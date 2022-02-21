@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Gmerlin remote
+Name[de]=Gmerlin remote
+Comment=Mediaplayer control proxy
+Exec=gmerlin-remote
+Icon=gmerlin-remote
+Type=Application
+Categories=AudioVideo;Player;

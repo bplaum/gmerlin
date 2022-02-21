@@ -1,0 +1,106 @@
+This is gmerlin.info, produced by makeinfo version 6.1 from
+gmerlin.texi.
+
+This manual is for Gmerlin (version 1.2.0, 26 August 2017).
+
+   Copyright (C) 2001-2008 Members of the Gmerlin project.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, with the Front-Cover Texts
+     being "A GNU Manual," and with the Back-Cover Texts as in (a)
+     below.  A copy of the license is included in the section entitled
+     "GNU Free Documentation License."
+
+     (a) The FSF's Back-Cover Text is: "You have freedom to copy and
+     modify this GNU Manual, like GNU software.  Copies published by the
+     Free Software Foundation raise funds for GNU development."
+INFO-DIR-SECTION Gmerlin
+START-INFO-DIR-ENTRY
+* Gmerlin: (gmerlin).           Gmerlin multimedia applications
+END-INFO-DIR-ENTRY
+
+
+Indirect:
+gmerlin.info-1: 986
+gmerlin.info-2: 501576
+
+Tag Table:
+(Indirect)
+Node: Top986
+Node: Basics2026
+Node: Installation2413
+Node: Requirements2624
+Node: Compilation and installation8183
+Node: Binary codecs9518
+Node: General usage information9972
+Node: Configuration data10241
+Node: GUI10884
+Node: gui_intro11198
+Node: gui_statdyn11581
+Node: gui_i12698
+Node: gui_f14411
+Node: gui_log15526
+Node: gui_tips16092
+Node: gml16406
+Node: Setting parameters from the commandline17356
+Node: Applications19256
+Node: GUI Player19587
+Node: gmerlin_player_usage20028
+Node: Main window21098
+Node: player_mainmenu21369
+Node: player_display23364
+Node: Media tree24383
+Node: player_treewidget25092
+Node: player_albumwidget27218
+Node: Video window29342
+Node: gmerlin_player_trackinfo29994
+Node: gmerlin_player_avconfig30389
+Node: gmerlin_player_shortcuts31177
+Node: Player remote control34450
+Node: gmerlin_remote35112
+Node: gmerlin_remote_examples37239
+Node: GUI Transcoder38280
+Node: gmerlin_transcoder38695
+Node: gmerlin_transcoder_intro39490
+Node: gmerlin_transcoder_window41899
+Node: transcoder_menubar42271
+Node: transcoder_display46743
+Node: transcoder_progressbar47104
+Node: transcoder_tasklist47333
+Node: gmerlin_transcoder_enc48104
+Node: gmerlin_transcoder_tracks49674
+Node: Transcoder remote control51864
+Node: gmerlin_transcoder_remote52125
+Node: Commandline player53226
+Node: gmerlin_play53453
+Node: Commandline recorder81050
+Node: gmerlin-record81269
+Node: Alsamixer501576
+Node: Visualizer502432
+Node: Keyboard daemon503798
+Node: Plugins504861
+Node: plugin_i505493
+Node: plugin_oa507787
+Node: plugin_ov508446
+Node: plugin_ra508772
+Node: plugin_rv509629
+Node: plugin_ea510187
+Node: plugin_ev512341
+Node: plugin_est513372
+Node: plugin_eso513739
+Node: plugin_e514129
+Node: plugin_epp515663
+Node: plugin_ir516453
+Node: plugin_iw517493
+Node: plugin_fa518524
+Node: plugin_fv519021
+Node: plugin_vis535206
+Node: FAQ535685
+Node: General questions535858
+Node: Installation questions535992
+Node: Usage questions537590
+Node: Get involved539820
+
+End Tag Table

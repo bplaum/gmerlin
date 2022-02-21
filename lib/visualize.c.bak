@@ -1,0 +1,754 @@
+/*****************************************************************
+ * gmerlin - a general purpose multimedia framework and applications
+ *
+ * Copyright (c) 2001 - 2012 Members of the Gmerlin project
+ * gmerlin-general@lists.sourceforge.net
+ * http://gmerlin.sourceforge.net
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * *****************************************************************/
+
+#include <string.h>
+
+#include <gavl/gavl.h>
+
+#include <config.h>
+#include <gmerlin/translation.h>
+
+#include <gmerlin/pluginregistry.h>
+#include <gmerlin/visualize.h>
+#include <visualize_priv.h>
+#include <gmerlin/utils.h>
+#include <gmerlin/subprocess.h>
+#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgsocket.h>
+#include <unistd.h>
+
+#include <pthread.h>
+#include <sys/signal.h>
+
+#include <gmerlin/log.h>
+#include <gmerlin/state.h>
+
+#define LOG_DOMAIN "visualizer"
+/*
+ * gmerlin_visualize_slave
+ *   -w "window_id"
+ *   -p "plugin_module"
+ *   -o "output_module"
+ */
+
+#ifdef PKGBIN_DIR
+#define PKGBIN_PATH PKGBIN_DIR"/"
+#else
+#define PKGBIN_PATH ""
+#endif
+
+struct bg_visualizer_s
+  {
+  gavl_msg_t * msg;
+  bg_plugin_registry_t * plugin_reg;
+
+  bg_plugin_handle_t * ov_handle;
+  bg_ov_plugin_t * ov_plugin;
+  
+  pthread_mutex_t mutex;
+  
+  int changed;
+  
+  bg_subprocess_t * proc;
+  const bg_plugin_info_t * vis_info;
+  const bg_plugin_info_t * ov_info;
+
+  int image_width;
+  int image_height;
+  float framerate;
+  float gain;
+  
+  sigset_t oldset;
+  gavl_audio_format_t audio_format;
+  double fps;
+  
+  char * display_string;
+  
+  gavf_io_t * io;
+
+  gavl_dictionary_t m_stream;
+  gavl_dictionary_t m_global;
+  
+  int fd;
+
+  gavl_audio_sink_t * sink_ext;
+  gavl_audio_sink_t * sink_int;
+  
+  bg_controllable_t ctrl;
+
+  
+
+  };
+
+static int proc_write_func(void * data, const uint8_t * ptr, int len)
+  {
+  bg_visualizer_t * p = data;
+  return write(p->fd, ptr, len);
+  }
+
+static int proc_read_func(void * data, uint8_t * ptr, int len)
+  {
+  bg_visualizer_t * p = data;
+  return read(p->fd, ptr, len);
+  }
+
+static void write_message(bg_visualizer_t * v)
+  {
+  int result;
+  if(!v->proc)
+    {
+    gavl_msg_free(v->msg);
+    return;
+    }
+  //fprintf(stderr, "Write message master...\n");
+  result = gavl_msg_write(v->msg, v->io);
+  //fprintf(stderr, "Write message master done %d\n", result);
+
+  if(!result)
+    {
+    bg_subprocess_close(v->proc);
+    v->proc = NULL;
+    bg_log(BG_LOG_ERROR, LOG_DOMAIN,
+           "Visualization process crashed, restart to try again");
+    }
+  gavl_msg_free(v->msg);
+  }
+
+static int read_message(bg_visualizer_t * v)
+  {
+  int result;
+  if(!v->proc)
+    return 0;
+
+  //fprintf(stderr, "Read message master...\n");
+  result = gavl_msg_read(v->msg, v->io);
+  //fprintf(stderr, "Read message master done %d\n", result);
+
+  if(!result)
+    {
+    bg_subprocess_close(v->proc);
+    v->proc = NULL;
+    bg_log(BG_LOG_ERROR, LOG_DOMAIN,
+           "Visualization process crashed, restart to try again");
+    return 0;
+    }
+  return 1;
+  }
+
+static void set_gain(bg_visualizer_t * v)
+  {
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_GAIN, BG_MSG_NS_VISUALIZER);
+  gavl_msg_set_arg_float(v->msg, 0, v->gain);
+  write_message(v);
+  }
+
+static void set_fps(bg_visualizer_t * v)
+  {
+  gavl_msg_set_id_ns(v->msg,   BG_VIS_MSG_FPS, BG_MSG_NS_VISUALIZER);
+  gavl_msg_set_arg_float(v->msg, 0, v->framerate);
+  write_message(v);
+  }
+
+static void set_ov_parameter(void * data,
+                             const char * name,
+                             const gavl_value_t * val)
+  {
+  const bg_parameter_info_t * info;
+  bg_visualizer_t * v = (bg_visualizer_t*)data;
+
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_OV_PARAM, BG_MSG_NS_VISUALIZER);
+  
+  if(name)
+    {
+    info = bg_parameter_find(v->ov_info->parameters,
+                             name);
+    if(!info)
+      return;
+    bg_msg_set_parameter(v->msg, name, val);
+    }
+  else
+    bg_msg_set_parameter(v->msg, name, NULL);
+  
+  write_message(v);
+  }
+
+static void set_vis_parameter(void * data,
+                              const char * name,
+                              const gavl_value_t * val)
+  {
+  const bg_parameter_info_t * info;
+  bg_visualizer_t * v = (bg_visualizer_t*)data;
+
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_VIS_PARAM, BG_MSG_NS_VISUALIZER);
+  
+  if(name)
+    {
+    info = bg_parameter_find(v->vis_info->parameters,
+                             name);
+    if(!info)
+      return;
+    bg_msg_set_parameter(v->msg, name, val);
+    }
+  else
+    bg_msg_set_parameter(v->msg, name, NULL);
+  
+  write_message(v);
+  
+  }
+
+double bg_visualizer_get_fps(bg_visualizer_t * v)
+  {
+  return v->fps;
+  }
+
+static int handle_command(void * priv, gavl_msg_t * msg)
+  {
+  return 1;
+  }
+
+static int handle_slave_message(void * priv, gavl_msg_t * msg)
+  {
+  bg_visualizer_t * v = priv;
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_LOG:
+      switch(msg->ID)
+        {
+        case BG_LOG_INFO:
+        case BG_LOG_ERROR:
+        case BG_LOG_WARNING:
+        case BG_LOG_DEBUG:
+          {
+          char * domain;
+          char * m;
+          domain = gavl_msg_get_arg_string(msg, 0);
+          m    = gavl_msg_get_arg_string(msg, 1);
+          bg_log_notranslate(msg->ID, domain, "%s", m);
+          free(domain);
+          free(m);
+          }
+          break;
+        }
+      break;
+    case GAVL_MSG_NS_GUI:
+      {
+      /* Forward */ 
+      
+      }
+      break;
+    case BG_MSG_NS_VISUALIZER:
+      {
+      switch(msg->ID)
+        {
+        case BG_VIS_SLAVE_MSG_FPS:
+          v->fps = gavl_msg_get_arg_float(msg, 0);
+          break;
+        }
+      }
+    }
+  return 1;
+  }
+
+static gavl_sink_status_t audio_sink_put_func(void * priv, gavl_audio_frame_t * frame)
+  {
+  gavl_sink_status_t st;
+  bg_visualizer_t * v = priv;
+  int keep_going;
+  pthread_mutex_lock(&v->mutex);
+
+  if(!v->proc)
+    {
+    if(v->ov_plugin)
+      {
+      v->ov_plugin->handle_events(v->ov_handle->priv);
+      }
+    pthread_mutex_unlock(&v->mutex);
+    return GAVL_SINK_ERROR;
+    }
+
+  if(frame)
+    {
+    //    gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_AUDIO_DATA, BG_MSG_NS_VISUALIZER);
+    //    write_message(v);
+    
+    if((st = gavl_audio_sink_put_frame(v->sink_int, frame)) != GAVL_SINK_OK)
+      {
+      bg_subprocess_close(v->proc);
+      v->proc = NULL;
+      bg_log(BG_LOG_ERROR, LOG_DOMAIN,
+             "Visualization process crashed, restart to try again");
+      return st;
+      }
+    }
+
+  if(v->ov_plugin)
+    {
+    v->ov_plugin->handle_events(v->ov_handle->priv);
+    }
+  /* Handle messages from slave */
+  //  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_TELL);
+  //  write_message(v);
+
+  keep_going = 1;
+  while(keep_going)
+    {
+    read_message(v);
+    if(!handle_slave_message(v, v->msg))
+      keep_going = 0;
+    gavl_msg_free(v->msg);
+    }
+  
+  pthread_mutex_unlock(&v->mutex);
+  return GAVL_SINK_OK;
+  }
+
+#if 0
+static int visualizer_start(bg_visualizer_t * v)
+  {
+  char * command = NULL;
+  bg_cfg_section_t * section;
+  sigset_t newset;
+
+  int listen_fd;
+  char * listen_fd_name = NULL;
+  int ret = 0;
+  
+  if((listen_fd = bg_unix_socket_create(&listen_fd_name, 1)) < 0)
+    goto fail;
+  
+  pthread_mutex_lock(&v->mutex);
+  
+  if(v->proc)
+    {
+    pthread_mutex_unlock(&v->mutex);
+    goto fail;
+    }
+  
+  if(!v->vis_info)
+    {
+    pthread_mutex_unlock(&v->mutex);
+    goto fail;
+    }
+
+  /* Block SIGPIPE */
+  sigemptyset(&newset);
+  sigaddset(&newset, SIGPIPE);
+  pthread_sigmask(SIG_BLOCK, &newset, &v->oldset);
+  
+  /* Start process */
+    
+  if(v->vis_info->flags & BG_PLUGIN_VISUALIZE_FRAME)
+    {
+    command = bg_sprintf(PKGBIN_PATH "gmerlin_visualizer_slave -s %s -w %s -o %s -p ",
+                         listen_fd_name,
+                         v->display_string,
+                         v->ov_info->module_filename);
+    }
+  else
+    {
+    command = bg_sprintf(PKGBIN_PATH "gmerlin_visualizer_slave -s %s -w %s -p ",
+                         listen_fd_name,
+                         v->display_string);
+    }
+#ifdef HAVE_LV
+  if(v->vis_info->api == BG_PLUGIN_API_LV)
+    command = gavl_strcat(command, v->vis_info->name);
+  else
+#endif  
+    command = gavl_strcat(command, v->vis_info->module_filename);
+  
+  v->proc = bg_subprocess_create(command, 0, 0, 0);
+  if(!v->proc)
+    {
+    pthread_mutex_unlock(&v->mutex);
+    goto fail;
+    }
+  if((v->fd = bg_listen_socket_accept(listen_fd, 10000, NULL)) < 0)
+    goto fail;
+
+  v->io = gavf_io_create(proc_read_func,
+                         proc_write_func,
+                         NULL, NULL, NULL,
+                         v);
+#if 0 
+  v->sink_int = gavl_audio_sink_create_io(v->io,
+                                          &v->audio_format,
+                                          &v->m_global);
+
+  v->sink_ext = gavl_audio_sink_create(NULL,
+                                       audio_sink_put_func,
+                                       v,
+                                       &v->audio_format);
+  /* Audio format */
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_AUDIO_FORMAT);
+  gavl_msg_set_arg_audio_format(v->msg, 0, &v->audio_format);
+  gavl_msg_set_arg_dictionary(v->msg, 1, &v->m_stream);
+  write_message(v);
+
+  /* Metadata */
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_METADATA);
+  gavl_msg_set_arg_dictionary(v->msg, 0, &v->m_global);
+  write_message(v);
+#endif
+
+  
+  /* default ov parameters */
+  if(v->ov_info->parameters &&
+     (v->vis_info->flags & BG_PLUGIN_VISUALIZE_FRAME))
+    {
+    section = bg_plugin_registry_get_section(v->plugin_reg,
+                                             v->ov_info->name);
+    bg_cfg_section_apply(section,
+                         v->ov_info->parameters,
+                         set_ov_parameter, v);
+    }
+  
+  /* default vis parameters */
+  if(v->vis_info->parameters)
+    {
+    section = bg_plugin_registry_get_section(v->plugin_reg,
+                                             v->vis_info->name);
+    bg_cfg_section_apply(section,
+                         v->vis_info->parameters,
+                         set_vis_parameter, v);
+    }
+  
+  /* Gain */
+  set_gain(v);
+  /* Image size */
+
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_IMAGE_SIZE, BG_MSG_NS_VISUALIZER);
+  gavl_msg_set_arg_int(v->msg, 0, v->image_width);
+  gavl_msg_set_arg_int(v->msg, 1, v->image_height);
+  
+  write_message(v);
+
+  /* FPS*/
+  set_fps(v);
+  
+  /* All done, start */
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_START, BG_MSG_NS_VISUALIZER);
+  gavl_msg_set_arg_float(v->msg, 0, v->gain);
+  write_message(v);
+
+  /* Show window */
+  if(v->ov_plugin)
+    {
+    bg_ov_plugin_set_visible(v->ov_handle, 1);
+    bg_ov_plugin_set_window_title(v->ov_handle, v->vis_info->long_name);
+    }
+  pthread_mutex_unlock(&v->mutex);
+
+  ret = 1;
+  
+  fail:
+
+  if(listen_fd_name)
+    bg_unix_socket_close(listen_fd, listen_fd_name);
+
+  if(command)
+    free(command);
+  
+  return ret;
+  }
+#endif
+
+bg_visualizer_t *
+bg_visualizer_create(bg_plugin_registry_t * plugin_reg)
+  {
+  bg_visualizer_t * ret;
+  ret = calloc(1, sizeof(*ret));
+
+  ret->plugin_reg = plugin_reg;
+
+  pthread_mutex_init(&ret->mutex, NULL);
+  
+  ret->msg = gavl_msg_create();
+  return ret;
+  }
+
+void bg_visualizer_destroy(bg_visualizer_t * v)
+  {
+  pthread_mutex_destroy(&v->mutex);
+  gavl_msg_destroy(v->msg);
+  gavl_dictionary_free(&v->m_stream);
+  gavl_dictionary_free(&v->m_global);
+
+  if(v->display_string)
+    free(v->display_string);
+    
+  
+  free(v);
+  }
+
+
+static const bg_parameter_info_t parameters[] =
+  {
+    {
+      .name =        "width",
+      .long_name =   TRS("Width"),
+      .type =        BG_PARAMETER_INT,
+      .flags =      BG_PARAMETER_SYNC,
+      .val_min =     GAVL_VALUE_INIT_INT(16),
+      .val_max =     GAVL_VALUE_INIT_INT(32768),
+      .val_default = GAVL_VALUE_INIT_INT(320),
+      .help_string = TRS("Desired image with, the visualization plugin might override this for no apparent reason"),
+    },
+    {
+      .name =       "height",
+      .long_name =  TRS("Height"),
+      .type =       BG_PARAMETER_INT,
+      .flags =      BG_PARAMETER_SYNC,
+      .val_min =    GAVL_VALUE_INIT_INT(16),
+      .val_max =    GAVL_VALUE_INIT_INT(32768),
+      .val_default = GAVL_VALUE_INIT_INT(240),
+      .help_string = TRS("Desired image height, the visualization plugin might override this for no apparent reason"),
+    },
+    {
+      .name =        "framerate",
+      .long_name =   TRS("Framerate"),
+      .type =        BG_PARAMETER_FLOAT,
+      .flags =       BG_PARAMETER_SYNC,
+      .val_min =     GAVL_VALUE_INIT_FLOAT(1.0),
+      .val_max =     GAVL_VALUE_INIT_FLOAT(200.0),
+      .val_default = GAVL_VALUE_INIT_FLOAT(30.0),
+      .num_digits = 2,
+    },
+    {
+      .name =        "gain",
+      .long_name =   TRS("Gain"),
+      .type =        BG_PARAMETER_SLIDER_FLOAT,
+      .flags =       BG_PARAMETER_SYNC,
+      .val_min =     GAVL_VALUE_INIT_FLOAT(-10.0),
+      .val_max =     GAVL_VALUE_INIT_FLOAT(10.0),
+      .val_default = GAVL_VALUE_INIT_FLOAT(0.0),
+      .num_digits = 2,
+      .help_string = TRS("Gain (in dB) to apply to the audio samples before it is sent to the visualization plugin"),
+    },
+    { /* End of parameters */ }
+  };
+
+const bg_parameter_info_t * bg_visualizer_get_parameters(bg_visualizer_t * v)
+  {
+  return parameters;
+  }
+
+
+
+void bg_visualizer_set_vis_plugin(bg_visualizer_t * v,
+                                  const bg_plugin_info_t * info)
+  {
+  if(!v->vis_info || strcmp(v->vis_info->name, info->name))
+    {
+    v->changed = 1;
+    v->vis_info = info;
+    bg_log(BG_LOG_DEBUG, LOG_DOMAIN, "Got visualization plugin %s",
+           v->vis_info->name);
+    }
+  }
+
+void bg_visualizer_set_vis_parameter(void * priv,
+                                     const char * name,
+                                     const gavl_value_t * val)
+  {
+  bg_visualizer_t * v;
+  v = (bg_visualizer_t *)priv;
+  pthread_mutex_lock(&v->mutex);
+  if(v->proc)
+    set_vis_parameter(v, name, val);
+  pthread_mutex_unlock(&v->mutex);
+  }
+
+
+void bg_visualizer_set_parameter(void * priv,
+                                 const char * name,
+                                 const gavl_value_t * val)
+  {
+  bg_visualizer_t * v;
+  if(!name)
+    return;
+  
+  v = (bg_visualizer_t*)priv;
+  
+  if(!strcmp(name, "width"))
+    {
+    if(v->image_width != val->v.i)
+      {
+      v->image_width = val->v.i;
+      v->changed = 1;
+      }
+    }
+  else if(!strcmp(name, "height"))
+    {
+    if(v->image_height != val->v.i)
+      {
+      v->image_height = val->v.i;
+      v->changed = 1;
+      }
+    }
+  else if(!strcmp(name, "framerate"))
+    {
+    v->framerate = val->v.d;
+    pthread_mutex_lock(&v->mutex);
+    if(v->proc)
+      set_fps(v);
+    pthread_mutex_unlock(&v->mutex);
+    }
+  else if(!strcmp(name, "gain"))
+    {
+    v->gain = val->v.d;
+    
+    pthread_mutex_lock(&v->mutex);
+    if(v->proc)
+      set_gain(v);
+    pthread_mutex_unlock(&v->mutex);
+    }
+  }
+
+
+void bg_visualizer_set_audio_format(bg_visualizer_t * v,
+                                    const gavl_audio_format_t * format)
+  {
+  pthread_mutex_lock(&v->mutex);
+  
+  gavl_audio_format_copy(&v->audio_format, format);
+
+  if(v->proc)
+    {
+    //    gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_AUDIO_FORMAT, BG_MSG_NS_VISUALIZER);
+    //    gavl_msg_set_arg_audio_format(v->msg, 0, &v->audio_format);
+    //    write_message(v);
+    }
+  
+  pthread_mutex_unlock(&v->mutex);
+  
+  }
+
+void bg_visualizer_open_plugin(bg_visualizer_t * v,
+                               const gavl_audio_format_t * format,
+                               const gavl_dictionary_t * m_global,
+                               const gavl_dictionary_t * m_stream,
+                               bg_plugin_handle_t * ov_handle)
+  {
+  gavl_value_t val;
+  /* Set audio format */
+  
+  gavl_audio_format_copy(&v->audio_format, format);
+
+  gavl_dictionary_free(&v->m_stream);
+  gavl_dictionary_free(&v->m_global);
+
+  gavl_dictionary_init(&v->m_stream);
+  gavl_dictionary_init(&v->m_global);
+
+  gavl_dictionary_copy(&v->m_stream, m_stream);
+  gavl_dictionary_copy(&v->m_global, m_global);
+  
+  /* Set ov plugin */
+  v->ov_handle = ov_handle;
+  v->ov_plugin = (bg_ov_plugin_t*)(ov_handle->plugin);
+  
+  v->ov_info = v->ov_handle->info;
+
+  gavl_value_init(&val);
+  if(bg_plugin_handle_get_state(v->ov_handle, BG_STATE_CTX_OV, BG_STATE_OV_WINDOW_ID, &val) &&
+     (val.type == GAVL_TYPE_STRING))
+    {
+    v->display_string = val.v.str;
+    gavl_value_init(&val);
+    }
+  else
+    gavl_value_free(&val);
+
+  
+  v->changed = 0;
+  
+  //  visualizer_start(v);
+  
+  }
+
+void bg_visualizer_open_id(bg_visualizer_t * v,
+                           const gavl_audio_format_t * format,
+                           const bg_plugin_info_t * ov_info,
+                           const char * display_name)
+  {
+  /* Set audio format */
+  
+  gavl_audio_format_copy(&v->audio_format, format);
+  
+  /* Set ov plugin */
+  v->ov_handle = NULL;
+  v->ov_plugin = NULL;
+  
+  v->ov_info = ov_info;
+  v->display_string = gavl_strdup(display_name);
+  
+  v->changed = 0;
+  
+  // visualizer_start(v);
+  
+  }
+
+
+void bg_visualizer_update(bg_visualizer_t * v,
+                          const gavl_audio_frame_t * frame)
+  {
+  }
+
+
+void bg_visualizer_close(bg_visualizer_t * v)
+  {
+  pthread_mutex_lock(&v->mutex);
+  
+  if(!v->proc)
+    {
+    pthread_mutex_unlock(&v->mutex);
+    return;
+    }
+  /* Stop process */
+  gavl_msg_set_id_ns(v->msg, BG_VIS_MSG_QUIT, BG_MSG_NS_VISUALIZER);
+  write_message(v);
+
+  bg_subprocess_close(v->proc);
+  v->proc = NULL;
+
+  if(v->io)
+    {
+    gavf_io_destroy(v->io);
+    v->io = NULL;
+    }
+  /* Restore signal mask */
+  pthread_sigmask(SIG_SETMASK, &v->oldset, NULL);
+  pthread_mutex_unlock(&v->mutex);
+  }
+
+int bg_visualizer_need_restart(bg_visualizer_t * v)
+  {
+  return v->proc && v->changed;
+  }
+
+#if 0
+void bg_visualizer_set_callbacks(bg_visualizer_t* v,
+                                 bg_ov_callbacks_t * cb)
+  {
+  v->cb = cb;
+  }
+#endif

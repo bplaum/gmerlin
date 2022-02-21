@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!-- <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">  -->
+<html>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<link rel="shortcut icon" href="/static/icons/server_16.png" type="image/png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+
+<script src="/static/js/vars.js" type="text/javascript"></script>
+<script src="/static/js/utils.js" type="text/javascript"></script>
+<script src="/static/js/widgets.js" type="text/javascript"></script>
+<script src="/static/js/app.js" type="text/javascript"></script>
+<script src="/static/js/html5player.js" type="text/javascript"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/icons.css">
+<link rel="stylesheet" type="text/css" href="/static/css/app.css">
+<!-- <link rel="stylesheet" type="text/css" href="/static/css/skin-darkblue.css"> -->
+<link rel="stylesheet" id="skin-css" type="text/css" href="/static/css/skin-darkblue.css">
+
+<link rel="manifest" href="/manifest.json">
+<head>
+</head>
+
+<!-- position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; -->
+<body onload="global_init();">
+  <header><table>
+    <tr>
+      <td id="header_icon"></td>
+      <td id="header_text">Header</td>
+      <td id="header_buttons" style="text-align: right; padding: 0px;">
+	<button type="button" class="icon-play" id="header-play" ></button>
+	<button type="button" class="icon-add" id="header-add" ></button>
+	<button type="button" class="icon-menu" id="nav-button" ></button>
+      </td>
+    </tr>
+    </table>
+    <div id="progress-popup">
+    <progress id="load-progress" max="100.0"></progress>
+    </div>
+
+  </header>
+
+<div id="bg" style="position: fixed; top: 0px; left: 0px; right: 0px; bottom: 0px; background-size: cover; background-repeat: no-repeat; z-index: -1;"></div>
+    
+  <div id="main" style="width: 100%">
+    <div id="browser"        style="width: 100%; display: none;"></div>
+    <div id="settings"       style="width: 100%; display: none;">
+       <table class="settings" id="settings-table">
+       </table>
+    </div>
+    <div id="iteminfo" style="width: 100%; display: none;">
+       <div id="iteminfo-image" class="track-image"></div>
+       <table id="iteminfo-table" class="track-info"></table>
+    </div>
+    <div id="imageviewer" style="display: none;">
+
+    <img id="imageviewer-img" style="z-index: 1;">
+
+    <button type="button" class="icon-chevron-left iv-control" id="imageviewer-prev"></button>
+    <button type="button" class="icon-chevron-right iv-control" id="imageviewer-next"></button>
+
+    <div id="imageviewer-label" class="iv-control"></div>
+    
+    </div>
+    <div id="help-screen" style="width: 100%; display: none;">
+      <table>
+	<tr>
+	  <td>F1, ?</td><td>Show this help</td>
+	</tr>
+	<tr>
+	  <td>Esc</td><td>Close this help, goto parent folder</td>
+	</tr>
+	<tr>
+          <td>Enter</td><td>Queue and play track</td>
+	</tr>
+	<tr>
+          <td>Shift + Enter</td><td>Queue and album (replacing queue)</td>
+	</tr>
+	<tr>
+          <td>A</td><td>Queue track</td>
+	</tr>
+	<tr>
+          <td>Shift + A</td><td>Queue album</td>
+	</tr>
+	<tr>
+	  <td>Backspace</td><td>Stop playback</td>
+	</tr>
+	<tr>
+	  <td>Space</td><td>Toggle pause</td>
+	</tr>
+	<tr>
+	  <td>Ctrl + Left</td><td>Go to previous sibling</td>
+	</tr>
+	<tr>
+	  <td>Ctrl + Right</td><td>Go to next sibling</td>
+	</tr>
+	<tr>
+	  <td>+/-</td><td>Increase/Decrease volume</td>
+	</tr>
+	<tr>
+ 	  <td>B</td><td>Switch to browser</td>
+	</tr>
+	<tr>
+ 	  <td>C</td><td>Goto currently played track</td>
+	</tr>
+	<tr>
+ 	  <td>F</td><td>Copy selected track to favorites</td>
+	</tr>
+ 	<tr>
+	  <td>H</td><td>Go to root folder</td>
+	</tr>
+ 	<tr>
+	  <td>I</td><td>Show media info</td>
+	</tr>
+	<tr>
+	  <td>N</td><td>Navigation menu</td>
+	</tr>
+	<tr>
+	  <td>P</td><td>Switch to player</td>
+	</tr>
+	<tr>
+	  <td>S</td><td>Search</td>
+	</tr>
+	<tr>
+	  <td>V</td><td>Switch visualization</td>
+	</tr>
+      </table>
+    </div>
+    
+  </div>
+
+  <div id="nav-popup">
+    <button id="nav-home"            class="icon-home"></button>
+    <button id="nav-up"              class="icon-chevron-up"></button>
+    <button id="nav-levelup"         class="icon-levelup"></button><br>
+
+    <button id="nav-left"            class="icon-chevron-left"></button>
+    <button id="nav-enter"           class="icon-enter"></button>
+    <button id="nav-right"           class="icon-chevron-right"></button><br>
+
+    <button id="nav-prev"            class="icon-arrow-left"></button>
+    <button id="nav-down"            class="icon-chevron-down"></button>
+    <button id="nav-next"            class="icon-arrow-right"></button><br>
+
+    <button id="nav-player"          class="icon-player"></button>
+    <button id="nav-info"            class="icon-info"></button>
+    <button id="nav-fav"             class="icon-heart"></button><br>
+
+    <button id="nav-settings"        class="icon-config"></button>
+    <button id="nav-search"          class="icon-search"></button>
+    <button id="nav-browser"         class="icon-view-list"></button><br>
+
+    <button id="nav-visualization"   class="icon-eye"></button>
+    <button id="nav-delete"          class="icon-trash"></button>
+    <button id="nav-help"            class="icon-help"></button>
+  </div>
+
+  <audio id="audio-element"></audio>
+  
+  <div id="search-popup">
+    <span class="icon-search">&nbsp;<input type="search" id="search-input">
+  </div>
+  
+  <footer>
+    <div id="pager">
+
+      <table style="width: 100%;">
+        <tr>
+
+        <td style="text-align: left;" >
+          <button id="pager-start"                class="icon-chevron2-left"></button>
+          <button id="pager-previous"             class="icon-chevron-left"></button>
+        </td>
+        <td style="text-align: center;">
+        <span id="pager-label"></span>
+        </td>
+        <td style="text-align: right;">
+          <button id="pager-next"             class="icon-chevron-right"></button>
+          <button id="pager-end"             class="icon-chevron2-right"></button>
+        </td>
+
+        </tr>
+      </table>
+     
+    </div>
+
+    <div id="player-controls">
+    <table style="width: 100%;">
+      <tr>
+
+       <td><input id="player-slider" type="range" style="margin: 0px; width: 100%;" min="0.0" max="1.0" step="0.00001"></input></td>
+
+	
+      </tr>
+    </table>
+    <table style="width: 100%;">
+      <tr>
+	<td style="width: 1.2em; text-align: center"><button class="icon-arrow-right" id="mode-button"></button></td>
+        <td style="text-align: right; width: 100%;" id="player-display">0:00</td>
+        <td>
+          <button class="icon-prev" id="prev-button"></button>
+        </td>
+        <td>
+          <button class="icon-stop" id="stop-button"></button>
+        </td>
+        <td>
+          <button class="icon-play" id="play-button" ></button>
+        </td>
+        <td>
+          <button class="icon-pause" id="pause-button"></button>
+        </td>
+        <td>
+          <button class="icon-next" id="next-button"></button>
+        </td>
+      </tr>
+    </table>
+    <table style="width: 100%;">
+      <tr>
+        <td style="width: 1.2em;">
+	  <button class="icon-volume-mute" id="volume-mute-button"></button>
+        </td>
+        <td style="width: 1.2em;">
+           <button class="icon-volume-min" id="volume-down-button"></button>
+        </td>
+        <td>
+          <input id="volume-slider" type="range" style="margin: 0px; width: 100%;" min="0.0" max="1.0" step="0.00001"></input>
+        </td>
+        <td style="width: 1.2em;">
+          <button class="icon-volume-max" id="volume-up-button"></button>
+        </td>
+      </tr>
+    </table>
+    </div>
+
+    <table style="width: 100%;" id="footer-table">
+      <tr style="width: 100%;">
+	<td id="footer_left"   style="width: 45%;">Footer</td>
+	<td id="player-status" style="width: 10%; text-align: center; padding: 0px;"></td>
+	<td id="footer_right"  style="width: 45%; text-align: right; padding: 0px;">
+	  <button id="browse-mode-button" class="icon-view-icons"></button>
+	  <button id="controls-button" class="icon-player"></button>
+	</td>
+      </tr>
+  </table>
+</footer>
+</body>
+
+</html>

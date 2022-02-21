@@ -1,0 +1,1760 @@
+This is gmerlin.info, produced by makeinfo version 6.1 from
+gmerlin.texi.
+
+This manual is for Gmerlin (version 1.2.0, 26 August 2017).
+
+   Copyright (C) 2001-2008 Members of the Gmerlin project.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, with the Front-Cover Texts
+     being "A GNU Manual," and with the Back-Cover Texts as in (a)
+     below.  A copy of the license is included in the section entitled
+     "GNU Free Documentation License."
+
+     (a) The FSF's Back-Cover Text is: "You have freedom to copy and
+     modify this GNU Manual, like GNU software.  Copies published by the
+     Free Software Foundation raise funds for GNU development."
+INFO-DIR-SECTION Gmerlin
+START-INFO-DIR-ENTRY
+* Gmerlin: (gmerlin).           Gmerlin multimedia applications
+END-INFO-DIR-ENTRY
+
+
+File: gmerlin.info,  Node: Alsamixer,  Next: Visualizer,  Prev: Commandline recorder,  Up: Applications
+
+4.7 Alsamixer
+=============
+
+Type 'gmerlin_alsamixer' to start this.  This is a mixer program, which
+is still convenient, if you have multiple soundcards with 100s of
+options each.  It provides widgets for almost all soundcard parameters,
+which are supported by alsa.
+
+   By right clicking on a control, you get a menu where you can:
+
+   * Move controls inside the window
+
+   * Move controls to own windows .  To move them back to main window,
+     simply close the control-windows.
+   * Pop up an options dialog , where you can select which controls
+     should be shown at all.
+
+   All window configurations and coordinates are remembered.  The actual
+mixer settings are _not_ remembered, since this is done globally by the
+Alsa startup scripts.
+
+
+File: gmerlin.info,  Node: Visualizer,  Next: Keyboard daemon,  Prev: Alsamixer,  Up: Applications
+
+4.8 Visualizer
+==============
+
+Type 'gmerlin_visualizer' to start this.  Gmerlin visualizer opens your
+soundard for recording and displays a visualization in a window.  It
+supports fullscreen and mouse- and keyboard interaction with visuals for
+visualization plugins, which support this.  If you move the mouse or
+press the "Menu key", the toolbar will show up (either method can be
+disabled).  It will be hidden again after the mouse is idle for some
+seconds.
+
+   In the upper left row, you can change the input plugin, show info
+about the plugin or configure the visualization .
+
+   In the lower left row, you can change the recording- and display
+plugins , set global (plugin independent) options , restart the
+visualization , switch to fullscreen or back .  Moreover you can show or
+hide the *note Log window: gui_log. or exit the application.
+
+   The VU-meter at the right displays the recording level as it comes
+from the device (i.e.  before the visualizer gain is applied).
+
+   You have the following Shortcuts:
+
+'f'
+     Toggle fullscreen mode
+'Tab'
+     Toggle fullscreen mode
+'Escape'
+     Exit fullscreen mode
+'Menu'
+     Show toolbar
+
+   All other keyboard- and mouse events are propagated to the display
+plugin and then to the visualization plugin.
+
+
+File: gmerlin.info,  Node: Keyboard daemon,  Prev: Visualizer,  Up: Applications
+
+4.9 Keyboard daemon
+===================
+
+The gmerlin keyboard daemon is an X11 application, which grabs key
+combinations and executes commands.  You will communicate mostly via the
+configuration utility 'gmerlin_kbd_config'.  It's independent of
+keyboard model definitions, because it allows to enter the keyboard
+combination in the config dialog directly.  It's independent of gmerlin
+or any other multimedia architecture, since the actions can be arbitrary
+shell commands.
+
+   You can manually start and stop the keyboard daemon, add, edit and
+delete key combinations and tell the daemon to apply the changes.
+
+   To automatically start the keyboard daemon at each X11 start, find
+out where to enter start commands in your desktop configuration add the
+command '/usr/local/bin/gmerlin_kbd'.  Change '/usr/local' to your
+install prefix if necessary.
+
+   Messages from the keyboard daemon show up in '/var/log/messages' or
+in another syslog file depending on your system setup.
+
+
+File: gmerlin.info,  Node: Plugins,  Next: FAQ,  Prev: Applications,  Up: Top
+
+5 Plugins
+*********
+
+* Menu:
+
+* Media input: plugin_i.
+* Audio output: plugin_oa.
+* Video output: plugin_ov.
+* Audio recorder: plugin_ra.
+* Video recorder: plugin_rv.
+* Encoders for audio: plugin_ea.
+* Encoders for video: plugin_ev.
+* Encoders for text subtitles: plugin_est.
+* Encoders for overlay subtitles: plugin_eso.
+* Encoders for multiple stream types: plugin_e.
+* Encoder postprocessors: plugin_epp.
+* Image readers: plugin_ir.
+* Image writers: plugin_iw.
+* Audio filters: plugin_fa.
+* Video filters: plugin_fv.
+* Visualizations: plugin_vis.
+
+
+File: gmerlin.info,  Node: plugin_i,  Next: plugin_oa,  Up: Plugins
+
+5.1 Media input
+===============
+
+5.1.1 AVDecoder plugin
+----------------------
+
+Internal name
+     i_avdec
+Module
+     i_avdec.so
+Description
+     Plugin based on the Gmerlin avdecoder library.  Supports most media
+     formats.  Playback is supported from files, URLs (with various
+     protocols) and stdin.
+
+5.1.2 Audio CD player/ripper
+----------------------------
+
+Internal name
+     i_cdaudio
+Module
+     i_cdaudio.so
+Description
+     Plugin for audio CDs.  Supports both playing with direct connection
+     from the CD-drive to the souncard and ripping with cdparanoia.
+     Metadata are obtained from Musicbrainz, freedb or CD-text.
+     Metadata are cached in $HOME/.gmerlin/cdaudio_metadata.
+
+5.1.3 DVD Player
+----------------
+
+Internal name
+     i_dvd
+Module
+     i_dvd.so
+Description
+     Plugin for playing DVDs.  Based on Gmerlin avdecoder.
+
+5.1.4 VCD Player
+----------------
+
+Internal name
+     i_vcd
+Module
+     i_vcd.so
+Description
+     Plugin for playing VCDs.  Based on Gmerlin avdecoder.
+
+5.1.5 DVB Player
+----------------
+
+Internal name
+     i_dvb
+Module
+     i_dvb.so
+Description
+     Plugin for playing DVB streams from a Linux-DVB compatible card.
+     Based on Gmerlin avdecoder.
+
+5.1.6 Still image input plugin
+------------------------------
+
+Internal name
+     i_singlepic_stills
+Module
+     Internal plugin
+Description
+     This plugin reads images as stills.  It uses the installed image
+     readers.
+
+5.1.7 libquicktime input plugin
+-------------------------------
+
+Internal name
+     i_lqt
+Module
+     i_lqt.so
+Description
+     Input plugin based on libquicktime
+
+5.1.8 Parser for gmerlin EDLs
+-----------------------------
+
+Internal name
+     i_edl
+Module
+     i_edl.so
+Description
+     This parses the XML file and exports an EDL, which can be played
+     with the builtin EDL decoder.
+
+5.1.9 Image video input plugin
+------------------------------
+
+Internal name
+     i_singlepic
+Module
+     Internal plugin
+Description
+     This plugin reads series of images as a video.  It uses the
+     installed image readers.
+
+5.1.10 mikmod input plugin
+--------------------------
+
+Internal name
+     i_mikmod
+Module
+     i_mikmod.so
+Description
+     Simple wrapper, which calls the mikmod program
+
+
+File: gmerlin.info,  Node: plugin_oa,  Next: plugin_ov,  Prev: plugin_i,  Up: Plugins
+
+5.2 Audio output
+================
+
+5.2.1 Alsa
+----------
+
+Internal name
+     oa_alsa
+Module
+     oa_alsa.so
+Description
+     Alsa output plugin with support for channel configurations up to
+     5.1
+
+5.2.2 PulseAudio
+----------------
+
+Internal name
+     oa_pulse
+Module
+     oa_pulse.so
+Description
+     PulseAudio output
+
+5.2.3 OSS
+---------
+
+Internal name
+     oa_oss
+Module
+     oa_oss.so
+Description
+     OSS output driver
+
+5.2.4 EsounD output driver
+--------------------------
+
+Internal name
+     oa_esd
+Module
+     oa_esd.so
+Description
+     EsounD output driver
+
+
+File: gmerlin.info,  Node: plugin_ov,  Next: plugin_ra,  Prev: plugin_oa,  Up: Plugins
+
+5.3 Video output
+================
+
+5.3.1 X11
+---------
+
+Internal name
+     ov_x11
+Module
+     ov_x11.so
+Description
+     X11 display driver with support for XVideo, XImage and OpenGL.
+     Shared memory (XShm) is used where available.
+
+
+File: gmerlin.info,  Node: plugin_ra,  Next: plugin_rv,  Prev: plugin_ov,  Up: Plugins
+
+5.4 Audio recorder
+==================
+
+5.4.1 Alsa
+----------
+
+Internal name
+     i_alsa
+Module
+     i_alsa.so
+Description
+     Alsa recorder
+
+5.4.2 OSS
+---------
+
+Internal name
+     i_oss
+Module
+     i_oss.so
+Description
+     OSS Recorder
+
+5.4.3 EsounD input driver
+-------------------------
+
+Internal name
+     i_esd
+Module
+     i_esd.so
+Description
+     EsounD input driver
+
+5.4.4 PulseAudio
+----------------
+
+Internal name
+     i_pulse
+Module
+     i_pulse.so
+Description
+     PulseAudio capture.  You can specify the source, where we'll get
+     the audio.
+
+5.4.5 Audiofile recorder
+------------------------
+
+Internal name
+     i_audiofile
+Module
+     Internal plugin
+Description
+     Take a bunch of audio file and make them available as a recording
+     device
+
+
+File: gmerlin.info,  Node: plugin_rv,  Next: plugin_ea,  Prev: plugin_ra,  Up: Plugins
+
+5.5 Video recorder
+==================
+
+5.5.1 V4L2
+----------
+
+Internal name
+     i_v4l2
+Module
+     i_v4l2.so
+Description
+     video4linux 2 recording plugin.  Supports only video and no tuner
+     decives.
+
+5.5.2 V4L
+---------
+
+Internal name
+     i_v4l
+Module
+     i_v4l.so
+Description
+     video4linux recording plugin.  Supports only video and no tuner
+     decives.
+
+5.5.3 X11
+---------
+
+Internal name
+     i_x11
+Module
+     i_x11.so
+Description
+     X11 grabber
+
+
+File: gmerlin.info,  Node: plugin_ea,  Next: plugin_ev,  Prev: plugin_rv,  Up: Plugins
+
+5.6 Encoders for audio
+======================
+
+5.6.1 Wave writer
+-----------------
+
+Internal name
+     e_wav
+Module
+     e_wav.so
+Description
+     Simple writer for wave files, supports 8, 16, 24 and 32 bit PCM
+
+5.6.2 Speex encoder
+-------------------
+
+Internal name
+     e_speex
+Module
+     e_speex.so
+Description
+     Encoder for Speex files
+
+5.6.3 Flac in Ogg encoder
+-------------------------
+
+Internal name
+     e_flacogg
+Module
+     e_flacogg.so
+Description
+     Encoder for flac streams in Ogg containers.  Based on libflac
+     (http://flac.sourceforge.net)
+
+5.6.4 Flac encoder
+------------------
+
+Internal name
+     e_flac
+Module
+     e_flac.so
+Description
+     Encoder for flac files.  Based on libflac
+     (http://flac.sourceforge.net)
+
+5.6.5 Lame mp3 encoder
+----------------------
+
+Internal name
+     e_lame
+Module
+     e_lame.so
+Description
+     Encoder for mp3 files.  Based on lame (http://www.mp3dev.org).
+     Supports CBR, ABR and VBR as well as ID3V1 and ID3V2 tags.
+
+5.6.6 MPEG-1 layer 1/2 audio encoder
+------------------------------------
+
+Internal name
+     e_mpegaudio
+Module
+     e_mpegaudio.so
+Description
+     Encoder for elementary MPEG-1 layer 1/2 audio streams.  Based on
+     mjpegtools (http://mjpeg.sourceforge.net).
+
+5.6.7 Lame mp3 broadcaster
+--------------------------
+
+Internal name
+     b_lame
+Module
+     b_lame.so
+Description
+     mp3 broadcaster for icecast servers.  Based on lame
+     (http://www.mp3dev.org) and libshout (http://www.icecast.org).
+
+5.6.8 Faac encoder
+------------------
+
+Internal name
+     e_faac
+Module
+     e_faac.so
+Description
+     Plugin for encoding AAC streams (with ADTS headers).  Based on faac
+     (http://faac.sourceforge.net).
+
+5.6.9 FFmpeg audio encoder
+--------------------------
+
+Internal name
+     e_ffmpeg_audio
+Module
+     e_ffmpeg_audio.so
+Description
+     Plugin for encoding various audio formats with ffmpeg
+     (http://www.ffmpeg.org).
+
+5.6.10 Vorbis encoder
+---------------------
+
+Internal name
+     e_vorbis
+Module
+     e_vorbis.so
+Description
+     Encoder for Vorbis files
+
+
+File: gmerlin.info,  Node: plugin_ev,  Next: plugin_est,  Prev: plugin_ea,  Up: Plugins
+
+5.7 Encoders for video
+======================
+
+5.7.1 yuv4mpeg2 encoder
+-----------------------
+
+Internal name
+     e_y4m
+Module
+     e_yuv4mpeg.so
+Description
+     Encoder for yuv4mpeg files.  Based on mjpegtools
+     (http://mjpeg.sourceforge.net).
+
+5.7.2 MPEG-1/2 video encoder
+----------------------------
+
+Internal name
+     e_mpegvideo
+Module
+     e_mpegvideo.so
+Description
+     Encoder for elementary MPEG-1/2 video streams.  Based on mjpegtools
+     (http://mjpeg.sourceforge.net).
+
+5.7.3 Singlepicture encoder
+---------------------------
+
+Internal name
+     e_singlepic
+Module
+     Internal plugin
+Description
+     This plugin encodes a video as a series of images.  It uses the
+     installed image writers.
+
+5.7.4 FFmpeg video encoder
+--------------------------
+
+Internal name
+     e_ffmpeg_video
+Module
+     e_ffmpeg_video.so
+Description
+     Plugin for encoding various video formats with ffmpeg
+     (http://www.ffmpeg.org).
+
+
+File: gmerlin.info,  Node: plugin_est,  Next: plugin_eso,  Prev: plugin_ev,  Up: Plugins
+
+5.8 Encoders for text subtitles
+===============================
+
+5.8.1 Text subtitle exporter
+----------------------------
+
+Internal name
+     e_subtext
+Module
+     e_subtext.so
+Description
+     Plugin for exporting text subtitles.  Supported formats are MPSub
+     and SRT
+
+
+File: gmerlin.info,  Node: plugin_eso,  Next: plugin_e,  Prev: plugin_est,  Up: Plugins
+
+5.9 Encoders for overlay subtitles
+==================================
+
+5.9.1 spumux overlay exporter
+-----------------------------
+
+Internal name
+     e_spumux
+Module
+     e_spumux.so
+Description
+     Exports overlay subtitles into the format used by spumux
+     (http://dvdauthor.sourceforge.net)
+
+
+File: gmerlin.info,  Node: plugin_e,  Next: plugin_epp,  Prev: plugin_eso,  Up: Plugins
+
+5.10 Encoders for multiple stream types
+=======================================
+
+5.10.1 Quicktime encoder
+------------------------
+
+Internal name
+     e_lqt
+Module
+     e_lqt.so
+Description
+     Encoder based on libquicktime (http://libquicktime.sourceforge.net)
+     Writes Quicktime, AVI (optionally ODML), MP4, M4A and 3GPP.
+     Supported codecs range from high quality uncompressed formats for
+     professional applications to consumer level formats like H.264/AVC,
+     AAC, MP3, Divx compatible etc.  Also supported are chapters and
+     text subtitles
+
+5.10.2 Theora encoder
+---------------------
+
+Internal name
+     e_theora
+Module
+     e_theora.so
+Description
+     Encoder for Theora files.  Audio can be Vorbis, Flac or Speex.
+
+5.10.3 Ogg Broadcaster
+----------------------
+
+Internal name
+     b_ogg
+Module
+     b_ogg.so
+Description
+     Broadcaster for Ogg streams using libshout.  Supports vorbis,
+     theora and speex.
+
+5.10.4 FFmpeg audio/video encoder
+---------------------------------
+
+Internal name
+     e_ffmpeg
+Module
+     e_ffmpeg.so
+Description
+     Plugin for encoding various audio/video formats with ffmpeg
+     (http://www.ffmpeg.org).
+
+5.10.5 MPEG 1/2 program/system stream encoder
+---------------------------------------------
+
+Internal name
+     e_mpeg
+Module
+     e_mpeg.so
+Description
+     Encoder for regular .mpg files as well as VCD and DVD streams.
+     Based on mjpegtools (http://mjpeg.sourceforge.net)
+
+
+File: gmerlin.info,  Node: plugin_epp,  Next: plugin_ir,  Prev: plugin_e,  Up: Plugins
+
+5.11 Encoder postprocessors
+===========================
+
+5.11.1 Audio CD generator/burner
+--------------------------------
+
+Internal name
+     e_pp_cdrdao
+Module
+     e_pp_cdrdao.so
+Description
+     This is a frontend for generating audio CD images (optionally with
+     CD-Text) for cdrdao (http://cdrdao.sourceforge.net).  Optional
+     burning is also supported.
+
+5.11.2 VCD image generator/burner
+---------------------------------
+
+Internal name
+     e_pp_vcdimager
+Module
+     e_pp_vcdimager.so
+Description
+     This is a frontend for generating (S)VCD images with the vcdimager
+     tools (http://www.vcdimager.org).  Burning with cdrdao
+     (http://cdrdao.sourceforge.net) is also possible.
+
+
+File: gmerlin.info,  Node: plugin_ir,  Next: plugin_iw,  Prev: plugin_epp,  Up: Plugins
+
+5.12 Image readers
+==================
+
+5.12.1 GAVL image reader
+------------------------
+
+Internal name
+     ir_gavl
+Module
+     ir_gavl.so
+Description
+     Reader for GAVL images
+
+5.12.2 PNM reader
+-----------------
+
+Internal name
+     ir_pnm
+Module
+     ir_pnm.so
+Description
+     Reader for PBM/PGM/PPM images
+
+5.12.3 TGA reader
+-----------------
+
+Internal name
+     ir_tga
+Module
+     ir_tga.so
+Description
+     Reader for TGA images
+
+5.12.4 BMP reader
+-----------------
+
+Internal name
+     ir_bmp
+Module
+     ir_bmp.so
+Description
+     Reader for BMP images
+
+5.12.5 PNG reader
+-----------------
+
+Internal name
+     ir_png
+Module
+     ir_png.so
+Description
+     Reader for PNG images
+
+5.12.6 JPEG reader
+------------------
+
+Internal name
+     ir_jpeg
+Module
+     ir_jpeg.so
+Description
+     Reader for JPEG images
+
+5.12.7 TIFF reader
+------------------
+
+Internal name
+     ir_tiff
+Module
+     ir_tiff.so
+Description
+     Reader for TIFF images
+
+
+File: gmerlin.info,  Node: plugin_iw,  Next: plugin_fa,  Prev: plugin_ir,  Up: Plugins
+
+5.13 Image writers
+==================
+
+5.13.1 JPEG writer
+------------------
+
+Internal name
+     iw_jpeg
+Module
+     iw_jpeg.so
+Description
+     Writer for JPEG images
+
+5.13.2 PPM writer
+-----------------
+
+Internal name
+     iw_pnm
+Module
+     iw_pnm.so
+Description
+     Writer for PPM images
+
+5.13.3 BMP writer
+-----------------
+
+Internal name
+     iw_bmp
+Module
+     iw_bmp.so
+Description
+     Writer for BMP images
+
+5.13.4 PNG writer
+-----------------
+
+Internal name
+     iw_png
+Module
+     iw_png.so
+Description
+     Writer for PNG images
+
+5.13.5 TGA writer
+-----------------
+
+Internal name
+     iw_tga
+Module
+     iw_tga.so
+Description
+     Writer for TGA images
+
+5.13.6 TIFF writer
+------------------
+
+Internal name
+     iw_tiff
+Module
+     iw_tiff.so
+Description
+     Writer for TIFF images
+
+5.13.7 gavl image writer
+------------------------
+
+Internal name
+     iw_gavl
+Module
+     iw_gavl.so
+Description
+     Writer for GAVL images
+
+
+File: gmerlin.info,  Node: plugin_fa,  Next: plugin_fv,  Prev: plugin_iw,  Up: Plugins
+
+5.14 Audio filters
+==================
+
+5.14.1 Force sampleformat
+-------------------------
+
+Internal name
+     fa_sampleformat
+Module
+     fa_sampleformat.so
+Description
+     This forces a sampleformat as input for the next filter.  Its
+     mainly used for testing.
+
+5.14.2 Volume control
+---------------------
+
+Internal name
+     fa_volume
+Module
+     fa_volume.so
+Description
+     Simple volume control
+
+
+File: gmerlin.info,  Node: plugin_fv,  Next: plugin_vis,  Prev: plugin_fa,  Up: Plugins
+
+5.15 Video filters
+==================
+
+5.15.1 1DTV
+-----------
+
+Internal name
+     fv_onedtv
+Module
+     fv_1dtv.so
+Description
+     1DTV is one of the most amazing effect, but that algorithm is very
+     easy.  The horizontal green line is the current scanning position
+     and it moves down every frame.  So only moving objects is
+     distorted.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.2 AgingTV
+--------------
+
+Internal name
+     fv_agingtv
+Module
+     fv_agingtv.so
+Description
+     AgingTV ages video input stream in realtime.  Discolors, scratches,
+     puts dust.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.3 BaltanTV
+---------------
+
+Internal name
+     fv_baltantv
+Module
+     fv_baltantv.so
+Description
+     BaltanTV is similar to the StreakTV,but BaltanTV makes after images
+     longer than that.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.4 Blur
+-----------
+
+Internal name
+     fv_blur
+Module
+     fv_blur.so
+Description
+     Blur filter based on gavl.  Supports triangular, box and gauss
+     blur.
+
+5.15.5 BrokenTV
+---------------
+
+Internal name
+     fv_brokentv
+Module
+     fv_brokentv.so
+Description
+     BrokenTV simulates mistuned television or mistracking video image.
+     Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.6 BurningTV
+----------------
+
+Internal name
+     fv_burningtv
+Module
+     fv_burningtv.so
+Description
+     The name describes itself.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.7 ChameleonTV
+------------------
+
+Internal name
+     fv_chameleontv
+Module
+     fv_chameleontv.so
+Description
+     When you are still in the sight of the camera for a second, you
+     will be vanishing into the background, and disappear.  When you
+     move again, you will appear normally.  By contrast, when you switch
+     from "disappearing mode" to "appearing mode", moving objects are
+     not shown, and a still object appears after seconds.  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.8 Colorbalance
+-------------------
+
+Internal name
+     fv_colorbalance
+Module
+     fv_colorbalance.so
+Description
+     Apply gain for red, green and blue.  RGB formats are processed
+     directly, Y'CbCr formats are processed by the colormatrix.
+
+5.15.9 ColstreakTV
+------------------
+
+Internal name
+     fv_colstreaktv
+Module
+     fv_colstreaktv.so
+Description
+     Make after images but the power of the effects are different
+     between red, green and blue layers, so it provides colourful after
+     images.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.10 Crop & Scale
+--------------------
+
+Internal name
+     fv_cropscale
+Module
+     fv_cropscale.so
+Description
+     Crop and scale video images.  Has lots of standard video formats as
+     presets.  Can also do chroma placement correction and simple
+     deinterlacing
+
+5.15.11 CycleTV
+---------------
+
+Internal name
+     fv_cycletv
+Module
+     fv_cycletv.so
+Description
+     CycleTV randomly cycles the color palette.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.12 Decimate
+----------------
+
+Internal name
+     fv_decimate
+Module
+     fv_decimate.so
+Description
+     Skip almost identical frames
+
+5.15.13 Deinterlacer
+--------------------
+
+Internal name
+     fv_deinterlace
+Module
+     fv_deinterlace.so
+Description
+     Deinterlace with various algorithms
+
+5.15.14 DiceTV
+--------------
+
+Internal name
+     fv_dicetv
+Module
+     fv_dicetv.so
+Description
+     DiceTV 'dices' the screen up into many small squares, each
+     defaulting to a size of 16 pixels by 16 pixels..  Each square is
+     rotated randomly in one of four directions: up (no change), down
+     (180 degrees, or upside down), right (90 degrees clockwise), or
+     left (90 degrees counterclockwise).  The direction of each square
+     normally remains consistent between each frame.  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.15 DiffTV
+--------------
+
+Internal name
+     fv_difftv
+Module
+     fv_difftv.so
+Description
+     DiffTV highlights interframe differences.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.16 Display timecodes
+-------------------------
+
+Internal name
+     fv_tcdisplay
+Module
+     fv_tcdisplay.so
+Description
+     Burn timecodes into video frames
+
+5.15.17 DisplaywallTV
+---------------------
+
+Internal name
+     fv_displaywalltv
+Module
+     fv_displaywalltv.so
+Description
+     Display the tiled video images.  You can scroll the image or change
+     the scale.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.18 DotTV
+-------------
+
+Internal name
+     fv_dottv
+Module
+     fv_dottv.so
+Description
+     DotTV converts gray scale images to set of dots.  It is hard to
+     recognize what is shown when your eyes are close to the monitor.
+     Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.19 EdgeTV
+--------------
+
+Internal name
+     fv_edgetv
+Module
+     fv_edgetv.so
+Description
+     Detects edges and display it like good old low resolution computer
+     way.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.20 EdgeblurTV
+------------------
+
+Internal name
+     fv_edgeblurtv
+Module
+     fv_edgeblurtv.so
+Description
+     Detects edge and display it with motion blur effect.  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.21 Equalizer
+-----------------
+
+Internal name
+     fv_equalizer
+Module
+     fv_equalizer.so
+Description
+     Control hue, saturation, contrast and brightness.  For Y'CbCr, it
+     uses routines based on the vf_eq and vf_hue filters from the
+     MPlayer project.  For RGB formats, it uses the colormatrix.
+
+5.15.22 FireTV
+--------------
+
+Internal name
+     fv_firetv
+Module
+     fv_firetv.so
+Description
+     FireTV clips moving objects and burns it.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.23 Flip image
+------------------
+
+Internal name
+     fv_flip
+Module
+     fv_flip.so
+Description
+     Flip video images horizontally and/or vertically
+
+5.15.24 Force framerate
+-----------------------
+
+Internal name
+     fv_framerate
+Module
+     fv_framerate.so
+Description
+     Forces a framerate as input for the next filter.  Its mainly used
+     for testing.
+
+5.15.25 Force pixelformat
+-------------------------
+
+Internal name
+     fv_pixelformat
+Module
+     fv_pixelformat.so
+Description
+     Forces a pixelformat as input for the next filter.  Its mainly used
+     for testing.
+
+5.15.26 Interlace
+-----------------
+
+Internal name
+     fv_interlace
+Module
+     fv_interlace.so
+Description
+     Interlace video images.  Output has half the input framerate.
+
+5.15.27 Invert RGBA
+-------------------
+
+Internal name
+     fv_invert
+Module
+     fv_invert_rgb.so
+Description
+     Invert single color channels.  RGB(A) formats are processed
+     directly, Y'CbCr(A) formats are processed with the colormatrix.
+
+5.15.28 LensTV
+--------------
+
+Internal name
+     fv_lenstv
+Module
+     fv_lenstv.so
+Description
+     LensTV - Based on Old school Demo Lens Effect.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.29 LifeTV
+--------------
+
+Internal name
+     fv_lifetv
+Module
+     fv_lifetv.so
+Description
+     You can play John Horton Conway's Life Game with video input.
+     Moving objects drop seeds on the game field.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.30 MatrixTV
+----------------
+
+Internal name
+     fv_matrixtv
+Module
+     fv_matrixtv.so
+Description
+     The Matrix's visual effect has been metamorphosed to the realtime
+     video effect.  Edge-enhanced input image is reflected to the
+     brightness of falling letters.  Blending with the input image is
+     also available.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.31 MosaicTV
+----------------
+
+Internal name
+     fv_mosaictv
+Module
+     fv_mosaictv.so
+Description
+     MosaicTV censors the incoming objects and gives it mosaic effect.
+     Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.32 NervousHalfTV
+---------------------
+
+Internal name
+     fv_halftv
+Module
+     fv_halftv.so
+Description
+     SimuraTV and NervousTV mixed, make more magic!  Delaying,
+     scratching or our famous "nervous" effect can be added to a half of
+     the screen.  Additionally you can add mirroring effect to it.
+     Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.33 NervousTV
+-----------------
+
+Internal name
+     fv_nervoustv
+Module
+     fv_nervoustv.so
+Description
+     NervousTV randomly re-arranges the past second of video, creating a
+     chaotic expression of past movements.  It shuffles time.  There is
+     no effect on still images.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.34 NoiseTV
+---------------
+
+Internal name
+     fv_noisetv
+Module
+     fv_noisetv.so
+Description
+     Black & White noise is rendered over the incoming objects.  Ported
+     from EffecTV (http://effectv.sourceforge.net).
+
+5.15.35 Old color
+-----------------
+
+Internal name
+     fv_oldcolor
+Module
+     fv_oldcolor.so
+Description
+     Simulate old color- and B/W movies
+
+5.15.36 OpTV
+------------
+
+Internal name
+     fv_optv
+Module
+     fv_optv.so
+Description
+     Traditional black-white optical animation is now resurrected as a
+     real-time video effect.  Input images are binarized and combined
+     with various optical pattern.  You can change its animation speed
+     and direction with a keyboard.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.37 PupTV
+-------------
+
+Internal name
+     fv_puptv
+Module
+     fv_puptv.so
+Description
+     PupTV does pup mark effect on the video input.  The pup is caused
+     by a motion or random rain drops.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.38 QuarkTV
+---------------
+
+Internal name
+     fv_quarktv
+Module
+     fv_quarktv.so
+Description
+     QuarkTV dissolves moving objects.  It picks up pixels from the last
+     eight frames randomly.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.39 RGB Colormatrix
+-----------------------
+
+Internal name
+     fv_colormatrix_rgb
+Module
+     fv_colormatrix_rgb.so
+Description
+     Generic colormatrix (RGBA). You pass the coefficients in RGB(A)
+     coordinates, but the processing will work in Y'CbCr(A) as well.
+
+5.15.40 RandomDotStereoTV
+-------------------------
+
+Internal name
+     fv_rdstv
+Module
+     fv_rdstv.so
+Description
+     RdsTV does rds mark effect on the video input.  The rds is caused
+     by a motion or random rain drops.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.41 RevTV
+-------------
+
+Internal name
+     fv_revtv
+Module
+     fv_revtv.so
+Description
+     RevTV acts like a video waveform monitor for each line of video
+     processed.  This creates a pseudo 3D effect based on the brightness
+     of the video along each line.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.42 RippleTV
+----------------
+
+Internal name
+     fv_rippletv
+Module
+     fv_rippletv.so
+Description
+     RippleTV does ripple mark effect on the video input.  The ripple is
+     caused by a motion or random rain drops.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.43 RndmTV
+--------------
+
+Internal name
+     fv_rndmtv
+Module
+     fv_rndmtv.so
+Description
+     RndmTV give you a noisy picture in color or B/W. Inspired by the
+     old days when reception was poor.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.44 ShagadelicTV
+--------------------
+
+Internal name
+     fv_shagadelictv
+Module
+     fv_shagadelictv.so
+Description
+     Oh behave, ShagedelicTV makes images shagadelic!  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.45 Shift image
+-------------------
+
+Internal name
+     fv_shift
+Module
+     fv_bitshift.so
+Description
+     Upshift 16 bit images, where only some lower bits are used
+
+5.15.46 SimuraTV
+----------------
+
+Internal name
+     fv_simuratv
+Module
+     fv_simuratv.so
+Description
+     The origin of SimuraTV is "SimuraEffect", a VJ (Video Jockey) tool
+     I made in 1995.  Color effect and image mirroring are all of
+     SimuraTV. Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.47 SlofastTV
+-----------------
+
+Internal name
+     fv_slofasttv
+Module
+     fv_slofasttv.so
+Description
+     SloFastTV plays back the current video input at non-constant speed:
+     while the buffer fills the video is played back at half the frame
+     rate, when the buffer is full it plays back at the double rate
+     until it has caught up with the live video again.  This causes the
+     actual image to be delayed from 0 to about half a second.
+     Movements that previously had a constant speed will appear very
+     slow and then very fast.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.48 SparkTV
+---------------
+
+Internal name
+     fv_sparktv
+Module
+     fv_sparktv.so
+Description
+     Bright sparks run on incoming objects.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.49 SpiralTV
+----------------
+
+Internal name
+     fv_spiraltv
+Module
+     fv_spiraltv.so
+Description
+     I admit that 'SpiralTV' is a misnomer; it doesn't actually spiral.
+     What it does do is segment the screen image into a series of
+     concentric circles, each of which is slightly out of phase
+     (timewise) from its neighbors.  Or to put it more simply, it really
+     messes with changing (i.e.  Moving) objects onscreen!  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.50 StreakTV
+----------------
+
+Internal name
+     fv_streaktv
+Module
+     fv_streaktv.so
+Description
+     StreakTV makes after images of moving objects.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.51 Temporal lowpass
+------------------------
+
+Internal name
+     fv_tlp
+Module
+     fv_tlp.so
+Description
+     Simple temporal lowpass
+
+5.15.52 TimedistTV
+------------------
+
+Internal name
+     fv_timedisttv
+Module
+     fv_timedisttv.so
+Description
+     Distorts moving objects in the sight.  When it detects a moving
+     part, it rollbacks to an old frame around that.  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.53 Transform
+-----------------
+
+Internal name
+     fv_transform
+Module
+     fv_transform.so
+Description
+     Transform the image with different methods
+
+5.15.54 TransformTV
+-------------------
+
+Internal name
+     fv_transformtv
+Module
+     fv_transformtv.so
+Description
+     TransformTV does transform mark effect on the video input.  The
+     transform is caused by a motion or random rain drops.  Ported from
+     EffecTV (http://effectv.sourceforge.net).
+
+5.15.55 Tweak timecodes
+-----------------------
+
+Internal name
+     fv_tctweak
+Module
+     fv_tctweak.so
+Description
+     Replace/remove/interpolate timecodes
+
+5.15.56 VertigoTV
+-----------------
+
+Internal name
+     fv_vertigotv
+Module
+     fv_vertigotv.so
+Description
+     VertigoTV is a loopback alpha blending effector with rotating and
+     scaling.  Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.57 WarholTV
+----------------
+
+Internal name
+     fv_warholtv
+Module
+     fv_warholtv.so
+Description
+     WarholTV offers some effects like Andy Warhol's series of
+     paintings; 'Marilyn', 'Marilyn Three Times', 'Four Marilyns' etc.
+     Ported from EffecTV (http://effectv.sourceforge.net).
+
+5.15.58 WarpTV
+--------------
+
+Internal name
+     fv_warptv
+Module
+     fv_warptv.so
+Description
+     WarpTV does realtime goo'ing of the video input.  based on warp-1.1
+     SDL demo by Sam Latinga (http://libSDL.org).  Original version by
+     Emmanuel Marty <core at ggi-project dawt org>.  Ported from EffecTV
+     (http://effectv.sourceforge.net).
+
+5.15.59 Y'CbCr(A) Colormatrix
+-----------------------------
+
+Internal name
+     fv_colormatrix_yuv
+Module
+     fv_colormatrix_yuv.so
+Description
+     Generic colormatrix (Y'CbCrA). You pass the coefficients in
+     Y'CbCr(A) coordinates, but the processing will work in RGB(A) as
+     well.
+
+5.15.60 Zoom
+------------
+
+Internal name
+     fv_zoom
+Module
+     fv_zoom.so
+Description
+     Zoom horizontally and/or vertically
+
+
+File: gmerlin.info,  Node: plugin_vis,  Prev: plugin_fv,  Up: Plugins
+
+5.16 Visualizations
+===================
+
+5.16.1 Scope
+------------
+
+Internal name
+     vis_scope
+Module
+     vis_scope.so
+Description
+     Scope plugin
+
+5.16.2 Lemuria
+--------------
+
+Internal name
+     vis_lemuria
+Module
+     vis_lemuria.so
+Description
+     OpenGL visualization with many effects
+
+5.16.3 Goom
+-----------
+
+Internal name
+     vis_goom
+Module
+     vis_goom.so
+Description
+     Goom plugin
+
+
+File: gmerlin.info,  Node: FAQ,  Next: Get involved,  Prev: Plugins,  Up: Top
+
+6 FAQ
+*****
+
+* Menu:
+
+* General questions::
+* Installation questions::
+* Usage questions::
+
+
+File: gmerlin.info,  Node: General questions,  Next: Installation questions,  Up: FAQ
+
+6.1 General questions
+=====================
+
+
+File: gmerlin.info,  Node: Installation questions,  Next: Usage questions,  Prev: General questions,  Up: FAQ
+
+6.2 Installation questions
+==========================
+
+*Q:* _Why do I have to install so many packages to get all features?_
+
+   *A:* Because having one huge package is not good for people, who want
+to use only one small subset of the included libraries or applications.
+To make installation a bit easier, there are the gmerlin-dependencies
+and gmerlin-all-in-one packages.
+
+   *Q:* _How do I enable Ladspa plugins?_
+
+   *A:* Gmerlin looks for Ladspa plugins in '/usr/lib/ladspa' and
+'/usr/local/lib/ladspa' by default.  Additional paths can be set with
+the 'LADSPA_PATH' enviromnent variable.
+
+   *Q:* _Which Ladspa plugins work with gmerlin?_
+
+   *A:* All plugins, which have either 1 or 2 input and output ports.
+The numbers of input- and output ports must be equal.
+
+   *Q:* How do I enable DVB?
+
+   *A:* Gmerlin looks for DVB devices in /dev/dvb.  Then, you must pass
+gmerlin a channel configuration file created with the dvb-apps
+(http://www.linuxtv.org/wiki/index.php/LinuxTV_dvb-apps) tools.  Check
+the documentation coming with dvb-apps for how to create channel files.
+Gmerlin looks for channel maps in the directories '$HOME/.szap',
+'$HOME/.tzap', '$HOME/.czap', '$HOME/.azap', '$HOME/.mplayer' and
+'$HOME/.xine'.  The first time, you load the DVB plugin, and each time
+you changed your channel map, the plugin will tune to each transponder
+and get the full information about the programs (the information
+provided by dvp-apps is not sufficient).  This can take some time.
+
+
+File: gmerlin.info,  Node: Usage questions,  Prev: Installation questions,  Up: FAQ
+
+6.3 Usage questions
+===================
+
+*Q:* _Ok, I compiled gmerlin and started the player, now how do I play a
+file?_
+
+   *A:* The easiest way is to open the Incoming or Favourites album and
+use one of the buttons at the bottom to open a file or URL. Or drag the
+file from a filemanager into an album.  Later you might want to create
+your own albums.
+
+   *Q:* _Can I play a VCD image from harddisk before burning?_
+
+   *A:* Yes.  If you use vcdimager, you have 2 files: a .bin file and a
+.cue file.  If you load the .cue file with the avdecoder plugin, you'll
+be able to play the VCD image.
+
+   *Q:* _Can I play a DVD image from harddisk or from a mounted DVD
+drive?_
+
+   *A:* Yes, in the dvd directory, go to the subdirectory 'video_ts' and
+load the file 'video_ts.ifo'.
+
+   *Q:* _Can I play an audio CD image from harddisk before burning?_
+
+   *A:* Not yet.
+
+   *Q:* _How can I make gmerlin the default audio CD player on my
+Desktop environment?_
+
+   *A:* First, find out how to configure the default audio CD player on
+your system.  Usually, you can set a command, which is executed, when a
+new audio cd is inserted.  Assuming your cdrom device is '/dev/hdd', the
+command for opening and playing an audio cd is:
+
+   'gmerlin_remote -launch -openplay cda:///dev/hdd'
+
+   If you just want ot open the CD (without starting playback), use:
+
+   'gmerlin_remote -launch -open cda:///dev/hdd'
+
+   *Q:* _How can I make gmerlin the default DVD player on my Desktop
+environment?_
+
+   *A:* Same as for audio CDs, but replace 'cda://' with 'dvd://'.
+
+   *Q:* _How can I configure gmerlin as a Mime handler for media files
+on my Desktop environment?_
+
+   *A:* Find out how to set up mime handlers (e.g.  right click onto a
+file and select "Open with...").  Then, enter the command
+'gmerlin_launcher'.
+
+   *Q:* _How can I map multimedia keys on my keyboard to gmerlin
+functions?_
+
+   *A:* You need some way to configure custom shell commands for
+multimedia keys.  Check the documentation of your Desktop system.  To
+remote control gmerlin, use the commandline program 'gmerlin_remote'.
+Type 'gmerlin_remote -help' for supported options and commands.
+
+
+File: gmerlin.info,  Node: Get involved,  Prev: FAQ,  Up: Top
+
+7 Get involved
+**************
+
+Contribution to gmerlin can happen at several skill levels:
+
+   * Report bugs and installation problems, tell about features you'd
+     like to see.
+   * Tell us about files, which cannot be played.  An URL and some infos
+     (other applications which play the file fine) can help a lot.
+   * Make skins.  In /usr/local/gmerlin/skins/Default/skin.xml, you'll
+     find an example skin description file.
+   * Assembler gurus can write more speed optimized routines for gavl
+   * Mathematics gurus can write more accurate routines for the higher
+     quality levels of gavl.
+

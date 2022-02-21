@@ -1,0 +1,353 @@
+body * {
+    outline: none;
+    font-size: inherit;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+html, body
+  {
+  min-height: 100%;
+  }
+
+body
+  {
+  margin:      0px;
+  height: 100%;
+  }
+
+
+/*
+body[data-has_wallpaper='1'] *
+  {
+  color: #ffffff;
+  }
+*/
+
+/* Header and Footer */
+
+header, footer {
+    position: fixed;
+    left: 0px;
+    right: 0px;
+    z-index: 50;
+  }
+
+header
+  {
+    top: 0px;
+    border-bottom-style: none;
+  }
+
+footer
+  {
+    bottom: 0px;
+    border-top-style: none;
+  }
+
+header table {
+  width: 100%;
+  height: 100%;
+}
+
+header td {
+  vertical-align: middle;
+}
+
+td[data-has_add="true"] #header-add
+  {
+  display: inline-block;
+  }
+
+td[data-has_add="false"] #header-add
+  {
+  display: none;
+  }
+
+td[data-has_play="true"] #header-play
+  {
+  display: inline-block;
+  }
+
+td[data-has_play="false"] #header-play
+  {
+  display: none;
+  }
+
+/* Iteminfo  in landscape */
+@media screen and (orientation: landscape) {
+
+.track-image {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.track-info {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+}
+
+/* Iteminfo  in portrait */
+@media screen and (orientation: portrait) {
+
+.track-image {
+    display: block;
+    text-align: center;
+}
+
+.track-info {
+    display: block;
+}
+
+}
+
+#header_icon {
+    width: 2em;
+    font-size: 200%;
+    text-align: center;
+}
+
+#header_icon img {
+    max-width: 100%;
+    max-height: 2em;
+}
+
+.listicon {
+    width: 2em;
+    text-align: center;
+    padding: 0px;
+    font-size: 200%;
+}
+
+#browser td {
+  vertical-align: middle;
+}
+
+#browser > [data-current="false"] td.play-icon
+  {
+  display: none;
+  }
+
+#browser[data-mode="tiles"]
+  {
+/*  grid-template-columns: repeat(auto-fit, minmax(min-content, 200px)); */
+  grid-gap: 4px;
+  }
+
+#browser[data-mode="tiles"] > div
+  {
+      padding: 2px;
+  }
+
+#browser[data-mode="tiles"] img
+  {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+/* Icons */
+div.tile-image[data-contains="div"]
+  {
+      text-align: center;
+      position: relative;
+  }
+
+div.tile-image[data-contains="div"] div
+  {
+      font-size: 400%;
+      vertical-align: middle;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+  }
+
+#imageviewer-prev, #imageviewer-next
+  {
+    position: fixed;
+    z-index: 3;
+    top: 50%;
+    transform: translate(0%, -50%);
+  }
+
+#imageviewer-prev 
+  {
+      left: 0px;
+  }
+
+#imageviewer[data-controls="true"] .iv-control
+  {
+  display: inline-block;
+  }
+
+#imageviewer[data-controls="false"] .iv-control
+  {
+  display: none;
+  }
+
+#imageviewer-next
+  {
+     right: 0px;
+  }
+
+#imageviewer-label
+  {
+    position: fixed;
+    z-index: 3;
+    left: 50%;
+    bottom: 0px;
+    transform: translate(-50%, 0%);
+  }
+
+
+#browser[data-mode="list"] img
+  {
+      max-width: 100%;
+      max-height: 2em;
+      vertical-align: middle;
+  }
+
+#browser[data-imgaspect="square"] div.tile-image
+  {
+      aspect-ratio: 1.0;
+  }
+
+#browser[data-imgaspect="poster"] div.tile-image
+  {
+      aspect-ratio: 0.667;
+  }
+
+#imageviewer
+  {
+  background-color: #000000;
+  position: fixed;
+  left: 0px;
+  right: 0px;
+  top: 0px;
+  bottom: 0px;
+  z-index: 100;
+  }
+
+#imageviewer-img
+  {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  }
+
+
+.menu {
+  position: fixed;
+  z-index: 100;
+/*   border: solid;
+  border-width: 1px; */
+  overflow-y: auto;  
+  }
+
+.menu > div[data-disabled="true"]
+  {
+  display: none;
+  }
+
+/* Menu icon */
+.menu td:nth-child(1)
+  {
+  width: 1.2em;
+  text-align: center;
+  }
+
+.menu img
+  {
+  height: 1.2em;
+  text-align: center;
+  }
+
+/* Button */
+
+button {
+  display:          inline-block;
+  }
+
+#settings-table {
+  width: 100%;
+  }
+
+
+#settings-table td
+  {
+  vertical-align: middle;
+  }
+
+#footer-table button {
+/*  border-width: 1px;
+  border-style: solid;
+  border-color: #ffffff; */
+  border-style: none;
+  font-size: 90%;
+  width: 3.0em;
+  }
+
+/* 
+#playerbuttons:after {
+  content: '';
+  width: 100%; 
+  display: inline-block;
+}
+*/
+
+/* Player */
+
+
+/* Switch off outline for buttons */
+
+button::-moz-focus-inner,
+input[type="reset"]::-moz-focus-inner,
+input[type="range"]::-moz-focus-inner,
+input[type="button"]::-moz-focus-inner,
+input[type="submit"]::-moz-focus-inner
+  {
+  border: none;
+  }
+
+#progress-popup {
+  display: none;
+  width: 100%;
+  }
+
+#load-progress {
+  width: 100%;
+}
+
+/* Player controls */
+
+#player-controls {
+  display: block;
+  width: 100%;
+  }
+
+#pager {
+  display: none;
+/*  display: block; */
+  width: 100%;
+  }
+
+#nav-popup, #search-popup {
+  display: none;
+  position: fixed;
+  left:   50%;
+  top:   50%;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+}
+
+#audio-element {
+  position: fixed;
+  display: none;
+}
+

@@ -1,0 +1,769 @@
+html {
+  height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  margin:     0px;
+  font-family: Tahoma, Geneva, sans-serif;  
+  font-size:   32px;
+/*  font-weight: bold; */
+  color:       #FFFFF0;
+  overflow: hidden;
+}
+
+/* Button */
+
+.button, .button_active, .button_disabled {
+  color:      #101010;
+  background: linear-gradient(to bottom, #a0a0a0, #808080);
+  font-size:        40px;
+  width:            50px;
+  height:           50px;
+  border-radius:    8px;
+  outline:          0;
+  border-style:     outset;
+  border-width:     5px;
+  border-color:     #808080;
+      
+  margin:           0px;
+  cursor:     pointer;
+}
+
+.button:hover, .button:focus {
+   background: linear-gradient(to bottom, #ffffff, #8f8f8f);
+}
+
+.button:focus {
+   border-style:     outset;
+   border-color:     #FF8000;
+}
+
+.button:active, .button_active {
+   border-style:     inset;
+   border-color:     #FF8000;
+}
+
+.button_disabled {
+   color:            #F0F0F0;
+   border-style:     solid;
+   background-image: linear-gradient(to bottom, #f0f0f0, #808080);
+}
+
+/* Player button */
+
+.playerbutton, .playerbutton_active, .playerbutton_disabled {
+  color:      #101010;
+  background: linear-gradient(to bottom, #a0a0a0, #808080);
+  font-size:        40px;
+  width:            90px;
+  height:           50px;
+  border-radius:    28px;
+  outline:          0;
+  border-style:     outset;
+  border-width:     5px;
+  border-color:     #808080;
+
+  border-spacing:   10px;
+
+  
+  cursor:     pointer;
+}
+
+.playerbutton:hover, .playerbutton:focus {
+   background: linear-gradient(to bottom, #ffffff, #8f8f8f);
+}
+
+.playerbutton:focus {
+   border-style:     outset;
+   border-color:     #FF8000;
+}
+
+.playerbutton:active, .playerbutton_active {
+   border-style:     inset;
+   border-color:     #FF8000;
+}
+
+.playerbutton_disabled {
+   color:            #F0F0F0;
+   border-style:     solid;
+   background-image: linear-gradient(to bottom, #f0f0f0, #808080);
+}
+
+.playerdisplay {
+   user-select: none;
+   font-size: 250%;
+   color: #FFFFF0;
+}
+
+/* */
+
+div.toppanel, div.bottompanel {
+  border-width:      0px;
+  border-style:      none;
+  position:          absolute;
+/*  display:           table-cell; */
+  vertical-align:    middle;
+  color:            #FFFFFF;
+  left:              0px;
+  right:             0px;
+  height:            56px;
+  line-height:       56px;
+  }
+
+div.toppanel {
+  top:               0px;
+/*  border-bottom-width: 3px;
+  border-bottom-style: outset; */
+  border-width:       0px;
+  border-style:      none;
+  padding-left:      10px; 
+  padding-right:     10px; 
+  background: linear-gradient(to bottom, rgba(32,32,32,0.7), rgba(32,32,32,0.0));
+}
+
+div.bottompanel {
+  bottom:           0px;
+  border-width:       0px;
+  border-style:      none;
+  background: linear-gradient(to bottom, rgba(32,32,32,0.0), rgba(32,32,32,0.7));
+}
+
+table.bottompanel {
+  position:         absolute;
+  top:              0px;
+  left:             0px;
+  width:            100%;
+  height:           50px;
+  vertical-align:   middle;
+  padding:          0px;
+  margin:           0px;
+  border-spacing:   0px;
+}
+
+#bottom_left
+  {
+  padding-top:  0px;
+  padding-bottom:  0px;
+  padding-left: 10px;
+  }
+
+#bottom_right
+  {
+  padding-top:  0px;
+  padding-bottom:  0px;
+  padding-right: 10px;
+  }
+
+div.iteminfo, #listcontainer,
+#containerlistcontainer {
+  background: linear-gradient(to bottom, rgba(32,32,32,0.5), rgba(0,0,0,0.5));
+}
+
+div.toppanel
+  {
+
+  }
+
+#listcontainer, div.iteminfo, div.containerinfo,
+div.volume_popup, div.atrack_popup {
+  position:      absolute;
+}
+
+#listcontainer,
+#containerlistcontainer,
+#movie_popup_listcontainer,
+div.iteminfo,
+div.volume_popup, div.atrack_popup {
+  border-radius: 10px;
+  border-width:  6px;
+  border-style:  ridge;
+}
+
+table.infopanel {
+  width: 100%;
+  font-weight: normal;
+  font-size:   85%;
+}
+
+td.imagecell {
+  text-align: center;
+  vertical-align: middle;
+  padding-top:    10px;
+  padding-bottom: 10px;
+  user-select: none;
+  }
+
+div.iteminfo {
+  visibility:        visible;
+  top:               60px;
+}
+
+div.containerinfo {
+  visibility:        visible;
+  left:              10px;
+  top:               70px;
+  bottom:            70px;
+  overflow:          hidden;
+  border-width:      0px;
+  border-style:      none;
+}
+
+#listcontainer {
+  top:               60px;
+  bottom:            70px;
+  right:             90px;
+  left:              10px;
+}
+
+#containerlistcontainer {
+  display: inline-block;
+  position: relative;
+  outline: 0;
+}
+
+#listcontainer, #containerlistcontainer, #movie_popup_listcontainer, div.infopanel {
+  border-color:  #a0a0a0;
+}
+
+#listcontainer, #containerlistcontainer, #movie_popup_listcontainer {
+  outline: 0;
+}
+
+#listcontainer:focus, #containerlistcontainer:focus, #movie_popup_listcontainer:focus {
+  border-color:  #FF8000;
+  background: linear-gradient(to bottom, rgba(0,0,64,0.6), rgba(0,0,32,0.6));
+}
+
+
+table.buttonbar {
+  position:         absolute;
+  bottom:           69px;
+  right:            0px;
+  width:            80px;
+  vertical-align:   middle;
+}
+
+td.buttonbar {
+  width:            100%;
+  text-align:       center;
+  vertical-align:   middle;
+  padding-top:      10px;
+  padding-left:     10px;
+  padding-right:    10px;
+}
+
+div.listscrollarea {
+  display:       inline-block;
+  position:      absolute;
+  top:           0px;
+  bottom:        0px;
+  left:          0px;
+  right:         40px;
+  overflow:      hidden;
+}
+
+#containerlistdiv {
+  right:         40px;
+}
+
+div.containerlistscrollbar, div.listscrollbar, #movie_popup_listscrollbar
+  {
+  width:        37px;
+  border-width: 0px 0px 0px 3px;
+  border-style: ridge;
+  border-color: #808080;
+  }
+
+div.containerlistscrollbar {
+  display:      inline-block;
+  height:       100%;
+}
+
+div.listscrollbar, #movie_popup_listscrollbar {
+  display:      inline-block;
+  position:     absolute;
+  right:        0px;
+  top:          0px;
+  bottom:       0px;
+}
+
+div.listscroller {
+  display:      inline-block;
+  position:     absolute;
+  right:        0px;
+  left:         0px;
+  top:          0px;
+/*  height:       100px; */
+  border-width: 3px;
+  border-style: outset;
+  border-color: #808080;
+  border-radius: 10px;
+  background: linear-gradient(to right, rgba(128,128,128,0.6), rgba(64,64,64,0.6));
+}
+
+.expander {
+   width: 100%;
+   font-weight: normal;
+   font-size:   85%;
+}
+
+hr {
+    border: 0;
+    height: 2px;
+    margin: 0px;
+    background-image: -webkit-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:    -moz-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:     -ms-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:      -o-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+}
+
+div.list {
+  width:           100%;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  outline:     0;
+  }
+
+div.listrow, div.listrow_focus
+{
+    width: 100%;
+}
+
+
+div.listrow_focus
+{
+  color:      #101010;
+  font-weight: bold;
+  font-size:  120%;
+  background: linear-gradient(to bottom, #f0f0f0, #808080);
+}
+
+/* Active backgrounds */
+
+span.icon {
+  font-size: 120%;
+}
+
+div.loading {
+  position:          absolute;
+  width:             128px;
+  height:            128px;
+  left:              50%;
+  top:               50%;
+  margin-left:       -64px;
+  margin-top:        -64px;
+  background-size: 100% auto;
+  background: url(/static/icons/loading_white.svg);
+  z-index:           10;
+}
+
+.album_thumbnail, .movie_thumbnail
+  {
+  border-width: 4px;
+  border-style: ridge;
+  }
+
+.movie_thumbnail
+  {
+  }
+
+.player_slider
+  {
+  width: 90%;
+  border-radius: 13px;
+  }
+
+.player_slider, .volume_slider
+  {
+  outline: 0;
+  height: 26px;
+  background-color: #202020;
+  border-color: #808080;
+  border-style: inset;
+  border-width: 3px;
+  }
+
+.player_slider:focus
+  {
+  border-color: #F07000;
+  }
+
+.player_slider_handle
+  {
+  border-radius: 10px;
+  width:  20px;
+  }
+
+.player_slider_handle, .volume_slider_handle
+  {
+  height: 20px;
+  background-color: #70F070;
+  border-width: 3px;
+  border-color: #808080;
+  border-style:     outset;
+  }
+
+.player_slider_handle:hover
+  {
+  background-color: #F07000;
+  }
+
+/* Info popups */
+
+div.hidden
+  {
+    visibility: hidden;
+    border-style: none;
+  }
+
+div.popup
+  {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    visibility: visible;
+    z-index: 10;
+    overflow: hidden;
+  }
+
+div.popup_song
+  {
+    background: linear-gradient(to bottom, #404040, #101010);
+    padding: 20px;
+    display: table-cell;
+    vertical-align: middle;
+    border-style:     outset;
+    border-radius:    10px;
+    left: 50%;
+    top: 50%;
+  }
+
+div.movie_poster
+  {
+    position: absolute;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    z-index: 12;
+    
+    border-style:     outset;
+    border-color:     #808080;
+    border-width:     3px;
+    
+    left:      30px;
+    bottom:    30px;
+    margin-left:   0px;
+    margin-bottom: 0px;
+    width:  25vw;
+    height: 37.5vw;
+  }
+
+
+div.movie_pane
+  {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    height: 55%;
+    z-index: 11;
+    background: linear-gradient(to bottom, rgba(32,32,32,0.3), rgba(0,0,0,0.3));
+  }
+
+div.movie_info
+  {
+    position: absolute;
+    left: 25%;
+    right: 100px;
+    top: 0px;
+    bottom: 30px; 
+    margin-left: 60px;   
+    z-index: 12;
+  }
+
+table.movie_tab
+  {
+  position: absolute;
+  left:     0px;
+  top:      0px;
+  height:   40px;
+  border-spacing: 0px;
+  }
+
+div.movie_tab
+  {
+  position: absolute;
+  left:     0px;
+  top:      40px;
+  bottom:    0px;
+  right:     0px;
+  border-width: 3px;
+  border-style:  ridge;
+  }
+
+table.movie_buttons
+  {
+  position: absolute;
+  top:      40px;
+  right:    0px;
+  width:    80px;
+  }
+
+td.notebook_tab, td.notebook_tab_active
+  {
+  font-size: 80%;
+  font-weight: bold;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-style: outset;
+  border-width: 3px;
+  outline: 0;
+  }
+
+td.notebook_tab:focus, td.notebook_tab_active:focus
+  {
+  border-color: #ff8000;
+  border-style: solid;
+  }
+
+td.notebook_tab_active
+  {
+  color:      #101010;
+  background: linear-gradient(to bottom, #f0f0f0, #808080);
+  }
+
+/* Menu */
+
+.mainmenu {
+  border-width: 3px;
+  border-color: #808080;
+  border-style: outset;
+  outline:          0;
+  background-color: #808080;
+  z-index:          15;
+}
+
+.mainmenuitem, .mainmenuitem_selected {
+  border-width: 0px;
+  padding:      3px;
+}
+
+.mainmenuitem_selected {
+  color: #ffffff;
+  background-color: #4c4fb7;
+}
+
+
+/* Volume popup */
+
+div.volume_popup, div.atrack_popup {
+  border-color: #b0b0b0;
+/*  background-color: #b0b0b0; */
+  background: linear-gradient(to bottom, #f0f0f0, #b0b0b0);
+/*  height: 54px; */
+}
+
+table.volume_popup {
+}
+
+div.volume_slider {
+  width: 400px;
+  margin: 10px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+div.volume_slider_handle {
+  left: 0px;
+  }
+
+td.volume_icon {
+  font-size: 150%;
+  width: 0.8em;
+  text-align: left;
+  vertical-align: middle;
+  padding-left: 10px;
+  color: #000000;
+  }
+
+/* Track popup */
+
+td.atrack_popup {
+  border-color: #b0b0b0;
+/*  background-color: #b0b0b0; */
+  background: linear-gradient(to bottom, #f0f0f0, #b0b0b0);
+/*  height: 54px; */
+}
+
+#atrack_info {
+  color: #000000;
+  }
+
+#atrack_cover {
+
+  }
+
+/* Settings */
+
+table.settings {
+  border-collapse: collapse;
+}
+
+tr.settings, tr.settings_focus
+  {
+  }
+
+tr.settings
+  {
+  }
+
+tr.settings_focus
+  {
+  background: linear-gradient(to bottom, #8f8f8f, #4b4b4b);
+  }
+
+tr.settings > td, tr.settings_focus > td
+{
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  padding-left: 0.25em;
+  padding-right: 0.25em;
+}
+
+table.settings_pulldown
+  {
+  color:      #101010;
+  background: linear-gradient(to bottom, #a0a0a0, #808080);
+
+  outline:          0;
+  border-style:     outset;
+  border-width:     3px;
+  border-color:     #808080;
+      
+  margin:           0px;
+  cursor:     pointer;
+  }
+
+.settingsmenu {
+  border-width: 3px;
+  border-color: #808080;
+  border-style: outset;
+  outline:          0;
+  background-color: #808080;
+}
+
+.settingsmenuitem, .settings_mainmenuitem_selected {
+  border-width: 0px;
+  padding:      3px;
+}
+
+.settingsmenuitem_selected {
+  color: #ffffff;
+  background-color: #4c4fb7;
+}
+
+
+#wall_popup_topbar, #wall_popup_bottombar {
+  position: fixed;
+  height: 80px;
+  line-height: 80px;
+  left:    0px;
+  right:   0px;
+
+  padding-left:    10px;
+  padding-right:   10px;
+  
+  z-index:       12;
+}
+
+#wall_popup_topbar {
+  top: 0px;
+  background: linear-gradient(to bottom, rgba(0,0,0,1.0), rgba(0,0,0,0.0));
+}
+
+#wall_popup_bottombar {
+  bottom: 0px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.0), rgba(0,0,0,1.0));
+}
+
+#wall_popup_hl
+  {
+  position: absolute;
+  border-width:  8px;
+  border-style:  outset;
+  border-color:  #FFFF00;
+  z-index:       13;
+  }
+
+#wall_table
+  {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  border-collapse: collapse;
+  border-spacing: 0px;
+  z-index:       11;
+  }
+
+img.wall_popup {
+  display:      block;    
+  border-width: 3px;
+  border-style: solid;
+  border-color: transparent;
+}
+
+td.wall_popup {
+  padding: 0px;
+}
+
+#movie_popup_info {
+  font-size: 120%;
+  margin-bottom: 20px;
+  }
+
+#movie_popup_persons {
+  margin-bottom: 20px;
+}
+
+#movie_popup_poster {
+  position: absolute;
+
+  bottom:  40px;
+  left:    40px;
+  width:   600px;
+  height:  900px;
+  
+  }
+
+#movie_popup_listscrollarea {
+  right:   40px;
+}
+
+#movie_popup_listcontainer {
+  position: absolute;
+  left:    700px;
+  bottom:  40px;
+  right:   40px;
+  height:  600px;
+  background: linear-gradient(to bottom, rgba(0,0,32,0.5), rgba(0,0,16,0.5));
+  overflow: hidden;
+  }
+
+#movie_popup {
+    z-index: 11;
+}

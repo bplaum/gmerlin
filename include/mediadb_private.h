@@ -1,0 +1,460 @@
+/*****************************************************************
+ * gmerlin - a general purpose multimedia framework and applications
+ *
+ * Copyright (c) 2001 - 2012 Members of the Gmerlin project
+ * gmerlin-general@lists.sourceforge.net
+ * http://gmerlin.sourceforge.net
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * *****************************************************************/
+
+#include <gavl/gavl.h>
+#include <gmerlin/mediadb.h>
+#include <gavl/metatags.h>
+
+#include <bgsqlite.h>
+
+#define BG_DB_OBJ_FLAG_DONT_PROPAGATE (1<<0)
+#define BG_DB_OBJ_FLAG_CHANGED        (1<<2)
+
+/*
+ *  Object creation:
+ *
+ *  - bg_db_object_init(bg_db_object_storage_t * obj);
+ *  - bg_db_object_create(db, void*);   // Set a unique ID
+ *  - bg_db_object_set_type();
+
+ *  - bg_db_object_set_size();
+ *  - bg_db_object_set_duration();
+ *
+ *  - bg_db_object_set_parent[_id](); // Set unique ID of parent
+ *
+ *  - bg_db_object_update();
+ */
+
+/*
+ *  Object querying
+ *  - bg_db_object_init(bg_db_object_storage_t * obj);
+ *  - bg_db_object_query(void*, id);
+ *
+ */
+
+typedef union
+  {
+  bg_db_object_t obj;
+  bg_db_dir_t dir;
+  bg_db_file_t file;
+  bg_db_audio_file_t audio_file;
+  bg_db_video_file_t video_file;
+  bg_db_audio_album_t audio_album;
+  bg_db_vfolder_t vfolder;
+  bg_db_movie_t movie;
+  bg_db_video_container_t videocontainer;
+  bg_db_url_t url;
+  bg_db_rootfolder_t root_folder;
+  } bg_db_object_storage_t;
+
+struct bg_db_object_class_s
+  {
+  const char * name;
+  void (*del)(bg_db_t * db, bg_db_object_t * obj);   // Delete from db
+  void (*free)(void * obj);                          // Free memory
+  int (*query)(bg_db_t * db, void * obj);  // Query from database
+  void (*update)(bg_db_t * db, void * obj);          // Update database with new settings
+  void (*dump)(void * obj);
+  void (*get_children)(bg_db_t * db, void * obj, bg_sqlite_id_tab_t * tab);
+  const struct bg_db_object_class_s * parent;
+  };
+
+/* string cache */
+
+typedef struct
+  {
+  int64_t id;
+  char * str;
+  } bg_db_string_cache_item_t;
+
+typedef struct
+  {
+  int size;
+  int alloc;
+  bg_db_string_cache_item_t * items;
+  char * table;
+  char * str_col;
+  char * id_col;
+  } bg_db_string_cache_t;
+
+bg_db_string_cache_t * bg_db_string_cache_create(int size,
+                                                 const char * table,
+                                                 const char * str_col,
+                                                 const char * id_col);
+
+void
+bg_db_string_cache_destroy(bg_db_string_cache_t *);
+
+char *
+bg_db_string_cache_get(bg_db_string_cache_t *, sqlite3 * db, int64_t id);
+
+/* Thumbnail cache */
+
+typedef struct
+  {
+  int max_width;
+  int max_height;
+  char * mimetype;
+  int max_size;
+
+  int64_t ref_id;
+  int64_t thumb_id;
+  } bg_db_thumbnail_cache_item_t;
+
+typedef struct
+  {
+  int size;
+  int alloc;
+  bg_db_thumbnail_cache_item_t *items;
+  } bg_db_thumbnail_cache_t;
+
+void bg_db_thumbnail_cache_init(bg_db_thumbnail_cache_t * c);
+void bg_db_thumbnail_cache_free(bg_db_thumbnail_cache_t * c);
+
+void 
+bg_db_make_thumbnail(bg_db_t * db, void * obj,
+                     int max_width, int max_height, const char * mimetype);
+
+
+#define BG_DB_CACHE_SIZE 128
+
+typedef struct
+  {
+  bg_db_object_storage_t obj; // Must be first
+  bg_db_object_storage_t orig;
+  int refcount;
+  int sync;
+  int have_children;
+  bg_sqlite_id_tab_t children;
+  } bg_db_obj_cache_t;
+
+void bg_db_obj_cache_clear(bg_db_obj_cache_t*);
+
+struct bg_db_s
+  {
+  sqlite3 * db;
+  char * base_dir;
+  char * db_path;
+  
+  int base_len;
+  bg_plugin_registry_t * plugin_reg;
+  
+  int cache_size;
+  bg_db_obj_cache_t * cache;
+
+  int num_added;
+  int num_deleted;
+
+  /* String caches */
+  bg_db_string_cache_t * audio_artists;
+  bg_db_string_cache_t * audio_genres;
+  bg_db_string_cache_t * audio_albums;
+
+  bg_db_string_cache_t * video_genres;
+  bg_db_string_cache_t * video_persons;
+  bg_db_string_cache_t * video_countries;
+  bg_db_string_cache_t * video_languages;
+  
+  bg_db_string_cache_t * mimetypes;
+  
+  /* Thumbnail cache */
+  bg_db_thumbnail_cache_t th_cache;
+  
+  /* Select statements for common tables */
+
+  sqlite3_stmt * q_objects;
+  sqlite3_stmt * q_files;
+  sqlite3_stmt * q_audio_files;
+  sqlite3_stmt * q_audio_albums;
+  sqlite3_stmt * q_directories;
+  sqlite3_stmt * q_video_files;
+  sqlite3_stmt * q_video_infos;
+  sqlite3_stmt * q_urls;
+  sqlite3_stmt * q_rootfolders;
+  };
+
+/* File scanning */
+
+typedef enum
+  {
+  BG_DB_DIRENT_FILE,
+  BG_DB_DIRENT_DIRECTORY,
+  } bg_db_dirent_type_t;
+
+typedef struct
+  {
+  bg_db_dirent_type_t type;
+  char * path;
+  int parent_index;
+  
+  int64_t size;
+  time_t mtime;
+
+  int done;
+  } bg_db_scan_item_t;
+
+/* Get the parent album of an audio file */
+
+bg_db_audio_album_t *
+bg_db_get_audio_album(bg_db_t * db, bg_db_audio_file_t * file);
+
+bg_db_scan_item_t *
+bg_db_scan_directory(const char * directory, int * num);
+void bg_db_scan_items_free(bg_db_scan_item_t *, int num);
+
+void bg_db_scan_item_free(bg_db_scan_item_t * item);
+int bg_db_scan_item_set(bg_db_scan_item_t * ret, char * filename);
+
+/* Object */
+void * bg_db_object_create(bg_db_t * db); /* Create an object */
+void * bg_db_object_create_root(bg_db_t * db);
+
+void bg_db_object_add(bg_db_t * db, bg_db_object_t * obj);    /* Add to DB      */
+void bg_db_object_update(bg_db_t * db, void * obj, int children, int parent); /* Update in DB   */
+void bg_db_object_delete(bg_db_t * db, void * obj); /* Delete from DB */
+void bg_db_object_free(void * obj);
+
+int bg_db_object_is_valid(void * obj);
+
+const bg_db_object_class_t * bg_db_object_get_class(bg_db_object_type_t t);
+void bg_db_object_set_type(void * obj, bg_db_object_type_t t);
+
+void bg_db_object_set_parent_id(bg_db_t * db, void * obj, int64_t parent_id);
+void bg_db_object_set_parent(bg_db_t * db, void * obj, void * parent);
+
+int64_t bg_db_object_get_parent(void * obj);
+
+void bg_db_object_update_size(bg_db_t * db, void * obj, int64_t delta_size);
+void bg_db_object_update_duration(bg_db_t * db, void * obj, gavl_time_t delta_d);
+
+
+
+void bg_db_object_create_ref(void * obj, void * parent);
+void bg_db_object_set_label_nocpy(void * obj, char * label);
+void bg_db_object_set_label(void * obj1, const char * label);
+
+void bg_db_object_add_child(bg_db_t * db, void * obj1, void * child1);
+void bg_db_object_remove_child(bg_db_t * db, void * obj1, void * child1);
+
+void bg_db_object_init(void * obj1);
+
+void
+bg_db_get_children(bg_db_t * db, int64_t id, bg_sqlite_id_tab_t * tab);
+
+
+extern const bg_db_object_class_t bg_db_root_class;
+
+/* Container */
+void * bg_db_container_get(bg_db_t * db, void * parent, const char * path1);
+
+/* Directory */
+
+extern const bg_db_object_class_t bg_db_dir_class;
+
+int bg_db_dir_del(bg_db_t * db, bg_db_dir_t * dir);
+
+int64_t bg_dir_by_path(bg_db_t * db, const char * path);
+int64_t bg_parent_dir_by_path(bg_db_t * db, const char * path1);
+
+bg_db_dir_t *
+bg_db_dir_ensure_parent(bg_db_t * db,
+                        bg_db_dir_t * dir, const char * path);
+
+void bg_db_dir_create(bg_db_t * db, int scan_flags,
+                      bg_db_scan_item_t * item,
+                      bg_db_dir_t ** parent, int64_t * scan_dir_id);
+
+/* File */
+
+int bg_db_file_add(bg_db_t * db, bg_db_file_t * f);
+extern const bg_db_object_class_t bg_db_file_class;
+
+void bg_db_file_create(bg_db_t * db, int scan_flags,
+                       bg_db_scan_item_t * item,
+                       bg_db_dir_t ** parent, int64_t scan_dir_id);
+
+bg_db_file_t *
+bg_db_file_create_from_object(bg_db_t * db, bg_db_object_t * obj, int scan_flags,
+                              bg_db_scan_item_t * item,
+                              int64_t scan_dir_id);
+
+
+/* Create an internally generated files (e.g. a thumbnail) */
+bg_db_file_t * bg_db_file_create_internal(bg_db_t * db, const char * path_rel);
+
+
+/* Audio file */
+void bg_db_audio_file_create(bg_db_t * db, void * obj, gavl_dictionary_t * t);
+
+int bg_db_audio_file_add(bg_db_t * db, bg_db_audio_file_t * t);
+int bg_db_audio_file_query(bg_db_t * db, bg_db_audio_file_t * t, int full);
+extern const bg_db_object_class_t bg_db_audio_file_class;
+
+void bg_db_audio_file_create_refs(bg_db_t * db, void * obj);
+
+/* Remove empty audio genres and artists */
+void bg_db_cleanup_audio(bg_db_t * db);
+
+/* Video file */
+extern const bg_db_object_class_t bg_db_video_file_class;
+extern const bg_db_object_class_t bg_db_movie_class;
+extern const bg_db_object_class_t bg_db_episode_class;
+extern const bg_db_object_class_t bg_db_movie_part_class;
+
+void bg_db_video_file_create(bg_db_t * db, void * obj, gavl_dictionary_t * t);
+
+void bg_db_cleanup_video(bg_db_t * db);
+
+/* Audio album */
+
+void bg_db_audio_file_add_to_album(bg_db_t * db, bg_db_audio_file_t * t);
+void bg_db_audio_file_remove_from_album(bg_db_t * db, bg_db_audio_file_t * t);
+extern const bg_db_object_class_t bg_db_audio_album_class;
+
+/* Video container */
+
+extern const bg_db_object_class_t bg_db_series_class;
+extern const bg_db_object_class_t bg_db_season_class;
+extern const bg_db_object_class_t bg_db_multipart_movie_class;
+
+/* Image file */
+
+void bg_db_image_file_create_from_ti(bg_db_t * db, void * obj, gavl_dictionary_t * t);
+void bg_db_identify_images(bg_db_t * db, int64_t scan_dir_id, int scan_flags);
+
+const bg_db_object_class_t bg_db_image_file_class;
+const bg_db_object_class_t bg_db_album_cover_class;
+const bg_db_object_class_t bg_db_movie_art_class;
+const bg_db_object_class_t bg_db_thumbnail_class;
+
+/* Virtual folder */
+
+void
+bg_db_create_vfolders(bg_db_t * db, void * obj);
+
+void bg_db_create_tables_vfolders(bg_db_t * db);
+
+void
+bg_db_cleanup_vfolders(bg_db_t * db);
+
+
+extern const bg_db_object_class_t bg_db_vfolder_leaf_class;
+extern const bg_db_object_class_t bg_db_vfolder_class;
+
+/* Playlists */
+int64_t bg_db_playlist_by_name(bg_db_t * db, const char * name);
+extern const bg_db_object_class_t bg_db_playlist_class;
+
+/* Radio URLs */
+
+void * bg_db_get_radio_url_folder(bg_db_t * db, const char * path);
+void bg_db_add_radio_url(bg_db_t * db, void * parent,
+                         const char * url, const char * label);
+
+// void * bg_db_get_radio_url_rootfolder(bg_db_t * db);
+
+extern const bg_db_object_class_t bg_db_radio_url_class;
+
+/* Video info */
+void bg_db_video_info_free(bg_db_video_info_t* info);
+void bg_db_video_info_init(bg_db_video_info_t* info);
+
+void bg_db_video_info_query(bg_db_t * db, bg_db_video_info_t * ret, bg_db_object_t * obj);
+void bg_db_video_info_dump(bg_db_video_info_t * info);
+void bg_db_video_info_delete(bg_db_t * db, bg_db_object_t * obj);
+void bg_db_video_info_insert(bg_db_t * db, bg_db_video_info_t * info, void * obj);
+int bg_db_video_info_load(bg_db_t * db, bg_db_video_info_t * info, bg_db_object_t * obj, bg_db_file_t * nfo_file);
+void bg_db_video_info_clear(bg_db_t * db, bg_db_video_info_t * info, void * obj);
+void bg_db_video_info_update(bg_db_t * db, bg_db_video_info_t * info, void * obj);
+
+void bg_db_identify_nfo(bg_db_t * db, int64_t scan_dir_id);
+
+
+bg_db_video_info_t * bg_db_object_get_video_info(void * obj);
+
+void bg_db_video_info_set_title(bg_db_video_info_t* info, const char * title);
+void bg_db_video_info_set_title_nocpy(bg_db_video_info_t* info, char * title);
+
+extern const bg_db_object_class_t bg_db_nfo_class;
+
+/* Video container */
+
+bg_db_object_t * bg_db_tvseries_query(bg_db_t * db, const char * label);
+
+void bg_db_cleanup_tvseries(bg_db_t * db);
+
+bg_db_object_t * bg_db_season_query(bg_db_t * db, bg_db_object_t * show, const char * label, int idx);
+bg_db_object_t * bg_db_movie_multipart_query(bg_db_t * db, const char * label, const char * title);
+
+/* Root Folder */
+
+extern const bg_db_object_class_t bg_db_rootfolder_class;
+
+/* Utility functions we might want */
+
+char * bg_db_filename_to_abs(bg_db_t * db, char * filename);
+const char * bg_db_filename_to_rel(bg_db_t * db, const char * filename);
+
+const char * bg_db_get_search_string(const char * str);
+
+// const char * bg_db_get_group(const char * str, int * id);
+char * bg_db_get_group_condition(const char * row, int group_id);
+
+void bg_db_add_files(bg_db_t * db, bg_db_scan_item_t * files,
+                     int num, int scan_flags, int64_t scan_dir_id);
+
+void bg_db_update_files(bg_db_t * db, bg_db_scan_item_t * files,
+                        int num, int scan_flags,
+                        int64_t scan_dir_id, const char * scan_dir);
+
+int64_t bg_db_cache_search(bg_db_t * db,
+                           int (*compare)(const bg_db_object_t * ,const void*),
+                           const void * data);
+
+/* For querying multiple columns of a table */
+
+#define BG_DB_SET_QUERY_STRING(col, val)   \
+  if(!strcasecmp(azColName[i], col)) \
+    ret->val = gavl_strrep(ret->val, argv[i]);
+
+#define BG_DB_SET_QUERY_INT(col, val)      \
+  if(!strcasecmp(azColName[i], col) && argv[i]) \
+    ret->val = strtoll(argv[i], NULL, 10);
+
+#define BG_DB_SET_QUERY_DATE(col, val)      \
+  if(!strcasecmp(azColName[i], col) && argv[i]) \
+    bg_db_string_to_date(argv[i], &ret->val);
+
+#define BG_DB_SET_QUERY_MTIME(col, val)      \
+  if(!strcasecmp(azColName[i], col) && argv[i]) \
+    ret->val = bg_db_string_to_time(argv[i]);
+
+#define BG_DB_GET_COL_INT(col, val) \
+  val = sqlite3_column_int64(st, col)
+
+#define BG_DB_GET_COL_STRING(col, val) \
+  val = gavl_strdup((const char*)sqlite3_column_text(st, col))
+
+#define BG_DB_GET_COL_DATE(col, val) \
+  bg_db_string_to_date((const char*)sqlite3_column_text(st, col), &val)
+
+#define BG_DB_GET_COL_MTIME(col, val) \
+  val = bg_db_string_to_time((const char*)sqlite3_column_text(st, col))

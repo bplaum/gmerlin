@@ -1,0 +1,67 @@
+
+pkgdatadir = $(datadir)/gmerlin/icons
+
+icons = \
+about_16.png \
+audio_16.png \
+config_16.png \
+close_16.png \
+display_mode_all.png \
+display_mode_all_rem.png \
+display_mode_none.png \
+display_mode_rem.png \
+fullscreen_16.png \
+help_16.png \
+info_16.png \
+log_16.png \
+player_icon.png \
+plugin_16.png \
+plugincfg_icon.png \
+quit_16.png \
+record_16.png \
+recorder_icon.png \
+refresh_16.png \
+renderer_icon.png \
+server_icon.png \
+snapshot_16.png \
+state_buffering_1.png \
+state_buffering_2.png \
+state_buffering_3.png \
+state_buffering_4.png \
+state_buffering_5.png \
+state_changing.png \
+state_error.png \
+state_mute.png \
+state_paused.png \
+state_playing.png \
+state_seeking.png \
+state_stopped.png \
+tearoff_16.png \
+transcoder_icon.png \
+video_16.png \
+visualizer_icon.png \
+windowed_16.png \
+gmerlin.jpg
+
+pkgdata_DATA = $(icons)
+
+dist_pkgdata_DATA = $(icons)
+
+install-data-hook:
+	test -z $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps || $(MKDIR_P) $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps
+	ln -sf $(DESTDIR)$(pkgdatadir)/mixer_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-alsamixer.png
+	ln -sf $(DESTDIR)$(pkgdatadir)/transcoder_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-transcoder.png
+	ln -sf $(DESTDIR)$(pkgdatadir)/kbd_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-kbd.png
+	ln -sf $(DESTDIR)$(pkgdatadir)/plugincfg_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-plugincfg.png
+	ln -sf $(DESTDIR)$(pkgdatadir)/recorder_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-recorder.png
+	ln -sf $(DESTDIR)$(pkgdatadir)/visualizer_icon.png $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-visualizer.png
+
+uninstall-local:
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-alsamixer.png
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-transcoder.png
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-kbd.png
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-plugincfg.png
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-recorder.png
+	-rm -rf $(DESTDIR)$(prefix)/share/icons/hicolor/48x48/apps/gmerlin-visualizer.png
+
+

@@ -1,0 +1,98 @@
+1. Introduction
+
+In apps/gavftools, there is a bunch of commandline programs I wrote
+for making my everyday multimedia work much easier. They allow to
+build quite complex processing pipelines from the commandline.
+
+The basis is the gavf multimedia format, which can contain audio, video
+as well as text- and graphical subtitles. A/V data can be either
+uncompressed or compressed in a large number of formats. In some cases,
+especially for uncompresed video, the video frames are passed as shared memory
+segments between the processes.
+
+All programs are prefixed by gavf-. All programs can be called with the -help
+argument to show commandline options.
+
+2. Simple examples
+
+Read a media file and convert it to the gavf format:
+
+gavf-decode -i file.avi -o file.gavf
+
+or:
+
+gavf-decode -i file.avi > file.gavf
+
+Play a media file:
+
+gavf-decode -i file.avi | gavf-play
+
+3. I/O variants
+
+Playing a media file can happen in many ways. Instead of
+
+gavf-decode -i file.avi | gavf-play
+
+You can use a unix-domain socket:
+
+gavf-decode -i file.avi -o unixserv://socket &
+gavf-play -i unix://socket
+
+Or a fifo:
+
+mkfifo fifo
+gavf-decode -i file.avi -o fifo &
+gavf-play -i fifo
+
+Or a TCP socket:
+
+gavf-decode -i file.avi -o httpserv://192.128.100.1:8888 &
+gavf-play -i http://192.128.100.1:8888
+
+Naturally in the last example the decode and playback commands can run
+on different machines.
+
+Shared memory segments are always used if the maximum packet size is known
+in advance and the receiver is a process (i.e. not a file) running on the same
+machine.
+
+4. Other commands
+
+Recompress the the audio stream to 320 kbps mp3. This can also be used to recompress
+audio and video simultaneously:
+
+... | gavf-recompress -ac 'codec=c_lame{cbr_bitrate=320}' | ....
+
+Split audio- and video stream into separate files:
+
+... | gavf-demux -oa audio.gavf -ov video.gavf
+
+Multiplex separate streams:
+
+gavf-mux -i audio.gavf -i video.gavf | ....
+
+Display info about the stream (don't do anything else)
+
+... | gavf-info
+
+Split a stream for multiple receivers (can also use more than 2 -o options):
+
+... | gavf-tee -o saved_file.gavf -o "|gavf-play"
+
+Record a stream from your webcam and from your soundcard
+(replace pulseaudio_device with something meaningful):
+
+gavf-record -vid 'plugin=i_v4l2{device=/dev/video0}' -aud 'plugin=i_pulse{dev=pulseaudio_device}' | ...
+
+Convert an audio-only stream to mp3. If the audio compression is mp3 already,
+it is written as it is, else it is encoded with 320 kbps:
+
+... | gavf-encode -enc "a2v=0:ae=e_lame" -ac cbr_bitrate=320 -o file.mp3
+
+Flip video images vertically:
+
+... | gavf-filter -vf 'f={fv_flip{flip_v=1}}' | ....
+
+Can also be used for adding audio filters with the -af option. Filters can also be chained.
+
+

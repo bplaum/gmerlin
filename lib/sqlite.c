@@ -1,0 +1,313 @@
+/*****************************************************************
+ * gmerlin - a general purpose multimedia framework and applications
+ *
+ * Copyright (c) 2001 - 2012 Members of the Gmerlin project
+ * gmerlin-general@lists.sourceforge.net
+ * http://gmerlin.sourceforge.net
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * *****************************************************************/
+
+#include <config.h>
+#include <bgsqlite.h>
+
+#include <string.h>
+
+#include <gmerlin/utils.h>
+#include <gmerlin/log.h>
+#define LOG_DOMAIN "sqlite"
+
+void bg_sqlite_start_transaction(sqlite3 * db)
+  {
+  bg_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL);
+  }
+
+void bg_sqlite_end_transaction(sqlite3 * db)
+  {
+  bg_sqlite_exec(db, "END;", NULL, NULL);
+  }
+
+int
+bg_sqlite_exec(sqlite3 * db,                              /* An open database */
+               const char *sql,                           /* SQL to be evaluated */
+               int (*callback)(void*,int,char**,char**),  /* Callback function */
+               void * data)                               /* 1st argument to callback */
+  {
+  char * err_msg = NULL;
+  int err;
+
+  err = sqlite3_exec(db, sql, callback, data, &err_msg);
+
+  //  fprintf(stderr, "SQL: %s\n", sql);
+
+  if(err)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "SQL query: \"%s\" failed: %s",
+           sql, err_msg);
+    sqlite3_free(err_msg);
+    return 0;
+    }
+  return 1;
+  }
+
+int bg_sqlite_int_callback(void * data, int argc, char **argv, char **azColName)
+  {
+  int64_t * ret = data;
+  if(argv[0])
+    *ret = strtoll(argv[0], NULL, 10);
+  return 0;
+  }
+
+int bg_sqlite_string_callback(void * data, int argc,
+                              char **argv, char **azColName)
+  {
+  char ** ret = data;
+  if((argv[0]) && (*(argv[0]) != '\0'))
+    *ret = gavl_strdup(argv[0]);
+  return 0;
+  }
+
+int bg_sqlite_string_array_callback(void * data, int argc,
+                                    char **argv, char **azColName)
+  {
+  gavl_array_t * arr = data;
+  if((argv[0]) && (*(argv[0]) != '\0'))
+    gavl_string_array_add(arr, argv[0]);
+  return 0;
+  }
+
+int64_t bg_sqlite_get_int(sqlite3 * db, const char * sql)
+  {
+  int64_t ret = -1;
+  if(!bg_sqlite_exec(db, sql, bg_sqlite_int_callback, &ret))
+    return -1;
+  return ret;
+  }
+
+int64_t bg_sqlite_get_max_int(sqlite3 * db, const char * table,
+                           const char * row)
+  {
+  int result;
+  char * sql;
+  int64_t ret = 0;
+
+  sql = sqlite3_mprintf("select max(%s) from %s;", row, table);
+  result = bg_sqlite_exec(db, sql, bg_sqlite_int_callback, &ret);
+  sqlite3_free(sql);
+  if(!result)
+    return -1;
+
+  if(ret < 0)
+    return -1;
+  return ret;
+  }
+
+int64_t bg_sqlite_string_to_id(sqlite3 * db,
+                               const char * table,
+                               const char * id_row,
+                               const char * string_row,
+                               const char * str)
+  {
+  char * buf;
+  int64_t ret = -1;
+  int result;
+  buf = sqlite3_mprintf("select %s from %s where %s = %Q;",
+                        id_row, table, string_row, str);
+  result = bg_sqlite_exec(db, buf, bg_sqlite_int_callback, &ret);
+  sqlite3_free(buf);
+  return result ? ret : -1 ;
+  }
+
+int64_t bg_sqlite_string_to_id_add(sqlite3 * db,
+                                   const char * table,
+                                   const char * id_row,
+                                   const char * string_row,
+                                   const char * str)
+  {
+  char * sql;
+  int result;
+
+  int64_t ret;
+  ret = bg_sqlite_string_to_id(db, table, id_row, string_row, str);
+  if(ret >= 0)
+    return ret;
+  ret = bg_sqlite_get_max_int(db, table, id_row);
+  if(ret < 0)
+    return ret;
+
+  ret++;
+  
+  /* Insert into table */
+  sql = sqlite3_mprintf("INSERT INTO %s "
+                          "( %s, %s ) VALUES "
+                          "( %"PRId64", %Q );",
+                          table, id_row, string_row, ret, str);
+
+  result = bg_sqlite_exec(db, sql, NULL, NULL);
+  sqlite3_free(sql);
+  if(!result)
+    return -1;
+  return ret;
+  }
+
+char * bg_sqlite_id_to_string(sqlite3 * db,
+                              const char * table,
+                              const char * string_row,
+                              const char * id_row,
+                              int64_t id)
+  {
+  char * buf;
+  char * ret = NULL;
+  int result;
+  buf = sqlite3_mprintf("select %s from %s where %s = %"PRId64";",
+                        string_row, table, id_row, id);
+  result = bg_sqlite_exec(db, buf, bg_sqlite_string_callback, &ret);
+  sqlite3_free(buf);
+  return result ? ret : NULL;
+  }
+
+int bg_sqlite_get_string_array(sqlite3 * db,
+                               const char * table,
+                               const char * string_row,
+                               gavl_array_t * ret)
+  {
+  char * buf;
+  int result;
+  buf = sqlite3_mprintf("select %s from %s;", string_row, table);
+  result = bg_sqlite_exec(db, buf, bg_sqlite_string_array_callback, ret);
+  sqlite3_free(buf);
+  return result;
+  }
+                                 
+
+int64_t bg_sqlite_id_to_id(sqlite3 * db,
+                           const char * table,
+                           const char * dst_row,
+                           const char * src_row,
+                           int64_t id)
+  {
+  char * buf;
+  int64_t ret = -1;
+  int result;
+  buf = sqlite3_mprintf("select %s from %s where %s = %"PRId64";",
+                        dst_row, table, src_row, id);
+  result = bg_sqlite_exec(db, buf, bg_sqlite_int_callback, &ret);
+  return result ? ret : -1;
+  }
+
+int64_t bg_sqlite_get_next_id(sqlite3 * db, const char * table)
+  {
+  int64_t ret = bg_sqlite_get_max_int(db, table, "ID");
+  if(ret < 0)
+    return -1;
+  return ret + 1;
+  }
+
+#if 0
+typedef struct
+  {
+  int64_t * val;
+  int val_alloc;
+  int num_val;
+  } bg_sqlite_id_tab_t;
+#endif
+
+void bg_sqlite_id_tab_init(bg_sqlite_id_tab_t * tab)
+  {
+  memset(tab, 0, sizeof(*tab));
+  }
+
+void bg_sqlite_id_tab_free(bg_sqlite_id_tab_t * tab)
+  {
+  if(tab->val)
+    free(tab->val);
+  }
+
+void bg_sqlite_id_tab_reset(bg_sqlite_id_tab_t * tab)
+  {
+  tab->num_val = 0;
+  }
+
+void bg_sqlite_id_tab_push(bg_sqlite_id_tab_t * val, int64_t id)
+  {
+  if(val->num_val + 1 > val->val_alloc)
+    {
+    val->val_alloc = val->num_val + 1024;
+    val->val = realloc(val->val, val->val_alloc * sizeof(*val->val));
+    }
+  val->val[val->num_val] = id;
+  val->num_val++;
+  }
+
+int bg_sqlite_append_id_callback(void * data, int argc, char **argv, char **azColName)
+  {
+  int64_t ret;
+  bg_sqlite_id_tab_t * val = data;
+  if(argv[0])
+    {
+    ret = strtoll(argv[0], NULL, 10);
+    bg_sqlite_id_tab_push(val, ret);
+    }
+  return 0;
+  }
+
+void bg_sqlite_delete_by_id(sqlite3 * db,
+                            const char * table,
+                            int64_t id)
+  {
+  char * sql;
+  sql = sqlite3_mprintf("DELETE FROM %s WHERE ID = %"PRId64";", table, id);
+  bg_sqlite_exec(db, sql, NULL, NULL);
+  sqlite3_free(sql);
+  }
+
+int bg_sqlite_select_join(sqlite3 * db, bg_sqlite_id_tab_t * tab,
+                          const char * table_1,
+                          const char * col_1,
+                          int64_t val_1,
+                          const char * table_2,
+                          const char * col_2,
+                          int64_t val_2)
+  {
+  char * sql;
+  int result;
+  sql = sqlite3_mprintf("SELECT a.ID from %s a INNER JOIN %s b on (a.ID = b.ID) & (a.%s = %"PRId64") & (b.%s = %"PRId64");", table_1, table_2, col_1, val_1, col_2, val_2);
+
+  result = bg_sqlite_exec(db, sql, bg_sqlite_append_id_callback, tab);
+  sqlite3_free(sql);
+  return result;
+  }
+
+char * bg_sqlite_get_col_str(sqlite3_stmt * st, int col)
+  {
+  return gavl_strdup((const char*)sqlite3_column_text(st, col));
+  }
+
+static int compare_func(void* udp, int sizeA, const void* textA, int sizeB, const void* textB)
+  {
+  int result;
+
+  char * sA = gavl_strndup(textA, textA + sizeA);
+  char * sB = gavl_strndup(textB, textB + sizeB);
+  result = strcoll(sA, sB);
+  free(sA);
+  free(sB);
+  
+  return result;
+  }
+
+void bg_sqlite_init_strcoll(sqlite3 * db)
+  {
+  sqlite3_create_collation(db, "strcoll", SQLITE_UTF8, NULL, compare_func);
+  }

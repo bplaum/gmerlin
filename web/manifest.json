@@ -1,0 +1,21 @@
+{
+  "short_name": "Gmerlin server",
+  "name": "Gmerlin server",
+  "display": "standalone",
+  "icons": [ {
+        "src": "/static/icons/server_16.png",
+        "sizes": "16x16",
+        "type": "image/png",
+        "density": 1.0
+      }, {
+        "src": "/static/icons/server_48.png",
+        "sizes": "48x48",
+        "type": "image/png",
+        "density": 1.0
+      }, {
+        "src": "/static/icons/server_96.png",
+        "sizes": "96x96",
+        "type": "image/png",
+        "density": 1.0
+      } ]
+}

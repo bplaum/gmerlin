@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Gmerlin recorder
+Name[de]=Gmerlin recorder
+Comment=Audio/video recorder
+Comment[de]=Audio/video recorder
+Exec=gmerlin_recorder
+Icon=gmerlin-recorder
+Type=Application
+Categories=Application;AudioVideo;
+

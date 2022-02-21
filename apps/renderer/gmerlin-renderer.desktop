@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Gmerlin renderer
+Name[de]=Gmerlin renderer
+Comment=Media rendering service
+Exec=gmerlin-renderer
+Icon=gmerlin-renderer
+Type=Application
+NoDisplay=YES
+Categories=AudioVideo;Player;

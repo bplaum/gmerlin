@@ -1,0 +1,131 @@
+html {
+  font-family: Tahoma, Geneva, sans-serif;  
+  font-size:   32px;
+  }
+
+hr {
+    border: 0;
+    height: 2px;
+    margin: 0px;
+    background-image: -webkit-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:    -moz-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:     -ms-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+    background-image:      -o-linear-gradient(left, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+}
+
+
+/* Button */
+
+.button, .button_active, .button_disabled {
+  color:      #101010;
+  background: linear-gradient(to bottom, #a0a0a0, #808080);
+  font-size:        40px;
+  width:            50px;
+  height:           50px;
+  border-radius:    8px;
+  outline:          0;
+  border-style:     outset;
+  border-width:     5px;
+  border-color:     #808080;
+      
+  display:          table-cell;
+  text-align:       center;
+  vertical-align:   middle;
+  text-decoration:  none;
+  margin:           0px;
+  cursor:     pointer;
+}
+
+.button:hover, .button:focus {
+   background: linear-gradient(to bottom, #ffffff, #8f8f8f);
+}
+
+.button:focus {
+   border-style:     outset;
+   border-color:     #FF8000;
+}
+
+.button:active, .button_active {
+   border-style:     inset;
+   border-color:     #FF8000;
+}
+
+.button_disabled {
+   color:            #F0F0F0;
+   border-style:     solid;
+   background-image: linear-gradient(to bottom, #f0f0f0, #808080);
+}
+
+/* Vertical slider */
+
+div.vslider {
+  right:        0px;
+  width:        37px;
+  height:       200px;
+  border-width: 3px;
+  border-style: inset;
+  border-color: #808080;
+}
+
+div.vslider_handle {
+  right:        0px;
+  left:         0px;
+  top:          0px;
+  height:       20px;
+  width:        31px;
+  border-width: 3px;
+  border-style: outset;
+  border-color: #808080;
+  border-radius: 10px;
+  background: linear-gradient(to right, rgba(128,128,128,0.6), rgba(64,64,64,0.6));
+}
+
+/* Horizontal slider */
+div.hslider {
+  top:        0px;
+  height:        37px;
+  width:       200px;
+  border-width: 3px;
+  border-style: inset;
+  border-color: #808080;
+  background: linear-gradient(to right, rgba(0,0,0,0.8), rgba(255,255,255,0.8));
+}
+
+div.hslider:focus, div.vslider:focus {
+   border-color:     #FF8000;
+   outline: 0;
+}
+
+div.hslider_handle {
+  right:        0px;
+  left:         0px;
+  top:          0px;
+  width:       20px;
+  height:        31px;
+  border-width: 3px;
+  border-style: outset;
+  border-color: #808080;
+  border-radius: 10px;
+  background-image: linear-gradient(to right, #FF8000, #804000);
+}
+
+/* Menu */
+
+.mainmenu {
+  border-width: 3px;
+  border-color: #808080;
+  border-style: outset;
+  outline:          0;
+  background-color: #808080;
+}
+
+.mainmenuitem, .mainmenuitem_selected {
+  border-width: 0px;
+  padding:      3px;
+}
+
+.mainmenuitem_selected {
+  color: #ffffff;
+  background-color: #4c4fb7;
+}
+

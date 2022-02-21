@@ -1,0 +1,88 @@
+.player-button
+   {
+       font-size: 200%;
+   }
+
+.header-button
+   {
+       font-size: 80%;
+   }
+
+/* Seems not to work yet */
+.windowheader
+  {
+/*     background-color: inherit; */
+  }
+
+.playerwindow
+  {
+/*     background-color: #a0a0a0; */
+  }
+
+.time-label
+   {
+     font-size: 200%;
+     font-family: monospace;
+     margin-left: 3px;
+     margin-right: 3px;
+   }
+
+.state-label, .mode-label
+   {
+     font-size: 150%;
+     margin-left: 3px;
+     margin-right: 3px;
+   }
+
+.all-label, .rem-label
+   {
+     font-size: 80%;
+   }
+
+/* The all-label and rem-label are switched on and off by changing their
+   opacity. This way they keep ther allocated size */
+
+.invisible
+  {
+    color: transparent;
+  }
+
+.volume-label
+   {
+     font-size: 170%;
+     margin-left: 3px;
+     margin-right: 3px;
+   }
+
+.volume-slider
+   {
+     margin: 3px;
+   }
+
+.seek-slider
+   {
+     margin: 3px;
+   }
+
+.track-display
+   {
+/*       min-width: 200px;
+       min-height: 80px; */
+   }
+
+.track-image, .track-icon
+  {
+      margin-right: 3px;
+
+  }
+
+.display
+   {
+       background-color: #ffffff;
+       border-color: #a0a0a0;
+       border-width: 4px;
+       border-style: inset;
+       padding:      5px;
+       min-width:    250px; 
+/*       min-height:   150px; */
+   }
