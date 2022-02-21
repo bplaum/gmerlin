@@ -326,12 +326,10 @@ lib/gtk/presetmenu.c
 lib/gtk/button.c
 lib/gtk/question.c
 lib/gtk/cfg_time.c
-lib/gtk/albumwindow.c
 lib/gtk/urlselect.c
 lib/gtk/cfg_multi_menu.c
 lib/gtk/cfg_slider.c
 lib/gtk/albumentry.c
-lib/gtk/plugin_single.c
 lib/gtk/mdb_private.h
 lib/gtk/scrolltext.c
 lib/gtk/message.c
@@ -559,6 +557,7 @@ apps/player/main.c
 apps/player/player_remote.h
 apps/player/gmerlin.c
 apps/player/display.h
+apps/player/mainwindow.c
 apps/player/mainmenu.c
 apps/player/display.c
 apps/player/playerwindow.c
