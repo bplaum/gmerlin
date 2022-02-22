@@ -72,6 +72,10 @@ struct windows_menu_s
   guint       infowindow_id;
   GtkWidget * logwindow;
   guint       logwindow_id;
+
+  GtkWidget * mdbwindow;
+  guint       mdbwindow_id;
+  
   GtkWidget * menu;
   };
 
@@ -253,6 +257,14 @@ static void menu_callback(GtkWidget * w, gpointer data)
     else
       bg_gtk_log_window_hide(g->log_window);
     }
+  else if(w == the_menu->windows_menu.mdbwindow)
+    {
+    if(gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(the_menu->windows_menu.mdbwindow)))
+      gtk_widget_show(g->mdb_window);
+    else
+      gtk_widget_hide(g->mdb_window);
+    }
+
   else if(w == the_menu->help_menu.about)
     {
     gtk_widget_set_sensitive(the_menu->help_menu.about, 0);
@@ -665,12 +677,18 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   /* Windows */
     
   ret->windows_menu.menu = create_menu();
+
+  ret->windows_menu.mdbwindow =
+    create_toggle_item(TR("Media DB"), gmerlin, ret->windows_menu.menu,
+                       &ret->windows_menu.mdbwindow_id);
   ret->windows_menu.infowindow =
     create_toggle_item(TR("Info window"), gmerlin, ret->windows_menu.menu,
                        &ret->windows_menu.infowindow_id);
   ret->windows_menu.logwindow =
     create_toggle_item(TR("Log window"), gmerlin, ret->windows_menu.menu,
                        &ret->windows_menu.logwindow_id);
+
+
   gtk_widget_show(ret->windows_menu.menu);
 
   /* Help */
@@ -961,6 +979,15 @@ void main_menu_set_info_window_item(main_menu_t * m, int state)
   gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(m->windows_menu.infowindow), state);
   g_signal_handler_unblock(G_OBJECT(m->windows_menu.infowindow),
                            m->windows_menu.infowindow_id);
+  }
+
+void main_menu_set_mdb_window_item(main_menu_t * m, int state)
+  {
+  g_signal_handler_block(G_OBJECT(m->windows_menu.mdbwindow),
+                         m->windows_menu.mdbwindow_id);
+  gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(m->windows_menu.mdbwindow), state);
+  g_signal_handler_unblock(G_OBJECT(m->windows_menu.mdbwindow),
+                           m->windows_menu.mdbwindow_id);
   }
 
 void main_menu_set_log_window_item(main_menu_t * m, int state)

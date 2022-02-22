@@ -66,6 +66,12 @@ static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
     main_menu_set_info_window_item(g->main_menu, FALSE);
     return TRUE;
     }
+  else if(w == g->mdb_window)
+    {
+    gtk_widget_hide(w);
+    main_menu_set_mdb_window_item(g->main_menu, FALSE);
+    return TRUE;
+    }
   
   return FALSE;
   }
@@ -491,6 +497,9 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   ret->mdb_tree = bg_gtk_mdb_tree_create(ret->mdb_ctrl);
   
   ret->mdb_window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  g_signal_connect(ret->mdb_window,
+                   "delete_event",
+                   G_CALLBACK(delete_callback), ret);
 
   
   gtk_container_add(GTK_CONTAINER(ret->mdb_window),
@@ -499,8 +508,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   gtk_window_set_default_size(GTK_WINDOW(ret->mdb_window),
                               600, 400);
   
-  gtk_widget_show(ret->mdb_window);
-
+  
   /* Needs to come early */
   //  bg_control_init(&ret->ctrl, bg_msg_sink_create(gmerlin_handle_message, ret, 0));
   
@@ -588,6 +596,9 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   free(network_name);
 
   ret->main_menu = main_menu_create(ret);
+
+  gtk_widget_show(ret->mdb_window);
+  main_menu_set_mdb_window_item(ret->main_menu, 1);
   
   return ret;
   

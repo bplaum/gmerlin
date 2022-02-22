@@ -34,6 +34,9 @@ player_remote.h
 
 pkgdatadir = $(datadir)/@PACKAGE@/player
 
+gmerlin.1: gmerlin
+	$(builddir)/gmerlin -help-man > $(builddir)/gmerlin.1
+
 skin_data = \
 gmerlin-player.css
 

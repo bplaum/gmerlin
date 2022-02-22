@@ -18,6 +18,9 @@ bin_PROGRAMS = gmerlin-remote
 
 dist_man_MANS = gmerlin-remote.1
 
+gmerlin-remote.1: gmerlin-remote
+	$(builddir)/gmerlin-remote -help-man > $(builddir)/gmerlin-remote.1
+
 gmerlin_remote_SOURCES = \
 gmerlin-remote.c
 

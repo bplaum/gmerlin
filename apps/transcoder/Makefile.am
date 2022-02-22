@@ -16,7 +16,7 @@ Desktop_DATA = gmerlin-transcoder.desktop
 
 bin_PROGRAMS = gmerlin-transcoder
 
-man_MANS = gmerlin_transcoder.1
+man_MANS = gmerlin-transcoder.1
 
 gmerlin_transcoder_SOURCES = \
 main.c \

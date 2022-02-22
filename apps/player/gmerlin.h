@@ -100,8 +100,9 @@ main_menu_set_subtitle_index(main_menu_t *, int);
 
 
 void main_menu_set_info_window_item(main_menu_t * m, int state);
+void main_menu_set_mdb_window_item(main_menu_t * m, int state);
+
 void main_menu_set_log_window_item(main_menu_t * m, int state);
-void main_menu_set_plugin_window_item(main_menu_t * m, int state);
 
 void main_menu_ping(main_menu_t * m);
 

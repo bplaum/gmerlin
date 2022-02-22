@@ -1774,7 +1774,7 @@ static GtkNotebook * create_window_callback(GtkNotebook *notebook,
   if(src_idx < 0)
     return NULL;
 
-  fprintf(stderr, "Tab -> window: %d\n", src_idx);
+  //  fprintf(stderr, "Tab -> window: %d\n", src_idx);
 
   a = album_array_move_2(tree, &tree->win_albums, &tree->tab_albums, -1, src_idx);
   lst = a->list;

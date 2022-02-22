@@ -13,5 +13,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 bin_PROGRAMS = gmerlin-record
 dist_man_MANS = gmerlin-record.1
 
+gmerlin-record.1: gmerlin-record
+	$(builddir)/gmerlin-record -help-man > $(builddir)/gmerlin-record.1
+
+
 gmerlin_record_LDADD = $(top_builddir)/lib/libgmerlin.la -ldl
 gmerlin_record_SOURCES=gmerlin-record.c
