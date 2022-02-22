@@ -66,6 +66,12 @@ static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
     main_menu_set_info_window_item(g->main_menu, FALSE);
     return TRUE;
     }
+  else if(w == bg_gtk_log_window_get_widget(g->log_window))
+    {
+    gtk_widget_hide(w);
+    main_menu_set_log_window_item(g->main_menu, FALSE);
+    return TRUE;
+    }
   else if(w == g->mdb_window)
     {
     gtk_widget_hide(w);
@@ -476,11 +482,14 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   /* From here we can direct log messages to the GUI */
   ret->log_window = bg_gtk_log_window_create(TR("Gmerlin player"));
-  bg_gtk_log_window_set_ctrl(ret->log_window, ret->player_ctrl);
   bg_cfg_section_apply(ret->logwindow_section,
                        bg_gtk_log_window_get_parameters(ret->log_window),
                        bg_gtk_log_window_set_parameter,
                        (void*)ret->log_window);
+
+  g_signal_connect(G_OBJECT(bg_gtk_log_window_get_widget(ret->log_window)),
+                   "delete_event",
+                   G_CALLBACK(delete_callback), ret);
   
   bg_mdb_set_root_name(ret->mdb, network_name);
   
@@ -500,6 +509,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   g_signal_connect(ret->mdb_window,
                    "delete_event",
                    G_CALLBACK(delete_callback), ret);
+  gtk_window_set_title(GTK_WINDOW(ret->mdb_window), TR("Gmerlin Media DB"));
 
   
   gtk_container_add(GTK_CONTAINER(ret->mdb_window),
@@ -558,8 +568,6 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   gmerlin_create_dialog(ret);
   
   bg_player_state_init(&ret->state, NULL, NULL, NULL);
-  bg_gtk_log_window_init_state(&ret->state);
-
   /* Apply the state before the frontends are created */
 
   if(saved_state)

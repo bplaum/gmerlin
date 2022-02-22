@@ -29,14 +29,9 @@ typedef struct bg_gtk_log_window_s bg_gtk_log_window_t;
 bg_gtk_log_window_t *
 bg_gtk_log_window_create(const char * app_name);
 
-void bg_gtk_log_window_set_ctrl(bg_gtk_log_window_t *, bg_controllable_t * ctrl);
-
 void bg_gtk_log_window_destroy(bg_gtk_log_window_t *);
 
-void
-bg_gtk_log_window_show(bg_gtk_log_window_t *);
-
-void bg_gtk_log_window_hide(bg_gtk_log_window_t *);
+GtkWidget * bg_gtk_log_window_get_widget(bg_gtk_log_window_t * w);
 
 const bg_parameter_info_t *
 bg_gtk_log_window_get_parameters(bg_gtk_log_window_t *);
@@ -47,6 +42,4 @@ void bg_gtk_log_window_set_parameter(void * data, const char * name,
 void bg_gtk_log_window_flush(bg_gtk_log_window_t *);
 
 const char * bg_gtk_log_window_last_error(bg_gtk_log_window_t *);
-
-void bg_gtk_log_window_init_state(gavl_dictionary_t * dict);
 

@@ -881,7 +881,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
                                   NULL);
   
   
-  ret->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  ret->win = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
   set_css_class(ret->win, ret->skin_provider, NULL, "playerwindow");
   

@@ -665,12 +665,12 @@ static void button_callback(GtkWidget * w, gpointer data)
     {
     if(gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(w)))
       {
-      bg_gtk_log_window_show(win->logwindow);
+      gtk_widget_show(bg_gtk_log_window_get_widget(win->logwindow));
       win->show_logwindow = 1;
       }
     else
       {
-      bg_gtk_log_window_hide(win->logwindow);
+      gtk_widget_hide(bg_gtk_log_window_get_widget(win->logwindow));
       win->show_logwindow = 0;
       }
     }

@@ -37,17 +37,6 @@
 /* Delay between update calls in Milliseconds */
 #define DELAY_TIME 50
 
-/* State variables */
-
-static const bg_state_var_desc_t state_vars[] =
-  {
-    { GAVL_META_X,              GAVL_TYPE_INT, GAVL_VALUE_INIT_INT(10)  },
-    { GAVL_META_Y,              GAVL_TYPE_INT, GAVL_VALUE_INIT_INT(10)  },
-    { GAVL_META_WIDTH,          GAVL_TYPE_INT, GAVL_VALUE_INIT_INT(100) },
-    { GAVL_META_HEIGHT,         GAVL_TYPE_INT, GAVL_VALUE_INIT_INT(100) },
-    { BG_GTK_LOGWINDOW_VISIBLE, GAVL_TYPE_INT, GAVL_VALUE_INIT_INT(0)   },
-    { /* End */ },
-  };
 
 struct bg_gtk_log_window_s
   {
@@ -56,47 +45,20 @@ struct bg_gtk_log_window_s
   GtkTextBuffer * buffer;
   GtkWidget * scrolledwindow;
   
-  bg_control_t ctrl;
-  
-  // bg_msg_sink_t * sink;
-
   GtkTextTagTable * tag_table;
   GtkTextTag      * info_tag;
   GtkTextTag      * debug_tag;
   GtkTextTag      * error_tag;
   GtkTextTag      * warning_tag;
-  
-  int visible;
 
   int num_messages;
   int max_messages;
   
-  int x, y, width, height;
-
   char * last_error;
   
-  //  gavl_dictionary_t state;
-  int have_state;
-
   bg_msg_sink_t * log_sink;
   };
 
-static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
-                                gpointer data)
-  {
-  gavl_value_t val;
-  bg_gtk_log_window_t * win = data;
-  
-  gavl_value_init(&val);
-  gavl_value_set_int(&val, 0);
-  
-  bg_state_set(NULL, 1, BG_GTK_LOGWINDOW_STATE_CTX, BG_GTK_LOGWINDOW_VISIBLE,
-               &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  
-  gtk_widget_hide(win->window);
-  win->visible = 0;
-  return TRUE;
-  }
 
 static void delete_first_line(bg_gtk_log_window_t * win)
   {
@@ -202,94 +164,14 @@ static int handle_log_message(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-static int handle_message(void * data, gavl_msg_t * msg)
-  {
-  bg_gtk_log_window_t * w = data;
-
-  switch(msg->NS)
-    {
-    case BG_MSG_NS_STATE:
-      switch(msg->ID)
-        {
-        case BG_MSG_STATE_CHANGED:
-          if(w->have_state)
-            return 1;
-          
-          if(!strcmp(gavl_msg_get_arg_string_c(msg, 1), BG_GTK_LOGWINDOW_STATE_CTX))
-            {
-            int last = 0;
-            const char * var = NULL;
-            gavl_value_t val;
-            
-            gavl_value_init(&val);
-            bg_msg_get_state(msg, &last, NULL, &var, &val, NULL);
-
-            //             fprintf(stderr, "Logwindow state changed %d %s ", last, var);
-            //            gavl_value_dump(&val, 0);
-            //            fprintf(stderr, "\n");
-            
-            if(!strcmp(var, GAVL_META_X))
-              gavl_value_get_int(&val, &w->x);
-            else if(!strcmp(var, GAVL_META_Y))
-              gavl_value_get_int(&val, &w->y);
-            else if(!strcmp(var, GAVL_META_WIDTH))
-              gavl_value_get_int(&val, &w->width);
-            else if(!strcmp(var, GAVL_META_HEIGHT))
-              gavl_value_get_int(&val, &w->height);
-            else if(!strcmp(var, BG_GTK_LOGWINDOW_VISIBLE))
-              gavl_value_get_int(&val, &w->visible);
-            
-            if(last)
-              {
-              if(w->visible)
-                bg_gtk_log_window_show(w);
-              else
-                bg_gtk_log_window_hide(w);
-
-              w->have_state = 1;
-              }
-            }
-          break;
-        }
-      break;
-    }
-  
-  return 1;
-  }
 
 static gboolean idle_callback(gpointer data)
   {
   bg_gtk_log_window_t * w = data;
   bg_msg_sink_iteration(w->log_sink);
-  bg_msg_sink_iteration(w->ctrl.evt_sink);
   return TRUE;
   }
 
-static gboolean configure_callback(GtkWidget * w, GdkEventConfigure *event,
-                                   gpointer data)
-  {
-  gavl_value_t val;
-  bg_gtk_log_window_t * win = data;
-
-  gavl_value_init(&val);
-  
-  win->x = event->x;
-  win->y = event->y;
-  win->width = event->width;
-  win->height = event->height;
-  gdk_window_get_root_origin(gtk_widget_get_window(win->window), &win->x, &win->y);
-
-  gavl_value_set_int(&val, win->x);
-  bg_state_set(NULL, 0, BG_GTK_LOGWINDOW_STATE_CTX, GAVL_META_X, &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  gavl_value_set_int(&val, win->y);
-  bg_state_set(NULL, 0, BG_GTK_LOGWINDOW_STATE_CTX, GAVL_META_Y, &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  gavl_value_set_int(&val, win->width);
-  bg_state_set(NULL, 0, BG_GTK_LOGWINDOW_STATE_CTX, GAVL_META_WIDTH, &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  gavl_value_set_int(&val, win->height);
-  bg_state_set(NULL, 1, BG_GTK_LOGWINDOW_STATE_CTX, GAVL_META_HEIGHT, &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  
-  return FALSE;
-  }
 
 bg_gtk_log_window_t * bg_gtk_log_window_create(const char * app_name)
   {
@@ -299,19 +181,12 @@ bg_gtk_log_window_t * bg_gtk_log_window_create(const char * app_name)
 
   /* Create window */
   ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
+  gtk_window_set_default_size(GTK_WINDOW(ret->window), 500, 300);
+  
   tmp_string = bg_sprintf(TR("%s messages"), app_name);
   gtk_window_set_title(GTK_WINDOW(ret->window), tmp_string);
   free(tmp_string);
   
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
-                   G_CALLBACK(delete_callback), (gpointer)ret);
-  g_signal_connect(G_OBJECT(ret->window), "configure-event",
-                   G_CALLBACK(configure_callback), (gpointer)ret);
-  
-  /* Create and connect message queue */
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_message, ret, 0));
-
   ret->log_sink = bg_msg_sink_create(handle_log_message, ret, 0);
   bg_log_add_dest(ret->log_sink);
   
@@ -343,7 +218,7 @@ bg_gtk_log_window_t * bg_gtk_log_window_create(const char * app_name)
   /* Create scrolledwindow */
   ret->scrolledwindow = gtk_scrolled_window_new(NULL, NULL);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ret->scrolledwindow),
-                                 GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   
   gtk_container_add(GTK_CONTAINER(ret->scrolledwindow), ret->textview);
   gtk_widget_show(ret->scrolledwindow);
@@ -356,11 +231,6 @@ bg_gtk_log_window_t * bg_gtk_log_window_create(const char * app_name)
   return ret;
   }
 
-void bg_gtk_log_window_set_ctrl(bg_gtk_log_window_t * ret, bg_controllable_t * ctrl)
-  {
-  bg_controllable_connect(ctrl, &ret->ctrl);
-  }
-
 void bg_gtk_log_window_destroy(bg_gtk_log_window_t * win)
   {
   if(win->last_error)
@@ -370,49 +240,14 @@ void bg_gtk_log_window_destroy(bg_gtk_log_window_t * win)
   bg_log_remove_dest(win->log_sink);
   bg_msg_sink_destroy(win->log_sink);
   
-  bg_control_cleanup(&win->ctrl);
   free(win);
   }
 
-void
-bg_gtk_log_window_show(bg_gtk_log_window_t * w)
+GtkWidget * bg_gtk_log_window_get_widget(bg_gtk_log_window_t * w)
   {
-  gavl_value_t val;
-
-  if(!w->width || !w->height)
-    {
-    gtk_window_set_position(GTK_WINDOW(w->window), GTK_WIN_POS_CENTER_ON_PARENT);
-    }
-  gtk_widget_show(w->window);
-
-  if(w->width && w->height)
-    bg_gtk_decorated_window_move_resize_window(w->window,
-                                               w->x, w->y, w->width, w->height);
-  else
-    gtk_window_resize(GTK_WINDOW(w->window), 600, 300);
-  
-  gavl_value_init(&val);
-  gavl_value_set_int(&val, 1);
-  
-  bg_state_set(NULL, 1, BG_GTK_LOGWINDOW_STATE_CTX, BG_GTK_LOGWINDOW_VISIBLE,
-               &val, w->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  
-  w->visible = 1;
+  return w->window;
   }
 
-void bg_gtk_log_window_hide(bg_gtk_log_window_t * win)
-  {
-  gavl_value_t val;
-
-  gavl_value_init(&val);
-  gavl_value_set_int(&val, 0);
-  
-  bg_state_set(NULL, 1, BG_GTK_LOGWINDOW_STATE_CTX, BG_GTK_LOGWINDOW_VISIBLE,
-               &val, win->ctrl.cmd_sink, BG_CMD_SET_STATE);
-  
-  gtk_widget_hide(win->window);
-  win->visible = 0;
-  }
 
 /* Configuration stuff */
 
@@ -422,7 +257,7 @@ static const bg_parameter_info_t parameters[] =
       .name =        "max_messages",
       .long_name =   TRS("Number of messages"),
       .type =        BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(20),
+      .val_default = GAVL_VALUE_INIT_INT(200),
       .help_string = TRS("Maximum number of messages hold in the window")
     },
     {
@@ -547,8 +382,4 @@ const char * bg_gtk_log_window_last_error(bg_gtk_log_window_t * win)
   return win->last_error;
   }
 
-void bg_gtk_log_window_init_state(gavl_dictionary_t * dict)
-  {
-  bg_state_init_ctx(dict, BG_GTK_LOGWINDOW_STATE_CTX, state_vars);
-  }
   

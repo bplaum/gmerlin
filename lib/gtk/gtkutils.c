@@ -151,16 +151,6 @@ GtkWidget * bg_gtk_window_new(GtkWindowType type)
   GtkWidget * ret = gtk_window_new(type);
   if(bg_gtk_window_icon_pixbuf)
     gtk_window_set_icon(GTK_WINDOW(ret), bg_gtk_window_icon_pixbuf);
-
-#if 0
-  if(default_window_name && default_window_class)
-    {
-    gtk_window_set_wmclass(GTK_WINDOW(ret), 
-                           default_window_name, 
-                           default_window_class);
-    }
-#endif
-  
   return ret;
   }
 

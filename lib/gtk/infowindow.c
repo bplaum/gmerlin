@@ -540,6 +540,7 @@ bg_gtk_info_window_create(void)
   /* Create objects */
   
   ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_default_size(GTK_WINDOW(ret->window), 500, 300);
   
   gtk_window_set_title(GTK_WINDOW(ret->window), TR("Gmerlin Track Info"));
   

@@ -278,7 +278,7 @@ static void button_callback(GtkWidget * w, gpointer data)
   if(w == win->log_button)
     {
     gtk_widget_set_sensitive(win->log_button, 0);
-    bg_gtk_log_window_show(win->logwindow);
+    gtk_widget_show(bg_gtk_log_window_get_widget(win->logwindow));
     }
   else if(w == win->config_button)
     {
