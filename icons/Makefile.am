@@ -2,20 +2,13 @@
 pkgdatadir = $(datadir)/gmerlin/icons
 
 icons = \
-about_16.png \
 audio_16.png \
 config_16.png \
 close_16.png \
-display_mode_all.png \
-display_mode_all_rem.png \
-display_mode_none.png \
-display_mode_rem.png \
 fullscreen_16.png \
-help_16.png \
 info_16.png \
 log_16.png \
 player_icon.png \
-plugin_16.png \
 plugincfg_icon.png \
 quit_16.png \
 record_16.png \
@@ -24,19 +17,6 @@ refresh_16.png \
 renderer_icon.png \
 server_icon.png \
 snapshot_16.png \
-state_buffering_1.png \
-state_buffering_2.png \
-state_buffering_3.png \
-state_buffering_4.png \
-state_buffering_5.png \
-state_changing.png \
-state_error.png \
-state_mute.png \
-state_paused.png \
-state_playing.png \
-state_seeking.png \
-state_stopped.png \
-tearoff_16.png \
 transcoder_icon.png \
 video_16.png \
 visualizer_icon.png \

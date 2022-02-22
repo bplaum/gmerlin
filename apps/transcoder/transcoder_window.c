@@ -156,7 +156,7 @@ struct transcoder_window_s
   struct
     {
     GtkWidget * about_item;
-    GtkWidget * help_item;
+    //    GtkWidget * help_item;
     GtkWidget * menu;
     } help_menu;
 
@@ -677,10 +677,12 @@ static void button_callback(GtkWidget * w, gpointer data)
 
     gtk_widget_show(win->about_window);
     }
+#if 0
   else if(w == win->help_menu.help_item)
     {
     bg_display_html_help("userguide/GUI-Transcoder.html");
     }
+#endif
   }
 
 
@@ -709,27 +711,6 @@ static gboolean delete_callback(GtkWidget * w, GdkEvent * evt,
   return TRUE;
   }
 
-static GtkWidget *
-create_item(transcoder_window_t * w, GtkWidget * parent,
-            const char * label, const char * pixmap)
-  {
-  GtkWidget * ret;
-  char * path = NULL;
-  
-  if(pixmap)
-    path = bg_search_file_read("icons", pixmap);
-
-  ret = bg_gtk_image_menu_item_new(label, path);
-  
-  if(path)
-    free(path);
-  
-  g_signal_connect(G_OBJECT(ret), "activate", G_CALLBACK(button_callback),
-                   (gpointer)w);
-  gtk_widget_show(ret);
-  gtk_menu_shell_append(GTK_MENU_SHELL(parent), ret);
-  return ret;
-  }
 
 static GtkWidget *
 create_icon_item(transcoder_window_t * w, GtkWidget * parent,
@@ -801,8 +782,8 @@ static void init_menus(transcoder_window_t * w)
   gtk_widget_show(w->windows_menu.menu);
 
   w->help_menu.menu = gtk_menu_new();
-  w->help_menu.about_item = create_item(w, w->help_menu.menu, TR("About..."), "about_16.png");
-  w->help_menu.help_item = create_item(w, w->help_menu.menu, TR("Userguide"), "help_16.png");
+  w->help_menu.about_item = create_icon_item(w, w->help_menu.menu, TR("About..."), BG_ICON_INFO);
+  //  w->help_menu.help_item = create_item(w, w->help_menu.menu, TR("Userguide"), "help_16.png");
   gtk_widget_show(w->help_menu.menu);
   
   }

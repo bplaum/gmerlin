@@ -82,7 +82,7 @@ struct windows_menu_s
 struct help_menu_s
   {
   GtkWidget * about;
-  GtkWidget * help;
+  //  GtkWidget * help;
   GtkWidget * menu;
   };
 
@@ -264,10 +264,12 @@ static void menu_callback(GtkWidget * w, gpointer data)
     gtk_widget_show(g->about_window);
     
     }
+#if 0
   else if(w == the_menu->help_menu.help)
     {
     // bg_display_html_help("userguide/GUI-Player.html");
     }
+#endif
   
   /* Commands (== accelerators) */
   else if(w == the_menu->command_menu.inc_volume)
@@ -338,29 +340,6 @@ static void menu_callback(GtkWidget * w, gpointer data)
     bg_player_set_chapter(g->mainwin.player_ctrl.cmd_sink, i);
   }
 
-static GtkWidget *
-create_pixmap_item(const char * label, const char * pixmap,
-                   gmerlin_t * gmerlin,
-                   GtkWidget * menu)
-  {
-  GtkWidget * ret;
-  char * path = NULL;
-  
-  
-  if(pixmap)
-    path = bg_search_file_read("icons", pixmap);
-  
-  ret = bg_gtk_image_menu_item_new(label, path);
-
-  if(path)
-    free(path);
-  
-  g_signal_connect(G_OBJECT(ret), "activate", G_CALLBACK(menu_callback),
-                   (gpointer)gmerlin);
-  gtk_widget_show(ret);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ret);
-  return ret;
-  }
 
 static GtkWidget * create_item(const char * label, const char * icon,
                                gmerlin_t * gmerlin,
@@ -685,10 +664,10 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   /* Help */
   
   ret->help_menu.menu = create_menu();
-  ret->help_menu.about = create_pixmap_item(TR("About..."), "about_16.png",
+  ret->help_menu.about = create_item(TR("About..."), BG_ICON_INFO,
                                             gmerlin, ret->help_menu.menu);
-  ret->help_menu.help = create_pixmap_item(TR("Userguide"), "help_16.png",
-                                           gmerlin, ret->help_menu.menu);
+  //  ret->help_menu.help = create_pixmap_item(TR("Userguide"), "help_16.png",
+  //                                           gmerlin, ret->help_menu.menu);
   
   gtk_widget_show(ret->help_menu.menu);
     
