@@ -55,28 +55,14 @@ enum
   NUM_COLUMNS
   };
 
-
-
-#define INFOWINDOW_STATE "infowindow" // Hope there will be just 1 infowindow per application
-
-
-#define DELAY_TIME 50
-
 struct bg_gtk_info_window_s
   {
   /* We store everything interesting locally */
   
-  int num_audio_streams;
-  int num_video_streams;
-  int num_subtitle_streams;
-  
   GtkWidget * window;
   
   GtkWidget * treeview;
-
-  guint expand_id;
-  guint collapse_id;
-
+  
   /* Clipboard */
   
   char * clipboard;
@@ -88,10 +74,7 @@ struct bg_gtk_info_window_s
     GtkWidget * copy_selected;
     GtkWidget * menu;
     } menu;
-
-  guint idle_id;
-
-  int have_state;
+  
   };
 
 static void set_dict_internal(GtkTreeModel * model,
@@ -281,8 +264,8 @@ static void set_dict_internal(GtkTreeModel * model,
   int i;
   GtkTreeIter item;
 
-  fprintf(stderr, "set_dict_internal:\n");
-  gavl_dictionary_dump(dict, 2);
+  //  fprintf(stderr, "set_dict_internal:\n");
+  //  gavl_dictionary_dump(dict, 2);
   
   for(i = 0; i < dict->num_entries; i++)
     {
@@ -625,8 +608,6 @@ void bg_gtk_info_window_destroy(bg_gtk_info_window_t * w)
   if(w->clipboard)
     free(w->clipboard);
 
-  g_source_remove(w->idle_id);
-  
   gtk_widget_destroy(w->window);
   free(w);
   }

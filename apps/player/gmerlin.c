@@ -669,8 +669,6 @@ void gmerlin_destroy(gmerlin_t * g)
   if(g->image_reader_parameters)
     bg_parameter_info_destroy_array(g->image_reader_parameters);
   
-  /* Fetch parameters */
-
   if(g->info_window)
     bg_gtk_info_window_destroy(g->info_window);
 

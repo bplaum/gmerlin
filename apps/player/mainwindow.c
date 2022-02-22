@@ -405,7 +405,11 @@ static char * get_track_markup(const gavl_dictionary_t * m)
   metadata = add_metadata_markup_array(metadata, m, GAVL_META_ARTIST, BG_ICON_MICROPHONE);
   metadata = add_metadata_markup(metadata, m, GAVL_META_ALBUM, BG_ICON_MUSIC_ALBUM);
   metadata = add_metadata_markup_array(metadata, m, GAVL_META_GENRE, BG_ICON_MASKS);
+  metadata = add_metadata_markup_array(metadata, m, GAVL_META_TAG, BG_ICON_TAGS);
 
+  metadata = add_metadata_markup(metadata, m, GAVL_META_STATION, BG_ICON_RADIO);
+  
+  metadata = add_metadata_markup_array(metadata, m, GAVL_META_COUNTRY, BG_ICON_FLAG);
   if((var = gavl_dictionary_get_string(m, GAVL_META_DATE)))
     {
     if(!gavl_string_starts_with(var, "9999"))
@@ -423,8 +427,6 @@ static char * get_track_markup(const gavl_dictionary_t * m)
 
   // markup = add_metadata_markup_array(markup, m, GAVL_META_APPROX_DURATION, BG_ICON_CLOCK);
   
-  metadata = add_metadata_markup(metadata, m, GAVL_META_STATION, BG_ICON_RADIO);
-
   if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
     {
     char str[GAVL_TIME_STRING_LEN];
