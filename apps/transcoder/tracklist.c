@@ -56,8 +56,6 @@
 
 static void track_list_update(track_list_t * w);
 
-static GdkPixbuf * has_audio_pixbuf = NULL;
-static GdkPixbuf * has_video_pixbuf = NULL;
 
 #define cp_tracks_name "gmerlin_transcoder_tracks"
 
@@ -89,24 +87,6 @@ static int is_urilist(char * target_name)
   return 0;
   }
 
-static void load_pixmaps()
-  {
-  char * filename;
-  if(has_audio_pixbuf)
-    return;
-  filename = bg_search_file_read("icons", "audio_16.png");
-  if(filename)
-    {
-    has_audio_pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-    free(filename);
-    }
-  filename = bg_search_file_read("icons", "video_16.png");
-  if(filename)
-    {
-    has_video_pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-    free(filename);
-    }
-  }
 
 typedef struct
   {
@@ -1475,8 +1455,6 @@ track_list_t * track_list_create(bg_plugin_registry_t * plugin_reg,
   GtkCellRenderer *renderer;
   GtkTreeSelection * selection;
   char * tmp_path;
-  
-  load_pixmaps();
   
   ret = calloc(1, sizeof(*ret));
   
