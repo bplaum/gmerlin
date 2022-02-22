@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
 
   clp = &cl;
   
-  bg_gtk_init(&argc, &argv, NULL, NULL, NULL);;
+  bg_gtk_init(&argc, &argv, NULL);;
   
   create_chapter_list(clp);
   bg_gtk_chapter_dialog_show(&clp, duration, NULL);

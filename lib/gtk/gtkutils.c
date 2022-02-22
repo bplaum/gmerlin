@@ -51,6 +51,7 @@
 
 #include <gmerlin/iconfont.h>
 #include <gmerlin/downloader.h>
+#include <gmerlin/application.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
@@ -130,8 +131,6 @@ cairo_surface_t * bg_gtk_pixbuf_scale_alpha(cairo_surface_t * src,
 
 GdkPixbuf * bg_gtk_window_icon_pixbuf = NULL;
 
-static char * default_window_name = NULL;
-static char * default_window_class = NULL;
 
 static void set_default_window_icon(const char * icon)
   {
@@ -142,22 +141,25 @@ static void set_default_window_icon(const char * icon)
     if(bg_gtk_window_icon_pixbuf)
       g_object_unref(bg_gtk_window_icon_pixbuf);
     bg_gtk_window_icon_pixbuf = gdk_pixbuf_new_from_file(tmp, NULL);
+    bg_app_set_window_icon(tmp);
     free(tmp);
+
+    gtk_window_set_default_icon(bg_gtk_window_icon_pixbuf);
+
     }
   }
 
 GtkWidget * bg_gtk_window_new(GtkWindowType type)
   {
   GtkWidget * ret = gtk_window_new(type);
-  if(bg_gtk_window_icon_pixbuf)
-    gtk_window_set_icon(GTK_WINDOW(ret), bg_gtk_window_icon_pixbuf);
+  //  if(bg_gtk_window_icon_pixbuf)
+  //    gtk_window_set_icon(GTK_WINDOW(ret), bg_gtk_window_icon_pixbuf);
   return ret;
   }
 
 
 void bg_gtk_init(int * argc, char *** argv, 
-                 const char * default_window_icon,
-                 const char * win_name, const char * win_class)
+                 const char * default_window_icon)
   {
   gtk_init(argc, argv);
 
@@ -166,10 +168,6 @@ void bg_gtk_init(int * argc, char *** argv,
 
   /* Set the default window icon */
   set_default_window_icon(default_window_icon);
-
-  /* Set default class hints */
-  default_window_name = gavl_strrep(default_window_name, win_name);
-  default_window_class = gavl_strrep(default_window_class, win_class);
 
   }
 

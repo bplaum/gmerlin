@@ -2039,6 +2039,7 @@ bg_plugin_registry_load_image(bg_plugin_registry_t * r,
   gavl_video_frame_t * ret = NULL;
 
   // fprintf(stderr, "bg_plugin_registry_load_image\n");
+  memset(format, 0, sizeof(*format));
   
   if(!probe_image(r, filename, format,
                   m, &handle))
@@ -2050,12 +2051,8 @@ bg_plugin_registry_load_image(bg_plugin_registry_t * r,
   if(!ir->read_image(handle->priv, ret))
     goto fail;
 
-  if(format)
-    {
-    format->framerate_mode = GAVL_FRAMERATE_STILL;
-    format->timescale = GAVL_TIME_SCALE;
-    }
-  
+  format->framerate_mode = GAVL_FRAMERATE_STILL;
+  format->timescale = GAVL_TIME_SCALE;
   
   bg_plugin_unref(handle);
   return ret;

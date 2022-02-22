@@ -666,23 +666,6 @@ struct bg_ov_plugin_s
   
   //  const char * (*get_window)(void * priv);
   
-  /** \brief Set window class
-   *  \param priv The handle returned by the create() method
-   *  \param name The name of the window
-   *  \param klass The class of the window
-   *
-   *  This makes sense probably only in an X11 environment.
-   *  If the klass argument is the same for all windows of an
-   *  application, they, might be grouped together in the
-   *  window list. On X11 this results in a call to
-   *  XSetClassHint().
-   */
-
-  void (*set_window_options)(void * priv, const char * name, 
-                             const char * klass, 
-                             const gavl_video_frame_t * icon,
-                             const gavl_video_format_t * icon_format);
-
 
   /** \brief Set callbacks
    *  \param priv The handle returned by the create() method

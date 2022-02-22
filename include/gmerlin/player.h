@@ -128,7 +128,7 @@ bg_player_tracklist_get_next(bg_player_tracklist_t * l);
 
 bg_player_t * bg_player_create(void);
 
-void bg_player_set_window_config(bg_player_t *, const char * display_string, const char * window_options);
+void bg_player_set_window_config(bg_player_t *, const char * display_string);
 
 /** \ingroup player
  *  \brief Get parameters

@@ -460,8 +460,6 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
                             ret->player_ctrl->cmd_sink);
   
   bg_player_add_accelerators(ret->player, accels);
-  bg_player_set_window_config(ret->player, NULL,
-                              WINDOW_NAME","WINDOW_CLASS","WINDOW_ICON);
   
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "player");
   bg_cfg_ctx_array_create_sections(ret->cfg_player, cfg_section);

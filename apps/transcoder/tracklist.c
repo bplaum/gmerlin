@@ -1433,33 +1433,6 @@ static void drag_received_callback(GtkWidget *widget,
 
 /* Buttons */
 
-static GtkWidget * create_pixmap_button(track_list_t * l, const char * filename,
-                                        const char * tooltip)
-  {
-  GtkWidget * button;
-  GtkWidget * image;
-  char * path;
-  path = bg_search_file_read("icons", filename);
-  if(path)
-    {
-    image = gtk_image_new_from_file(path);
-    free(path);
-    }
-  else
-    image = gtk_image_new();
-
-  gtk_widget_show(image);
-  button = gtk_button_new();
-  gtk_container_add(GTK_CONTAINER(button), image);
-
-  bg_gtk_tooltips_set_tip(button, tooltip, PACKAGE);
-
-  g_signal_connect(G_OBJECT(button), "clicked",
-                   G_CALLBACK(button_callback), l);
-  gtk_widget_show(button);
-  return button;
-  }
-
 static GtkWidget * create_icon_button(track_list_t * l,
                                       const char * icon,
                                       const char * tooltip)

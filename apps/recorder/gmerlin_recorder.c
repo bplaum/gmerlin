@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
   bg_plugins_init();
   
   /* Initialize gtk */
-  bg_gtk_init(&argc, &argv, WINDOW_ICON, WINDOW_NAME, WINDOW_CLASS);
+  bg_gtk_init(&argc, &argv, WINDOW_ICON);
 
   win = bg_recorder_window_create(bg_cfg_registry, bg_plugin_reg);
 

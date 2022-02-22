@@ -112,19 +112,6 @@ void bg_ov_set_window(bg_ov_t * ov, const char * window_id)
   gavl_value_free(&val);
   }
 
-void bg_ov_set_window_options(bg_ov_t * ov, const char * name, 
-                              const char * klass, 
-                              const gavl_video_frame_t * icon,
-                              const gavl_video_format_t * icon_format)
-  {
-  if(ov->plugin->set_window_options)
-    {
-    LOCK(ov);
-    ov->plugin->set_window_options(ov->priv,
-                                   name, klass, icon, icon_format);
-    UNLOCK(ov);
-    }
-  }
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   {

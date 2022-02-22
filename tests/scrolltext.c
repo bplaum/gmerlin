@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
   {
   GtkWidget * win;
   bg_gtk_scrolltext_t * scrolltext;
-  bg_gtk_init(&argc, &argv, NULL, NULL, NULL);
+  bg_gtk_init(&argc, &argv, NULL);
   win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
   scrolltext = bg_gtk_scrolltext_create(226, 18);

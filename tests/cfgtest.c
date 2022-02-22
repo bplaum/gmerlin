@@ -648,7 +648,7 @@ int main(int argc, char ** argv)
   
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
   
-  bg_gtk_init(&argc, &argv, NULL, NULL, NULL);
+  bg_gtk_init(&argc, &argv, NULL);
   
   //  test_dialog = bg_dialog_create(section, set_param, NULL, info, "Test dialog");
 

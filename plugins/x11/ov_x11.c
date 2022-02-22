@@ -159,18 +159,6 @@ static void set_accel_map_x11(void * data, const bg_accelerator_map_t * accel_ma
   bg_accelerator_map_append_array(priv->accel_map, bg_accelerator_map_get_accels(accel_map));
   }
 
-static void set_window_options_x11(void * data, 
-                                 const char * name,
-                                 const char * klass,
-                                 const gavl_video_frame_t * icon,
-                                 const gavl_video_format_t * icon_format)
-  {
-  x11_t * priv = data;
-  ensure_window_realized(priv);
-  bg_x11_window_set_options(priv->win, name, klass,
-                            icon, icon_format);
-  }
-
 static int open_x11(void * data, gavl_video_format_t * format, int keep_aspect)
   {
   x11_t * priv = data;
@@ -250,7 +238,6 @@ const bg_ov_plugin_t the_plugin =
     },
     .set_accel_map      = set_accel_map_x11,
     
-    .set_window_options = set_window_options_x11,
     .open               = open_x11,
     .get_sink           = get_sink_x11,
     

@@ -90,7 +90,7 @@ int main(int argc, char ** argv)
   bg_cfg_registry_init("transcoder");
   bg_plugins_init();
   
-  bg_gtk_init(&argc, &argv, "transcoder_icon.png", NULL, NULL);
+  bg_gtk_init(&argc, &argv, "transcoder_icon.png");
 
   /* We must initialize the random number generator if we want the
      Vorbis encoder to work */

@@ -136,7 +136,6 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   {
   const gavl_dictionary_t * options;
   bg_plugin_handle_t * handle;
-  bg_ov_plugin_t * plugin;
   bg_player_video_stream_t * ctx = &player->video_stream;
 
   if(!(options = bg_multi_menu_get_selected(val)) ||
@@ -145,8 +144,8 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   
   bg_player_stream_change_init(player);
   
-  plugin = (bg_ov_plugin_t *)handle->plugin;
 
+#if 0
   if(plugin->set_window_options && ctx->window_options)
     {
     gavl_video_frame_t * icon = NULL;
@@ -188,6 +187,7 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
       free(icon_path);
     gavl_strbreak_free(opt);
     }
+#endif
   
   if(ctx->ov)
     {
@@ -222,8 +222,6 @@ void bg_player_ov_destroy(bg_player_t * player)
 
   if(ctx->display_string)
     free(ctx->display_string);
-  if(ctx->window_options)
-    free(ctx->window_options);
 
   if(ctx->ov_evt_sink)
     bg_msg_sink_destroy(ctx->ov_evt_sink);
@@ -522,8 +520,7 @@ void bg_player_set_ov_plugin_parameter(void * data, const char * name,
     }
   }
 
-void bg_player_set_window_config(bg_player_t * p, const char * display_string, const char * window_options)
+void bg_player_set_window_config(bg_player_t * p, const char * display_string)
   {
   p->video_stream.display_string = gavl_strrep(p->video_stream.display_string, display_string);
-  p->video_stream.window_options = gavl_strrep(p->video_stream.window_options, window_options);
   }

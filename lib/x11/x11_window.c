@@ -39,6 +39,7 @@
 #include <gmerlin/state.h>
 #include <gmerlin/plugin.h>
 #include <gmerlin/pluginregistry.h>
+#include <gmerlin/application.h>
 
 #include <gmerlin/ov.h>
 
@@ -1013,6 +1014,7 @@ static int create_window(bg_x11_window_t * w,
 
   const char * title;
   const gavl_value_t * title_val;
+  const char * icon_file;
   
   if((!w->dpy) && !open_display(w))
     return 0;
@@ -1023,7 +1025,7 @@ static int create_window(bg_x11_window_t * w,
   wmhints->input = True;
   wmhints->initial_state = NormalState;
   wmhints->flags |= InputHint|StateHint;
-  
+
   /* Creating windows without colormap results in a BadMatch error */
   w->black = BlackPixel(w->dpy, w->screen);
   w->colormap = XCreateColormap(w->dpy, RootWindow(w->dpy, w->screen),
@@ -1070,6 +1072,46 @@ static int create_window(bg_x11_window_t * w,
                                 w->visual,
                                 attr_flags,
                                 &attr);
+
+  /* Create GC */
+  
+  w->gc = XCreateGC(w->dpy, w->normal.win, 0, NULL);
+  XSetForeground(w->dpy, w->gc, w->black);
+  XSetForeground(w->dpy, w->gc, w->black);
+  XSetLineAttributes(w->dpy, w->gc, 3, LineSolid, CapButt, JoinBevel);
+
+  /* Icon */
+  if((icon_file = bg_app_get_window_icon()))
+    {
+    gavl_video_frame_t * icon = NULL;
+    gavl_video_format_t icon_format;
+    
+    if((icon = 
+        bg_plugin_registry_load_image(bg_plugin_reg, icon_file, &icon_format, NULL)))
+      {
+      bg_x11_window_make_icon(w, icon, &icon_format, &w->icon, &w->icon_mask);
+    
+      wmhints->icon_pixmap = w->icon;
+      wmhints->icon_mask   = w->icon_mask;
+    
+      if(wmhints->icon_pixmap != None)
+        wmhints->flags |= IconPixmapHint;
+    
+      if(wmhints->icon_mask != None)
+        wmhints->flags |= IconMaskHint;
+      
+      gavl_video_frame_destroy(icon);
+      }
+    else
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't load icon file %s", icon_file);
+       
+    }
+  else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no application icon");
+    //    gavl_dictionary_dump(&bg_app_vars, 2);
+    }
+
   
   if(w->normal.parent == w->root)
     {
@@ -1146,21 +1188,16 @@ static int create_window(bg_x11_window_t * w,
   XSetWindowBackground(w->dpy, w->normal.win, w->black);
   XSetWindowBackground(w->dpy, w->fullscreen.win, w->black);
   
-  /* Create GC */
-  
-  w->gc = XCreateGC(w->dpy, w->normal.win, 0, NULL);
-  XSetForeground(w->dpy, w->gc, w->black);
-  XSetForeground(w->dpy, w->gc, w->black);
-  XSetLineAttributes(w->dpy, w->gc, 3, LineSolid, CapButt, JoinBevel);
   
   /* Create colormap and fullscreen cursor */
+  
+  black.pixel = BlackPixel(w->dpy, w->screen);
+  XQueryColor(w->dpy, DefaultColormap(w->dpy, w->screen), &black);
   
   w->fullscreen_cursor_pixmap =
     XCreateBitmapFromData(w->dpy, w->fullscreen.win,
                           bm_no_data, 8, 8);
 
-  black.pixel = BlackPixel(w->dpy, w->screen);
-  XQueryColor(w->dpy, DefaultColormap(w->dpy, w->screen), &black);
   
   w->fullscreen_cursor=
     XCreatePixmapCursor(w->dpy, w->fullscreen_cursor_pixmap,
@@ -1881,6 +1918,7 @@ void bg_x11_window_set_options(bg_x11_window_t * w,
                                const gavl_video_frame_t * icon,
                                const gavl_video_format_t * icon_format)
   {
+
   /* Set Class hints */
   if(name && klass)
     {
@@ -1900,7 +1938,7 @@ void bg_x11_window_set_options(bg_x11_window_t * w,
     free(xclasshint.res_class);
     }
 
-  /* Set Icon (TODO) */
+  /* Set Icon */
   if(icon && icon_format)
     {
     XWMHints xwmhints;

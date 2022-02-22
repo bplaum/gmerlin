@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
   const bg_plugin_info_t * info;
   gavl_dictionary_t m;
   
-  bg_gtk_init(&argc, &argv, NULL, NULL, NULL);
+  bg_gtk_init(&argc, &argv, NULL);
 
   gavl_dictionary_init(&m);
   

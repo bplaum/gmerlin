@@ -140,8 +140,7 @@ int main(int argc, char ** argv)
   srand(time(NULL));
   
   bg_translation_init();
-  bg_gtk_init(&argc, &argv, WINDOW_ICON, WINDOW_NAME, 
-              WINDOW_CLASS);
+  bg_gtk_init(&argc, &argv, WINDOW_ICON);
 
   bg_cfg_registry_init("player");
   bg_plugins_init();

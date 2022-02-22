@@ -50,8 +50,6 @@ typedef struct gmerlin_s gmerlin_t;
 
 /* Class hints */
 
-#define WINDOW_NAME  "Gmerlin"
-#define WINDOW_CLASS "gmerlin"
 #define WINDOW_ICON  "player_icon.png"
 
 /* Main menu */

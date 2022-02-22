@@ -36,9 +36,7 @@ GdkPixbuf * bg_gtk_pixbuf_from_frame(gavl_video_format_t * format,
                                      gavl_video_frame_t * frame);
 
 void bg_gtk_init(int * argc, char *** argv, 
-                 const char * default_window_icon,
-                 const char * default_name,
-                 const char * default_class);
+                 const char * default_window_icon);
 
 cairo_surface_t * bg_gdk_pixbuf_render_pixmap_and_mask(GdkPixbuf *pixbuf);
 

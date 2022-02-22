@@ -215,7 +215,6 @@ typedef struct
   bg_parameter_info_t * plugin_params;
 
   char * display_string;
-  char * window_options;
 
   bg_controllable_t * ov_ctrl;
   bg_msg_sink_t * ov_evt_sink;

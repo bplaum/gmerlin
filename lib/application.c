@@ -30,6 +30,16 @@ const char * bg_app_get_label()
   return gavl_dictionary_get_string(&bg_app_vars, BG_APP_LABEL);
   }
 
+const char * bg_app_get_window_icon()
+  {
+  return gavl_dictionary_get_string(&bg_app_vars, GAVL_META_ICON_URL);
+  }
+
+void bg_app_set_window_icon(const char * str)
+  {
+  gavl_dictionary_set_string(&bg_app_vars, GAVL_META_ICON_URL, str);
+  }
+
 const char * config_dir_default = "generic";
 
 const char * bg_app_get_config_dir()

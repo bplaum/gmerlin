@@ -36,9 +36,11 @@ void bg_app_init(const char * name,
 const char * bg_app_get_name();
 const char * bg_app_get_label();
 const char * bg_app_get_label();
+const char * bg_app_get_window_icon();
 
 const char * bg_app_get_config_dir();
 void bg_app_set_config_dir(const char * p);
+void bg_app_set_window_icon(const char * icon);
 
 void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, const char * name);
 
