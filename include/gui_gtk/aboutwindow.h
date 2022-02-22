@@ -19,11 +19,5 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-typedef struct bg_gtk_about_window_s bg_gtk_about_window_t;
-
-bg_gtk_about_window_t *
-bg_gtk_about_window_create(const char * name, const char * version,
-                           const char * icon,
-                           void (*close_callback)(bg_gtk_about_window_t*,
-                                                  void*),
-                           void * close_callback_data);
+GtkWidget *
+bg_gtk_about_window_create(void);

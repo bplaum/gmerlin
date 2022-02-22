@@ -214,6 +214,8 @@ struct gmerlin_s
   bg_parameter_info_t * input_plugin_parameters;
   bg_parameter_info_t * image_reader_parameters;
   
+  GtkWidget * about_window;
+  
   //  bg_lcdproc_t * lcdproc;
 
   /* Remote control */

@@ -85,6 +85,7 @@ struct bg_recorder_window_s
   GtkWidget * fullscreen_button;
   GtkWidget * nofullscreen_button;
   GtkWidget * hide_button;
+  GtkWidget * about_window;
   
   bg_dialog_t * cfg_dialog;
   
@@ -188,15 +189,6 @@ static int get_parameter(void * data, const char * name,
     return 1;
     }
   return 0;
-  }
-
-
-static void about_window_close_callback(bg_gtk_about_window_t * w,
-                                        void * data)
-  {
-  bg_recorder_window_t * win;
-  win = (bg_recorder_window_t *)data;
-  gtk_widget_set_sensitive(win->about_button, 1);
   }
 
 static void set_fullscreen(bg_recorder_window_t * v)
@@ -306,11 +298,10 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if(w == win->about_button)
     {
-    gtk_widget_set_sensitive(win->about_button, 0);
-    bg_gtk_about_window_create("Gmerlin recorder", VERSION,
-                               "recorder_icon.png",
-                               about_window_close_callback,
-                               win);
+    if(!win->about_window)
+      win->about_window = bg_gtk_about_window_create();
+
+    gtk_widget_show(win->about_window);
     }
   else if(w == win->fullscreen_button)
     set_fullscreen(win);

@@ -222,15 +222,6 @@ static int chapter_menu_has_widget(chapter_menu_t * s,
   return 0;
   }
 
-static void about_window_close_callback(bg_gtk_about_window_t* win, void* data)
-  {
-  gmerlin_t * g;
-  main_menu_t * the_menu;
-
-  g = (gmerlin_t*)data;
-  the_menu = g->main_menu;
-  gtk_widget_set_sensitive(the_menu->help_menu.about, 1);
-  }
 
 static void menu_callback(GtkWidget * w, gpointer data)
   {
@@ -267,15 +258,15 @@ static void menu_callback(GtkWidget * w, gpointer data)
 
   else if(w == the_menu->help_menu.about)
     {
-    gtk_widget_set_sensitive(the_menu->help_menu.about, 0);
-    bg_gtk_about_window_create("Gmerlin player", VERSION,
-                               "player_icon.png",
-                               about_window_close_callback,
-                               g);
+    if(!g->about_window)
+      g->about_window = bg_gtk_about_window_create();
+
+    gtk_widget_show(g->about_window);
+    
     }
   else if(w == the_menu->help_menu.help)
     {
-    bg_display_html_help("userguide/GUI-Player.html");
+    // bg_display_html_help("userguide/GUI-Player.html");
     }
   
   /* Commands (== accelerators) */

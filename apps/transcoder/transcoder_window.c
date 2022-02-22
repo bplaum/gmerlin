@@ -160,6 +160,7 @@ struct transcoder_window_s
     GtkWidget * menu;
     } help_menu;
 
+  GtkWidget * about_window;
 
   bg_msg_sink_t * msg_sink;
   };
@@ -554,12 +555,6 @@ static void filesel_set_path(GtkWidget * filesel, char * path)
   }
 #endif
 
-static void about_window_close_callback(bg_gtk_about_window_t * w,
-                                        void * data)
-  {
-  transcoder_window_t * win = (transcoder_window_t *)data;
-  gtk_widget_set_sensitive(win->help_menu.about_item, 1);
-  }
 
 void transcoder_window_load_profile(transcoder_window_t * win,
                                     const char * file)
@@ -677,10 +672,10 @@ static void button_callback(GtkWidget * w, gpointer data)
 
   else if(w == win->help_menu.about_item)
     {
-    bg_gtk_about_window_create("Gmerlin transcoder", VERSION,
-                               "transcoder_icon.png", about_window_close_callback,
-                               win);
-    gtk_widget_set_sensitive(win->help_menu.about_item, 0);
+    if(!win->about_window)
+      win->about_window = bg_gtk_about_window_create();
+
+    gtk_widget_show(win->about_window);
     }
   else if(w == win->help_menu.help_item)
     {
