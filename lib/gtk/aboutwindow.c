@@ -55,7 +55,9 @@ GtkWidget * bg_gtk_about_window_create()
   gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(ret), VERSION);
 
   gtk_about_dialog_set_license_type(GTK_ABOUT_DIALOG(ret), GTK_LICENSE_GPL_3_0);
-  gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(ret), "https://gmerlin.sourceforge.net");
+
+  /* TODO: Enter new website once it is available */
+  gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(ret), "http://gmerlin.sourceforge.net");
 
   g_signal_connect(G_OBJECT(ret), "delete_event",
                    G_CALLBACK(delete_callback), NULL);
