@@ -161,7 +161,7 @@ static int handle_msg_open(void * priv, gavl_msg_t * msg)
 
 static int handle_msg_out(void * priv, gavl_msg_t * msg)
   {
-  fprintf(stderr, "gavf-decode: Got backchannel message\n");
+  fprintf(stderr, "gavf-read: Got backchannel message\n");
   gavl_msg_dump(msg, 2);
 
   switch(msg->NS)
@@ -405,7 +405,7 @@ int main(int argc, char ** argv)
   
   gavl_dictionary_t m;
 
-  bg_app_init("gavf-decode", TRS("Open media locations and output a gavf stream"));
+  bg_app_init("gavf-read", TRS("Open media locations and output a gavf stream"));
   
   //  gavf_t * g;
   
