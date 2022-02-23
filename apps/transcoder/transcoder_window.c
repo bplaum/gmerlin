@@ -44,21 +44,19 @@
 #include <gmerlin/iconfont.h>
 
 
-// #include <gmerlin/remote.h>
 #include <gmerlin/textrenderer.h>
 
 #include <gmerlin/converters.h>
 #include <gmerlin/filters.h>
 
-#include <gui_gtk/display.h>
-#include <gui_gtk/scrolltext.h>
+// #include <gui_gtk/display.h>
+// #include <gui_gtk/scrolltext.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/logwindow.h>
 #include <gui_gtk/aboutwindow.h>
 #include <gui_gtk/fileselect.h>
 
 #include "transcoder_window.h"
-#include "transcoder_remote.h"
 
 #include "tracklist.h"
 
@@ -82,12 +80,17 @@ struct transcoder_window_s
   GtkWidget * load_button;
   GtkWidget * save_button;
 
+  GtkWidget * statusbar;
+
+  guint status_ctx_id;
+  int status_active;
+  
   bg_gtk_log_window_t * logwindow;
   int show_logwindow;
   
   GtkWidget * progress_bar;
-  bg_gtk_time_display_t * time_remaining;
-  bg_gtk_scrolltext_t   * scrolltext;
+  //  bg_gtk_time_display_t * time_remaining;
+  //  bg_gtk_scrolltext_t   * scrolltext;
   
   /* Configuration stuff */
 
@@ -103,11 +106,6 @@ struct transcoder_window_s
 
   bg_transcoder_t * transcoder;
   bg_transcoder_track_t * transcoder_track;
-
-
-  float fg_color[3];
-  float fg_color_e[3]; /* Foreground color for error messages */
-  float bg_color[3];
   
   /* Load/Save stuff */
   
@@ -117,10 +115,6 @@ struct transcoder_window_s
   GtkWidget * filesel;
   char * filesel_file;
   char * filesel_path;
-
-  /* Remote control */
-  bg_websocket_context_t * ws;
-  bg_http_server_t   * srv;
   
   GtkWidget * menubar;
 
@@ -171,35 +165,6 @@ static int start_transcode(transcoder_window_t * win);
 static const bg_parameter_info_t transcoder_window_parameters[] =
   {
     {
-      .name =        "display",
-      .long_name =   TRS("Display"),
-      .type =        BG_PARAMETER_SECTION,
-    },
-    {
-      .name =        "display_foreground",
-      .long_name =   TRS("Foreground"),
-      .type =        BG_PARAMETER_COLOR_RGB,
-      .val_default = GAVL_VALUE_INIT_COLOR_RGB(1.0, 1.0, 0.0)
-    },
-    {
-      .name =        "display_foreground_error",
-      .long_name =   TRS("Error foreground"),
-      .type =        BG_PARAMETER_COLOR_RGB,
-      .val_default = GAVL_VALUE_INIT_COLOR_RGB(1.0, 0.0, 0.0)
-    },
-    {
-      .name =        "display_background",
-      .long_name =   TRS("Background"),
-      .type =        BG_PARAMETER_COLOR_RGB,
-      .val_default = GAVL_VALUE_INIT_COLOR_RGB(0.0, 0.0, 0.0)
-    },
-    {
-      .name =        "display_fontname",
-      .long_name =   TRS("Font"),
-      .type =        BG_PARAMETER_FONT,
-      .val_default = GAVL_VALUE_INIT_STRING("Sans Bold 10")
-    },
-    {
       .name =        "task_path",
       .long_name =   "Task path",
       .type =        BG_PARAMETER_DIRECTORY,
@@ -234,19 +199,33 @@ static const bg_parameter_info_t transcoder_window_parameters[] =
     { /* End of parameters */ }
   };
 
+static void set_status_message(transcoder_window_t * win, const char * msg)
+  {
+  if(win->status_active)
+    gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->status_ctx_id);
+  
+  gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->status_ctx_id, msg);
+  win->status_active = 1;
+  }
+
+static void clear_status_message(transcoder_window_t * win)
+  {
+  if(win->status_active)
+    {
+    gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->status_ctx_id);
+    win->status_active = 0;
+    }
+  }
+
 static void
 set_transcoder_window_parameter(void * data, const char * name,
                                 const gavl_value_t * val)
   {
-  transcoder_window_t * win = (transcoder_window_t *)data;
+  transcoder_window_t * win = data;
 
   if(!name)
-    {
-    bg_gtk_scrolltext_set_colors(win->scrolltext, win->fg_color, win->bg_color);
-    bg_gtk_time_display_set_colors(win->time_remaining, win->fg_color, win->bg_color);
     return;
-    }
-
+  
   if(!strcmp(name, "task_path"))
     {
     win->task_path = gavl_strrep(win->task_path, val->v.str);
@@ -254,28 +233,6 @@ set_transcoder_window_parameter(void * data, const char * name,
   else if(!strcmp(name, "profile_path"))
     {
     win->profile_path = gavl_strrep(win->profile_path, val->v.str);
-    }
-  else if(!strcmp(name, "display_foreground"))
-    {
-    win->fg_color[0] = val->v.color[0];
-    win->fg_color[1] = val->v.color[1];
-    win->fg_color[2] = val->v.color[2];
-    }
-  else if(!strcmp(name, "display_foreground_error"))
-    {
-    win->fg_color_e[0] = val->v.color[0];
-    win->fg_color_e[1] = val->v.color[1];
-    win->fg_color_e[2] = val->v.color[2];
-    }
-  else if(!strcmp(name, "display_background"))
-    {
-    win->bg_color[0] = val->v.color[0];
-    win->bg_color[1] = val->v.color[1];
-    win->bg_color[2] = val->v.color[2];
-    }
-  else if(!strcmp(name, "display_fontname"))
-    {
-    bg_gtk_scrolltext_set_font(win->scrolltext, val->v.str);
     }
   else if(!strcmp(name, "show_logwindow"))
     {
@@ -291,7 +248,7 @@ static int
 get_transcoder_window_parameter(void * data, const char * name,
                                 gavl_value_t * val)
   {
-  transcoder_window_t * win = (transcoder_window_t *)data;
+  transcoder_window_t * win = data;
 
   if(!name)
     return 1;
@@ -351,7 +308,7 @@ static int handle_msg(void * data, gavl_msg_t * msg)
         {
         case BG_TRANSCODER_MSG_START:
           arg_str = gavl_msg_get_arg_string_c(msg, 0);
-          bg_gtk_scrolltext_set_text(win->scrolltext, arg_str, win->fg_color, win->bg_color);
+          set_status_message(win, arg_str);
           break;
         case BG_TRANSCODER_MSG_NUM_AUDIO_STREAMS:
           break;
@@ -362,23 +319,30 @@ static int handle_msg(void * data, gavl_msg_t * msg)
         case BG_TRANSCODER_MSG_VIDEO_FORMAT:
           break;
         case BG_TRANSCODER_MSG_PROGRESS:
+          {
+          char * status_msg;
+          char time_str[GAVL_TIME_STRING_LEN];
+          
           percentage_done = gavl_msg_get_arg_float(msg, 0);
           remaining_time = gavl_msg_get_arg_long(msg, 1);
 
-          bg_gtk_time_display_update(win->time_remaining,
-                                     remaining_time,
-                                     BG_GTK_DISPLAY_MODE_HMS);
-        
+          gavl_time_prettyprint(remaining_time, time_str);
+
+          status_msg = bg_sprintf("Remaining time: %s", time_str);
+          
+          gtk_progress_bar_set_text(GTK_PROGRESS_BAR(win->progress_bar), status_msg);
+          free(status_msg);
+          
           gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(win->progress_bar),
                                         percentage_done);
+          }
           break;
         case BG_TRANSCODER_MSG_FINISHED:
 
           finish_transcoding(win);
-        
-          bg_gtk_time_display_update(win->time_remaining,
-                                     GAVL_TIME_UNDEFINED,
-                                     BG_GTK_DISPLAY_MODE_HMS);
+
+          gtk_progress_bar_set_text(GTK_PROGRESS_BAR(win->progress_bar), "");
+          
           gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(win->progress_bar), 0.0);
         
         
@@ -399,9 +363,9 @@ static int handle_msg(void * data, gavl_msg_t * msg)
 
         case BG_TRANSCODER_MSG_ERROR:
           arg_str = gavl_msg_get_arg_string_c(msg, 0);
-          bg_gtk_scrolltext_set_text(win->scrolltext,
-                                     bg_gtk_log_window_last_error(win->logwindow),
-                                     win->fg_color_e, win->bg_color);
+
+          set_status_message(win, bg_gtk_log_window_last_error(win->logwindow));
+          
           if(win->transcoder_track)
             {
             track_list_prepend_track(win->tracklist, win->transcoder_track);
@@ -410,9 +374,7 @@ static int handle_msg(void * data, gavl_msg_t * msg)
 
           finish_transcoding(win);
         
-          bg_gtk_time_display_update(win->time_remaining,
-                                     GAVL_TIME_UNDEFINED,
-                                     BG_GTK_DISPLAY_MODE_HMS);
+          gtk_progress_bar_set_text(GTK_PROGRESS_BAR(win->progress_bar), "");
           gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(win->progress_bar), 0.0);
         
           win->transcoder = NULL;
@@ -453,8 +415,7 @@ static int start_transcode(transcoder_window_t * win)
   win->transcoder_track      = track_list_get_track(win->tracklist);
   if(!win->transcoder_track)
     {
-    bg_gtk_scrolltext_set_text(win->scrolltext, "Gmerlin transcoder version "VERSION,
-                               win->fg_color, win->bg_color);
+    clear_status_message(win);
     return 0;
     }
   win->transcoder            = bg_transcoder_create();
@@ -470,8 +431,8 @@ static int start_transcode(transcoder_window_t * win)
     {
     bg_gtk_log_window_flush(win->logwindow);
     
-    bg_gtk_scrolltext_set_text(win->scrolltext, bg_gtk_log_window_last_error(win->logwindow),
-                               win->fg_color_e, win->bg_color);
+    set_status_message(win, bg_gtk_log_window_last_error(win->logwindow));
+        
     
     if(win->transcoder_track)
       track_list_prepend_track(win->tracklist, win->transcoder_track);
@@ -493,69 +454,6 @@ static int start_transcode(transcoder_window_t * win)
   return 1;
   }
 
-#if 0
-static void filesel_button_callback(GtkWidget * w, gpointer * data)
-  {
-  const char * end_pos;
-
-  GtkFileSelection * filesel;
-  transcoder_window_t * win = (transcoder_window_t *)data;
-  
-  filesel = GTK_FILE_SELECTION(win->filesel);
-
-  if(w == filesel->ok_button)
-    {
-    win->filesel_file = gavl_strdup(gtk_file_selection_get_filename(filesel));
-    gtk_widget_hide(win->filesel);
-
-    end_pos = strrchr(win->filesel_file, '/');
-    if(end_pos)
-      {
-      end_pos++;
-      win->filesel_path = bg_strndup(win->filesel_path, win->filesel_file, end_pos);
-      }
-    gtk_main_quit();
-    }
-  else if((w == win->filesel) || (w == filesel->cancel_button))
-    {
-    gtk_widget_hide(win->filesel);
-    gtk_main_quit();
-    }
-  }
-
-static gboolean filesel_delete_callback(GtkWidget * w, GdkEventAny * event,
-                                         gpointer * data)
-  {
-  filesel_button_callback(w, data);
-  return TRUE;
-  }
-
-static GtkWidget * create_filesel(transcoder_window_t * win)
-  {
-  GtkWidget * ret;
-
-  ret = gtk_file_selection_new("");
-
-  gtk_window_set_modal(GTK_WINDOW(ret), 1);
-  
-  g_signal_connect(G_OBJECT(ret), "delete-event",
-                   G_CALLBACK(filesel_delete_callback), win);
-  g_signal_connect(G_OBJECT(GTK_FILE_SELECTION(ret)->ok_button),
-                   "clicked", G_CALLBACK(filesel_button_callback), win);
-  g_signal_connect(G_OBJECT(GTK_FILE_SELECTION(ret)->cancel_button),
-                   "clicked", G_CALLBACK(filesel_button_callback), win);
-  
-  return ret;
-  }  
-
-static void filesel_set_path(GtkWidget * filesel, char * path)
-  {
-  if(path)
-    gtk_file_selection_set_filename(GTK_FILE_SELECTION(filesel), path);
-  }
-#endif
-
-
 void transcoder_window_load_profile(transcoder_window_t * win,
                                     const char * file)
   {
@@ -574,7 +472,7 @@ static void transcoder_window_save_profile(transcoder_window_t * win,
 
 static void button_callback(GtkWidget * w, gpointer data)
   {
-  transcoder_window_t * win = (transcoder_window_t *)data;
+  transcoder_window_t * win = data;
   char * tmp_string;
   
   if((w == win->run_button) || (w == win->actions_menu.run_item))
@@ -596,14 +494,11 @@ static void button_callback(GtkWidget * w, gpointer data)
     gtk_widget_set_sensitive(win->stop_button, 0);
     gtk_widget_set_sensitive(win->actions_menu.stop_item, 0);
 
-    bg_gtk_time_display_update(win->time_remaining, GAVL_TIME_UNDEFINED,
-                               BG_GTK_DISPLAY_MODE_HMS);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(win->progress_bar), "");
+
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(win->progress_bar), 0.0);
 
-    bg_gtk_scrolltext_set_text(win->scrolltext,
-                               "Gmerlin transcoder version "VERSION,
-                               win->fg_color, win->bg_color);
-    
+    clear_status_message(win);
     }
   else if((w == win->load_button) || (w == win->file_menu.load_item))
     {
@@ -705,7 +600,7 @@ static GtkWidget * create_icon_button(transcoder_window_t * win,
 static gboolean delete_callback(GtkWidget * w, GdkEvent * evt,
                                 gpointer data)
   {
-  transcoder_window_t * win = (transcoder_window_t *)data;
+  transcoder_window_t * win = data;
   gtk_widget_hide(win->win);
   gtk_main_quit();
   return TRUE;
@@ -799,8 +694,6 @@ static void logwindow_close_callback(bg_gtk_log_window_t*w, void*data)
 
 transcoder_window_t * transcoder_window_create()
   {
-  int port;
-  char * env;
   GtkWidget * menuitem;
   
   GtkWidget * main_table;
@@ -891,25 +784,18 @@ transcoder_window_t * transcoder_window_create()
   
   /* Progress bar */
   ret->progress_bar = gtk_progress_bar_new();
+  gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(ret->progress_bar), TRUE);
+  gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ret->progress_bar), "");
+    
   gtk_widget_show(ret->progress_bar);
 
-  /* Time display */
-  ret->time_remaining =
-    bg_gtk_time_display_create(BG_GTK_DISPLAY_SIZE_SMALL, 4,
-                               BG_GTK_DISPLAY_MODE_HMS);
+  ret->statusbar = gtk_statusbar_new();
+  ret->status_ctx_id = gtk_statusbar_get_context_id(GTK_STATUSBAR(ret->statusbar), "Messages");
+  gtk_statusbar_push(GTK_STATUSBAR(ret->statusbar), ret->status_ctx_id, "Gmerlin transcoder version "VERSION);
+  
+  gtk_widget_show(ret->statusbar);
 
-  bg_gtk_tooltips_set_tip(bg_gtk_time_display_get_widget(ret->time_remaining),
-                          "Estimated remaining transcoding time",
-                          PACKAGE);
-
-
-  bg_gtk_time_display_update(ret->time_remaining, GAVL_TIME_UNDEFINED,
-                             BG_GTK_DISPLAY_MODE_HMS);
-
-  /* Scrolltext */
-
-  ret->scrolltext = bg_gtk_scrolltext_create(100, 24);
-
+  
   /* Menubar */
 
   init_menus(ret);
@@ -972,23 +858,10 @@ transcoder_window_t * transcoder_window_create()
                    box,
                    0, 1, 1, 2, 0, 0);
 
-  box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-
-  gtk_box_pack_end(GTK_BOX(box),
-                   bg_gtk_time_display_get_widget(ret->time_remaining),
-                   FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(box),
-                     bg_gtk_scrolltext_get_widget(ret->scrolltext), TRUE, TRUE, 0);
-
-  gtk_widget_show(box);
-  
-  bg_gtk_table_attach(main_table,
-                      box,
-                      0, 1, 2, 3, 0, 0);
   
   bg_gtk_table_attach(main_table,
                       ret->progress_bar,
-                      0, 1, 3, 4, 0, 0);
+                      0, 1, 2, 3, 0, 0);
   
   frame = gtk_frame_new(TR("Tasklist"));
   gtk_container_add(GTK_CONTAINER(frame),
@@ -996,41 +869,23 @@ transcoder_window_t * transcoder_window_create()
 
   gtk_widget_show(frame);
   bg_gtk_table_attach_defaults(main_table,
-                            frame,
-                            0, 1, 4, 5);
+                               frame,
+                               0, 1, 3, 4);
+  
+  bg_gtk_table_attach(main_table,
+                      ret->statusbar,
+                      0, 1, 4, 5, 0, 0);
+  
   
   gtk_widget_show(main_table);
   gtk_container_add(GTK_CONTAINER(ret->win), main_table);
   
-  bg_gtk_scrolltext_set_text(ret->scrolltext, "Gmerlin transcoder version "VERSION,
-                             ret->fg_color, ret->bg_color);
-
   /* Apply config stuff */
 
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window");
   bg_cfg_section_apply(cfg_section, transcoder_window_parameters,
                        set_transcoder_window_parameter, ret);
 
-  port = TRANSCODER_REMOTE_PORT;
-  env = getenv(TRANSCODER_REMOTE_ENV);
-  if(env)
-    port = atoi(env);
-  
-  ret->srv = bg_http_server_create();
-  
-  bg_http_server_set_default_port(ret->srv, port);
-  
-  /* Apply tree config */
-
-  ret->srv = bg_http_server_create();
-  ret->ws = bg_websocket_context_create(0, ret->srv, "/ws", NULL);
-  
-  bg_http_server_set_default_port(ret->srv, TRANSCODER_REMOTE_PORT);
-  
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "remote");
-  bg_cfg_section_apply(cfg_section, bg_http_server_get_parameters(ret->srv),
-                       bg_http_server_set_parameter, ret->srv);
-  
   
   return ret;
   }
@@ -1063,35 +918,8 @@ void transcoder_window_destroy(transcoder_window_t* w)
   
   bg_msg_sink_destroy(w->msg_sink);
 
-  bg_http_server_destroy(w->srv);
-  bg_websocket_context_destroy(w->ws);
-  
-  bg_gtk_time_display_destroy(w->time_remaining);
-  bg_gtk_scrolltext_destroy(w->scrolltext);
-  
-  //  g_object_unref(w->win);
-  
   free(w);
   }
-
-#if 0
-static int handle_cmd(void * data, gavl_msg_t * msg)
-  {
-  transcoder_window_t * win = data;
-  char * arg_str;
-  uint32_t id = gavl_msg_get_id(msg);
-
-  switch(id)
-    {
-    case TRANSCODER_REMOTE_ADD_FILE:
-      arg_str = gavl_msg_get_arg_string(msg, 0);
-      track_list_add_url(win->tracklist, arg_str);
-      free(arg_str);
-      break;
-    }
-  return 1;
-  }
-#endif
 
 static gboolean remote_callback(gpointer data)
   {
@@ -1305,15 +1133,6 @@ static void transcoder_window_preferences(transcoder_window_t * w)
                 w,
                 transcoder_window_parameters);
 
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry,
-                                             "remote");
-
-  bg_dialog_add(dlg,
-                TR("Remote"),
-                cfg_section,
-                bg_http_server_set_parameter,
-                w->srv,
-                bg_http_server_get_parameters(w->srv));
 
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry,
                                              "logwindow");

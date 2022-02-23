@@ -33,7 +33,6 @@
 #include <gmerlin/application.h>
 
 #include "transcoder_window.h"
-#include "transcoder_remote.h"
 
 static void opt_p(void * data, int * argc, char *** argv, int arg)
   {
@@ -72,10 +71,7 @@ const bg_cmdline_app_data_t app_data =
     .args = (bg_cmdline_arg_array_t[]) { { TRS("Options"), args },
                                        {  } },
     .env = (bg_cmdline_ext_doc_t[])
-    { { TRANSCODER_REMOTE_ENV,
-        TRS("Default port for the remote control") },
-      { /* End */ }
-    },
+    { { /* End */ } },
   };
 
 
