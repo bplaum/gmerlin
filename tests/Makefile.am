@@ -17,7 +17,6 @@ cfgtest \
 mdb-tree \
 question \
 message \
-scrolltext \
 auth \
 chapter \
 vumeter
@@ -151,9 +150,6 @@ vumeter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 # visualization_SOURCES = visualization.c
 # visualization_LDADD = ../lib/libgmerlin.la
-
-scrolltext_SOURCES = scrolltext.c
-scrolltext_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 question_SOURCES = question.c
 question_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la

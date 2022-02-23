@@ -20,7 +20,6 @@ message.h \
 plugin.h \
 presetmenu.h \
 question.h \
-scrolltext.h \
 slider.h \
 textview.h \
 urllink.h \

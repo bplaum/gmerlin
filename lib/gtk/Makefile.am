@@ -52,7 +52,6 @@ plugin_multi.c \
 pluginmenu.c \
 presetmenu.c \
 question.c \
-scrolltext.c \
 textview.c \
 trackinfo.c \
 urllink.c \
