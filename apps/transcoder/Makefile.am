@@ -37,7 +37,6 @@ $(top_builddir)/lib/libgmerlin.la @GTK_LIBS@
 
 
 noinst_HEADERS = \
-transcoder_remote.h \
 transcoder_window.h \
 tracklist.h \
 trackdialog.h
