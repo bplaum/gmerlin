@@ -918,7 +918,7 @@ static gavf_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout)
     *flags |= BG_PLUG_IO_IS_SOCKET;
     }
   
-  return gavf_io_create_socket_1(fd, timeout, GAVF_IO_SOCKET_DO_CLOSE);
+  return gavf_io_create_socket(fd, timeout, GAVF_IO_SOCKET_DO_CLOSE);
   }
 
 

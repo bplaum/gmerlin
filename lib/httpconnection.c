@@ -148,7 +148,7 @@ void bg_http_connection_clear_keepalive(bg_http_connection_t * c)
 
 int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   {
-  gavf_io_t * io = gavf_io_create_socket_1(fd, timeout, 0);
+  gavf_io_t * io = gavf_io_create_socket(fd, timeout, 0);
   
   req->fd = fd;
 

@@ -118,7 +118,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
   l->last_subscribe_time = gavl_timer_get(l->timer);
   
   if(((fd = gavl_socket_connect_inet(l->remote_addr, 5000)) < 0) ||
-     !(io = gavf_io_create_socket_1(fd, 5000, 0)) ||
+     !(io = gavf_io_create_socket(fd, 5000, 0)) ||
      !gavl_http_request_write(io, &req) ||
      !gavl_http_response_read(io, &res) ||
      (gavl_http_response_get_status_int(&res) != 200))
@@ -181,7 +181,7 @@ static void unsubscribe(bg_upnp_event_listener_t * l)
     goto fail;
 
   if(((fd = gavl_socket_connect_inet(l->remote_addr, 5000)) < 0) ||
-     !(io = gavf_io_create_socket_1(fd, 5000, 0)) ||
+     !(io = gavf_io_create_socket(fd, 5000, 0)) ||
      !gavl_http_request_write(io, &req) ||
      !gavl_http_response_read(io, &res) ||
      (gavl_http_response_get_status_int(&res) != 200))
@@ -382,7 +382,7 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
   if(strcmp(conn->method, "NOTIFY") || strcmp(conn->path, l->path))
     return 0;
 
-  io = gavf_io_create_socket_1(conn->fd, 30000, 0);
+  io = gavf_io_create_socket(conn->fd, 30000, 0);
   
   if(!bg_http_read_body(io, &conn->req, &buf))
     {

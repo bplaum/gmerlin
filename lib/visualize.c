@@ -834,5 +834,3 @@ void bg_visualizer_pause(bg_visualizer_t * v)
   gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_PAUSE, BG_MSG_NS_VISUALIZER);
   bg_msg_sink_put(v->msink, msg);
   }
-  
-  

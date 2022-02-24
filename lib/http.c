@@ -426,7 +426,7 @@ static gavf_io_t * open_io(const char * protocol, const char * host, int port)
     }
   else
     {
-    ret = gavf_io_create_socket_1(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
+    ret = gavf_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
     }
 
   fail:

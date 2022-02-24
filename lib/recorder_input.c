@@ -208,8 +208,14 @@ static int open_recorder(void * priv, const char * filename)
   gavl_dictionary_t vars;
   const char * var;
   recorder_t * r = priv;
-  bg_media_source_init(&r->src);
 
+  if(!gavl_string_starts_with(filename, "recorder://"))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid location %s", filename);
+    return 0;
+    }
+  bg_media_source_init(&r->src);
+    
   /* We support the URL variables a=[0|1] and v=[0|1] */
   gavl_dictionary_init(&vars);
   bg_url_get_vars_c(filename, &vars);

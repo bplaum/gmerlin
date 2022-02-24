@@ -951,7 +951,7 @@ static int create_mpd(bg_backend_handle_t * dev, const char * uri, const char * 
   if((fd = gavl_socket_connect_inet(addr, 2000)) < 0)
     goto fail;
   
-  priv->io = gavf_io_create_socket_1(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+  priv->io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
   
   if(!gavf_io_read_line(priv->io, &priv->line, &priv->line_alloc, 1024))
     goto fail;

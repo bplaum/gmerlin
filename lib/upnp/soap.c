@@ -159,7 +159,7 @@ int bg_soap_request_read_req(gavl_dictionary_t * s, bg_http_connection_t * conn)
   gavl_buffer_t buf;
   const char * soapaction;
   const char * pos;
-  gavf_io_t * io = gavf_io_create_socket_1(conn->fd, 3000, 0);
+  gavf_io_t * io = gavf_io_create_socket(conn->fd, 3000, 0);
 
   gavl_buffer_init(&buf);
   
@@ -480,7 +480,7 @@ int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd)
 
   res = gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_RES_HDR);
 
-  io = gavf_io_create_socket_1(*fd, 30000, 0);
+  io = gavf_io_create_socket(*fd, 30000, 0);
   
   if(!gavl_http_response_read(io, res) ||
      !bg_http_read_body(io, res, &buf))

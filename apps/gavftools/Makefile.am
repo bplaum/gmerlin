@@ -28,7 +28,8 @@ gavf-info \
 gavf-mux \
 gavf-recompress \
 gavf-record \
-gavf-tee
+gavf-tee \
+gavf-visualize
 
 man_MANS = \
 gavf-read.1 \
@@ -39,7 +40,9 @@ gavf-info.1 \
 gavf-mux.1 \
 gavf-recompress.1 \
 gavf-record.1 \
-gavf-tee.1
+gavf-tee.1 \
+gavf-visualize.1
+
 
 CLEANFILES = $(man_MANS)
 

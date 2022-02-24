@@ -684,7 +684,7 @@ bg_websocket_connection_create(const char * url, int timeout,
 
   //  setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
   
-  io = gavf_io_create_socket_1(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
+  io = gavf_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
   
   if(!gavl_http_request_write(io, &req))
     {
@@ -867,7 +867,7 @@ static int conn_start_server(bg_websocket_connection_t * conn,
 
   //  setsockopt(c->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
   
-  if(!(conn->io = gavf_io_create_socket_1(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE)))
+  if(!(conn->io = gavf_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE)))
     goto fail;
   
   c->fd = -1;

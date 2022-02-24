@@ -287,7 +287,7 @@ static int send_event(gavl_dictionary_t * es,
   if((fd = gavl_socket_connect_inet(addr, 500)) < 0)
     goto fail;
 
-  io = gavf_io_create_socket_1(fd, CLIENT_TIMEOUT, GAVF_IO_SOCKET_DO_CLOSE);
+  io = gavf_io_create_socket(fd, CLIENT_TIMEOUT, GAVF_IO_SOCKET_DO_CLOSE);
   fd = -1;
   
   if(path)

@@ -378,7 +378,7 @@ static int connect_backchannel(bg_plug_t * p, const gavl_dictionary_t * dict)
     /* Write messages (back) */
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using duplex backchannel");
 
-    p->io_msg = gavf_io_create_socket_1(gavf_io_get_socket(p->io), 1000, 0);
+    p->io_msg = gavf_io_create_socket(gavf_io_get_socket(p->io), 1000, 0);
     }
                 
   if(p->io_msg)
@@ -1833,7 +1833,7 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
           /* Read messages (backchannel) */
           
           /* Start read thread */
-          p->io_msg = gavf_io_create_socket_1(gavf_io_get_socket(p->io), 5000, 0);
+          p->io_msg = gavf_io_create_socket(gavf_io_get_socket(p->io), 5000, 0);
           
           p->flags |= (PLUG_FLAG_HAS_MSG_READ | PLUG_FLAG_HAS_MSG_READ_THREAD);
           }

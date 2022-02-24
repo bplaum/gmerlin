@@ -36,7 +36,7 @@ int got_select_track = -1;
 
 static char * input_file   = "-";
 
-static char * input_plugin = NULL;
+//static char * input_plugin = NULL;
 static bg_plug_t * out_plug = NULL;
 static int selected_track = 0;
 
@@ -85,6 +85,7 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = TRS("Set input file or location"),
       .argv     =    &input_file,
     },
+#if 0
     {
       .arg =         "-p",
       .help_arg =    "<plugin>",
@@ -92,6 +93,7 @@ static bg_cmdline_arg_t global_options[] =
       .argv   =       &input_plugin,
       
     },
+#endif
     {
       .arg =         "-t",
       .help_arg =    "<track>",
@@ -104,6 +106,11 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = TRS("Seek to position"),
       .callback =    opt_seek,
     },
+    BG_PLUGIN_OPT_RA,
+    BG_PLUGIN_OPT_RV,
+    BG_PLUGIN_OPT_LIST_RA,
+    BG_PLUGIN_OPT_LIST_RV,
+    BG_PLUGIN_OPT_LIST_OPTIONS,
     GAVFTOOLS_AUDIO_STREAM_OPTIONS,
     GAVFTOOLS_VIDEO_STREAM_OPTIONS,
     GAVFTOOLS_TEXT_STREAM_OPTIONS,
