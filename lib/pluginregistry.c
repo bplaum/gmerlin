@@ -4566,56 +4566,8 @@ void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t * time, int scale)
   {
   bg_media_source_seek(h->src, h->control.cmd_sink, h->ctrl_ext.evt_hub,
                        time, scale);
-#if 0
-  
-  seek_t s;
-  bg_msg_sink_t * sink;
-  
-  gavl_msg_t * cmd;
-  bg_media_source_t * src;
-
-
-  
-  
-  //  fprintf(stderr, "bg_input_plugin_seek: %"PRId64"\n", *time);
-
-  bg_media_source_seek(bg_media_source_t * src, bg_msg_sink_t * cmd_sink, bg_msg_hub_t * evt_hub,
-                       int64_t * t, int scale)
-  
-  if(!h->control.cmd_sink)
-    return; /* Should never happen */
-
-  s.time = time;
-  s.scale = scale;
-  sink = bg_msg_sink_create(handle_msg_seek, &s, 1);
-  
-  bg_msg_hub_connect_sink(h->ctrl_ext.evt_hub, sink);
-
-  /* Send command */
-
-  cmd = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
-  gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SEEK, GAVL_MSG_NS_SRC);
-  gavl_msg_set_arg_long(cmd, 0, *time);
-  gavl_msg_set_arg_int(cmd, 1, scale);
-  gavl_msg_set_arg_int(cmd, 2, 0);
-  bg_msg_sink_put(h->ctrl_ext.cmd_sink, cmd);
-
-  /* Flush source */
-  
-  /* Clear EOF */
-  
-  bg_msg_hub_disconnect_sink(h->ctrl_ext.evt_hub, sink);
-  bg_msg_sink_destroy(sink);
-#endif
   }
 
-#if 0
-void bg_input_plugin_seek_async(bg_plugin_handle_t * h, int64_t * time, int scale)
-  {
-  bg_media_source_seek_async(h->src, h->control.cmd_sink, h->ctrl_ext.evt_hub,
-                             time, scale);
-  }
-#endif
 
 void bg_input_plugin_start(bg_plugin_handle_t * h)
   {

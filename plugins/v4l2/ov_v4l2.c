@@ -385,7 +385,7 @@ static int init_mmap(ov_v4l2_t * v4l)
       bgv4l2_create_frame(v4l->buffers[i].buf, // Can be NULL
                           &v4l->gavl_fmt,
                           &v4l->v4l2_fmt);
-    v4l->buffers[i].f->user_data = &v4l->buffers[i];
+    v4l->buffers[i].f->storage = &v4l->buffers[i];
     }
   v4l->need_streamon = 1;
   
@@ -429,7 +429,7 @@ static gavl_sink_status_t put_frame_write(ov_v4l2_t * v4l, gavl_video_frame_t * 
 static gavl_sink_status_t put_frame_mmap(ov_v4l2_t * v4l, gavl_video_frame_t * frame)
   {
   struct v4l2_buffer buf;
-  buffer_t * b = frame->user_data;
+  buffer_t * b = frame->storage;
   CLEAR (buf);
   
   buf.type        = V4L2_BUF_TYPE_VIDEO_OUTPUT;

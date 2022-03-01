@@ -150,7 +150,7 @@ struct video_driver_s
   
   void (*init_overlay_stream)(driver_data_t* data, overlay_stream_t * str);
   
-  int (*supports_hw_type)(driver_data_t* data, gavl_hw_type_t type);
+  int (*supports_hw)(driver_data_t* data, gavl_hw_context_t * ctx);
   
   gavl_video_frame_t * (*create_overlay)(driver_data_t* d, overlay_stream_t * str);
   void (*destroy_overlay)(driver_data_t* data, overlay_stream_t * str,

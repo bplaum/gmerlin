@@ -486,10 +486,10 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
 void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv)
   {
   int i;
-  char * filename;
-  gavl_dictionary_t dict;
-  const char * id;
-  const gavl_value_t * val;
+  //  char * filename;
+  //  gavl_dictionary_t dict;
+  //  const char * id;
+  //  const gavl_value_t * val;
   
   pthread_mutex_lock(&cache->mutex);
 
@@ -505,12 +505,15 @@ void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_fu
       i++;
     }
 
+#if 0
+  
   i =  0;
   while(i < cache->disk_cache_size)
     {
     gavl_dictionary_init(&dict);
     filename = create_filename(cache, cache->disk_cache[i].md5);
 
+    
     if(bg_dictionary_load_xml(&dict, filename, ROOT_NAME_ENTRY))
       {
       val = gavl_dictionary_get(&dict, "v");
@@ -522,9 +525,9 @@ void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_fu
     free(filename);
     gavl_dictionary_free(&dict);
     }
+#endif
 
   /* Disk cache */
-                
   pthread_mutex_unlock(&cache->mutex);
   }
 

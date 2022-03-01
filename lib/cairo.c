@@ -44,13 +44,13 @@ gavl_video_frame_t * bg_cairo_frame_create(gavl_video_format_t * fmt)
   
   fmt->pixelformat = GAVL_RGBA_32;
   ret = gavl_video_frame_create(NULL);
-  ret->user_data = s;
+  ret->storage = s;
   return ret;
   }
 
 void bg_cairo_frame_destroy(gavl_video_frame_t * frame)
   {
-  cairo_surface_t * s = frame->user_data;
+  cairo_surface_t * s = frame->storage;
   
   cairo_surface_destroy(s);
   gavl_video_frame_null(frame);
@@ -62,7 +62,7 @@ cairo_t *
 bg_cairo_create(const gavl_video_format_t * fmt,
                 gavl_video_frame_t * frame)
   {
-  cairo_surface_t * s = frame->user_data;
+  cairo_surface_t * s = frame->storage;
   return cairo_create(s);
   }
 
@@ -74,7 +74,7 @@ void bg_cairo_frame_done(const gavl_video_format_t * fmt,
   uint32_t *src_ptr;
   uint8_t  *dst_ptr;
     
-  cairo_surface_t * s = frame->user_data;
+  cairo_surface_t * s = frame->storage;
 
   cairo_surface_flush(s);
   frame->planes[0] = cairo_image_surface_get_data(s);

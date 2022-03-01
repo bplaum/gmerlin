@@ -12,6 +12,7 @@
 
 #include <EGL/egl.h>
 #include <gavl/hw_egl.h> 
+#include <gavl/hw_gl.h> 
 
 
 #include <gavl/peakdetector.h> 
@@ -575,11 +576,11 @@ static gavl_sink_status_t put_audio_func(void * priv, gavl_audio_frame_t * f)
 
 static void draw_texture(glscope_t * s)
   {
-  GLuint * tex;
   texture_matrix_t mat_buf;
   const texture_matrix_t * mat;
-  
   int min_frames = 100;
+
+  gavl_gl_frame_info_t * info;
   
   if(!s->vframe_tex)
     {
@@ -669,11 +670,11 @@ static void draw_texture(glscope_t * s)
       glUniform4fv(s->params_location, 1, s->params_end);
     }
   
-  tex = s->vframe_tex->user_data;
+  info = s->vframe_tex->storage;
 
   glUniform1i(s->tex_location, 0);
   glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, *tex);
+  glBindTexture(GL_TEXTURE_2D, info->textures[0]);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -1403,8 +1404,8 @@ static void draw_scope(glscope_t * s)
 
 static gavl_source_status_t render_frame(void * priv, gavl_video_frame_t ** frame)
   {
-  GLuint * tex;
   glscope_t * s = priv;
+  gavl_gl_frame_info_t * info;
   
   //  fprintf(stderr, "Render frame\n");
 
@@ -1413,8 +1414,8 @@ static gavl_source_status_t render_frame(void * priv, gavl_video_frame_t ** fram
   glBindFramebuffer(GL_FRAMEBUFFER, s->frame_buffer);
 
   /* Attach texture image */
-  tex = s->vframe_cur->user_data;
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *tex, 0);
+  info = s->vframe_cur->storage;
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, info->textures[0], 0);
   glDrawBuffer(GL_COLOR_ATTACHMENT0);
   
   glViewport(0, 0, s->vfmt.image_width, s->vfmt.image_height);
@@ -1780,8 +1781,11 @@ static int open_glscope(void * priv, gavl_audio_format_t * audio_format,
   /* Generate frame buffer */
   
   s->vframe_1 = gavl_hw_video_frame_create_hw(s->hwctx, &s->vfmt);
+  s->vframe_1->buf_idx = 0;
+  
   s->vframe_2 = gavl_hw_video_frame_create_hw(s->hwctx, &s->vfmt);
-
+  s->vframe_2->buf_idx = 1;
+  
   s->vframe_cur = s->vframe_1;
   s->vframe_tex = NULL;
   

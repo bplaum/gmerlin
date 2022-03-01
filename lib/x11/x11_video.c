@@ -225,7 +225,6 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   int i;
   int force_hw_scale;
   int min_penalty, min_index;
-  gavl_hw_type_t hw_type = GAVL_HW_NONE;
   
   gavl_video_frame_t * (*get_func)(void * priv) = NULL;
   
@@ -256,12 +255,12 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   num_drivers = sizeof(drivers) / sizeof(drivers[0]);
 
   /* Check if we support the hardware type directly */
-  if((w->video_format.hwctx && (hw_type = gavl_hw_ctx_get_type(w->video_format.hwctx))))
+  if(w->video_format.hwctx)
     {
     for(i = 0; i < num_drivers; i++)
       {
-      if(w->drivers[i].driver->supports_hw_type &&
-         w->drivers[i].driver->supports_hw_type(&w->drivers[i], hw_type)) // Zero copy
+      if(w->drivers[i].driver->supports_hw &&
+         w->drivers[i].driver->supports_hw(&w->drivers[i], w->video_format.hwctx)) // Zero copy
         {
         SET_FLAG(w, FLAG_ZEROCOPY);
         gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Using %s in zerocopy mode",

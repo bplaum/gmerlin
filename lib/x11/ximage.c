@@ -89,7 +89,7 @@ static gavl_video_frame_t * create_frame_ximage(driver_data_t * d)
                                     32,
                                     ret->strides[0]);
     }
-  ret->user_data = frame;
+  ret->storage = frame;
 
   gavl_video_frame_clear(ret, &w->window_format);
   
@@ -98,7 +98,7 @@ static gavl_video_frame_t * create_frame_ximage(driver_data_t * d)
 
 static void put_frame_ximage(driver_data_t * d, gavl_video_frame_t * f)
   {
-  ximage_frame_t * frame = (ximage_frame_t*)f->user_data;
+  ximage_frame_t * frame = (ximage_frame_t*)f->storage;
   bg_x11_window_t * w = d->win;
   
   if(TEST_FLAG(w, FLAG_HAVE_SHM))
@@ -133,7 +133,7 @@ static void put_frame_ximage(driver_data_t * d, gavl_video_frame_t * f)
 
 static void destroy_frame_ximage(driver_data_t * d, gavl_video_frame_t * f)
   {
-  ximage_frame_t * frame = (ximage_frame_t*)f->user_data;
+  ximage_frame_t * frame = (ximage_frame_t*)f->storage;
   bg_x11_window_t * w = d->win;
   if(frame->x11_image)
     XFree(frame->x11_image);

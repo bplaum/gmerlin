@@ -342,13 +342,6 @@ bg_osd_t * bg_osd_create(bg_controllable_t * c)
   return ret;
   }
 
-#if 0
-bg_msg_queue_t * bg_osd_get_msg_queue(bg_osd_t * osd)
-  {
-  return osd->queue;
-  }
-#endif
-
 void bg_osd_destroy(bg_osd_t * osd)
   {
   bg_text_renderer_destroy(osd->renderer);

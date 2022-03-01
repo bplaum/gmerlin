@@ -407,14 +407,14 @@ static gavl_video_frame_t * create_frame_xv(driver_data_t * d)
     }
 
   gavl_video_frame_clear(ret, &w->video_format);
-  ret->user_data = frame;
+  ret->storage = frame;
   return ret;
   }
 
 static void put_frame_xv(driver_data_t * d, gavl_video_frame_t * f)
   {
   xv_priv_t * priv;
-  xv_frame_t * frame = (xv_frame_t*)f->user_data;
+  xv_frame_t * frame = f->storage;
   
   bg_x11_window_t * w;
   
@@ -459,7 +459,7 @@ static void put_frame_xv(driver_data_t * d, gavl_video_frame_t * f)
 
 static void destroy_frame_xv(driver_data_t * d, gavl_video_frame_t * f)
   {
-  xv_frame_t * frame = (xv_frame_t*)f->user_data;
+  xv_frame_t * frame = f->storage;
   bg_x11_window_t * w = d->win;
 
   if(frame->xv_image)

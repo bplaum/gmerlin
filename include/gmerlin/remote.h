@@ -22,11 +22,6 @@
 #ifndef __BG_REMOTE_H_
 #define __BG_REMOTE_H_
 
-#include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
-#include <gmerlin/bgsocket.h>
-#include <gmerlin/http.h>
-#include <gmerlin/httpserver.h>
 
 #define BG_REMOTE_PORT_BASE 10100
 
@@ -42,36 +37,5 @@
  * Send messages (supports Keep-Alive)
  * PUT /player/json
  */
-
-#if 0
-
-
-typedef struct bg_remote_server_s bg_remote_server_t;
-
-bg_remote_server_t * bg_remote_server_create(bg_http_server_t * server,
-                                             char * path);
-
-const bg_parameter_info_t * bg_remote_server_get_parameters(bg_remote_server_t *);
-
-void bg_remote_server_set_parameter(void * data,
-                                    const char * name,
-                                    const gavl_value_t * v);
-
-int bg_remote_server_init(bg_remote_server_t *);
-
-bg_msg_t * bg_remote_server_get_msg(bg_remote_server_t *);
-void bg_remote_server_put_msg(bg_remote_server_t *, bg_msg_t *);
-
-bg_msg_t * bg_remote_server_lock_read(bg_remote_server_t * s);
-void bg_remote_server_unlock_read(bg_remote_server_t * s);
-#else
-void bg_remote_server_set_cmd_sink(bg_remote_server_t * s, bg_msg_sink_t * sink);
-bg_msg_sink_t * bg_remote_server_get_evt_sink(bg_remote_server_t * s);
-void bg_remote_server_destroy(bg_remote_server_t *);
-
-#endif
-
-
-
 
 #endif // __BG_REMOTE_H_

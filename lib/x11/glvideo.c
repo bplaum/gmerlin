@@ -42,12 +42,34 @@
 #include <gmerlin/state.h>
 
 #ifdef HAVE_V4L2
-#include <gavl/hw_v4l2.h>
+// #include <gavl/hw_v4l2.h>
+#endif
+
+#ifdef HAVE_DRM_DRM_FOURCC_H 
+#define HAVE_DRM
+
+#else // !HAVE_DRM_DRM_FOURCC_H 
+#ifdef HAVE_LIBDRM_DRM_FOURCC_H 
+#define HAVE_DRM
+#endif
+#endif // !HAVE_DRM_DRM_FOURCC_H 
+
+#ifdef HAVE_DRM
+#include <gavl/hw_dmabuf.h>
 #endif
 
 #ifndef GL_TEXTURE_EXTERNAL_OES
 #define GL_TEXTURE_EXTERNAL_OES 0x8D65
 #endif
+
+/* Copy frames from RAM */
+#define MODE_TEXTURE_COPY    1
+
+/* Use textures created somewhere else */
+#define MODE_TEXTURE_DIRECT  2
+
+/* Use textures imported from DMA-Buffers */
+#define MODE_TEXTURE_DMABUF  3
 
 typedef struct
   {
@@ -68,8 +90,12 @@ typedef struct
 
 typedef struct
   {
-  gavl_hw_context_t * hwctx;
+  gavl_hw_context_t * hwctx_gl;
   gavl_hw_context_t * hwctx_priv;
+
+#ifdef HAVE_DRM
+  gavl_hw_context_t * hwctx_dmabuf;
+#endif
   
   gavl_video_frame_t * texture;
 
@@ -82,24 +108,51 @@ typedef struct
   float saturation;
   float contrast;
 
+  int mode;
 
   int colormatrix_changed;
   int colormatrix_changed_ovl;
 
-  gavl_hw_type_t hwtype;
-
-  GLenum texture_target;
-
-  /* We assign the textures to DMA buffers just once */
-  int num_dma_textures;
-  GLuint * dma_textures;
-
-  /* Textures (= planes) per image. Currently only supported for the background image */
-  int num_textures;
-  
   double bsc[4][5]; // Brightness, saturation, contrast
   double cmat[4][5]; // Colorspace conversion
   } gl_priv_t;
+
+static int supports_hw_gl(driver_data_t* d,
+                          gavl_hw_context_t * ctx)
+  {
+  gavl_hw_type_t type = gavl_hw_ctx_get_type(ctx);
+
+#ifdef HAVE_DRM  
+  gl_priv_t * p = d->priv;
+#endif
+  
+  switch(type)
+    {
+    case GAVL_HW_EGL_GL_X11:
+    case GAVL_HW_EGL_GLES_X11:
+      return 1;
+      break;
+    default:
+      break;
+    }
+
+#if 0 // No hardware context supports these yet
+  if(gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GL_X11) ||
+     gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GLES_X11))
+    return 1;
+
+  if(gavl_hw_ctx_imports_type(priv->hwctx_priv, gavl_hw_ctx_get_type(ctx)))
+    return 1;
+#endif
+
+#ifdef HAVE_DRM  
+  if(gavl_hw_ctx_imports_type(p->hwctx_priv, GAVL_HW_DMABUFFER) &&
+     gavl_hw_ctx_exports_type(ctx, GAVL_HW_DMABUFFER))
+    return 1;
+#endif
+  
+  return 0;
+  }
 
 static void matrixmult(const double coeffs1[4][5],
                        const double coeffs2[4][5],
@@ -162,13 +215,13 @@ static void update_colormatrix(driver_data_t* d);
 static void set_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
-  gavl_hw_egl_set_current(priv->hwctx, d->win->current->egl_surface);
+  gavl_hw_egl_set_current(priv->hwctx_gl, d->win->current->egl_surface);
   }
 
 static void unset_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
-  gavl_hw_egl_unset_current(priv->hwctx);
+  gavl_hw_egl_unset_current(priv->hwctx_gl);
   }
 
 static const char * vertex_shader_gl = 
@@ -204,6 +257,7 @@ static const char * fragment_shader_gl =
   "  gl_FragColor = colormatrix * texture2D(frame, TexCoord) + coloroffset;"
   "  }";
 
+#if 0
 static const char * fragment_shader_planar_gl =
   "#version 110\n"
   "varying vec2 TexCoord;" 
@@ -217,6 +271,7 @@ static const char * fragment_shader_planar_gl =
   "  vec4 color = vec4( texture2D(frame, TexCoord).r, texture2D(frame_u, TexCoord).r, texture2D(frame_v, TexCoord).r, 1.0 );\n"
   "  gl_FragColor = colormatrix * color + coloroffset;"
   "  }";
+#endif
 
 static const char * fragment_shader_gles =
   "#version 300 es\n"
@@ -313,13 +368,13 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
 
   //  priv = d->priv;
   //  w = d->win;
-
-  
+  int num_planes = gavl_pixelformat_num_planes(d->win->video_format.pixelformat);
+    
   p->program = glCreateProgram();
   
   /* Vertex shader */
   
-  switch(gavl_hw_ctx_get_type(priv->hwctx))
+  switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
     {
     case GAVL_HW_EGL_GL_X11:
       shader[0] = vertex_shader_gl;
@@ -350,19 +405,16 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   p->fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   //  fprintf(stderr, "Created fragment shader (ID: %d) %08x\n", p->fragment_shader, glGetError());
   
-  switch(gavl_hw_ctx_get_type(priv->hwctx))
+  switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
     {
     case GAVL_HW_EGL_GL_X11:
-      if(background && (priv->num_textures > 1))
-        shader[0] = fragment_shader_planar_gl;
-      else
-        shader[0] = fragment_shader_gl;
+      shader[0] = fragment_shader_gl;
       num = 1;
       break;
     case GAVL_HW_EGL_GLES_X11:
-      if((priv->hwtype == GAVL_HW_V4L2_BUFFER) && background)
+      if((priv->mode == MODE_TEXTURE_DMABUF) && background)
         shader[0] = fragment_shader_gles_ext;
-      else if(background && (priv->num_textures > 1))
+      else if(background && (num_planes > 1))
         shader[0] = fragment_shader_planar_gles;
       else
         shader[0] = fragment_shader_gles;
@@ -395,7 +447,7 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   
   p->frame_locations[0] = glGetUniformLocation(p->program, "frame");
 
-  if(background && (priv->num_textures == 3))
+  if(background && (num_planes == 3))
     {
     p->frame_locations[1] = glGetUniformLocation(p->program, "frame_u");
     p->frame_locations[2] = glGetUniformLocation(p->program, "frame_v");
@@ -629,55 +681,60 @@ static int open_gl(driver_data_t * d)
   {
   bg_x11_window_t * w;
   gl_priv_t * priv;
-
+  gavl_hw_type_t src_type;
   
   priv = d->priv;
   w = d->win;
+  priv->mode = 0;
   
-  priv->num_textures = 1;
-  
-  priv->texture_target = GL_TEXTURE_2D;
+  //  priv->texture_target = GL_TEXTURE_2D;
   
   if(w->video_format.hwctx)
     {
     /* Frames are in hardware already: Take these */
     SET_FLAG(w, FLAG_NO_GET_FRAME);
-    
-    priv->hwtype = gavl_hw_ctx_get_type(w->video_format.hwctx);
-    
-    if(priv->hwtype == GAVL_HW_V4L2_BUFFER)
+
+    src_type = gavl_hw_ctx_get_type(w->video_format.hwctx);
+
+    if((src_type == GAVL_HW_EGL_GL_X11) || 
+       (src_type == GAVL_HW_EGL_GLES_X11))
       {
-      priv->hwctx = priv->hwctx_priv;
-      priv->texture_target = GL_TEXTURE_EXTERNAL_OES;
+      priv->hwctx_gl = w->video_format.hwctx;
+      priv->mode = MODE_TEXTURE_DIRECT;
       }
-    else
-      priv->hwctx = w->video_format.hwctx;
+#ifdef HAVE_DRM  
+    else if(gavl_hw_ctx_imports_type(priv->hwctx_priv, GAVL_HW_DMABUFFER) &&
+            gavl_hw_ctx_exports_type(w->video_format.hwctx, GAVL_HW_DMABUFFER))
+      {
+      priv->mode = MODE_TEXTURE_DMABUF;
+      priv->hwctx_gl = priv->hwctx_priv;
+      priv->hwctx_dmabuf = gavl_hw_ctx_create_dma();
+      }
+#endif
     }
   else
     {
-    priv->hwctx = priv->hwctx_priv;
-    priv->hwtype = gavl_hw_ctx_get_type(priv->hwctx);
+    priv->hwctx_gl = priv->hwctx_priv;
+    priv->mode = MODE_TEXTURE_COPY;
     }
   
-  switch(priv->hwtype)
+  switch(priv->mode)
     {
-    case GAVL_HW_EGL_GL_X11:
-      priv->num_textures = gavl_pixelformat_num_planes(w->video_format.pixelformat);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL via EGL (%s)", (w->video_format.hwctx ? "direct" : "indirect") );
+    case MODE_TEXTURE_DIRECT:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (direct)", (src_type == GAVL_HW_EGL_GL_X11) ? "" : "ES");
       break;
-    case GAVL_HW_EGL_GLES_X11:
-      priv->num_textures = gavl_pixelformat_num_planes(w->video_format.pixelformat);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL ES via EGL (%s)", (w->video_format.hwctx ? "direct" : "indirect") );
+    case MODE_TEXTURE_COPY:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL ES via EGL (indirect)");
       break;
-    case GAVL_HW_V4L2_BUFFER:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing V4L2 buffers with OpenGL ES");
+    case MODE_TEXTURE_DMABUF:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing DMA buffers with OpenGL ES");
       break;
     default:
       break;
     }
   
-  w->normal.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx, &w->normal.win);
-  w->fullscreen.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx, &w->fullscreen.win);
+  w->normal.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->normal.win);
+  w->fullscreen.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->fullscreen.win);
 
   
   //  bg_x11_window_start_gl(w);
@@ -689,7 +746,7 @@ static int open_gl(driver_data_t * d)
   
   create_shader_program(d, &priv->progs[1], 0);
 
-  if(priv->hwtype != GAVL_HW_V4L2_BUFFER)
+  if(priv->mode != MODE_TEXTURE_DMABUF)
     set_pixelformat_matrix(priv->cmat, w->video_format.pixelformat);
   
   update_colormatrix(d);
@@ -706,9 +763,7 @@ static gavl_video_frame_t * create_frame_gl(driver_data_t * d)
   gl_priv_t * priv = d->priv;
   bg_x11_window_t * w = d->win;
   /* Used only for transferring to HW */
-  ret = gavl_hw_video_frame_create_ram(priv->hwctx,
-                                        &w->video_format);
- 
+  ret = gavl_hw_video_frame_create_ram(priv->hwctx_gl, &w->video_format);
   gavl_video_frame_clear(ret, &w->video_format);
   return ret;
   }
@@ -721,8 +776,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   float v_x1, v_x2, v_y1, v_y2;
   gavl_video_frame_t * ovl;
   gl_priv_t * priv;
-  GLuint * tex = NULL;
-
+  gavl_gl_frame_info_t * info;
   
   priv = d->priv;
   
@@ -731,47 +785,32 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   if(!TEST_FLAG(w, FLAG_NO_GET_FRAME))
     {
     if(!priv->texture)
-      priv->texture = gavl_hw_video_frame_create_hw(priv->hwctx, &w->video_format);
+      priv->texture = gavl_hw_video_frame_create_hw(priv->hwctx_gl, &w->video_format);
     
     gavl_video_frame_ram_to_hw(&w->video_format, priv->texture, f);
     f = priv->texture;
-    tex = f->user_data;
+    info = f->storage;
     }
 
-#ifdef HAVE_V4L2
-  else if(priv->hwtype == GAVL_HW_V4L2_BUFFER)
+#ifdef HAVE_DRM
+  else if(priv->mode == MODE_TEXTURE_DMABUF)
     {
-    gavl_v4l2_buffer_t * buf = f->user_data;
-    
-    if(!priv->dma_textures)
-      {
-      priv->num_dma_textures = buf->total;
-      priv->dma_textures = calloc(priv->num_dma_textures, sizeof(*priv->dma_textures));
-      }
+    gavl_video_frame_t * dma_frame = NULL;
 
-    if(!priv->dma_textures[buf->index])
+    if(!gavl_hw_ctx_transfer_video_frame(f, priv->hwctx_dmabuf, &dma_frame, &w->video_format))
       {
-      set_gl(d);
-      glGenTextures(1, &priv->dma_textures[buf->index]);
-      unset_gl(d);
       
-      /* Export DMA buffer. Will be a noop when called the second time */
-      gavl_v4l2_export_dmabuf_video(f);
-
-      if(!gavl_hw_egl_import_v4l2_buffer(priv->hwctx_priv, &w->video_format,
-                                         priv->dma_textures[buf->index], f))
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Importing DMA buffer failed");
       }
     
-    //    if(!priv->texture)
-    //      priv->texture = gavl_hw_video_frame_create_hw(priv->hwctx, NULL);
-
-    /* Import texture from DMA buffer */
-    tex = &priv->dma_textures[buf->index];
+    if(!gavl_hw_ctx_transfer_video_frame(dma_frame, priv->hwctx_gl, &f, &w->video_format))
+      {
+      
+      }
+    info = f->storage;
     }
 #endif
   else
-    tex = f->user_data;
+    info = f->storage;
   
   set_gl(d);
 
@@ -782,33 +821,23 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     {
     double mat[4][5];
 
-    if(priv->hwtype == GAVL_HW_V4L2_BUFFER)
+    if(priv->mode == MODE_TEXTURE_DMABUF)
       upload_colormatrix(d, &priv->progs[0], priv->bsc);
     else
       {
       matrixmult(priv->bsc, priv->cmat, mat);
       upload_colormatrix(d, &priv->progs[0], mat);
       }
-      
-#if 0    
-    
-    glUniformMatrix4fv(priv->progs[0].colormatrix_location,
-                       1, GL_TRUE, priv->colormatrix);
-    
-    glUniform4fv(priv->progs[0].coloroffset_location,
-                 1, priv->coloroffset );
-#endif
     priv->colormatrix_changed = 0;
     }
-  
   
   /* Put image into texture */
   //  glEnable(GL_TEXTURE_2D);
 
-  for(i = 0; i < priv->num_textures; i++)
+  for(i = 0; i < info->num_textures; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(priv->texture_target, tex[i]);
+    glBindTexture(info->texture_target, info->textures[i]);
     glUniform1i(priv->progs[0].frame_locations[i], i);
 #if 0
     fprintf(stderr, "Bind texture %d %d %d\n",
@@ -882,7 +911,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
 
       ovl = w->overlay_streams[i]->ovl_hw;
 
-      tex = ovl->user_data;
+      info = ovl->storage;
       
       tex_x1 = (float)(ovl->src_rect.x) /
         w->overlay_streams[i]->format.image_width;
@@ -922,7 +951,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
       v_y2 = (v_y2 - 0.5) * 2.0;
 
       //   glActiveTexture(GL_TEXTURE0 + 0);
-      glBindTexture(GL_TEXTURE_2D, *tex);
+      glBindTexture(info->texture_target, info->textures[0]);
       
       update_vertex_buffer(d,
                            // 0, 0, w->dst_rect.w, w->dst_rect.h,
@@ -937,7 +966,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
 
   //  glDisable(GL_TEXTURE_2D);
 
-  gavl_hw_egl_swap_buffers(priv->hwctx);
+  gavl_hw_egl_swap_buffers(priv->hwctx_gl);
   
   glUseProgram(0);
   
@@ -952,24 +981,16 @@ create_overlay_gl(driver_data_t* d, overlay_stream_t * str)
   gl_priv_t * priv;
   gavl_video_frame_t * ret;
   priv = d->priv;
-  ret = gavl_hw_video_frame_create_ovl(priv->hwctx, &str->format);
+  ret = gavl_hw_video_frame_create_ovl(priv->hwctx_gl, &str->format);
   return ret;
   }
 
-#if 0
-static void
-destroy_overlay_gl(driver_data_t* d, overlay_stream_t * str,
-                  gavl_video_frame_t * frame)
-  {
-  destroy_frame_gl(d, frame);
-  }
-#endif
 
 static void init_overlay_stream_gl(driver_data_t* d, overlay_stream_t * str)
   {
   gl_priv_t * priv;
   priv = d->priv;
-  str->ovl_hw = gavl_hw_video_frame_create_hw(priv->hwctx, &str->format);
+  str->ovl_hw = gavl_hw_video_frame_create_hw(priv->hwctx_gl, &str->format);
   }
 
 static void delete_program(shader_program_t * p)
@@ -1007,22 +1028,7 @@ static void close_gl(driver_data_t * d)
     glDeleteBuffers(1, &priv->vbo);
     priv->vbo = 0;
     }
-
-  if(priv->dma_textures)
-    {
-    int i;
-    for(i = 0; i < priv->num_dma_textures; i++)
-      {
-      if(priv->dma_textures[i])
-        glDeleteTextures(1, &priv->dma_textures[i]);
-      }
-    free(priv->dma_textures);
-    priv->dma_textures = NULL;
-    }
-  
   unset_gl(d);
-
-  
   
   if(priv->texture)
     {
@@ -1032,14 +1038,29 @@ static void close_gl(driver_data_t * d)
 
   if(w->normal.egl_surface != EGL_NO_SURFACE)
     {
-    gavl_hw_ctx_egl_destroy_surface(priv->hwctx, w->normal.egl_surface);
+    gavl_hw_ctx_egl_destroy_surface(priv->hwctx_gl, w->normal.egl_surface);
     w->normal.egl_surface = EGL_NO_SURFACE;
     }
   if(w->fullscreen.egl_surface != EGL_NO_SURFACE)
     {
-    gavl_hw_ctx_egl_destroy_surface(priv->hwctx, w->fullscreen.egl_surface);
+    gavl_hw_ctx_egl_destroy_surface(priv->hwctx_gl, w->fullscreen.egl_surface);
     w->fullscreen.egl_surface = EGL_NO_SURFACE;
     }
+
+#ifdef HAVE_DRM  
+  if(priv->hwctx_dmabuf)
+    {
+    gavl_hw_ctx_destroy(priv->hwctx_dmabuf);
+    priv->hwctx_dmabuf = NULL;
+    }
+#endif
+  if(priv->hwctx_priv)
+    {
+    /* Re-create the hw context */
+    gavl_hw_ctx_destroy(priv->hwctx_priv);
+    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GLES_X11, d->win->dpy);
+    }
+
   
   }
 
@@ -1054,91 +1075,6 @@ static void cleanup_gl(driver_data_t * d)
   
   free(priv);
   }
-
-/* Colormatrix functions */
-#if 0
-
-static void matrixmult_cn(const float coeffs1[4][5],
-                          float coeffs2[4][5],
-                          float result[4][5])
-  {
-  int i, j;
-
-  for(i = 0; i < 4; i++)
-    {
-    for(j = 0; j < 5; j++)
-      {
-      result[i][j] = 
-        coeffs1[i][0] * coeffs2[0][j] +
-        coeffs1[i][1] * coeffs2[1][j] +
-        coeffs1[i][2] * coeffs2[2][j] +
-        coeffs1[i][3] * coeffs2[3][j];
-      }
-    result[i][4] += coeffs1[i][4];
-    }
-  }
-
-static void matrixmult_nc(float coeffs1[4][5],
-                          const float coeffs2[4][5],
-                          float result[4][5])
-  {
-  int i, j;
-
-  for(i = 0; i < 4; i++)
-    {
-    for(j = 0; j < 5; j++)
-      {
-      result[i][j] = 
-        coeffs1[i][0] * coeffs2[0][j] +
-        coeffs1[i][1] * coeffs2[1][j] +
-        coeffs1[i][2] * coeffs2[2][j] +
-        coeffs1[i][3] * coeffs2[3][j];
-      }
-    result[i][4] += coeffs1[i][4];
-    }
-  }
-
-static const float rgba_2_yuva[4][5] =
-  {
-    /*       ry         gy         by   ay   oy */
-    {  0.299000,  0.587000,  0.114000, 0.0, 0.0 },
-    /*       ru         gu         bu   au   ou */
-    { -0.168736, -0.331264,  0.500000, 0.0, 0.0 },
-    /*       rv         gv         bv   av   ov */
-    {  0.500000, -0.418688, -0.081312, 0.0, 0.0 },
-    /*       ra         ga         ba   aa   oa */
-    {       0.0,       0.0,       0.0, 1.0, 0.0 },
-  };
-
-
-static const float yuva_2_rgba[4][5] =
-  {
-    /* yr         ur         vr   ar   or */
-    { 1.0,  0.000000,  1.402000, 0.0, 0.0 },
-    /* yg         ug         vg   ag   og */
-    { 1.0, -0.344136, -0.714136, 0.0, 0.0},
-    /* yb         ub         vb   ab   ob */
-    { 1.0,  1.772000,  0.000000, 0.0, 0.0},
-    /* ya         ua         va   aa   oa */
-    { 0.0,  0.000000,  0.000000, 1.0, 0.0 },
-  };
-
-static void colormatrix_rgb2yuv(float coeffs_in[4][5],
-                                float coeffs_out[4][5])
-  {
-  float coeffs_tmp[4][5];
-  matrixmult_cn(rgba_2_yuva, coeffs_in, coeffs_tmp);
-  matrixmult_nc(coeffs_tmp, yuva_2_rgba, coeffs_out);
-  }
-
-static void colormatrix_yuv2rgb(float coeffs_in[4][5],
-                                float coeffs_out[4][5])
-  {
-  float coeffs_tmp[4][5];
-  matrixmult_cn(yuva_2_rgba,  coeffs_in, coeffs_tmp);
-  matrixmult_nc(coeffs_tmp, rgba_2_yuva, coeffs_out);
-  }
-#endif
 
 // Inspired by https://docs.rainmeter.net/tips/colormatrix-guide/
 
@@ -1244,28 +1180,12 @@ static void set_contrast_gl(driver_data_t* d,float val)
   update_colormatrix(d);
   }
 
-static int supports_hw_type_gl(driver_data_t* d,
-                               gavl_hw_type_t type)
-  {
-  switch(type)
-    {
-    case GAVL_HW_EGL_GL_X11:
-      return 1;
-      break;
-    case GAVL_HW_V4L2_BUFFER:
-      /* TODO: Check extensions */
-      return 1;
-    default:
-      break;
-    }
-  return 0;
-  }
 
 const video_driver_t gl_driver =
   {
     .name               = "OpenGL",
     .can_scale          = 1,
-    .supports_hw_type   = supports_hw_type_gl,
+    .supports_hw        = supports_hw_gl,
     .init               = init_gl,
     .open               = open_gl,
     .create_frame       = create_frame_gl,

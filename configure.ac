@@ -68,6 +68,13 @@ dnl
 GMERLIN_CHECK_SEMAPHORES
 
 dnl
+dnl Linux dma-buf
+dnl 
+
+AC_CHECK_HEADERS([drm/drm_fourcc.h])
+AC_CHECK_HEADERS([libdrm/drm_fourcc.h])
+
+dnl
 dnl Gettext
 dnl
 
@@ -114,6 +121,9 @@ if test "x$test_texinfo" = "xtrue"; then
 fi
 
 AM_CONDITIONAL(HAVE_TEXINFO, test "x$have_texinfo" = "xtrue")
+
+
+
 
 dnl
 dnl Linker flags

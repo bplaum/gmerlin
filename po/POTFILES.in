@@ -107,7 +107,6 @@ include/gui_gtk/message.h
 include/gui_gtk/auth.h
 include/gui_gtk/urlselect.h
 include/gui_gtk/logwindow.h
-include/gui_gtk/scrolltext.h
 include/gui_gtk/slider.h
 include/gui_gtk/question.h
 include/gui_gtk/mdb.h
@@ -144,7 +143,6 @@ tests/question.c
 tests/sqlextract.c
 tests/upnpdesc.c
 tests/gmerlin_imgdiff.c
-tests/scrolltext.c
 tests/server.c
 tests/message.c
 tests/gmerlin_vpsnr.c
@@ -331,7 +329,6 @@ lib/gtk/cfg_multi_menu.c
 lib/gtk/cfg_slider.c
 lib/gtk/albumentry.c
 lib/gtk/mdb_private.h
-lib/gtk/scrolltext.c
 lib/gtk/message.c
 lib/gtk/urllink.c
 lib/gtk/fileentry.c
@@ -391,7 +388,6 @@ lib/backend_mpris2.c
 lib/msgqueue.c
 lib/msg.c
 lib/bgplug.c
-lib/remote.c
 lib/formats.c
 lib/colormatrix.c
 lib/downloader.c
@@ -540,7 +536,6 @@ apps/renderer/gmerlin-renderer.c
 apps/remote/gmerlin-remote.c
 apps/mediainfo/gmerlin-mediainfo.c
 apps/cmdlineplayer/gmerlin-play.c
-apps/transcoder/transcoder_remote.h
 apps/transcoder/main.c
 apps/transcoder/transcoder_window.h
 apps/transcoder/trackdialog.c
@@ -559,8 +554,6 @@ apps/player/gmerlin.c
 apps/player/display.h
 apps/player/mainwindow.c
 apps/player/mainmenu.c
-apps/player/display.c
-apps/player/playerwindow.c
 apps/player/remote.c
 apps/player/skin.c
 apps/player/cfgdialog.c
@@ -582,6 +575,7 @@ apps/gavftools/gavf-tee.c
 apps/gavftools/gavf-read.c
 apps/gavftools/gavf-encode.c
 apps/gavftools/gavf-mux.c
+apps/gavftools/gavf-visualize.c
 apps/gavftools/gavftools.c
 apps/server/server.h
 apps/server/server_upnp.c

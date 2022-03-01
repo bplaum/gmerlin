@@ -70,15 +70,6 @@ struct bg_msg_sink_s
   pthread_mutex_t write_mutex;
   };
 
-#if 0
-/* Wait until at least one message arrives */
-void bg_msg_sink_wait(bg_msg_sink_t * sink, int timeout)
-  {
-  
-  }
-#endif
-
-
 static int routing_table_get(bg_msg_sink_t * sink, const char * id)
   {
   int i;
