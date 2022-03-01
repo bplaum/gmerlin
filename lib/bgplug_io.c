@@ -128,48 +128,26 @@ static gavf_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout);
 
 static gavf_io_t * open_dash(int method, int * flags)
   {
-  struct stat st;
-  int fd;
   FILE * f;
-  
+  gavf_io_t * ret;
   /* Stdin/stdout */
   if(method == BG_PLUG_IO_METHOD_WRITE)
     f = stdout;
   else
     f = stdin;
-    
-  fd = fileno(f);
+  
+  ret = gavf_io_create_file(f, method == BG_PLUG_IO_METHOD_WRITE, 0, 0);
 
-  if(isatty(fd))
+  if(gavf_io_get_flags(ret) & GAVF_IO_IS_TTY)
     {
     if(method == BG_PLUG_IO_METHOD_WRITE)
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Not writing to a TTY");
     else
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Not reading from a TTY");
+    gavf_io_destroy(ret);
     return NULL;
     }
-    
-  if(fstat(fd, &st))
-    {
-    if(method == BG_PLUG_IO_METHOD_WRITE)
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot stat stdout");
-    else
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot stat stdin");
-    return 0;
-    }
-  if(S_ISFIFO(st.st_mode)) /* Pipe: Use local connection */
-    {
-    *flags |= (BG_PLUG_IO_IS_LOCAL|BG_PLUG_IO_IS_PIPE);
-    }
-  else if(S_ISREG(st.st_mode))
-    *flags |= BG_PLUG_IO_IS_REGULAR;
-
-  if(method == BG_PLUG_IO_METHOD_WRITE)
-    fprintf(stderr, "Opened stdout\n");
-  else
-    fprintf(stderr, "Opened stdin %d\n", !!(*flags & BG_PLUG_IO_IS_PIPE));
-  
-  return gavf_io_create_file(f, method == BG_PLUG_IO_METHOD_WRITE, 0, 0);
+  return ret;
   }
 
 /* TCP client */
@@ -200,9 +178,9 @@ static gavf_io_t * open_pipe(const char * location, int wr)
   {
   const char * pos;
   bg_subprocess_t * sp;
-  
+  int flags = GAVF_IO_IS_LOCAL | GAVF_IO_IS_PIPE;
   pos = location;
-
+  
   if(!wr && (*pos == '|'))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read pipes must start with '<'");
@@ -213,6 +191,11 @@ static gavf_io_t * open_pipe(const char * location, int wr)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Write pipes must start with '|'");
     return NULL;
     }
+
+  if(wr)
+    flags |= GAVF_IO_CAN_WRITE;
+  else
+    flags |= GAVF_IO_CAN_READ;
   
   pos++;
   while(isspace(*pos) && (*pos != '\0'))
@@ -237,6 +220,7 @@ static gavf_io_t * open_pipe(const char * location, int wr)
                         NULL, // seek
                         close_pipe,
                         NULL, // flush
+                        flags,
                         sp);
   }
 

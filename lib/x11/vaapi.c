@@ -376,9 +376,10 @@ static void cleanup_vaapi(driver_data_t * d)
   free(priv);
   }
 
-static int supports_hw_type_vaapi(driver_data_t* d,
-                                  gavl_hw_type_t type)
+static int supports_hw_vaapi(driver_data_t* d,
+                             gavl_hw_context_t * ctx)
   {
+  gavl_hw_type_t type = gavl_hw_ctx_get_type(ctx);
   switch(type)
     {
     case GAVL_HW_VAAPI_X11:
@@ -394,7 +395,7 @@ static int supports_hw_type_vaapi(driver_data_t* d,
 const video_driver_t vaapi_driver =
   {
     .name                = "VAAPI",
-    .supports_hw_type   = supports_hw_type_vaapi,
+    .supports_hw         = supports_hw_vaapi,
     .can_scale           = 1,
     .init                = init_vaapi,
     .open                = open_vaapi,
