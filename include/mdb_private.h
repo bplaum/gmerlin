@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef MDB_PRIVATE_H_INCLUDED
+#define MDB_PRIVATE_H_INCLUDED
+
+
 /* Backends: */
 
 #include <gmerlin/objectcache.h>
@@ -274,3 +278,5 @@ int bg_mdb_container_create_pages(bg_mdb_t * mdb,
 void bg_mdb_page_free(bg_mdb_page_t * page);
   
 #endif
+
+#endif // MDB_PRIVATE_H_INCLUDED

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BGLADSPA_PRIV_H_INCLUDED
+#define BGLADSPA_PRIV_H_INCLUDED
+
+
 /* Make gmerlin audio filters from ladspa plugins.
  * See http://www.ladspa.org for information about ladspa.
  *
@@ -34,3 +38,4 @@ int bg_ladspa_load(bg_plugin_handle_t * ret,
 
 void bg_ladspa_unload(bg_plugin_handle_t *);
 
+#endif // BGLADSPA_PRIV_H_INCLUDED

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef REGISTRY_PRIV_H_INCLUDED
+#define REGISTRY_PRIV_H_INCLUDED
+
+
 #define bg_cfg_item_t gavl_value_t
 
 /* Create an empty item */
@@ -28,3 +32,5 @@ bg_cfg_item_t * bg_cfg_section_find_item(bg_cfg_section_t * section,
 
 #define BG_CFG_REGISTRY_INFO "$INFO"
 #define BG_CFG_REGISTRY_DIRECTORY "$DIR"
+
+#endif // REGISTRY_PRIV_H_INCLUDED

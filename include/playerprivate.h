@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef PLAYERPRIVATE_H_INCLUDED
+#define PLAYERPRIVATE_H_INCLUDED
+
+
 #include <pthread.h>
 #include <config.h>
 
@@ -785,4 +789,6 @@ void bg_player_set_eof(bg_player_t * p);
 
 
 #define BG_PLAYER_CMD_EOF 1
+
+#endif // PLAYERPRIVATE_H_INCLUDED
 

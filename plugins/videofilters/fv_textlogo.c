@@ -29,7 +29,6 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
 #include <gmerlin/bggavl.h>
-#include <bgfreetype.h>
 
 #include <gmerlin/textrenderer.h>
 

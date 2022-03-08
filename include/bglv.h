@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BGLV_PRIV_H_INCLUDED
+#define BGLV_PRIV_H_INCLUDED
+
+
 /* Interface for libvisual plugins */
 
 bg_plugin_info_t * bg_lv_get_info(const char * filename);
@@ -28,3 +32,5 @@ int bg_lv_load(bg_plugin_handle_t * ret,
                const char * window_id);
 
 void bg_lv_unload(bg_plugin_handle_t *);
+
+#endif // BGLV_PRIV_H_INCLUDED

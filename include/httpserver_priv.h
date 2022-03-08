@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef HTTPSERVER_PRIV_H_INCLUDED
+#define HTTPSERVER_PRIV_H_INCLUDED
+
+
 #include <gmerlin/websocket.h>
 #include <gmerlin/lpcm_handler.h>
 #include <gmerlin/plug_handler.h>
@@ -125,28 +129,5 @@ void bg_http_server_init_mediafile_handler(bg_http_server_t * s);
 
 void bg_http_server_free_header(header_t *);
 
-/* Backend proxy */
 
-#if 0
-struct bg_backend_proxy_s
-  {
-  bg_backend_handle_t * be;
-  bg_websocket_context_t * ws;
-  gavl_timer_t * timer;
-  const char * id;
-  
-  int status;
-  pthread_mutex_t status_mutex;
-
-  pthread_t th;
-  
-  };
-
-void bg_http_server_init_backend_proxy_handler(bg_http_server_t * s);
-
-bg_backend_proxy_t * bg_backend_proxy_create(const gavl_dictionary_t * device);
-void bg_backend_proxy_destroy(bg_backend_proxy_t *);
-
-
-void bg_http_server_cleanup_backend_proxies(bg_http_server_t * s);
-#endif
+#endif // HTTPSERVER_PRIV_H_INCLUDED

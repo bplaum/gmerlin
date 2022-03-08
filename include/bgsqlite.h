@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BGSQLITE_H_INCLUDED
+#define BGSQLITE_H_INCLUDED
+
+
 #include <gavl/gavl.h>
 #include <gavl/value.h>
 
@@ -115,3 +119,4 @@ int64_t bg_sqlite_get_int(sqlite3 * db, const char * sql);
 
 void bg_sqlite_init_strcoll(sqlite3 * db);
   
+#endif // BGSQLITE_H_INCLUDED

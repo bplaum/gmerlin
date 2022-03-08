@@ -25,7 +25,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <bgshm.h>
 #include <gavl/metatags.h>
 
 #include <gavl/gavf.h>
@@ -43,8 +42,6 @@
 
 #define LOG_DOMAIN "plug"
 
-#define META_SHM_SIZE     "bgplug_shm_size"
-#define META_RETURN_QUEUE "bgplug_return_queue"
 
 #define PLUG_FLAG_HAS_MSG_READ                (1<<1)
 #define PLUG_FLAG_HAS_MSG_WRITE               (1<<2)
@@ -58,13 +55,7 @@
 
 // #define DUMP_MESSAGES
 
-// #define SHM_THRESHOLD 1024 // Minimum max_packet_size to switch to shm
 
-typedef struct
-  {
-  int id;  /* ID of the segment */
-  int len; /* Real length       */
-  } shm_info_t;
 
 typedef struct
   {
@@ -72,11 +63,6 @@ typedef struct
   gavl_stream_type_t type;
   int id;
     
-  bg_shm_pool_t * sp;
-  bg_shm_t * shm_segment;
-
-  int shm_size; // Size of an shm seqment */
-  
   /* Reading */
   gavl_packet_source_t * src_int;
   
@@ -85,7 +71,6 @@ typedef struct
   
   bg_plug_t * plug;
 
-  gavl_packet_t p_shm;
   gavl_packet_t * p_ext;
   
   /* Audio stuff */
@@ -145,7 +130,6 @@ struct bg_plug_s
   gavl_packet_t skip_packet;
   
   int got_error;
-  int shm_threshold;
   int timeout;
   int nomsg;
   
@@ -617,7 +601,6 @@ static bg_plug_t * create_common()
   ret->opt = gavf_options_create();
   
   ret->timeout = 10000;
-  ret->shm_threshold = 1024;
   
   pthread_mutex_init(&ret->mutex, NULL);
   pthread_mutex_init(&ret->flags_mutex, NULL);
@@ -741,8 +724,6 @@ static void cleanup_streams(bg_plug_t * p)
   for(i = 0; i < p->num_streams; i++)
     {
     s = p->streams + i;
-    if(s->sp)
-      bg_shm_pool_destroy(s->sp);
     
     if(s->aframe)
       {
@@ -843,13 +824,6 @@ static const bg_parameter_info_t input_parameters[] =
 static const bg_parameter_info_t output_parameters[] =
   {
     {
-      .name = "shm",
-      .long_name = TRS("SHM threshold"),
-      .type = BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(1024),
-      .help_string = TRS("Select the minimum packet size for using shared memory for a stream. Non-positive values disable shared memory completely"),
-    },
-    {
       .name = "to",
       .type = BG_PARAMETER_INT,
       .val_default = GAVL_VALUE_INIT_INT(5000),
@@ -907,8 +881,6 @@ void bg_plug_set_parameter(void * data, const char * name,
     }
   else if(!strcmp(name, "nomsg"))
     p->nomsg = val->v.i;
-  else if(!strcmp(name, "shm"))
-    p->shm_threshold = val->v.i;
   else if(!strcmp(name, "timeout"))
     p->timeout = val->v.i;
   }
@@ -1026,96 +998,15 @@ static void init_streams_read(bg_plug_t * p)
 
 /* Read support */
 
-static gavl_source_status_t read_packet_shm(void * priv,
-                                            gavl_packet_t ** ret)
-  {
-  shm_info_t si;
-  gavl_source_status_t st;
-  gavl_packet_t * p = NULL;
-  stream_t * s = priv;
-  
-  if((st = gavl_packet_source_read_packet(s->src_int, &p)) !=
-     GAVL_SOURCE_OK)
-    return st;
-
-  /* Sanity check */
-  if(p->data_len != sizeof(si))
-    {
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "SHM packet data size mismatch, %d != %d\n",
-           (int)p->data_len, (int)(sizeof(si)));
-    return GAVL_SOURCE_EOF;
-    }
-  memcpy(&si, p->data, sizeof(si));
-
-  /* Unref the old segment if there is one */
-  if(s->shm_segment)
-    bg_shm_unref(s->shm_segment);
-  
-  /* Obtain memory segment */
-  s->shm_segment = bg_shm_pool_get_read(s->sp, si.id);
-
-  if(!s->shm_segment)
-    return GAVL_SOURCE_EOF;
-  
-  /* Copy metadata */
-  
-  memcpy(&s->p_shm, p, sizeof(*p));
-  
-  /* Exchange pointers */
-  s->p_shm.data       = bg_shm_get_buffer(s->shm_segment, &s->p_shm.data_alloc);
-  s->p_shm.data_len   = si.len;
-  
-  *ret = &s->p_shm;
-  return GAVL_SOURCE_OK;
-  }
-
-static void unref_shm_packet(gavl_packet_t * p,
-                             void * priv)
-  {
-  shm_info_t si;
-  stream_t * s = priv;
-  
-  /* Sanity check */
-  if(s->plug->skip_packet.data_len != sizeof(si))
-    return;
-  
-  memcpy(&si, s->plug->skip_packet.data, sizeof(si));
-  
-  /* Obtain memory segment */
-  s->shm_segment = bg_shm_pool_get_read(s->sp, si.id);
-  
-  /* Unref the segment if there is one */
-  if(s->shm_segment)
-    bg_shm_unref(s->shm_segment);
-  
-  }
-
 static int init_read_common(bg_plug_t * p,
                             stream_t * s)
   {
   int id;
-  gavl_dictionary_t * m = gavl_stream_get_metadata_nc(s->h);
-
   // fprintf(stderr, "init_read_common:\n");
   // gavl_dictionary_dump(s->h, 2);
   
-  gavl_dictionary_get_int(m, META_SHM_SIZE, &s->shm_size);
-
   gavl_stream_get_id(s->h, &id);
   
-  if(s->shm_size)
-    {
-    /* Create shared memory pool */
-    s->sp = bg_shm_pool_create(s->shm_size, 0);
-    /* Clear metadata tags */
-    gavl_dictionary_set_string(m, META_SHM_SIZE, NULL);
-
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using shm for reading (segment size: %d)",
-           s->shm_size);
-    }
-
-  if(s->shm_size)
-    gavf_stream_set_unref(p->g, id, unref_shm_packet, s);
   
   if(s->source_s->action == BG_STREAM_ACTION_OFF)
     {
@@ -1128,16 +1019,7 @@ static int init_read_common(bg_plug_t * p,
   if(s->type != GAVL_STREAM_MSG)
     gavl_packet_source_set_lock_funcs(s->src_int, lock_func_read, unlock_func, s);
   
-  if(s->shm_size)
-    {
-    s->source_s->psrc_priv =
-      gavl_packet_source_create_source(read_packet_shm, s,
-                                       GAVL_SOURCE_SRC_ALLOC,
-                                       s->src_int);
-    s->source_s->psrc = s->source_s->psrc_priv;
-    }
-  else
-    s->source_s->psrc = s->src_int;
+  s->source_s->psrc = s->src_int;
 
   return 1;
   }
@@ -1459,54 +1341,6 @@ static gavl_sink_status_t put_overlay_func(void * priv,
 
 /* Packet */
 
-static gavl_packet_t * get_packet_shm(void * priv)
-  {
-  stream_t * s = priv;
-
-  s->shm_segment = bg_shm_pool_get_write(s->sp);
-  
-  s->p_shm.data = bg_shm_get_buffer(s->shm_segment, &s->p_shm.data_alloc);
-  gavl_packet_reset(&s->p_shm);
-  return &s->p_shm;
-  }
-
-static gavl_sink_status_t put_packet_shm(void * priv, gavl_packet_t * pp)
-  {
-  gavl_packet_t * p;
-  shm_info_t si;
-  stream_t * s = priv;
-
-  /* Exchange pointers */
-  si.id = bg_shm_get_id(s->shm_segment);
-  si.len = s->p_shm.data_len;
-
-  p = gavl_packet_sink_get_packet(s->sink_int);
-  
-  gavl_packet_copy_metadata(p, &s->p_shm);
-  gavl_packet_alloc(p, sizeof(si));
-  memcpy(p->data, &si, sizeof(si));
-  p->data_len = sizeof(si);
-  return gavl_packet_sink_put_packet(s->sink_int, p);
-  }
-
-static void check_shm_write(bg_plug_t * p, stream_t * s,
-                            gavl_dictionary_t * m,
-                            const gavl_compression_info_t * ci)
-  {
-  /* TODO */
-  
-  if((p->io_flags & BG_PLUG_IO_IS_LOCAL) &&
-     (p->shm_threshold > 0) &&
-     (ci->max_packet_size > p->shm_threshold))
-    {
-    s->shm_size = ci->max_packet_size + GAVL_PACKET_PADDING;
-    s->sp = bg_shm_pool_create(s->shm_size, 1);
-    gavl_dictionary_set_int(m, META_SHM_SIZE, s->shm_size);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using shm for writing (segment size: %d)",
-           s->shm_size);
-    
-    }
-  }
 
 static int init_write_common(bg_plug_t * p, stream_t * s)
   {
@@ -1514,15 +1348,7 @@ static int init_write_common(bg_plug_t * p, stream_t * s)
   s->sink_int = gavf_get_packet_sink(p->g, s->id);
   gavl_packet_sink_set_lock_funcs(s->sink_int, lock_func_write, unlock_func, s);
   
-  if(s->shm_size)
-    {
-    s->sink_s->psink = gavl_packet_sink_create(get_packet_shm,
-                                               put_packet_shm,
-                                               s);
-    s->sink_s->psink_priv = s->sink_s->psink;
-    }
-  else
-    s->sink_s->psink = s->sink_int;
+  s->sink_s->psink = s->sink_int;
 
   if(s->codec_handle)
     {
@@ -1678,7 +1504,6 @@ static int init_write(bg_plug_t * p)
         s->afmt = gavl_stream_get_audio_format_nc(s->h);
         
         s->ci.max_packet_size = gavf_get_max_audio_packet_size(s->afmt, &s->ci);
-        check_shm_write(p, s, s->m, &s->ci);
     
         if((s->id = gavf_append_audio_stream(p->g, &s->ci, s->afmt, s->m)) < 0)
           return 0;
@@ -1701,7 +1526,6 @@ static int init_write(bg_plug_t * p)
 
         s->vfmt = gavl_stream_get_video_format_nc(s->h);
         s->ci.max_packet_size = gavf_get_max_video_packet_size(s->vfmt, &s->ci);
-        check_shm_write(p, s, s->m, &s->ci);
 
         if((s->id = gavf_append_video_stream(p->g, &s->ci, s->vfmt, s->m)) < 0)
           return 0;
@@ -1710,8 +1534,6 @@ static int init_write(bg_plug_t * p)
       case GAVL_STREAM_TEXT:
 
         s->sink_s = bg_media_sink_append_text_stream(&p->sink, s->h);
-
-        check_shm_write(p, s, s->m, &s->ci);
 
         gavl_dictionary_get_int(s->m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &s->timescale);
         
@@ -1735,7 +1557,6 @@ static int init_write(bg_plug_t * p)
         s->vfmt = gavl_stream_get_video_format_nc(s->h);
 
         s->ci.max_packet_size = gavf_get_max_video_packet_size(s->vfmt, &s->ci);
-        check_shm_write(p, s, s->m, &s->ci);
 
         if((s->id = gavf_append_overlay_stream(p->g, &s->ci, s->vfmt, s->m)) < 0)
           return 0;

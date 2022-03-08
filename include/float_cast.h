@@ -43,6 +43,10 @@
 **		long int lrint  (double x) ;
 */
 
+#ifndef FLOAT_CAST_H_INCLUDED
+#define FLOAT_CAST_H_INCLUDED
+
+
 #include <config.h>
 
 /*
@@ -201,3 +205,4 @@
 
 
 
+#endif // FLOAT_CAST_H_INCLUDED

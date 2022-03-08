@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef RECORCDER_PRIVATE_H_INCLUDED
+#define RECORCDER_PRIVATE_H_INCLUDED
+
 #include <gmerlin/bggavl.h>
 #include <gmerlin/filters.h>
 #include <gmerlin/encoder.h>
@@ -314,3 +317,5 @@ void
 bg_recorder_set_output_parameter(void * data,
                                  const char * name,
                                  const gavl_value_t * val);
+
+#endif // RECORCDER_PRIVATE_H_INCLUDED

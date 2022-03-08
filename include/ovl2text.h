@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef OVL2TEXT_H_INCLUDED
+#define OVL2TEXT_H_INCLUDED
+
+
 bg_plugin_info_t * bg_ovl2text_info(void);
 const bg_plugin_common_t * bg_ovl2text_get(void);
 
@@ -31,3 +35,6 @@ void * bg_ovl2text_create(void);
 const bg_plugin_common_t * bg_ovl2text_get_plugin(void);
 
 #define bg_ovl2text_name        "e_ovl2text"
+
+
+#endif // OVL2TEXT_H_INCLUDED

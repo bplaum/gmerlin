@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef PLUGINREG_PRIV_H_INCLUDED
+#define PLUGINREG_PRIV_H_INCLUDED
+
+
 /** \ingroup plugin_registry
  *  \brief Load plugin infos from an xml file
  *  \param filename The name of the xml file
@@ -39,3 +43,5 @@ bg_plugin_info_t * bg_edldec_get_info();
 bg_plugin_info_t *        bg_recorder_input_info(void);
 const bg_plugin_common_t* bg_recorder_input_get(void);
 void *                    bg_recorder_input_create(void);
+
+#define // PLUGINREG_PRIV_H_INCLUDED

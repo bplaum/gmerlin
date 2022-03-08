@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVFENC_H_INCLUDED
+#define GAVFENC_H_INCLUDED
+
 
 bg_plugin_info_t * bg_gavfenc_info(bg_plugin_registry_t * reg);
 
@@ -28,3 +31,4 @@ void * bg_gavfenc_create(bg_plugin_registry_t * reg);
 
 #define bg_gavfenc_name        "e_gavf"
 
+#endif // GAVFENC_H_INCLUDED

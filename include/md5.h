@@ -18,8 +18,8 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
-#ifndef _MD5_H
-#define _MD5_H 1
+#ifndef MD5_H_INCLUDED
+#define MD5_H_INCLUDED
 
 #include <stdio.h>
 #include <stdint.h>
@@ -130,4 +130,4 @@ char * bg_md5_buffer_str(const char *buffer, size_t len, char * ret);
 char * bg_md5_2_string(const void * md5v, char * str);
 int bg_string_2_md5(const char * str, void * md5v);
 
-#endif /* md5.h */
+#endif /* MD5_H_INCLUDED */

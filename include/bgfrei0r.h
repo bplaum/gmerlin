@@ -23,6 +23,9 @@
  * See http://www.piksel.org/frei0r
  */
 
+#ifndef BGFREI0R_PRIV_H_INCLUDED
+#define BGFREI0R_PRIV_H_INCLUDED
+
 bg_plugin_info_t * bg_frei0r_get_info(void * dll_handle, const char * filename);
 
 int bg_frei0r_load(bg_plugin_handle_t * ret,
@@ -30,3 +33,4 @@ int bg_frei0r_load(bg_plugin_handle_t * ret,
 
 void bg_frei0r_unload(bg_plugin_handle_t *);
 
+#endif // BGFREI0R_PRIV_H_INCLUDED

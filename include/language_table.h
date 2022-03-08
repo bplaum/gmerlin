@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef LANGUAGE_TABLE_H_INCLUDED
+#define LANGUAGE_TABLE_H_INCLUDED
+
 extern char const * const bg_language_codes[];
 extern char const * const bg_language_labels[];
 
@@ -33,3 +36,4 @@ typedef struct
 extern const bg_country_t bg_countries[];
 
 
+#endif // LANGUAGE_TABLE_H_INCLUDED

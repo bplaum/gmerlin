@@ -1,3 +1,5 @@
+#ifndef FRONTEND_PRIV_H_INCLUDED
+#define FRONTEND_PRIV_H_INCLUDED
 
 
 struct bg_frontend_s
@@ -17,3 +19,4 @@ bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable);
 void bg_frontend_init(bg_frontend_t *);
 
   
+#endif // FRONTEND_PRIV_H_INCLUDED

@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BACKEND_PRIV_H_INCLUDED
+#define BACKEND_PRIV_H_INCLUDED
+
 #include <pthread.h>
 
 typedef struct bg_remote_dev_backend_s bg_remote_dev_backend_t;
@@ -113,3 +116,5 @@ struct bg_backend_registry_s
 
 int bg_backend_is_local(const char * uri,
                         gavl_dictionary_t * dev);
+
+#endif // BACKEND_PRIV_H_INCLUDED

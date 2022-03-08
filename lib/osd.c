@@ -34,8 +34,6 @@
 #include <gmerlin/player.h>
 #include <gavl/keycodes.h>
 
-#include <bgfreetype.h>
-
 #include <gmerlin/parameter.h>
 #include <gmerlin/msgqueue.h>
 #include <gmerlin/textrenderer.h>
