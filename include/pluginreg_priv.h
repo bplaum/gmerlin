@@ -44,4 +44,4 @@ bg_plugin_info_t *        bg_recorder_input_info(void);
 const bg_plugin_common_t* bg_recorder_input_get(void);
 void *                    bg_recorder_input_create(void);
 
-#define // PLUGINREG_PRIV_H_INCLUDED
+#endif // PLUGINREG_PRIV_H_INCLUDED
