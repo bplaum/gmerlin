@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_PLUGINREGISTRY_H_
-#define __BG_PLUGINREGISTRY_H_
+#ifndef BG_PLUGINREGISTRY_H_INCLUDED
+#define BG_PLUGINREGISTRY_H_INCLUDED
 
 /* Plugin registry */
 #include <pthread.h>
@@ -1304,4 +1304,5 @@ const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_ty
 
 
 
-#endif // __BG_PLUGINREGISTRY_H_
+#endif // BG_PLUGINREGISTRY_H_INCLUDED
+

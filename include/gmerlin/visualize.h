@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_VISUALIZE_H_INCLUDED
+#define BG_VISUALIZE_H_INCLUDED
 
 #include <gmerlin/ov.h>
 #include <gmerlin/osd.h>
@@ -101,3 +103,6 @@ void bg_visualize_set_format(gavl_video_format_t * fmt,
 void bg_visualizer_set_plugin(bg_visualizer_t * v, int plugin);
 
 void bg_visualizer_pause(bg_visualizer_t * v);
+
+#endif // BG_VISUALIZE_H_INCLUDED
+

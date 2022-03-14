@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_TREE_H_
-#define __BG_TREE_H_
+#ifndef BG_TREE_H_INCLUDED
+#define BG_TREE_H_INCLUDED
 
 #include <wchar.h> /* wchar_t */
 
@@ -480,5 +480,6 @@ void bg_media_tree_foreach(bg_media_tree_t *,
 
 // void bg_media_tree_copy_current_to_favourites(bg_media_tree_t * t);
 
-#endif //  __BG_TREE_H_
+#endif //  BG_TREE_H_INCLUDED
+
 

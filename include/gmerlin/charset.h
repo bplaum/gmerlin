@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_CHARSET_H_INCLUDED
+#define BG_CHARSET_H_INCLUDED
 
 /* Charset utilities (charset.c) */
 
@@ -67,3 +69,6 @@ char * bg_convert_string(bg_charset_converter_t * cnv,
                          int * out_len);
 
 /** @} */
+
+#endif // BG_CHARSET_H_INCLUDED
+

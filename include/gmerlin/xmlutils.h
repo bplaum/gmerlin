@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_XMLUTILS_H_INCLUDED
+#define BG_XMLUTILS_H_INCLUDED
+
 /* xml utilities */
 
 #include <libxml/tree.h>
@@ -92,3 +95,5 @@ const char * bg_xml_node_get_child_content(xmlNodePtr parent,
 
 /* Load an xml document from a http URL */
 xmlDocPtr bg_xml_from_url(const char * url, char ** mimetype_ptr);
+
+#endif // BG_XMLUTILS_H_INCLUDED

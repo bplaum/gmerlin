@@ -20,8 +20,8 @@
  * *****************************************************************/
 
 
-#ifndef __BG_GAVL_H_
-#define __BG_GAVL_H_
+#ifndef BGGAVL_H_INCLUDED
+#define BGGAVL_H_INCLUDED
 
 #include <json-c/json.h>
 #include <libxml/tree.h>
@@ -814,4 +814,5 @@ char * bg_string_array_to_string(const gavl_array_t * arr);
 
 
 
-#endif // __BG_GAVL_H_
+#endif // BGGAVL_H_INCLUDED
+

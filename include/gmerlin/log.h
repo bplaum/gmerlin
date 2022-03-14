@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __GAVL_LOG_H_
-#define __GAVL_LOG_H_
+#ifndef BG_LOG_H_INCLUDED
+#define BG_LOG_H_INCLUDED
 
 /* Gmerlin log facilities */
 
@@ -149,4 +149,5 @@ void bg_log_stderr_init();
 
 
 
-#endif // __GAVL_LOG_H_
+#endif // BG_LOG_H_INCLUDED
+

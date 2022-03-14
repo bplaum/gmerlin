@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_PLAYER_H_
-#define __BG_PLAYER_H_
+#ifndef BG_PLAYER_H_INCLUDED
+#define BG_PLAYER_H_INCLUDED
 
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/msgqueue.h>
@@ -505,4 +505,5 @@ int bg_player_volume_from_dB(float volume);
 
 
 
-#endif // __BG_PLAYER_H_
+#endif // BG_PLAYER_H_INCLUDED
+

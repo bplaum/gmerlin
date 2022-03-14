@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_OV_H_
-#define __BG_OV_H_
+#ifndef BG_OV_H_INCLUDED
+#define BG_OV_H_INCLUDED
 
 #include <gmerlin/plugin.h>
 #include <gmerlin/pluginregistry.h>
@@ -72,4 +72,5 @@ extern const bg_state_var_desc_t bg_ov_state_vars[];
 #define BG_OV_ZOOM_DELTA 2.0
 
 
-#endif // __BG_OV_H_
+#endif // BG_OV_H_INCLUDED
+

@@ -262,7 +262,7 @@ int main(int argc, char ** argv)
   if(!gavftools_open_input(in_plug, gavftools_in_file))
     goto fail;
   
-  gavftools_set_stream_actions(in_plug);
+  gavftools_set_stream_actions(bg_plug_get_source(in_plug));
 
   if(!bg_plug_start(in_plug))
     goto fail;

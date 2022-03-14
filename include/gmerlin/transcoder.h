@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_TRANSCODER_H_INCLUDED
+#define BG_TRANSCODER_H_INCLUDED
+
 #include <gmerlin/transcoder_track.h>
 
 typedef struct bg_transcoder_s bg_transcoder_t;
@@ -89,4 +92,6 @@ void bg_transcoder_send_msg_error(bg_msg_hub_t * l);
 void bg_transcoder_send_msg_metadata(bg_msg_hub_t * l,
                                      gavl_dictionary_t * m);
 
+
+#endif // BG_TRANSCODER_H_INCLUDED
 

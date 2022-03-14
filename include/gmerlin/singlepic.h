@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_SINGLEPIC_H_INCLUDED
+#define BG_SINGLEPIC_H_INCLUDED
+
 /*
  * Singlepicture "metaplugins" are for the application like
  * all other plugin. The internal difference is, that they
@@ -57,3 +60,5 @@ void * bg_singlepic_encoder_create(void);
 #define bg_singlepic_encoder_name        "e_singlepic"
 #define bg_singlepic_input_name        "i_singlepic"
 #define bg_singlepic_stills_input_name "i_singlepic_stills"
+
+#endif // BG_SINGLEPIC_H_INCLUDED

@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_HTTPSERVER_H_
-#define __BG_HTTPSERVER_H_ 
+#ifndef BG_HTTPSERVER_H_INCLUDED
+#define BG_HTTPSERVER_H_INCLUDED
 
 #include <gmerlin/msgqueue.h>
 #include <gmerlin/bgsocket.h>
@@ -223,5 +223,6 @@ int bg_is_http_media_uri(const char * uri);
 
 
 
-#endif // __BG_HTTPSERVER_H_
+#endif // BG_HTTPSERVER_H_INCLUDED
+
 

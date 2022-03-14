@@ -42,10 +42,6 @@ static int num_audio_streams = 0;
 static int num_video_streams = 0;
 static int num_overlay_streams = 0;
 
-static bg_stream_action_t * audio_actions = NULL;
-static bg_stream_action_t * video_actions = NULL;
-static bg_stream_action_t * text_actions = NULL;
-static bg_stream_action_t * overlay_actions = NULL;
 
 static int force_audio = 0;
 static int force_video = 0;
@@ -243,7 +239,8 @@ int main(int argc, char ** argv)
   gavl_compression_info_t ci;
   
   const gavl_dictionary_t * s;
-
+  bg_stream_action_t action;
+  
   bg_app_init("gavf-recompress", TRS("Recompress streams of a gavf stream"));
   
   gavl_dictionary_init(&ac_options);
@@ -284,15 +281,6 @@ int main(int argc, char ** argv)
   num_video_streams = gavl_track_get_num_streams(src->track, GAVL_STREAM_VIDEO);
   num_overlay_streams = gavl_track_get_num_streams(src->track, GAVL_STREAM_OVERLAY);
   num_text_streams = gavl_track_get_num_streams(src->track, GAVL_STREAM_TEXT);
-
-  audio_actions = gavftools_get_stream_actions(num_audio_streams,
-                                               GAVL_STREAM_AUDIO);
-  video_actions = gavftools_get_stream_actions(num_video_streams,
-                                               GAVL_STREAM_VIDEO);
-  text_actions = gavftools_get_stream_actions(num_text_streams,
-                                               GAVL_STREAM_TEXT);
-  overlay_actions = gavftools_get_stream_actions(num_overlay_streams,
-                                                 GAVL_STREAM_OVERLAY);
   
   ac_sections =
     create_stream_sections(ac_parameters,
@@ -312,9 +300,10 @@ int main(int argc, char ** argv)
     s = gavl_track_get_audio_stream(src->track, i);
     gavl_compression_info_init(&ci);
     gavl_stream_get_compression_info(s, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_AUDIO, i);
     
     bg_media_source_set_stream_action(src, GAVL_STREAM_AUDIO, i,
-                                      get_stream_action(audio_actions[i],
+                                      get_stream_action(action,
                                                         ac_sections[i],
                                                         force_audio, &ci));
     gavl_compression_info_free(&ci);
@@ -324,9 +313,10 @@ int main(int argc, char ** argv)
     s = gavl_track_get_audio_stream(src->track, i);
     gavl_compression_info_init(&ci);
     gavl_stream_get_compression_info(s, &ci);
-
+    action = gavftools_get_stream_action(GAVL_STREAM_VIDEO, i);
+    
     bg_media_source_set_stream_action(src, GAVL_STREAM_VIDEO, i,
-                                      get_stream_action(video_actions[i],
+                                      get_stream_action(action,
                                                         vc_sections[i],
                                                         force_video, &ci));
 
@@ -337,16 +327,19 @@ int main(int argc, char ** argv)
     s = gavl_track_get_audio_stream(src->track, i);
     gavl_compression_info_init(&ci);
     gavl_stream_get_compression_info(s, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_OVERLAY, i);
 
     bg_media_source_set_stream_action(src, GAVL_STREAM_OVERLAY, i,
-                                      get_stream_action(overlay_actions[i],
+                                      get_stream_action(action,
                                                         oc_sections[i],
                                                         force_overlay, &ci));
     gavl_compression_info_free(&ci);
     }
   for(i = 0; i < num_text_streams; i++)
-    bg_media_source_set_stream_action(src, GAVL_STREAM_OVERLAY, i, text_actions[i]);
-  
+    {
+    action = gavftools_get_stream_action(GAVL_STREAM_TEXT, i);
+    bg_media_source_set_stream_action(src, GAVL_STREAM_TEXT, i, action);
+    }
   /* Start decoder and initialize media connector */
 
   if(!bg_plug_start(in_plug) ||
@@ -437,15 +430,5 @@ int main(int argc, char ** argv)
   
   gavftools_cleanup();
 
-  if(audio_actions)
-    free(audio_actions);
-  if(video_actions)
-    free(video_actions);
-  if(text_actions)
-    free(text_actions);
-  if(overlay_actions)
-    free(overlay_actions);
-
-  
   return ret;
   }

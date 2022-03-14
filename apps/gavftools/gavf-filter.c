@@ -72,13 +72,13 @@ static bg_cmdline_arg_t global_options[] =
     {
       .arg =         "-af",
       .help_arg =    "<options>",
-      .help_string = "Audio compression options",
+      .help_string = "Audio filter options",
       .callback =    opt_af,
     },
     {
       .arg =         "-vf",
       .help_arg =    "<options>",
-      .help_string = "Video compression options",
+      .help_string = "Video filter options",
       .callback =    opt_vf,
     },
     GAVFTOOLS_OUTPLUG_OPTIONS,
@@ -134,10 +134,7 @@ int main(int argc, char ** argv)
   {
   int ret = EXIT_FAILURE;
   bg_mediaconnector_t conn;
-  bg_stream_action_t * audio_actions = NULL;
-  bg_stream_action_t * video_actions = NULL;
-  bg_stream_action_t * text_actions = NULL;
-  bg_stream_action_t * overlay_actions = NULL;
+  bg_stream_action_t action;
 
   const gavl_dictionary_t * sh;
   
@@ -193,15 +190,15 @@ int main(int argc, char ** argv)
   /* Get stream actions */
 
   num_audio_streams = gavl_track_get_num_streams(in_src->track, GAVL_STREAM_AUDIO);
-  audio_actions = gavftools_get_stream_actions(num_audio_streams,
-                                               GAVL_STREAM_AUDIO);
 
+ 
   for(i = 0; i < num_audio_streams; i++)
     {
     sh = gavl_track_get_stream(in_src->track, i, GAVL_STREAM_AUDIO);
 
     gavl_compression_info_init(&ci);
     gavl_stream_get_compression_info(sh, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_AUDIO, i);
     
     if((ci.id != GAVL_CODEC_ID_NONE) &&
        (bg_cmdline_get_stream_options(&af_options, i)))
@@ -212,20 +209,19 @@ int main(int argc, char ** argv)
       }
     else
       {
-      bg_media_source_set_stream_action(in_src, GAVL_STREAM_AUDIO, i, audio_actions[i]);
+      bg_media_source_set_stream_action(in_src, GAVL_STREAM_AUDIO, i, action);
       }
     gavl_compression_info_free(&ci);
     }
   
   num_video_streams = gavl_track_get_num_streams(in_src->track, GAVL_STREAM_VIDEO);
-  video_actions = gavftools_get_stream_actions(num_video_streams,
-                                               GAVL_STREAM_VIDEO);
 
   for(i = 0; i < num_video_streams; i++)
     {
     sh = gavl_track_get_stream(in_src->track, i, GAVL_STREAM_VIDEO);
     gavl_compression_info_init(&ci);
     gavl_stream_get_compression_info(sh, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_VIDEO, i);
 
     if((ci.id != GAVL_CODEC_ID_NONE) &&
        (bg_cmdline_get_stream_options(&vf_options, i)))
@@ -235,27 +231,28 @@ int main(int argc, char ** argv)
       bg_media_source_set_stream_action(in_src, GAVL_STREAM_VIDEO, i, BG_STREAM_ACTION_DECODE);
       }
     else
-      bg_media_source_set_stream_action(in_src, GAVL_STREAM_VIDEO, i, video_actions[i]);
+      bg_media_source_set_stream_action(in_src, GAVL_STREAM_VIDEO, i, action);
 
     gavl_compression_info_free(&ci);
     }
 
   num = gavl_track_get_num_streams(in_src->track, GAVL_STREAM_TEXT);
-  text_actions = gavftools_get_stream_actions(num, GAVL_STREAM_TEXT);
+  
 
   for(i = 0; i < num; i++)
     {
     sh = gavl_track_get_stream(in_src->track, i, GAVL_STREAM_TEXT);
-    bg_media_source_set_stream_action(in_src, GAVL_STREAM_TEXT, i, text_actions[i]);
+    action = gavftools_get_stream_action(GAVL_STREAM_TEXT, i);
+    bg_media_source_set_stream_action(in_src, GAVL_STREAM_TEXT, i, action);
     }
 
   num = gavl_track_get_num_streams(in_src->track, GAVL_STREAM_OVERLAY);
-  overlay_actions = gavftools_get_stream_actions(num, GAVL_STREAM_OVERLAY);
 
   for(i = 0; i < num; i++)
     {
     sh = gavl_track_get_stream(in_src->track, i, GAVL_STREAM_OVERLAY);
-    bg_media_source_set_stream_action(in_src, GAVL_STREAM_OVERLAY, i, overlay_actions[i]);
+    action = gavftools_get_stream_action(GAVL_STREAM_OVERLAY, i);
+    bg_media_source_set_stream_action(in_src, GAVL_STREAM_OVERLAY, i, action);
     }
   
   
@@ -377,15 +374,6 @@ int main(int argc, char ** argv)
   
   gavftools_cleanup();
 
-  if(audio_actions)
-    free(audio_actions);
-  if(video_actions)
-    free(video_actions);
-  if(text_actions)
-    free(text_actions);
-  if(overlay_actions)
-    free(overlay_actions);
-  
   bg_media_source_cleanup(&src);
   
   return ret;

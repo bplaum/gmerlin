@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_SUBTITLE_H_INCLUDED
+#define BG_SUBTITLE_H_INCLUDED
+
+
 typedef struct bg_subtitle_handler_s bg_subtitle_handler_t;
 
 bg_subtitle_handler_t * bg_subtitle_handler_create();
@@ -35,5 +39,6 @@ void bg_subtitle_handler_update(bg_subtitle_handler_t *,
 void bg_subtitle_handler_reset(bg_subtitle_handler_t *);
 
 
+#endif // BG_SUBTITLE_H_INCLUDED
 
 

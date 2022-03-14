@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_PLUGINFUNCS_H_INCLUDED
+#define BG_PLUGINFUNCS_H_INCLUDED
+
 int bg_encoder_cb_create_output_file(bg_encoder_callbacks_t * cb,
                                      const char * filename);
 
@@ -73,3 +76,7 @@ int bg_encoder_pts_cache_push_frame(bg_encoder_pts_cache_t*, gavl_video_frame_t 
 
 int bg_encoder_pts_cache_pop_packet(bg_encoder_pts_cache_t*, gavl_packet_t * p,
                                     int64_t frame_num, int64_t pts);
+
+#endif // BG_PLUGINFUNCS_H_INCLUDED
+
+

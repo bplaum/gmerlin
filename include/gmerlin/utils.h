@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_UTILS_H_
-#define __BG_UTILS_H_
+#ifndef BG_UTILS_H_INCLUDED
+#define BG_UTILS_H_INCLUDED
 
 #include <stdio.h>
 #include <wchar.h>
@@ -230,13 +230,10 @@ int bg_string_is_url(const char * str);
  * occur in the URL. All strings must be freed when non-NULL after the call.
  */
 
-int bg_url_split(const char * url,
-                 char ** protocol,
-                 char ** user,
-                 char ** password,
-                 char ** hostname,
-                 int * port,
-                 char ** path);
+
+#define bg_url_split(url, protocol, user, password, hostname, port, path) \
+  gavl_url_split(url, protocol, user, password, hostname, port, path)
+
 
 /*
  *  \brief Get a string suitable for the Host variable
@@ -751,4 +748,5 @@ extern char const * const bg_language_labels[];
 
 
 
-#endif // __BG_UTILS_H_
+#endif // BG_UTILS_H_INCLUDED
+

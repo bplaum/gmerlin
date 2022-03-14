@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_EMBEDPLAYER_H_
-#define __BG_EMBEDPLAYER_H_
+#ifndef BG_EMBEDPLAYER_H_INCLUDED
+#define BG_EMBEDPLAYER_H_INCLUDED
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/msgqueue.h>
@@ -55,4 +55,5 @@ void bg_embed_player_set_window_options(bg_embed_player_t * p,
 int bg_embed_player_get_error(bg_embed_player_t * p);
 
 
-#endif // __BG_EMBEDPLAYER_H_
+#endif // BG_EMBEDPLAYER_H_INCLUDED
+

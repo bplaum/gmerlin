@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BGDBUS_H
-#define __BGDBUS_H
+#ifndef BGDBUS_H_INCLUDED
+#define BGDBUS_H_INCLUDED
 
 #include <dbus/dbus.h>
 
@@ -178,4 +178,5 @@ void bg_dbus_unregister_object(bg_dbus_connection_t * conn, const char * path, b
 
 
 
-#endif // __BGDBUS_H
+#endif // BGDBUS_H_INCLUDED
+

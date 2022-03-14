@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_SUBPROCESS_H_INCLUDED
+#define BG_SUBPROCESS_H_INCLUDED
+
 /** \defgroup subprocesses Subprocesses
  *  \ingroup utils
  *  \brief Subprocesses with pipable stdin, stdout and stderr
@@ -111,3 +114,6 @@ int bg_subprocess_read_data(int fd, uint8_t * ret, int len);
 int bg_system(const char * command);
 
 /** @} */
+
+#endif // BG_SUBPROCESS_H_INCLUDED
+

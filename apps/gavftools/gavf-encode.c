@@ -234,10 +234,7 @@ int main(int argc, char ** argv)
   gavl_video_sink_t * vsink;
   gavl_packet_sink_t * psink;
   
-  bg_stream_action_t * audio_actions = NULL;
-  bg_stream_action_t * video_actions = NULL;
-  bg_stream_action_t * text_actions = NULL;
-  bg_stream_action_t * overlay_actions = NULL;
+  bg_stream_action_t action;
   
   bg_media_source_t * src;
   const gavl_dictionary_t * m; 
@@ -315,7 +312,6 @@ int main(int argc, char ** argv)
   /* Set stream actions */
   
   num = gavl_track_get_num_streams(src->track, GAVL_STREAM_AUDIO);
-  audio_actions = gavftools_get_stream_actions(num, GAVL_STREAM_AUDIO);
   
   for(i = 0; i < num; i++)
     {
@@ -324,22 +320,22 @@ int main(int argc, char ** argv)
 
     afmt = gavl_stream_get_audio_format(sh);
     gavl_stream_get_compression_info(sh, &ci);
+
+    action = gavftools_get_stream_action(GAVL_STREAM_AUDIO, i);
     
     /* Check if we can write the stream compressed */
     if((ci.id != GAVL_CODEC_ID_NONE) &&
-       (audio_actions[i] == BG_STREAM_ACTION_READRAW) && 
+       (action == BG_STREAM_ACTION_READRAW) && 
         !bg_encoder_writes_compressed_audio(enc, afmt, &ci))
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Audio stream %d cannot be written compressed", i+1);
-      audio_actions[i] = BG_STREAM_ACTION_DECODE;
+      action = BG_STREAM_ACTION_DECODE;
       }
-    bg_media_source_set_stream_action(src, GAVL_STREAM_AUDIO, i, audio_actions[i]);
+    bg_media_source_set_stream_action(src, GAVL_STREAM_AUDIO, i, action);
     gavl_compression_info_free(&ci);
     }
 
   num = gavl_track_get_num_streams(src->track, GAVL_STREAM_VIDEO);
-  
-  video_actions = gavftools_get_stream_actions(num, GAVL_STREAM_VIDEO);
   
   for(i = 0; i < num; i++)
     {
@@ -348,31 +344,30 @@ int main(int argc, char ** argv)
 
     vfmt = gavl_stream_get_video_format(sh);
     gavl_stream_get_compression_info(sh, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_VIDEO, i);
     
     /* Check if we can write the stream compressed */
     if((ci.id != GAVL_CODEC_ID_NONE) &&
-       (video_actions[i] == BG_STREAM_ACTION_READRAW) &&
+       (action == BG_STREAM_ACTION_READRAW) &&
         !bg_encoder_writes_compressed_video(enc, vfmt, &ci))
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Video stream %d cannot be written compressed", i+1);
-      video_actions[i] = BG_STREAM_ACTION_DECODE;
+      action = BG_STREAM_ACTION_DECODE;
       }      
-    bg_media_source_set_stream_action(src, GAVL_STREAM_VIDEO, i, video_actions[i]);
+    bg_media_source_set_stream_action(src, GAVL_STREAM_VIDEO, i, action);
     gavl_compression_info_free(&ci);
     }
 
   num = gavl_track_get_num_streams(src->track, GAVL_STREAM_TEXT);
-  text_actions = gavftools_get_stream_actions(num, GAVL_STREAM_TEXT);
-
+  
   for(i = 0; i < num; i++)
     {
-    bg_media_source_set_stream_action(src, GAVL_STREAM_TEXT, i, text_actions[i]);
+    action = gavftools_get_stream_action(GAVL_STREAM_TEXT, i);
+    bg_media_source_set_stream_action(src, GAVL_STREAM_TEXT, i, action);
     }
 
   num = gavl_track_get_num_streams(src->track, GAVL_STREAM_OVERLAY);
 
-  overlay_actions = gavftools_get_stream_actions(num, GAVL_STREAM_OVERLAY);
-  
   for(i = 0; i < num; i++)
     {
     gavl_compression_info_init(&ci);
@@ -381,16 +376,17 @@ int main(int argc, char ** argv)
 
     vfmt = gavl_stream_get_video_format(sh);
     gavl_stream_get_compression_info(sh, &ci);
+    action = gavftools_get_stream_action(GAVL_STREAM_OVERLAY, i);
 
     /* Check if we can write the stream compressed */
     if((ci.id != GAVL_CODEC_ID_NONE) &&
-       (overlay_actions[i] == BG_STREAM_ACTION_READRAW) &&
+       (action == BG_STREAM_ACTION_READRAW) &&
         !bg_encoder_writes_compressed_overlay(enc, vfmt, &ci))
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Overlay stream %d cannot be written compressed", i+1);
-      overlay_actions[i] = BG_STREAM_ACTION_DECODE;
+      action = BG_STREAM_ACTION_DECODE;
       }
-    bg_media_source_set_stream_action(src, GAVL_STREAM_OVERLAY, i, overlay_actions[i]);
+    bg_media_source_set_stream_action(src, GAVL_STREAM_OVERLAY, i, action);
     gavl_compression_info_free(&ci);
     }
   
@@ -570,14 +566,6 @@ int main(int argc, char ** argv)
   gavl_dictionary_free(&vc_options);
   gavl_dictionary_free(&oc_options);
 
-  if(audio_actions)
-    free(audio_actions);
-  if(video_actions)
-    free(video_actions);
-  if(text_actions)
-    free(text_actions);
-  if(overlay_actions)
-    free(overlay_actions);
   
   gavftools_cleanup();
 

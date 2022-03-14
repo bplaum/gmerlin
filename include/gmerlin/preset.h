@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_PRESET_H_INCLUDED
+#define BG_PRESET_H_INCLUDED
+
 #define BG_PRESET_PRIVATE (1<<0) // Preset is private (can be deleted)
 
 typedef struct bg_preset_s
@@ -51,3 +54,5 @@ void bg_presets_destroy(bg_preset_t *);
 bg_cfg_section_t * bg_preset_load(bg_preset_t * p);
 
 void bg_preset_save(bg_preset_t * p, const bg_cfg_section_t * s);
+
+#endif // BG_PRESET_H_INCLUDED

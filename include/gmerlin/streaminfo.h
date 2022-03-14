@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_STREAMINFO_H_
-#define __BG_STREAMINFO_H_
+#ifndef BG_STREAMINFO_H_INCLUDED
+#define BG_STREAMINFO_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
@@ -242,4 +242,5 @@ void bg_dictionary_delete_children_by_flag_nc(gavl_dictionary_t * container,
  */
 
 
-#endif // /__BG_STREAMINFO_H_
+#endif // BG_STREAMINFO_H_INCLUDED
+

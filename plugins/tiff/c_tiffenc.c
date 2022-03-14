@@ -93,7 +93,7 @@ static gavl_sink_status_t put_frame(void * priv,
       return GAVL_SINK_ERROR;
     }
   bg_tiff_writer_write_image(c->tiff, f);
-  gavf_video_frame_to_packet_metadata(f, &c->p);
+  gavl_video_frame_to_packet_metadata(f, &c->p);
   c->have_header = 0;
   c->p.flags |= GAVL_PACKET_KEYFRAME;
   return gavl_packet_sink_put_packet(c->psink, &c->p);

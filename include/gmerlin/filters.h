@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_FILTERS_H_INCLUDED
+#define BG_FILTERS_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gmerlin/bggavl.h>
@@ -249,3 +251,6 @@ bg_msg_sink_t * bg_video_filter_chain_get_cmd_sink(bg_video_filter_chain_t * ch)
 /**
  * @}
  */
+
+#endif // BG_FILTERS_H_INCLUDED
+

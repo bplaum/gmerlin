@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_COLORMATRIX_H_INCLUDED
+#define BG_COLORMATRIX_H_INCLUDED
+
 typedef struct bg_colormatrix_s bg_colormatrix_t;
 
 bg_colormatrix_t * bg_colormatrix_create();
@@ -40,4 +43,6 @@ void bg_colormatrix_init(bg_colormatrix_t *,
 
 void bg_colormatrix_process(bg_colormatrix_t *,
                             gavl_video_frame_t * frame);
+
+#endif // BG_COLORMATRIX_H_INCLUDED
 

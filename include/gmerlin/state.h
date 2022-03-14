@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_STATE_H_
-#define __BG_STATE_H_
+#ifndef BG_STATE_H_INCLUDED
+#define BG_STATE_H_INCLUDED
 
 typedef struct
   {
@@ -153,4 +153,5 @@ const char * bg_state_get_uuid(gavl_dictionary_t * state,
 #define BG_CONTRAST_MAX       10.0
 #define BG_CONTRAST_DELTA      0.5
 
-#endif // __BG_STATE_H_
+#endif // BG_STATE_H_INCLUDED
+

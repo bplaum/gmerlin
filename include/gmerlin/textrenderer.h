@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_TEXTRENDERER_H_INCLUDED
+#define BG_TEXTRENDERER_H_INCLUDED
+
 #include <gavl/connectors.h>
 
 typedef struct bg_text_renderer_s bg_text_renderer_t;
@@ -48,3 +51,6 @@ gavl_video_source_t * bg_text_renderer_connect(bg_text_renderer_t * r,
                                                gavl_packet_source_t * src,
                                                const gavl_video_format_t * frame_format,
                                                gavl_video_format_t * overlay_format);
+
+#endif // BG_TEXTRENDERER_H_INCLUDED
+

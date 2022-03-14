@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_TRANSLATION_H_INCLUDED
+#define BG_TRANSLATION_H_INCLUDED
+
 #include <libintl.h>
 
 /* Static strings (will be regognized by xgettext) */
@@ -44,3 +47,6 @@ void bg_bindtextdomain(const char * domainname, const char * dirname);
 #define BG_LOCALE \
 .gettext_domain = PACKAGE, \
 .gettext_directory = LOCALE_DIR
+
+#endif // BG_TRANSCODER_H_INCLUDED
+

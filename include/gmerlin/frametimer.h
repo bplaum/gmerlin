@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_FRAMETIMER_H_INCLUDED
+#define BG_FRAMETIMER_H_INCLUDED
+
+
 typedef struct bg_frame_timer_s bg_frame_timer_t;
 
 bg_frame_timer_t * bg_frame_timer_create(float framerate,
@@ -32,4 +36,4 @@ void bg_frame_timer_update(bg_frame_timer_t *,
 /* Wait for the next frame to capture */
 void bg_frame_timer_wait(bg_frame_timer_t *);
 
-
+#endif // BG_FRAMETIMER_H_INCLUDED

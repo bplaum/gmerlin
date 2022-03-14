@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_TRANSCODERMSG_H_INCLUDED
+#define BG_TRANSCODERMSG_H_INCLUDED
 
 /* Messages of the transcoder */
 
@@ -80,3 +82,6 @@
  */
 
 #define BG_TRANSCODER_MSG_ERROR            12
+
+#endif // BG_TRANSCODERMSG_H_INCLUDED
+

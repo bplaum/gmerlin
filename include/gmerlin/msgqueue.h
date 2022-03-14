@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_MSGQUEUE_H_
-#define __BG_MSGQUEUE_H_
+#ifndef BG_MSGQUEUE_H_INCLUDED
+#define BG_MSGQUEUE_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gavl/gavldsp.h>
@@ -813,6 +813,6 @@ void bg_control_cleanup(bg_control_t * c);
 /**@} */
 
 
-#endif /* __BG_MSGQUEUE_H_ */
+#endif /* BG_MSGQUEUE_H_INCLUDED */
 
 

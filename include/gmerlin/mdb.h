@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_MDB_H
-#define __BG_MDB_H
+#ifndef BG_MDB_H_INCLUDED
+#define BG_MDB_H_INCLUDED
 
 
 #include <gmerlin/httpserver.h>
@@ -133,4 +133,5 @@ int bg_mdb_adjust_num(int start, int * num, int total);
 
 
 
-#endif // __BG_MDB_H
+#endif // BG_MDB_H_INCLUDED
+

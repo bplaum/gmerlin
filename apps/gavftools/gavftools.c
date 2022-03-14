@@ -36,6 +36,8 @@ char * gavftools_out_file = NULL;
 bg_cfg_section_t * aq_section = NULL;
 bg_cfg_section_t * vq_section = NULL;
 
+static gavl_dictionary_t stream_options;
+
 static const bg_parameter_info_t aq_params[] =
   {
     BG_GAVL_PARAM_CONVERSION_QUALITY,
@@ -85,6 +87,7 @@ void gavftools_init()
 
   aq_section = bg_cfg_section_create_from_parameters("aq", aq_params);
   vq_section = bg_cfg_section_create_from_parameters("vq", vq_params);
+  gavl_dictionary_init(&stream_options);
   
   }
 
@@ -92,17 +95,6 @@ void gavftools_init()
 static bg_cfg_section_t * iopt_section = NULL;
 static bg_cfg_section_t * oopt_section = NULL;
 
-static bg_stream_action_t * a_actions = NULL;
-static int num_a_actions = 0;
-
-static bg_stream_action_t * v_actions = NULL;
-static int num_v_actions = 0;
-
-static bg_stream_action_t * t_actions = NULL;
-static int num_t_actions = 0;
-
-static bg_stream_action_t * o_actions = NULL;
-static int num_o_actions = 0;
 
 static char ** meta_fields = NULL;
 int num_meta_fields = 0;
@@ -118,12 +110,6 @@ void gavftools_cleanup(int save_regs)
   if(oopt_section)
     bg_cfg_section_destroy(oopt_section);
   
-
-  if(a_actions) free(a_actions);
-  if(v_actions) free(v_actions);
-  if(t_actions) free(t_actions);
-  if(o_actions) free(o_actions);
-
   if(meta_fields)
     free(meta_fields);
 
@@ -297,7 +283,7 @@ gavftools_block_sigpipe(void)
   }
 
 /* Stream actions */
-
+#if 0
 static bg_stream_action_t * stream_actions_from_arg(const char * arg, int * num_p)
   {
   int i;
@@ -325,6 +311,7 @@ static bg_stream_action_t * stream_actions_from_arg(const char * arg, int * num_
   gavl_strbreak_free(actions_c);
   return ret;
   }
+#endif
 
 void
 gavftools_opt_as(void * data, int * argc, char *** _argv, int arg)
@@ -335,7 +322,26 @@ gavftools_opt_as(void * data, int * argc, char *** _argv, int arg)
     exit(-1);
     }
 
-  a_actions = stream_actions_from_arg((*_argv)[arg], &num_a_actions);
+  gavl_dictionary_set_string(&stream_options, "as", (*_argv)[arg]);
+  
+  bg_cmdline_remove_arg(argc, _argv, arg);
+  
+  }
+
+void
+gavftools_opt_as_idx(void * data, int idx, int * argc, char *** _argv, int arg)
+  {
+  char * name;
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -as requires an argument\n");
+    exit(-1);
+    }
+
+  name = bg_sprintf("as-%d", idx);
+  gavl_dictionary_set_string(&stream_options, name, (*_argv)[arg]);
+  free(name);
+  
   bg_cmdline_remove_arg(argc, _argv, arg);
   
   }
@@ -348,7 +354,24 @@ gavftools_opt_vs(void * data, int * argc, char *** _argv, int arg)
     fprintf(stderr, "Option -vs requires an argument\n");
     exit(-1);
     }
-  v_actions = stream_actions_from_arg((*_argv)[arg], &num_v_actions);
+
+  bg_cmdline_remove_arg(argc, _argv, arg);
+  
+  }
+
+void
+gavftools_opt_vs_idx(void * data, int idx, int * argc, char *** _argv, int arg)
+  {
+  char * name;
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -vs requires an argument\n");
+    exit(-1);
+    }
+  name = bg_sprintf("vs-%d", idx);
+  gavl_dictionary_set_string(&stream_options, name, (*_argv)[arg]);
+  free(name);
+
   bg_cmdline_remove_arg(argc, _argv, arg);
   
   }
@@ -361,7 +384,24 @@ gavftools_opt_os(void * data, int * argc, char *** _argv, int arg)
     fprintf(stderr, "Option -os requires an argument\n");
     exit(-1);
     }
-  o_actions = stream_actions_from_arg((*_argv)[arg], &num_o_actions);
+
+  bg_cmdline_remove_arg(argc, _argv, arg);
+
+  }
+
+void
+gavftools_opt_os_idx(void * data, int idx, int * argc, char *** _argv, int arg)
+  {
+  char * name;
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -os requires an argument\n");
+    exit(-1);
+    }
+  name = bg_sprintf("os-%d", idx);
+  gavl_dictionary_set_string(&stream_options, name, (*_argv)[arg]);
+  free(name);
+  
   bg_cmdline_remove_arg(argc, _argv, arg);
 
   }
@@ -374,11 +414,27 @@ gavftools_opt_ts(void * data, int * argc, char *** _argv, int arg)
     fprintf(stderr, "Option -ts requires an argument\n");
     exit(-1);
     }
-  t_actions = stream_actions_from_arg((*_argv)[arg], &num_t_actions);
+  
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
+void
+gavftools_opt_ts_idx(void * data, int idx, int * argc, char *** _argv, int arg)
+  {
+  char * name;
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -ts requires an argument\n");
+    exit(-1);
+    }
+  name = bg_sprintf("ts-%d", idx);
+  gavl_dictionary_set_string(&stream_options, name, (*_argv)[arg]);
+  free(name);
 
+  bg_cmdline_remove_arg(argc, _argv, arg);
+  }
+
+#if 0
 bg_stream_action_t *
 gavftools_get_stream_actions(int num, gavl_stream_type_t type)
   {
@@ -436,6 +492,135 @@ gavftools_get_stream_actions(int num, gavl_stream_type_t type)
     }
   return ret;
   }
+#endif
+
+static const char * get_stream_option(int idx, const char * option)
+  {
+  const char * var;
+  char * name = bg_sprintf("%s-%d", option, idx+1);
+
+  var = gavl_dictionary_get_string(&stream_options, name);
+  free(name);
+  
+  if(var)
+    return var;
+
+  return
+    gavl_dictionary_get_string(&stream_options, option);
+  }
+
+bg_stream_action_t gavftools_get_stream_action(gavl_stream_type_t type, int idx)
+  {
+  const char * var;
+  const char * option = NULL;
+  
+  switch(type)
+    {
+    case GAVL_STREAM_AUDIO:
+      option = "as";
+      break;
+    case GAVL_STREAM_VIDEO:
+      option = "vs";
+      break;
+    case GAVL_STREAM_TEXT:
+      option = "ts";
+      break;
+    case GAVL_STREAM_OVERLAY:
+      option = "os";
+      break;
+    case GAVL_STREAM_MSG:
+    default:
+      return BG_STREAM_ACTION_DECODE;
+      break;
+    }
+  
+  var = get_stream_option(idx, option);
+  
+  if(!var)
+    return BG_STREAM_ACTION_READRAW;
+
+  switch(var[0])
+    {
+    case 'd':
+      return BG_STREAM_ACTION_DECODE;
+      break;
+    case 'c':
+      return  BG_STREAM_ACTION_READRAW;
+      break;
+    case 'm':
+    default:
+      return BG_STREAM_ACTION_OFF;
+      break;
+    }
+  
+  }
+  
+static void set_stream_action(bg_media_source_t * src,
+                              bg_media_source_stream_t * s, int idx, const char * option)
+  {
+  bg_stream_action_t act;
+  
+  const char * opt = get_stream_option(idx, option);
+
+  if(!opt)
+    opt = "c";
+  
+  switch(opt[0])
+    {
+    case 'd':
+      act = BG_STREAM_ACTION_DECODE;
+      break;
+    case 'c':
+      act = BG_STREAM_ACTION_READRAW;
+      break;
+    case 'm':
+    default:
+      act = BG_STREAM_ACTION_OFF;
+      break;
+    }
+  
+  switch(s->type)
+    {
+    case GAVL_STREAM_AUDIO:
+    case GAVL_STREAM_VIDEO:
+    case GAVL_STREAM_OVERLAY:
+      if(act == BG_STREAM_ACTION_READRAW)
+        {
+        if(!gavl_stream_get_compression_info(s->s, NULL))
+          act = BG_STREAM_ACTION_DECODE;
+        }
+      break;
+    default:
+      break;
+    }
+
+  bg_media_source_set_stream_action(src, s->type, idx, act);
+  }
+  
+void gavftools_set_stream_actions(bg_media_source_t * src)
+  {
+  int i;
+  int num;
+
+  num = bg_media_source_get_num_streams(src, GAVL_STREAM_AUDIO);
+  for(i = 0; i < num; i++)
+    set_stream_action(src, bg_media_source_get_audio_stream(src, i), i, "as");
+  
+  num = bg_media_source_get_num_streams(src, GAVL_STREAM_VIDEO);
+  for(i = 0; i < num; i++)
+    set_stream_action(src, bg_media_source_get_video_stream(src, i), i, "vs");
+
+  num = bg_media_source_get_num_streams(src, GAVL_STREAM_TEXT);
+  for(i = 0; i < num; i++)
+    set_stream_action(src, bg_media_source_get_text_stream(src, i), i, "ts");
+  
+  num = bg_media_source_get_num_streams(src, GAVL_STREAM_OVERLAY);
+  for(i = 0; i < num; i++)
+    set_stream_action(src, bg_media_source_get_overlay_stream(src, i), i, "os");
+  
+  }
+
+
 
 bg_plug_t * gavftools_create_in_plug()
   {
@@ -500,6 +685,7 @@ int gavftools_open_out_plug_from_in_plug(bg_plug_t * out_plug,
   return 1;
   }
 
+#if 0
 static void set_stream_actions(bg_plug_t * in_plug, gavl_stream_type_t type)
   {
   int num, i;
@@ -534,6 +720,7 @@ void gavftools_set_stream_actions(bg_plug_t * p)
   bg_media_source_set_stream_action(s, GAVL_STREAM_MSG, 0, BG_STREAM_ACTION_DECODE);
   // set_stream_actions(p, GAVL_STREAM_MSG);
   }
+#endif
 
 int gavftools_open_input(bg_plug_t * in_plug, const char * ifile)
   {

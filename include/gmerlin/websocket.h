@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __WEBSOCKET_H_
-#define __WEBSOCKET_H_
+#ifndef BG_WEBSOCKET_H_INCLUDED
+#define BG_WEBSOCKET_H_INCLUDED
 
 /* Websocket support */
 
@@ -90,4 +90,5 @@ bg_websocket_connection_get_controllable(bg_websocket_connection_t *);
 void
 bg_websocket_connection_destroy(bg_websocket_connection_t*);
 
-#endif // __WEBSOCKET_H_
+#endif // BG_WEBSOCKET_H_INCLUDED
+

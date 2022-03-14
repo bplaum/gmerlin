@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_CAIRO_H_INCLUDED
+#define BG_CAIRO_H_INCLUDED
+
 #include <gavl/gavl.h>
 #include <cairo/cairo.h>
 
@@ -61,3 +64,6 @@ void
 bg_cairo_make_rounded_box(cairo_t * cr,
                           const gavl_rectangle_f_t * r,
                           double radius);
+
+#endif // BG_CAIRO_H_INCLUDED
+

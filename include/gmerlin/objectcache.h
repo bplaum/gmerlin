@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_OBJCACHE_H_INCLUDED
+#define BG_OBJCACHE_H_INCLUDED
+
 typedef struct bg_object_cache_s bg_object_cache_t;
 
 /* Return 1 if a cache item is not expired yet */
@@ -42,3 +45,5 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
 void bg_object_cache_destroy(bg_object_cache_t * cache);
 
 void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv);
+
+#endif // BG_OBJCACHE_H_INCLUDED

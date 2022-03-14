@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_PARAMETER_H_
-#define __BG_PARAMETER_H_
+#ifndef BG_PARAMETER_H_INCLUDED
+#define BG_PARAMETER_H_INCLUDED
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -391,5 +391,6 @@ int bg_multi_menu_get_num(const gavl_value_t * val);
  */
 
 
-#endif /* __BG_PARAMETER_H_ */
+#endif // BG_PARAMETER_H_INCLUDED
+
 

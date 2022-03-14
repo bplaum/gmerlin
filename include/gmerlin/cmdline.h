@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_CMDLINE_H_INCLUDED
+#define BG_CMDLINE_H_INCLUDED
+
+
 #include <gavl/metadata.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/cfg_registry.h>
@@ -51,6 +55,9 @@ typedef struct
   
   /* Callback will be called if present */
   void (*callback)(void * data, int * argc, char *** argv, int arg);
+
+  /* Callback with index will be called if present */
+  void (*callback_idx)(void * data, int idx, int * argc, char *** argv, int arg);
 
   /* Parameters are used to generate a help string */
   const bg_parameter_info_t * parameters;
@@ -141,3 +148,6 @@ void bg_opt_v(void * data, int * argc, char *** _argv, int arg);
 int bg_cmdline_parse_parameters(const char * string,
                                 const bg_parameter_info_t * parameters,
                                 gavl_dictionary_t * ret);
+
+#endif // BG_CMDLINE_H_INCLUDED
+

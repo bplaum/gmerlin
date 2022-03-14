@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_REMOTE_H_
-#define __BG_REMOTE_H_
+#ifndef BG_REMOTE_H_INCLUDED
+#define BG_REMOTE_H_INCLUDED
 
 
 #define BG_REMOTE_PORT_BASE 10100
@@ -38,4 +38,5 @@
  * PUT /player/json
  */
 
-#endif // __BG_REMOTE_H_
+#endif // BG_REMOTE_H_INCLUDED
+

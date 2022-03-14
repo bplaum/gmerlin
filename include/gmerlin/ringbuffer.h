@@ -10,6 +10,9 @@
  *
  */
 
+#ifndef BG_RINGBUFFER_H_INCLUDED
+#define BG_RINGBUFFER_H_INCLUDED
+
 /* Overwrite the buffer if the reader was too slow */
 #define BG_RINGBUFFER_OVERWRITE     (1<<0)
 
@@ -41,3 +44,5 @@ int bg_ring_buffer_read(bg_ring_buffer_t * buf, void * data, int64_t * seqno);
 bg_ring_buffer_t * bg_ring_buffer_create_audio(int num_elements,
                                                gavl_audio_format_t * fmt,
                                                int flags);
+
+#endif // BG_RINGBUFFER_H_INCLUDED

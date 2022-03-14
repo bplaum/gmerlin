@@ -107,9 +107,6 @@ struct bg_plug_s
   int flags;
   pthread_mutex_t flags_mutex;
   
-  /* Opposite direction */
-  gavf_io_t * io_msg;
-  
   int num_audio_streams;
   int num_video_streams;
   int num_text_streams;
@@ -266,12 +263,6 @@ static void * msg_read_func(void * priv)
   
   fprintf(stderr, "msg_read_func started\n");
   
-  if(!plug->io_msg)
-    {
-    /* Shouldn't happen */
-    return NULL;
-    }
-  
   while(1)
     {
     /* Read message */
@@ -280,12 +271,12 @@ static void * msg_read_func(void * priv)
     
     /* Select */
 
-    if(!gavf_io_can_read(plug->io_msg, 50))
-      continue;
+    //    if(!gavf_io_can_read(plug->io_msg, 50))
+    //      continue;
     
     msg = bg_msg_sink_get(plug->msg_sink_int);
     
-    if(!gavl_msg_read(msg, plug->io_msg))
+    //    if(!gavl_msg_read(msg, plug->io_msg))
       {
       gavl_dprintf("gavl_msg_read failed\n");
       gavl_msg_free(msg);
@@ -347,35 +338,10 @@ static int accept_backchannel_socket(bg_plug_t * p)
 
   if(!ret)
     {
-    gavf_io_destroy(p->io_msg);
-    p->io_msg = NULL;
+    //    gavf_io_destroy(p->io_msg);
+    //    p->io_msg = NULL;
     }
 
-  return 1;
-  }
-
-/* Called by the destination */
-static int connect_backchannel(bg_plug_t * p, const gavl_dictionary_t * dict)
-  {
-  if(p->io_flags & BG_PLUG_IO_IS_SOCKET) /* Duplex connection already there */
-    {
-    /* Write messages (back) */
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using duplex backchannel");
-
-    p->io_msg = gavf_io_create_socket(gavf_io_get_socket(p->io), 1000, 0);
-    }
-                
-  if(p->io_msg)
-    {
-    //  fprintf(stderr, "PLUG_FLAG_HAS_MSG_WRITE\n");
-    set_flag(p, PLUG_FLAG_HAS_MSG_WRITE);
-    }
-  else
-    {
-    /* Error? */
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't open backchannel");
-    return 0;
-    }
   return 1;
   }
 
@@ -467,132 +433,12 @@ static int msg_cb_read_av(void * data, gavl_msg_t * msg)
           
           
           break;
-        case GAVL_MSG_GAVF_READ_PROGRAM_HEADER_START:
-          fprintf(stderr, "GAVL_MSG_GAVF_READ_PROGRAM_HEADER_START av rd\n");
-          break;
-        case GAVL_MSG_GAVF_READ_PROGRAM_HEADER_END:
-          {
-          gavl_value_t arg_val;
-          const gavl_dictionary_t * dict;
-          
-          fprintf(stderr, "GAVL_MSG_GAVF_READ_PROGRAM_HEADER_END av rd %p\n", p->controllable.cmd_sink);
-          
-          gavl_value_init(&arg_val);
-          gavl_msg_get_arg(msg, 0, &arg_val);
-          
-          // gavl_dictionary_dump(dict, 0);
-          
-          /* Back channel */
-          if(!p->nomsg && p->controllable.cmd_sink)
-            {
-            // fprintf(stderr, "p->controllable.cmd_sink: %p\n", p->controllable.cmd_sink);
-      
-            /* Write messages (backchannel) */
-
-            if(!p->io_msg && (p->io_flags & (BG_PLUG_IO_IS_SOCKET|BG_PLUG_IO_IS_LOCAL)))
-              {
-              if((dict = gavl_value_get_dictionary(&arg_val)))
-                {
-                if(!connect_backchannel(p, dict))
-                  ;
-                }
-              }
-            }
-          gavl_value_free(&arg_val);
-          }
-          // gavf_program_header_dump(p->ph);
-          break;
-        case GAVL_MSG_GAVF_READ_SYNC_HEADER_START:
-          // fprintf(stderr, "GAVL_MSG_GAVF_READ_SYNC_HEADER_START av rd\n");
-          
-          break;
-        case GAVL_MSG_GAVF_READ_SYNC_HEADER_END:
-          // fprintf(stderr, "GAVL_MSG_GAVF_READ_SYNC_HEADER_END av rd\n");
-          
-          break;
-        case GAVL_MSG_GAVF_READ_PACKET_START:
-          //          fprintf(stderr, "GAVL_MSG_GAVF_READ_PACKET_START av rd\n");
-          break;
-        case GAVL_MSG_GAVF_READ_PACKET_END:
-          /* TODO: Send reply */
-          // fprintf(stderr, "GAVL_MSG_GAVF_READ_PACKET_END av rd %p\n", p->controllable.cmd_sink);
-          
-          if(p->io_msg)
-            {
-            gavl_msg_t msg;
-            gavl_msg_init(&msg);
-            gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_PACKET_ACK, GAVL_MSG_NS_GAVF);
-            gavl_msg_write(&msg, p->io_msg);
-            gavl_msg_free(&msg);
-            }
-          
-          if(has_flag(p, PLUG_FLAG_HAS_MSG_WRITE))
-            {
-            
-            }
-          
-          break;
         }
     }
   
   return 1;
   }
 
-
-/* gavf instance, which *writes* A/V data */
-static int msg_cb_write_av(void * data, gavl_msg_t * msg)
-  {
-  bg_plug_t * p = data;
-
-  
-  switch(msg->NS)
-    {
-    case GAVL_MSG_NS_GAVF:
-      switch(msg->ID)
-        {
-        case GAVL_MSG_GAVF_WRITE_HEADER_START:
-          //          fprintf(stderr, "GAVL_MSG_GAVF_WRITE_HEADER_START av wr\n");
-          break;
-        case GAVL_MSG_GAVF_WRITE_HEADER_END:
-          //          fprintf(stderr, "GAVL_MSG_GAVF_WRITE_HEADER_END av wr\n");
-          if(!accept_backchannel_socket(p))
-            return 0;
-          break;
-        case GAVL_MSG_GAVF_WRITE_SYNC_HEADER_START:
-          // fprintf(stderr, "GAVL_MSG_GAVF_WRITE_SYNC_HEADER_START av wr\n");
-          
-          break;
-        case GAVL_MSG_GAVF_WRITE_SYNC_HEADER_END:
-          // fprintf(stderr, "GAVL_MSG_GAVF_WRITE_SYNC_HEADER_END av wr\n");
-
-          break;
-        case GAVL_MSG_GAVF_WRITE_PACKET_START:
-          // fprintf(stderr, "GAVL_MSG_GAVF_WRITE_PACKET_START av wr\n");
-
-          break;
-        case GAVL_MSG_GAVF_WRITE_PACKET_END:
-          /* TODO: Wait reply */
-          // fprintf(stderr, "GAVL_MSG_GAVF_WRITE_PACKET_END av wr\n");
-          
-          if(has_flag(p, PLUG_FLAG_HAS_MSG_READ))
-            {
-            while(1)
-              {
-              bg_msg_sink_iteration(p->msg_sink_int);
-              if(p->got_packet_ack)
-                {
-                //         fprintf(stderr, "Got packet ack\n");
-                p->got_packet_ack = 0;
-                break;
-                }
-              }
-            }
-          break;
-        }
-      break;
-    }
-  return 1;
-  }
 
 static bg_plug_t * create_common()
   {
@@ -1314,7 +1160,7 @@ static gavl_sink_status_t put_video_func(void * priv,
                                          gavl_video_frame_t * f)
   {
   stream_t * vs = priv;
-  gavf_video_frame_to_packet_metadata(f, vs->p_ext);
+  gavl_video_frame_to_packet_metadata(f, vs->p_ext);
   vs->p_ext->data_len = vs->ci.max_packet_size;
 #ifdef DUMP_PACKETS
   fprintf(stderr, "Got video packet\n");
@@ -1653,9 +1499,6 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
           {
           /* Read messages (backchannel) */
           
-          /* Start read thread */
-          p->io_msg = gavf_io_create_socket(gavf_io_get_socket(p->io), 5000, 0);
-          
           p->flags |= (PLUG_FLAG_HAS_MSG_READ | PLUG_FLAG_HAS_MSG_READ_THREAD);
           }
         else
@@ -1706,8 +1549,6 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
     
     set_flag(p, PLUG_FLAG_MULTITRACK_BGPLUG);
 
-    /* Connect backchannel */
-    connect_backchannel(p, p->mi);
     }
   else
     {
@@ -1767,7 +1608,7 @@ int bg_plug_start_program(bg_plug_t * p, const gavl_dictionary_t * m, int discar
   
   p->g = gavf_create();
   gavf_set_options(p->g, p->opt);
-  gavf_set_msg_cb(p->g, msg_cb_write_av, p);
+  //  gavf_set_msg_cb(p->g, msg_cb_write_av, p);
   
   p->io_orig = p->io;
   p->io = gavf_io_create_sub_write(p->io_orig);
@@ -2129,158 +1970,12 @@ int bg_plug_select_track_by_idx(bg_plug_t * p, int track)
 
 int bg_plug_select_track(bg_plug_t * p, const gavl_msg_t * msg)
   {
-  int track = gavl_msg_get_arg_int(msg, 0);
-
-  
-  if(has_flag(p, PLUG_FLAG_MULTITRACK_GAVF))
-    {
-    cleanup_streams(p);
-    gavf_select_track(p->g, track);
-    p->cur = gavf_get_current_track_nc(p->g);
-    }
-  else if(has_flag(p, PLUG_FLAG_MULTITRACK_BGPLUG) && p->io_msg)
-    {
-    gavl_msg_write(msg, p->io_msg);
-    
-    /* Wait until we are done */
-
-    if(p->g)
-      {
-      bg_media_source_drain_nolock(&p->src);
-      gavf_close(p->g, 0);
-      
-      gavf_io_destroy(p->io);
-      p->io = p->io_orig;
-      }
-
-    cleanup_streams(p);
-    
-    p->g = gavf_create();
-    gavf_set_options(p->g, p->opt);
-    gavf_set_msg_cb(p->g, msg_cb_read_av, p);
-
-    gavf_io_align_read(p->io);
-    
-    p->io_orig = p->io;
-    p->io = gavf_io_create_sub_read(p->io_orig, gavf_io_position(p->io_orig), 0);
-
-    if(!gavf_open_read(p->g, p->io))
-      {
-      
-      }
-    
-    gavf_select_track(p->g, 0);
-    p->cur = gavf_get_current_track_nc(p->g);
-    }
-  else
-    {
-    cleanup_streams(p);
-    gavf_select_track(p->g, track);
-    p->cur = gavf_get_current_track_nc(p->g);
-    }
-  
-  fprintf(stderr, "Selected track:\n");
-  gavl_dictionary_dump(p->cur, 2); 
-  
-  init_streams_read(p);
-  return 1;
+  return 0;
   }
 
 int bg_plug_seek(bg_plug_t * p, const gavl_msg_t * msg)
   {
-  int64_t time;
-  int scale;
-  int was_locked;
-  
-  int flags = gavf_get_flags(p->g);
-
-  time = gavl_msg_get_arg_long(msg, 0);
-  scale = gavl_msg_get_arg_int(msg, 1);
-
-  was_locked = plug_was_locked(p, 0);
-  
-  fprintf(stderr, "bg_plug_seek: %"PRId64" %d %d %d\n", time, scale,
-          !!(flags & GAVF_FLAG_STREAMING), was_locked);
-  
-  if(flags & GAVF_FLAG_STREAMING)
-    {
-    if(p->nomsg)
-      return 0;
-    
-    gavl_msg_write(msg, p->io_msg);
-    
-    /* Wait until we are done */
-    bg_media_source_drain_nolock(&p->src);
-    
-    if(has_flag(p, PLUG_FLAG_GOT_RESYNC))
-      {
-      int i;
-      clear_flag(p, PLUG_FLAG_GOT_RESYNC);
-      
-      /* Empty the queue */
-      //            fprintf(stderr, "Drain...\n");
-      // bg_media_source_drain(&p->src);
-      // fprintf(stderr, "Drain...done\n");
-
-      /* Clear EOF. From now, we should be able to read packets
-         from the new position. */
-      
-      gavf_clear_eof(p->g);
-      
-      if(p->resync_discard || p->resync_discont)
-        {
-        /* Flush all codecs and seek to the next sample position */
-        for(i = 0; i < p->num_streams; i++)
-          {
-          bg_codec_plugin_t * codec = NULL;
-
-          if(p->streams[i].codec_handle)
-            {
-            /* Flush decoder */
-            codec = (bg_codec_plugin_t*)p->streams[i].codec_handle->plugin;
-            
-            if(codec->reset)
-              codec->reset(p->streams[i].codec_handle->priv);
-            }
-          
-          if(p->src.streams[i]->asrc)
-            {
-            gavl_audio_source_reset(p->src.streams[i]->asrc);
-
-            fprintf(stderr, "Skip audio\n");
-            
-            gavl_audio_source_skip_to(p->src.streams[i]->asrc,
-                                      p->resync_time, p->resync_scale);
-            fprintf(stderr, "Skip audio done\n");
-            }
-          
-          if(p->src.streams[i]->vsrc)
-            {
-            gavl_video_source_reset(p->src.streams[i]->vsrc);
-
-            fprintf(stderr, "Skip video\n");
-            
-            if(codec && codec->skip)
-              codec->skip(p->streams[i].codec_handle->priv, p->resync_time, p->resync_scale);
-            fprintf(stderr, "Skip video done\n");
-            }
-          
-          }
-        }
-      }
-    else
-      {
-      fprintf(stderr, "Got no resync\n");
-      }
-    
-    }
-  else
-    {
-    /* TODO: Seek in local files */
-    
-    }
-  fprintf(stderr, "bg_plug_seek done: %"PRId64" %d\n", time, scale);
-  return 1;
+  return 0;
   }
 
 /* Handle messages *before* they are sent to the backchannel by the reader */
@@ -2322,7 +2017,7 @@ static int msg_sink_func_read(void * data, gavl_msg_t * msg)
   
   /* Backchannel */
   
-  return gavl_msg_write(msg, p->io_msg);
+  //  return gavl_msg_write(msg, p->io_msg);
   }
 
 bg_controllable_t * bg_plug_get_controllable(bg_plug_t * p)

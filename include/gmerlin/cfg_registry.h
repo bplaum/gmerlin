@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_CFG_REGISTRY_H_
-#define __BG_CFG_REGISTRY_H_
+#ifndef BG_CFG_REGISTRY_H_INCLUDED
+#define BG_CFG_REGISTRY_H_INCLUDED
 
 #include <gmerlin/parameter.h>
 // #include <gmerlin/cmdline.h>
@@ -512,4 +512,4 @@ void bg_cfg_registry_save_config();
   }
 
 
-#endif /* __BG_CFG_REGISTRY_H_ */
+#endif /* BG_CFG_REGISTRY_H_INCLUDED */

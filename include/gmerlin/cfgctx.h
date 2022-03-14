@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_CFG_CTX_H_
-#define __BG_CFG_CTX_H_
+#ifndef BG_CFG_CTX_H_INCLUDED
+#define BG_CFG_CTX_H_INCLUDED
 
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/msgqueue.h>
@@ -85,4 +85,5 @@ void bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx,
 void bg_cfg_ctx_array_clear_sections(bg_cfg_ctx_t * ctx);
 
 
-#endif // __BG_CFG_CTX_H_
+#endif // BG_CFG_CTX_H_INCLUDED
+

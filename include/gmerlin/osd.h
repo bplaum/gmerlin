@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_OSD_H_INCLUDED
+#define BG_OSD_H_INCLUDED
+
+
 typedef struct bg_osd_s bg_osd_t;
 // typedef struct bg_player_s bg_player_t;
 
@@ -58,3 +62,5 @@ void bg_osd_handle_messages(bg_osd_t * osd);
 int bg_osd_key_pressed(bg_osd_t * osd, int key, int mask);
 
 int bg_osd_clear(bg_osd_t * osd);
+
+#endif // BG_OSD_H_INCLUDED

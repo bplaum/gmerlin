@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __ACCELERATOR_H_
-#define __ACCELERATOR_H_
+#ifndef BG_ACCELERATOR_H_INCLUDED
+#define BG_ACCELERATOR_H_INCLUDED
 
 typedef struct
   {
@@ -69,4 +69,5 @@ bg_accelerator_map_has_accel_with_id(const bg_accelerator_map_t * m,
 const bg_accelerator_t * 
 bg_accelerator_map_get_accels(const bg_accelerator_map_t * m);
 
-#endif // __ACCELERATOR_H_
+#endif // BG_ACCELERATOR_H_INCLUDED
+

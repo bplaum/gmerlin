@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BGTHREAD_H_INCLUDED
+#define BGTHREAD_H_INCLUDED
+
+
 typedef struct bg_thread_common_s bg_thread_common_t;
 typedef struct bg_thread_s        bg_thread_t;
 
@@ -54,3 +58,4 @@ int bg_thread_wait_for_start(bg_thread_t * th);
 void bg_thread_exit(bg_thread_t * th);
 
 
+#endif // BGTHREAD_H_INCLUDED

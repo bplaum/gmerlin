@@ -136,7 +136,7 @@ static gavl_sink_status_t put_frame(void * priv,
     return GAVL_SINK_ERROR;
   
   bg_pngwriter_write_image(&c->png, write_frame);
-  gavf_video_frame_to_packet_metadata(f, &c->p);
+  gavl_video_frame_to_packet_metadata(f, &c->p);
 
   if(c->overlay)
     {

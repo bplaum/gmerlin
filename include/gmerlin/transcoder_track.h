@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_TRANSCODER_TRACK_H_
-#define __BG_TRANSCODER_TRACK_H_
+#ifndef BG_TRANSCODER_TRACK_H_INCLUDED
+#define BG_TRANSCODER_TRACK_H_INCLUDED
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -128,4 +128,4 @@ bg_transcoder_track_t *
 bg_transcoder_tracks_load(const char * filename,
                           bg_plugin_registry_t * plugin_reg);
 
-#endif
+#endif // BG_TRANSCODER_TRACK_H_INCLUDED

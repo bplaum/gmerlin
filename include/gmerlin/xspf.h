@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_XSPF_H_INCLUDED
+#define BG_XSPF_H_INCLUDED
 
 xmlDocPtr bg_xspf_create();
 
@@ -28,3 +30,5 @@ xmlNodePtr bg_xspf_get_tracklist(xmlDocPtr xspf);
 xmlNodePtr bg_xspf_add_track(xmlDocPtr xspf, const gavl_dictionary_t * m);
 
 xmlNodePtr bg_xspf_get_track(xmlDocPtr xspf, xmlNodePtr node, gavl_dictionary_t * m);
+
+#endif // BG_XSPF_H_INCLUDED

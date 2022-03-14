@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_HTTP_H_
-#define __BG_HTTP_H_ 
+#ifndef BG_HTTP_H_INCLUDED
+#define BG_HTTP_H_INCLUDED
 
 #include <gavl/metadata.h>
 #include <gavl/utils.h>
@@ -94,4 +94,4 @@ int bg_http_keepalive_accept(bg_http_keepalive_t * ka,
                              gavl_time_t current_time,
                              int * idx);
 
-#endif // __BG_HTTP_H_
+#endif // BG_HTTP_H_INCLUDED

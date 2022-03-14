@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_VOLUMEMANAGER_H_INCLUDED
+#define BG_VOLUMEMANAGER_H_INCLUDED
+
 #include <gmerlin/msgqueue.h>
 
 typedef struct bg_volume_manager_s bg_volume_manager_t;
@@ -45,3 +48,7 @@ bg_volume_manager_t * bg_volume_manager_create();
 void bg_volume_manager_destroy(bg_volume_manager_t *);
 
 bg_msg_hub_t * bg_volume_manager_get_msg_hub(bg_volume_manager_t *);
+
+#endif // BG_VOLUMEMANAGER_H_INCLUDED
+
+

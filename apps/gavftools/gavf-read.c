@@ -46,7 +46,6 @@ bg_stream_action_t * text_actions = NULL;
 bg_stream_action_t * overlay_actions = NULL;
 
 double seek_pos = -1.0;
-int force_decompress = 0;
 
 bg_control_t open_ctrl;
 bg_controllable_t out_ctrl;
@@ -85,15 +84,6 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = TRS("Set input file or location"),
       .argv     =    &input_file,
     },
-#if 0
-    {
-      .arg =         "-p",
-      .help_arg =    "<plugin>",
-      .help_string = TRS("Set input file plugin to use"),
-      .argv   =       &input_plugin,
-      
-    },
-#endif
     {
       .arg =         "-t",
       .help_arg =    "<track>",
@@ -225,11 +215,6 @@ static int play_track(bg_plugin_handle_t * h, int track)
   bg_controllable_t * controllable;
   
   gavl_dictionary_t * track_info;
-  int i;
-  int num_audio_streams;
-  int num_video_streams;
-  int num_text_streams;
-  int num_overlay_streams; 
   int num_msg_streams; 
   gavl_dictionary_t m;
   bg_mediaconnector_init(&conn);  
@@ -237,10 +222,6 @@ static int play_track(bg_plugin_handle_t * h, int track)
   bg_input_plugin_set_track(h, track);
   track_info = bg_input_plugin_get_track_info(h, track);
 
-  num_audio_streams   = gavl_track_get_num_audio_streams(track_info);
-  num_video_streams   = gavl_track_get_num_video_streams(track_info);
-  num_text_streams    = gavl_track_get_num_text_streams(track_info);
-  num_overlay_streams = gavl_track_get_num_overlay_streams(track_info);
   num_msg_streams     = gavl_track_get_num_msg_streams(track_info);
   
   /* Extract metadata */
@@ -249,68 +230,8 @@ static int play_track(bg_plugin_handle_t * h, int track)
 
   gavftools_set_output_metadata(&m);
   
-  /* Select A/V streams */
-  if(!audio_actions)  
-    audio_actions = gavftools_get_stream_actions(num_audio_streams,
-                                                 GAVL_STREAM_AUDIO);
-  if(!video_actions)
-    video_actions = gavftools_get_stream_actions(num_video_streams,
-                                                 GAVL_STREAM_VIDEO);
-  if(!text_actions)
-    text_actions = gavftools_get_stream_actions(num_text_streams,
-                                                GAVL_STREAM_TEXT);
-  if(!overlay_actions)
-    overlay_actions = gavftools_get_stream_actions(num_overlay_streams,
-                                                   GAVL_STREAM_OVERLAY);
-
-  /* Check for compressed reading */
-
-  for(i = 0; i < num_audio_streams; i++)
-    {
-    if((audio_actions[i] == BG_STREAM_ACTION_READRAW) &&
-       (force_decompress || !gavl_track_get_audio_compression_info(track_info, i, NULL)))
-      {
-      audio_actions[i] = BG_STREAM_ACTION_DECODE;
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Audio stream %d cannot be read compressed",
-             i+1);
-      }
-    }
-
-  for(i = 0; i < num_video_streams; i++)
-    {
-    if((video_actions[i] == BG_STREAM_ACTION_READRAW) &&
-       (force_decompress ||
-        !gavl_track_get_video_compression_info(track_info, i, NULL)))
-      {
-      video_actions[i] = BG_STREAM_ACTION_DECODE;
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Video stream %d cannot be read compressed",
-             i+1);
-      }
-    }
-
-  for(i = 0; i < num_overlay_streams; i++)
-    {
-    if((overlay_actions[i] == BG_STREAM_ACTION_READRAW) &&
-       (force_decompress || 
-        !gavl_track_get_overlay_compression_info(track_info, i, NULL)))
-      {
-      overlay_actions[i] = BG_STREAM_ACTION_DECODE;
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Overlay stream %d cannot be read compressed",
-             i+1);
-      }
-    }
-
-  /* Enable streams */
+  gavftools_set_stream_actions(h->src);
   
-  for(i = 0; i < num_audio_streams; i++)
-    bg_media_source_set_audio_action(h->src, i, audio_actions[i]);
-  for(i = 0; i < num_video_streams; i++)
-    bg_media_source_set_video_action(h->src, i, video_actions[i]);
-  for(i = 0; i < num_text_streams; i++)
-    bg_media_source_set_text_action(h->src, i, text_actions[i]);
-  for(i = 0; i < num_overlay_streams; i++)
-    bg_media_source_set_overlay_action(h->src, i, overlay_actions[i]);
-
   if(num_msg_streams)
     bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM, BG_STREAM_ACTION_DECODE);
   
@@ -455,9 +376,7 @@ int main(int argc, char ** argv)
     return ret;
     }
 
-  if(seek_pos > 0.0)
-    force_decompress = 1;
-
+  
   /* */
 
   bg_control_init(&open_ctrl, bg_msg_sink_create(handle_msg_open, out_plug, 0));

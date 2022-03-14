@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_ICONFONT_H_INCLUDED
+#define BG_ICONFONT_H_INCLUDED
 
 #define BG_ICON_BRIGHTNESS    "!"
 #define BG_ICON_CLOCK         "#"
@@ -150,4 +152,7 @@
 
 void bg_iconfont_init(void);
 const char * bg_play_mode_to_icon(int play_mode);
-  
+
+
+#endif // BG_ICONFONT_H_INCLUDED
+ 

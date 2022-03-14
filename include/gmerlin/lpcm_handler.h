@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_LPCM_HANDLER_H_INCLUDED
+#define BG_LPCM_HANDLER_H_INCLUDED
+
 
 typedef struct bg_lpcm_handler_s bg_lpcm_handler_t;
 
@@ -27,3 +30,6 @@ bg_lpcm_handler_t * bg_lpcm_handler_create(bg_mdb_t * mdb, bg_http_server_t * sr
 void bg_lpcm_handler_destroy(bg_lpcm_handler_t * h);
 
 void bg_lpcm_handler_add_uris(bg_lpcm_handler_t *, gavl_dictionary_t * track);
+
+#endif // BG_LPCM_HANDLER_H_INCLUDED
+

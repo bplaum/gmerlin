@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_EDL_H_
-#define __BG_EDL_H_
+#ifndef BG_EDL_H_INCLUDED
+#define BG_EDL_H_INCLUDED
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
@@ -72,4 +72,4 @@ gavl_edl_t * bg_edl_load(const char * filename);
  */
 
 
-#endif // __BG_EDL_H_
+#endif // BG_EDL_H_INCLUDED

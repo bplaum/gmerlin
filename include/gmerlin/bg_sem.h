@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_SEM_H_INCLUDED
+#define BG_SEM_H_INCLUDED
+
 #include <config.h>
 
 #ifdef HAVE_POSIX_SEMAPHORES /* Map original POSIX API with zero overhead */
@@ -127,3 +130,6 @@ __END_DECLS
 #endif /* _SEMAPHORE_H_ */
 
 #endif // HAVE_POSIX_SEMAPHORES
+
+#endif // BG_SEM_H_INCLUDED
+

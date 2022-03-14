@@ -5,6 +5,9 @@
  *  later on
  */
 
+#ifndef BG_APPLICATION_H_INCLUDED
+#define BG_APPLICATION_H_INCLUDED
+
 #include <gavl/gavl.h>
 #include <gavl/value.h>
 #include <gavl/metatags.h>
@@ -52,4 +55,6 @@ void bg_dictionary_add_application_icons(gavl_dictionary_t * dict,
 
 void bg_set_network_node_info(const char * node_name, const gavl_array_t * icons, const char * icon_name,
                               bg_msg_sink_t * sink);
-  
+ 
+
+#endif  

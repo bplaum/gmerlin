@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_PLAYERMSG_H_
-#define __BG_PLAYERMSG_H_
+#ifndef BG_PLAYERMSG_H_INCLUDED
+#define BG_PLAYERMSG_H_INCLUDED
 
 /** \defgroup player_states Player states
  *  \ingroup player_msg
@@ -372,4 +372,4 @@ const char * bg_player_get_state_icon(int state);
 /**  @}
  */
 
-#endif // __BG_PLAYERMSG_H_
+#endif // BG_PLAYERMSG_H_INCLUDED

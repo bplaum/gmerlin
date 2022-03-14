@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_DOWNLOADER_H_INCLUDED
+#define BG_DOWNLOADER_H_INCLUDED
+
 #include <gmerlin/msgqueue.h>
 
 typedef struct bg_downloader_s bg_downloader_t;
@@ -70,4 +73,6 @@ int64_t bg_downloader_add(bg_downloader_t * d, const char * uri,
                           bg_downloader_callback_t cb, void * cb_data);
 
 void bg_downloader_delete(bg_downloader_t * d, int64_t id);
+
+#endif // G_DOWNLOADER_H_INCLUDED
 

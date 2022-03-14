@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_LCDPROC_H_INCLUDED
+#define BG_LCDPROC_H_INCLUDED
+
+
 typedef struct bg_lcdproc_s bg_lcdproc_t;
 
 /* Create / destroy */
@@ -34,3 +38,5 @@ void bg_lcdproc_destroy(bg_lcdproc_t*);
 const bg_parameter_info_t * bg_lcdproc_get_parameters(bg_lcdproc_t *);
 void bg_lcdproc_set_parameter(void * data, const char * name,
                               const gavl_value_t * val);
+
+#endif // BG_LCDPROC_H_INCLUDED

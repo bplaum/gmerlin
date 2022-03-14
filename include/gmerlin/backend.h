@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_REMOTEDEV_H_
-#define __BG_REMOTEDEV_H_
+#ifndef BG_REMOTEDEV_H_INCLUDED
+#define BG_REMOTEDEV_H_INCLUDED
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/msgqueue.h>
@@ -143,4 +143,5 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret);
 void bg_backend_register_local(const gavl_dictionary_t * dev);
 
 
-#endif //  __BG_REMOTEDEV_H_
+#endif //  BG_REMOTEDEV_H_INCLUDED
+

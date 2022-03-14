@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_ENCODER_H_INCLUDED
+#define BG_ENCODER_H_INCLUDED
+
 /* Frontend for encoder plugins:
    It transparently handles the case that each stream goes to a
    separate file or not.
@@ -159,4 +162,6 @@ bg_encoder_get_text_sink(bg_encoder_t *, int stream);
 
 gavl_video_sink_t *
 bg_encoder_get_overlay_sink(bg_encoder_t *, int stream);
+
+#endif // BG_ENCODER_H_INCLUDED
 

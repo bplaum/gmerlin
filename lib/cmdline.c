@@ -613,8 +613,6 @@ void bg_cmdline_remove_arg(int * argc, char *** _argv, int arg)
   (*argc)--;
   }
 
-
-
 static void cmdline_parse(const bg_cmdline_arg_t * args,
                           int * argc, char *** _argv,
                           void * callback_data,
@@ -642,6 +640,9 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
     
     while(args[j].arg)
       {
+      const char * colon_pos;
+      int idx;
+      
       if(!strcmp(args[j].arg, argv[i]))
         {
         bg_cmdline_remove_arg(argc, _argv, i);
@@ -674,6 +675,14 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
           bg_cmdline_remove_arg(argc, _argv, i);
           }
         
+        found = 1;
+        break;
+        }
+      else if(args[j].callback_idx && (colon_pos = strchr(argv[i], '/')) &&
+              !strncmp(argv[i], args[j].arg, colon_pos - argv[i]) &&
+              ((idx = atoi(colon_pos+1)) > 0))
+        {
+        args[j].callback_idx(callback_data, idx, argc, _argv, i);
         found = 1;
         break;
         }

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_RECORDER_H_INCLUDED
+#define BG_RECORDER_H_INCLUDED
+
+
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/msgqueue.h>
 #include <gmerlin/cfgctx.h>
@@ -100,3 +104,6 @@ bg_recorder_set_metadata_parameter(void * data,
 int bg_recorder_ping(bg_recorder_t * rec);
 
 bg_controllable_t * bg_recorder_get_controllable(bg_recorder_t * rec);
+
+#endif // BG_RECORDER_H_INCLUDED
+

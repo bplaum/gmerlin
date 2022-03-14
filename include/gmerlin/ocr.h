@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_OCR_H_
-#define __BG_OCR_H_
+#ifndef BG_OCR_H_INCLUDED
+#define BG_OCR_H_INCLUDED
 
 #include <gmerlin/pluginregistry.h>
 
@@ -40,4 +40,5 @@ int bg_ocr_run(bg_ocr_t *,
 
 void bg_ocr_destroy(bg_ocr_t *);
 
-#endif // __BG_OCR_H_
+#endif // BG_OCR_H_INCLUDED
+

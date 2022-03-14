@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_SOCKET_H_
-#define __BG_SOCKET_H_
+#ifndef BG_SOCKET_H_INCLUDED
+#define BG_SOCKET_H_INCLUDED
 
 #if 1
 #include <gavl/gavlsocket.h>
@@ -127,6 +127,8 @@ int bg_socket_can_write(int fd, int milliseconds);
 int bg_socket_send_file(int fd, const char * filename,
                         int64_t offset, int64_t len);
 
-#endif // __BG_SOCKET_H_
-
 #endif
+
+#endif // BG_SOCKET_H_INCLUDED
+
+

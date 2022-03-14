@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_CONVERTERS_H_INCLUDED
+#define BG_CONVERTERS_H_INCLUDED
+
 #include <gavl/gavl.h>
 #include <gmerlin/plugin.h>
 
@@ -174,3 +177,6 @@ void bg_video_converter_reset(bg_video_converter_t * cnv);
 /**
  * @}
  */
+
+#endif // BG_CONVERTERS_H_INCLUDED
+

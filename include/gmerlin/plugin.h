@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_PLUGIN_H_
-#define __BG_PLUGIN_H_
+#ifndef BG_PLUGIN_H_INCLUDED
+#define BG_PLUGIN_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gavl/compression.h>
@@ -1625,4 +1625,5 @@ struct bg_codec_plugin_s
  *  @}
  */
 
-#endif // __BG_PLUGIN_H_
+#endif // BG_PLUGIN_H_INCLUDED
+

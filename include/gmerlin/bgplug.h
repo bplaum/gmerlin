@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BGPLUG_H_
-#define __BGPLUG_H_
+#ifndef BGPLUG_H_INCLUDED
+#define BGPLUG_H_INCLUDED
 
 #include <gavl/gavf.h>
 #include <gavl/connectors.h>
@@ -252,4 +252,4 @@ bg_plugin_info_t * bg_plug_input_get_info();
 
 extern char const * const bg_plug_plugin_protocols;
 
-#endif // __BGPLUG_H_
+#endif // BGPLUG_H_INCLUDED

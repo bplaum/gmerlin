@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_CFG_DIALOG_H_
-#define __BG_CFG_DIALOG_H_
+#ifndef BG_CFG_DIALOG_H_INCLUDED
+#define BG_CFG_DIALOG_H_INCLUDED
 
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/cfgctx.h>
@@ -79,4 +79,5 @@ void bg_dialog_add_child_ctx(bg_dialog_t *d,
 int bg_dialog_show(bg_dialog_t *, void * parent);
 
 void bg_dialog_destroy(bg_dialog_t *);
-#endif // __BG_CFG_DIALOG_H_
+#endif // BG_CFG_DIALOG_H_INCLUDED
+

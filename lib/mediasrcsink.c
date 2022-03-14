@@ -120,7 +120,7 @@ void bg_media_source_set_eof(bg_media_source_t * src, int eof)
     }
   }
 
-static int get_num_streams(bg_media_source_t * src, gavl_stream_type_t type)
+int bg_media_source_get_num_streams(bg_media_source_t * src, gavl_stream_type_t type)
   {
   int i;
   int ret = 0;
@@ -139,7 +139,7 @@ bg_media_source_append_stream(bg_media_source_t * src, gavl_stream_type_t type)
   int idx;
   bg_media_source_stream_t * ret;
 
-  idx = get_num_streams(src, type);
+  idx = bg_media_source_get_num_streams(src, type);
   
   if(src->streams_alloc < src->num_streams + 1)
     {

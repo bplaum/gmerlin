@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __MEDIACONNECTOR_H_
-#define __MEDIACONNECTOR_H_
+#ifndef BG_MEDIACONNECTOR_H_INCLUDED
+#define BG_MEDIACONNECTOR_H_INCLUDED
 
 
 #include <config.h>
@@ -169,6 +169,9 @@ int bg_media_source_set_video_action(bg_media_source_t * src, int idx, bg_stream
 int bg_media_source_set_text_action(bg_media_source_t * src, int idx, bg_stream_action_t action);
 int bg_media_source_set_overlay_action(bg_media_source_t * src, int idx, bg_stream_action_t action);
 int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id, bg_stream_action_t action);
+
+int bg_media_source_get_num_streams(bg_media_source_t * src, gavl_stream_type_t type);
+
 
 /* Sink */
 
@@ -409,4 +412,5 @@ void bg_media_hub_iteration(bg_media_hub_t * hub);
 void bg_media_hub_destroy(bg_media_hub_t * hub);
 
 
-#endif // __MEDIACONNECTOR_H_
+#endif // BG_MEDIACONNECTOR_H_INCLUDED
+
