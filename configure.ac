@@ -805,27 +805,6 @@ fi
 
 AM_CONDITIONAL(HAVE_PLAYER, test x$have_player = xtrue)
 
-dnl kbd
-
-AC_ARG_ENABLE(kbd,
-              AC_HELP_STRING(--disable-kbd, [Disable keyboard daemon (default: enabled)]),
-              [case "${enableval}" in
-                 yes) have_kbd=true ;;
-                 no) have_kbd=false ;;
-               esac],
-	       have_kbd=true)
-
-if test "x$have_gtk" != "xtrue"; then
-have_kbd=false
-fi
-
-if test "x$have_x" != "xtrue"; then
-have_kbd=false
-fi
-
-
-AM_CONDITIONAL(HAVE_KBD, test x$have_kbd = xtrue)
-
 
 
 dnl Transcoder
@@ -843,39 +822,6 @@ have_transcoder=false
 fi
 
 AM_CONDITIONAL(HAVE_TRANSCODER, test x$have_transcoder = xtrue)
-
-dnl Recorder
-
-AC_ARG_ENABLE(recorder,
-              AC_HELP_STRING(--disable-recorder, [Disable recorder (default: enabled)]),
-              [case "${enableval}" in
-                 yes) have_recorder=true ;;
-                 no) have_recorder=false ;;
-               esac],
-	       have_recorder=true)
-
-if test "x$have_gtk" = "xfalse"; then
-have_recorder=false
-fi
-
-AM_CONDITIONAL(HAVE_RECORDER, test x$have_recorder = xtrue)
-
-
-dnl Visualizer
-
-AC_ARG_ENABLE(visualizer,
-              AC_HELP_STRING(--disable-visualizer, [Disable visualizer (default: enabled)]),
-              [case "${enableval}" in
-                 yes) have_visualizer=true ;;
-                 no) have_visualizer=false ;;
-               esac],
-	       have_visualizer=true)
-
-if test "x$have_gtk" = "xfalse"; then
-have_visualizer=false
-fi
-
-AM_CONDITIONAL(HAVE_VISUALIZER, test x$have_visualizer = xtrue)
 
 dnl Thumbnailer
 
@@ -1156,13 +1102,6 @@ else
 echo "Missing"
 fi
 
-echo -n "GLX:                 "
-if test "x$have_GLX" = "xtrue"; then
-echo "Yes (CFLAGS=$GLX_CFLAGS, LIBS=$GLX_LIBS)"
-else
-echo "Missing"
-fi
-
 echo -n "Xinerama:            "
 if test "x$have_xinerama" = "xtrue"; then
 echo "Yes"
@@ -1276,36 +1215,8 @@ else
 echo "Disabled"
 fi
 
-echo -n "Recorder:            "
-if test "x$have_recorder" = "xtrue"; then
-echo "Enabled"
-else
-echo "Disabled"
-fi
-
-echo -n "Visualizer:          "
-if test "x$have_visualizer" = "xtrue"; then
-echo "Enabled"
-else
-echo "Disabled"
-fi
-
-echo -n "Keyboard daemon:     "
-if test "x$have_kbd" = "xtrue"; then
-echo "Enabled"
-else
-echo "Disabled"
-fi
-
 echo -n "Thumbnailer:         "
 if test "x$have_thumbnailer" = "xtrue"; then
-echo "Enabled"
-else
-echo "Disabled"
-fi
-
-echo -n "nmjedit:             "
-if test "x$have_nmjedit" = "xtrue"; then
 echo "Enabled"
 else
 echo "Disabled"
