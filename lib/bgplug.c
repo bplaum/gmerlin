@@ -2283,5 +2283,5 @@ void bg_plug_write_resync(bg_plug_t * plug,
   
   /* TODO: Reset on-the-fly encoders */
   
-  gavf_write_resync(plug->g, time, scale, discard, discont);
+  //  gavf_write_resync(plug->g, time, scale, discard, discont);
   }
