@@ -18,7 +18,6 @@ noinst_HEADERS = gtk_dialog.h mdb_private.h
 
 libgmerlin_gtk_la_SOURCES = \
 aboutwindow.c \
-auth.c \
 backendmenu.c \
 cfg_button.c \
 cfg_checkbutton.c \
@@ -47,14 +46,10 @@ mdb_list.c \
 mdb_tree.c \
 message.c \
 multiinfo.c \
-plugininfo.c \
-plugin_multi.c \
-pluginmenu.c \
 presetmenu.c \
 question.c \
 textview.c \
 trackinfo.c \
-urllink.c \
 urlselect.c \
 vumeter.c
 

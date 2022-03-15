@@ -44,7 +44,7 @@
 #include <gmerlin/xmlutils.h>
 #include <gmerlin/utils.h>
 
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
 #define LOG_DOMAIN "backend.upnp"
 

@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_AUDIO_H_INCLUDED
+#define BG_GTK_AUDIO_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gmerlin/cfg_registry.h>
@@ -47,3 +49,5 @@ void bg_gtk_vumeter_destroy(bg_gtk_vumeter_t * m);
 
 void bg_gtk_vumeter_update_peak(bg_gtk_vumeter_t * m,
                                 double * ampl, int samples);
+
+#endif // BG_GTK_AUDIO_H_INCLUDED

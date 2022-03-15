@@ -15,9 +15,9 @@
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
 
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
-#include <upnp/event.h>
+#include <gmerlin/upnp/event.h>
 
 #include <gmerlin/frontend.h>
 #include <gmerlin/application.h>

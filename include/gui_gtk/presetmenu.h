@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_PRESETMENU_H_INCLUDED
+#define BG_GTK_PRESETMENU_H_INCLUDED
+
 typedef struct bg_gtk_preset_menu_s bg_gtk_preset_menu_t;
 
 bg_gtk_preset_menu_t * bg_gtk_preset_menu_create(const char * preset_path,
@@ -30,4 +33,6 @@ bg_gtk_preset_menu_t * bg_gtk_preset_menu_create(const char * preset_path,
 void bg_gtk_preset_menu_destroy(bg_gtk_preset_menu_t *);
 
 GtkWidget * bg_gtk_preset_menu_get_widget(bg_gtk_preset_menu_t *);
+
+#endif // BG_GTK_PRESETMENU_H_INCLUDED
 

@@ -31,7 +31,6 @@
 #include <gmerlin/mdb.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/iconfont.h>
-#include <gui_gtk/albumentry.h>
 #include <gui_gtk/textview.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/mdb.h>

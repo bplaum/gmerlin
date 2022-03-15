@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_UPNP_H_INCLUDED
+#define BG_UPNP_H_INCLUDED
 
 const char * bg_didl_get_dlna_image_profile(const char * mimetype, int width, int height);
 
@@ -70,3 +72,5 @@ char ** bg_didl_create_filter(const char * Filter);
 
 
 // char * bg_didl_get_location(xmlNodePtr didl, gavl_time_t * duration);
+
+#endif // BG_UPNP_H_INCLUDED

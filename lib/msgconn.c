@@ -25,10 +25,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <uuid/uuid.h>
+
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/parameter.h>
 #include <gmerlin/msgqueue.h>
 #include <gmerlin/state.h>
-#include <gmerlin/bgsocket.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>

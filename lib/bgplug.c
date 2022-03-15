@@ -28,13 +28,13 @@
 #include <gavl/metatags.h>
 
 #include <gavl/gavf.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/plugin.h>
 #include <gmerlin/bggavl.h>
 
 #include <gmerlin/bgplug.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/http.h>
 
 #include <gmerlin/translation.h>

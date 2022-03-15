@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_MDB_H_INCLUDED
+#define BG_GTK_MDB_H_INCLUDED
+
 #include <gmerlin/bggavl.h>
 #include <gmerlin/mdb.h>
 
@@ -39,3 +42,5 @@ GtkWidget * bg_gtk_mdb_tree_get_widget(bg_gtk_mdb_tree_t * w);
 
 void bg_gtk_trackinfo_show(const gavl_dictionary_t * m,
                            GtkWidget * parent);
+
+#endif // BG_GTK_MDB_H_INCLUDED

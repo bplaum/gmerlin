@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_UPNP_SERVICEDESC_H_INCLUDED
+#define BG_UPNP_SERVICEDESC_H_INCLUDED
+
 #include <gmerlin/xmlutils.h>
 
 xmlDocPtr bg_upnp_service_description_create();
@@ -37,3 +40,5 @@ bg_upnp_service_description_add_statevar(xmlDocPtr doc,
 void
 bg_upnp_service_statevar_add_allowed_value(xmlNodePtr node,
                                            const char * name);
+
+#endif // BG_UPNP_SERVICEDESC_H_INCLUDED

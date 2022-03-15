@@ -17,7 +17,6 @@ cfgtest \
 mdb-tree \
 question \
 message \
-auth \
 chapter \
 vumeter
 else
@@ -153,9 +152,6 @@ vumeter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 question_SOURCES = question.c
 question_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
-
-auth_SOURCES = auth.c
-auth_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
 message_SOURCES = message.c
 message_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la

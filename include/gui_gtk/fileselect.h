@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_FILESELECT_H_INCLUDED
+#define BG_GTK_FILESELECT_H_INCLUDED
 
 typedef struct bg_gtk_filesel_s bg_gtk_filesel_t;
 
@@ -82,3 +84,6 @@ char * bg_gtk_get_filename_write(const char * title,
 
 char * bg_gtk_get_filename_read(const char * title,
                                 char ** directory, GtkWidget * parent);
+
+#endif // BG_GTK_FILESELECT_H_INCLUDED
+

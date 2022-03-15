@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_FILEENTRY_H_INCLUDED
+#define BG_GTK_FILEENTRY_H_INCLUDED
+
 typedef struct bg_gtk_file_entry_s bg_gtk_file_entry_t;
 
 bg_gtk_file_entry_t *
@@ -36,4 +39,6 @@ void bg_gtk_file_entry_set_filename(bg_gtk_file_entry_t *, const char *);
 
 GtkWidget * bg_gtk_file_entry_get_entry(bg_gtk_file_entry_t *);
 GtkWidget * bg_gtk_file_entry_get_button(bg_gtk_file_entry_t *);
+
+#endif // BG_GTK_FILEENTRY_H_INCLUDED
 

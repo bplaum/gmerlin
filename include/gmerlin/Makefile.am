@@ -7,7 +7,6 @@ bg_version.h \
 bgcairo.h \
 bggavl.h \
 bgplug.h \
-bgsocket.h \
 bgthread.h \
 cfg_dialog.h \
 cfg_registry.h \
@@ -15,8 +14,6 @@ cfgctx.h \
 charset.h \
 cmdline.h \
 colormatrix.h \
-converters.h \
-embedplayer.h \
 encoder.h \
 filters.h \
 frametimer.h \
@@ -28,7 +25,6 @@ lcdproc.h \
 log.h \
 lpcm_handler.h \
 mediaconnector.h \
-mediadb.h \
 msgqueue.h \
 ocr.h \
 osd.h \
@@ -41,7 +37,6 @@ pluginfuncs.h \
 pluginregistry.h \
 preset.h \
 recorder.h \
-remote.h \
 singlepic.h \
 state.h \
 streaminfo.h \

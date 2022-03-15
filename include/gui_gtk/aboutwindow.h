@@ -19,5 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_ABOUTWINDOW_H_INCLUDED
+#define BG_GTK_ABOUTWINDOW_H_INCLUDED
+
 GtkWidget *
 bg_gtk_about_window_create(void);
+
+#endif // BG_GTK_ABOUTWINDOW_H_INCLUDED

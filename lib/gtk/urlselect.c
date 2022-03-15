@@ -29,8 +29,6 @@
 
 #include <gmerlin/pluginregistry.h>
 
-#include <gui_gtk/plugin.h>
-
 #include <gui_gtk/urlselect.h>
 #include <gui_gtk/gtkutils.h>
 
@@ -43,7 +41,6 @@ struct bg_gtk_urlsel_s
   GtkWidget * close_button;
   GtkWidget * entry;
     
-  bg_gtk_plugin_menu_t * plugins;
   void (*add_files)(char ** files,
                     void * data);
 
@@ -57,7 +54,6 @@ struct bg_gtk_urlsel_s
 static void button_callback(GtkWidget * w, gpointer data)
   {
   bg_gtk_urlsel_t * f;
-  const char * plugin = NULL;
 
   char * urls[2];
   
@@ -67,9 +63,6 @@ static void button_callback(GtkWidget * w, gpointer data)
     {
     gavl_dictionary_t vars;
     gavl_dictionary_init(&vars);
-    
-    if(f->plugins && (plugin = bg_gtk_plugin_menu_get_plugin(f->plugins)))
-      gavl_dictionary_set_string(&vars, BG_URL_VAR_PLUGIN, plugin);
     
     urls[0] = bg_url_append_vars(gavl_strdup(gtk_entry_get_text(GTK_ENTRY(f->entry))), &vars);
     urls[1] = NULL;
@@ -144,10 +137,6 @@ bg_gtk_urlsel_create(const char * title,
   ret->entry = gtk_entry_new();
   gtk_widget_show(ret->entry);
   
-  /* Create plugin menu */
-
-  if(plugin_reg)
-    ret->plugins = bg_gtk_plugin_menu_create(1, plugin_reg, type_mask, flag_mask);
   
   /* Create Buttons */
 
@@ -184,9 +173,6 @@ bg_gtk_urlsel_create(const char * title,
   gtk_widget_show(box);
   bg_gtk_box_pack_start(mainbox, box, 1);
 
-  if(ret->plugins)
-    bg_gtk_box_pack_start(mainbox,
-                          bg_gtk_plugin_menu_get_widget(ret->plugins), 1);
 
   box = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
   gtk_container_add(GTK_CONTAINER(box), ret->close_button);

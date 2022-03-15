@@ -20,8 +20,8 @@
  * *****************************************************************/
 
 
-#ifndef __BG_GTK_INFOWINDOW_H_
-#define __BG_GTK_INFOWINDOW_H_
+#ifndef BG_GTK_INFOWINDOW_H_INCLUDED
+#define BG_GTK_INFOWINDOW_H_INCLUDED
 
 typedef struct bg_gtk_info_window_s bg_gtk_info_window_t;
 
@@ -34,4 +34,4 @@ void bg_gtk_info_window_destroy(bg_gtk_info_window_t *);
 void bg_gtk_info_window_set(bg_gtk_info_window_t *, const gavl_dictionary_t * dict);
 
 
-#endif // __BG_GTK_INFOWINDOW_H_
+#endif // BG_GTK_INFOWINDOW_H_INCLUDED

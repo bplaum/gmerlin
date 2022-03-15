@@ -30,9 +30,9 @@
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
 #include <gavl/utils.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/http.h>
 #include <gmerlin/httpserver.h>
 #include <gmerlin/upnp/eventlistener.h>

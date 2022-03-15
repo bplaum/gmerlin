@@ -22,6 +22,7 @@
 #include <gtk/gtk.h>
 
 #include <config.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
@@ -30,8 +31,7 @@
 #include <gui_gtk/infowindow.h>
 #include <gui_gtk/logwindow.h>
 #include <gui_gtk/mdb.h>
-//#include <gmerlin/lcdproc.h>
-#include <gmerlin/bgsocket.h>
+
 #include <gmerlin/websocket.h>
 #include <gmerlin/mdb.h>
 

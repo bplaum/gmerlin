@@ -1,3 +1,6 @@
+#ifndef BG_UPNPUTILS_H_INCLUDED
+#define BG_UPNPUTILS_H_INCLUDED
+
 #include <gmerlin/httpserver.h>
 
 char * bg_upnp_id_from_upnp(const char * id);
@@ -52,3 +55,5 @@ const char *
 bg_upnp_client_translate_mimetype(const bg_upnp_client_t * cl, const char * mimetype);
 
 int bg_upnp_parse_bool(const char * str);
+
+#endif // BG_UPNPUTILS_H_INCLUDED

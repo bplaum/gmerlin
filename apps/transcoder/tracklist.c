@@ -32,8 +32,6 @@
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/utils.h>
 
-#include <gmerlin/tree.h>
-
 #include <gmerlin/cfg_dialog.h>
 #include <gmerlin/iconfont.h>
 #include <gmerlin/bggavl.h>
@@ -45,7 +43,6 @@
 #include <gui_gtk/urlselect.h>
 #include <gui_gtk/driveselect.h>
 #include <gui_gtk/display.h>
-#include <gui_gtk/plugin.h>
 #include <gui_gtk/chapterdialog.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/mdb.h>

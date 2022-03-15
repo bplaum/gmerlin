@@ -26,6 +26,8 @@
 
 #include <config.h>
 
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/translation.h>
 
 #include <gmerlin/pluginregistry.h>
@@ -37,7 +39,6 @@
 #include <gmerlin/transcoder.h>
 #include <gmerlin/transcodermsg.h>
 
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/http.h>
 #include <gmerlin/httpserver.h>
 #include <gmerlin/websocket.h>

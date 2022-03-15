@@ -34,7 +34,6 @@
 #include <gui_gtk/fileselect.h>
 #include <gui_gtk/question.h>
 #include <gui_gtk/gtkutils.h>
-#include <gui_gtk/plugin.h>
 
 #include <gmerlin/utils.h>
 
@@ -42,7 +41,6 @@ struct bg_gtk_filesel_s
   {
   GtkWidget * filesel;
   GtkWidget * plugin_menu;
-  bg_gtk_plugin_menu_t * plugins;
   void (*add_files)(char ** files, void * data);
 
   void (*add_dir)(char * dir, int recursive, int subdirs_as_subalbums,
@@ -71,16 +69,10 @@ static void add_files(bg_gtk_filesel_t * f)
   GSList * tmp;
   gavl_dictionary_t vars;
   
-  const char * plugin = NULL;
   int num, i;
 
   gavl_dictionary_init(&vars);
 
-  if(f->plugins)
-    plugin = bg_gtk_plugin_menu_get_plugin(f->plugins);
-
-  if(plugin)
-    gavl_dictionary_set_string(&vars, BG_URL_VAR_PLUGIN, plugin);
 
   if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->prefer_edl)))
     gavl_dictionary_set_int(&vars, BG_URL_VAR_EDL, 1);
@@ -122,8 +114,6 @@ static void add_dir(bg_gtk_filesel_t * f)
   char * tmp =
     gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f->filesel));
   
-  if(f->plugins)
-    plugin = bg_gtk_plugin_menu_get_plugin(f->plugins);
 
   f->unsensitive = 1;
   gtk_widget_set_sensitive(f->filesel, 0);
@@ -267,11 +257,6 @@ filesel_create(const char * title,
     if(!extra)
       extra = bg_gtk_vbox_new(5);
     
-    ret->plugins = bg_gtk_plugin_menu_create(1, plugin_reg, type_mask,
-                                             flag_mask);
-    
-    bg_gtk_box_pack_start(extra,
-                          bg_gtk_plugin_menu_get_widget(ret->plugins), 1);
     ret->prefer_edl =
       gtk_check_button_new_with_label(TR("Prefer EDL"));
     gtk_widget_show(ret->prefer_edl);

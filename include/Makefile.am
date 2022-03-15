@@ -4,7 +4,7 @@ else
 x11_subdirs =
 endif
 
-SUBDIRS=gmerlin gui_gtk upnp $(x11_subdirs)
+SUBDIRS=gmerlin gui_gtk $(x11_subdirs)
 
 noinst_HEADERS = \
 backend_priv.h \

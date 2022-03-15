@@ -32,7 +32,6 @@
 #include <gdk/gdkkeysyms.h>
 
 #include <gui_gtk/aboutwindow.h>
-#include <gui_gtk/plugin.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/backendmenu.h>
 

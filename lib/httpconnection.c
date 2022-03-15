@@ -34,9 +34,9 @@
 #include <gavl/metadata.h>
 #include <gavl/utils.h>
 #include <gavl/numptr.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/translation.h>
-#include <gmerlin/bgsocket.h>
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/httpserver.h>

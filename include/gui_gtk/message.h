@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_MESSAGE_H_INCLUDED
+#define BG_GTK_MESSAGE_H_INCLUDED
+
 /*
  * Pop up a dialog with "message", and an ok 
  * button
@@ -28,3 +31,6 @@
 #define BG_GTK_MESSAGE_ERROR 1
 
 void bg_gtk_message(const char * question, int type, GtkWidget * parent);
+
+#endif // BG_GTK_MESSAGE_H_INCLUDED
+

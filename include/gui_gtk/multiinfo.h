@@ -19,9 +19,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_MULTIINFO_H_INCLUDED
+#define BG_GTK_MULTIINFO_H_INCLUDED
 
 void bg_gtk_multi_info_show(const bg_parameter_info_t * info,
                             int index,
                             const char * translation_domain,
                             GtkWidget * parent);
+
+#endif // BG_GTK_MULTIINFO_H_INCLUDED
 

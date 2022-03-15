@@ -23,9 +23,9 @@
 
 #include <gavl/gavl.h>
 #include <gavl/metatags.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/http.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
 #include <gmerlin/bgplug.h>

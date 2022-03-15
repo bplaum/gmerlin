@@ -1,3 +1,6 @@
+#ifndef BG_UPNP_EVENT_H_INCLUDED
+#define BG_UPNP_EVENT_H_INCLUDED
+
 #include <gavl/gavl.h>
 #include <gavl/value.h>
 
@@ -25,4 +28,6 @@ int bg_upnp_event_context_server_update(gavl_dictionary_t * dict,
 int bg_upnp_event_context_init_client(gavl_dictionary_t * dict,
                                       bg_http_server_t * srv,
                                       bg_msg_sink_t * sink);
+
+#endif // BG_UPNP_EVENT_H_INCLUDED
 

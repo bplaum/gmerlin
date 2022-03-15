@@ -27,11 +27,11 @@
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
 #include <gavl/metatags.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/upnp/upnputils.h>
 
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/translation.h>
 #include <gmerlin/http.h>
 

@@ -19,12 +19,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_UPNP_DEVICE_DESC_H_
-#define __BG_UPNP_DEVICE_DESC_H_
+#ifndef BG_UPNP_DEVICE_DESC_H_INCLUDED
+#define BG_UPNP_DEVICE_DESC_H_INCLUDED
 
 #include <uuid/uuid.h>
 #include <gmerlin/xmlutils.h>
-#include <gmerlin/bgsocket.h>
+#include <gavl/gavlsocket.h>
+
 
 // #include <gmerlin/upnp/device.h>
 
@@ -182,4 +183,5 @@ bg_upnp_device_description_get_icon_urls(xmlNodePtr dev_node, gavl_array_t * ret
 
 
 
-#endif // __BG_UPNP_DEVICE_DESC_H_
+#endif // BG_UPNP_DEVICE_DESC_H_INCLUDED
+

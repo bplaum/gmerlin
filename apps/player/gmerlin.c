@@ -33,7 +33,6 @@
 #include "player_remote.h"
 
 #include <gmerlin/utils.h>
-#include <gui_gtk/auth.h>
 #include <gui_gtk/gtkutils.h>
 
 #include <gavl/metatags.h>

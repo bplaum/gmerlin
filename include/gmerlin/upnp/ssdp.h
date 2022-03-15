@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_UPNP_SSDP_H_
-#define __BG_UPNP_SSDP_H_
+#ifndef BG_UPNP_SSDP_H_INCLUDED
+#define BG_UPNP_SSDP_H_INCLUDED
 
 #include <gavl/gavl.h>
 #include <gmerlin/backend.h>
@@ -177,4 +177,5 @@ void bg_create_ssdp_device(gavl_dictionary_t * desc, bg_backend_type_t type,
                            const char * uri, const char * protocol);
 
 
-#endif // __BG_UPNP_SSDP_H_
+#endif // BG_UPNP_SSDP_H_INCLUDED
+

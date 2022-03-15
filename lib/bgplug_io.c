@@ -34,9 +34,10 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/bgplug.h>
 #include <gmerlin/subprocess.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
 

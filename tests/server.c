@@ -25,7 +25,9 @@
 #include <sys/poll.h>
 #include <unistd.h>
 
-#include <gmerlin/bgsocket.h>
+#include <gavl/gavlsocket.h>
+
+
 #include <gmerlin/utils.h>
 
 #include <netinet/in.h>

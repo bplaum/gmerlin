@@ -123,7 +123,6 @@ chapterlist.c \
 charset.c \
 cmdline.c \
 colormatrix.c \
-converters.c \
 country_table.c \
 device.c \
 downloader.c \

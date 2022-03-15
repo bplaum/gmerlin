@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_URLSELECT_H_INCLUDED
+#define BG_GTK_URLSELECT_H_INCLUDED
 
 typedef struct bg_gtk_urlsel_s bg_gtk_urlsel_t;
 
@@ -44,3 +46,7 @@ void bg_gtk_urlsel_destroy(bg_gtk_urlsel_t * urlsel);
 /* A non modal window will destroy itself when it's closed */
 
 void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal, GtkWidget * parent);
+
+#endif // BG_GTK_URLSELECT_H_INCLUDED
+
+

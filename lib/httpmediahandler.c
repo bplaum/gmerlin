@@ -46,7 +46,7 @@
 
 #include <gmerlin/mdb.h>
 
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
 #include <httpserver_priv.h>
 

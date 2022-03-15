@@ -32,8 +32,9 @@
 #include <gavl/numptr.h>
 #include <gavl/gavl.h>
 #include <gavl/connectors.h>
+#include <gavl/gavlsocket.h>
 
-#include <gmerlin/bgsocket.h>
+
 // #include <gmerlin/http.h>
 #include <gmerlin/utils.h>
 

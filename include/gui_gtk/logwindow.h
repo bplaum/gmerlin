@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_LOGWINDOW_H_INCLUDED
+#define BG_GTK_LOGWINDOW_H_INCLUDED
 
 typedef struct bg_gtk_log_window_s bg_gtk_log_window_t;
 
@@ -42,4 +44,6 @@ void bg_gtk_log_window_set_parameter(void * data, const char * name,
 void bg_gtk_log_window_flush(bg_gtk_log_window_t *);
 
 const char * bg_gtk_log_window_last_error(bg_gtk_log_window_t *);
+
+#endif // BG_GTK_LOGWINDOW_H_INCLUDED
 

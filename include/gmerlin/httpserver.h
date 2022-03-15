@@ -22,8 +22,9 @@
 #ifndef BG_HTTPSERVER_H_INCLUDED
 #define BG_HTTPSERVER_H_INCLUDED
 
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/msgqueue.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/parameter.h>
 
 #include <gmerlin/pluginregistry.h>

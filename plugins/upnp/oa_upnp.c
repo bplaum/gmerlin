@@ -26,12 +26,14 @@
 #include <pthread.h>
 
 #include <config.h>
+
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/translation.h>
 
 #include <gmerlin/plugin.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/httpserver.h>
 
 #include <gmerlin/xmlutils.h>

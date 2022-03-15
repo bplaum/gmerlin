@@ -1,10 +1,12 @@
 #include <uuid/uuid.h>
 
 #include <unistd.h>
-#include <upnp/event.h>
 #include <string.h>
 
 #include <config.h>
+
+#include <gmerlin/upnp/event.h>
+
 #include <gmerlin/xmlutils.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>

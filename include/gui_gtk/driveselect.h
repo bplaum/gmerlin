@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_DRIVESEL_H_INCLUDED
+#define BG_GTK_DRIVESEL_H_INCLUDED
 
 typedef struct bg_gtk_drivesel_s bg_gtk_drivesel_t;
 
@@ -45,3 +47,6 @@ void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel);
 
 void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal,
                          GtkWidget * w);
+
+#endif // BG_GTK_DRIVESEL_H_INCLUDED
+

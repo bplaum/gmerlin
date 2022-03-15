@@ -19,9 +19,9 @@
 #include <gmerlin/upnp/upnputils.h>
 #include <gmerlin/upnp/ssdp.h>
 
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
-#include <upnp/event.h>
+// #include <upnp/event.h>
 
 #include <gmerlin/frontend.h>
 

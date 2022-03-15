@@ -33,7 +33,7 @@
 #include <gmerlin/httpserver.h>
 #include <gmerlin/lpcm_handler.h>
 #include <gmerlin/upnp/upnputils.h>
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>

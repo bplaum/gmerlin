@@ -19,62 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef __BG_UPNP_SOAP_H_
-#define __BG_UPNP_SOAP_H_
+#ifndef BG_UPNP_SOAP_H_INCLUDED
+#define BG_UPNP_SOAP_H_INCLUDED
 
 #include <gmerlin/httpserver.h>
 
 #include <gmerlin/xmlutils.h>
-
-#if 0
-
-xmlDocPtr bg_soap_create_request(const char * function, const char * service, int version);
-// xmlDocPtr bg_soap_create_response(const char * function, const char * service, int version);
-
-/* return the first named node within the Body element */
-
-
-const char *
-bg_soap_response_get_argument(xmlDocPtr doc, const char * name);
-
-
-xmlDocPtr bg_soap_create_error(int code_i, const char * code_str);
-
-/* Soap context (for clients) */
-
-#if 1
-typedef struct
-  {
-  gavl_dictionary_t req_hdr;
-  gavl_dictionary_t res_hdr;
-  
-  xmlDocPtr req;
-  xmlDocPtr res;
-
-  xmlNodePtr res_node;
-  
-  char * host;
-  int port;
-  
-  const char * function;
-  } bg_soap_t;
-#endif
-
-int bg_soap_init(bg_soap_t * s, const char * url, const char * service,
-                 int version, const char * function);
-
-int bg_soap_init_request(gavl_dictionary_t * s, const char * url, const char * service,
-                         int version, const char * function);
-
-
-
-/* Write request and get answer */
-int bg_soap_request(bg_soap_t * s);
-void bg_soap_free(bg_soap_t * s);
-
-#endif
-
-/* New API */
 
 #define BG_SOAP_META_FUNCTION  "function"  // String
 #define BG_SOAP_META_SERVICE   "service"   // String
@@ -119,4 +69,5 @@ int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd);
 
 int bg_soap_request(gavl_dictionary_t * s, int * fd);
 
-#endif // __BG_UPNP_SOAP_H_
+#endif // BG_UPNP_SOAP_H_INCLUDED
+

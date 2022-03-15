@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_BACKENDMENU_H_INCLUDED
+#define BG_GTK_BACKENDMENU_H_INCLUDED
+
 /* Backend menu */
 
 #include <gmerlin/backend.h>
@@ -35,3 +38,6 @@ GtkWidget * bg_gtk_backend_menu_get_widget(bg_gtk_backend_menu_t * m);
 void bg_gtk_backend_menu_destroy(bg_gtk_backend_menu_t * );
 
 void bg_gtk_backend_menu_ping(bg_gtk_backend_menu_t *);
+
+#endif // BG_GTK_BACKENDMENU_H_INCLUDED
+

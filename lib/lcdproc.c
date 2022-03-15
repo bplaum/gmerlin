@@ -22,11 +22,12 @@
 
 #include <config.h>
 
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/translation.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/player.h>
 #include <gmerlin/lcdproc.h>
-#include <gmerlin/bgsocket.h>
 
 #include <gavl/metatags.h>
 

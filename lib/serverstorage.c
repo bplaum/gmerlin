@@ -24,10 +24,10 @@
 #include <config.h>
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
+#include <gavl/gavlsocket.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #include <gmerlin/httpserver.h>

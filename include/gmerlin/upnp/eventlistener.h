@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_UPNP_EVENT_H_INCLUDED
+#define BG_UPNP_EVENT_H_INCLUDED
+
 #define BG_MSG_ID_UPNP_EVENT 1
 
 typedef struct bg_upnp_event_listener_s bg_upnp_event_listener_t;
@@ -44,4 +47,4 @@ int
 bg_upnp_event_listener_handle(bg_upnp_event_listener_t *,
                               bg_http_connection_t * conn);
 
-
+#endif

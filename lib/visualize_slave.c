@@ -26,11 +26,13 @@
 #include <gavl/gavl.h>
 
 #include <config.h>
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/translation.h>
 
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/visualize.h>
-#include <gmerlin/bgsocket.h>
+
 
 #include <visualize_priv.h>
 #include <gmerlin/utils.h>

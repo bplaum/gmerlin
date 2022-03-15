@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_TEXTVIEW_H_INCLUDED
+#define BG_GTK_TEXTVIEW_H_INCLUDED
+
 typedef struct bg_gtk_textview_s bg_gtk_textview_t;
 
 bg_gtk_textview_t * bg_gtk_textview_create(void);
@@ -28,9 +31,5 @@ void bg_gtk_textview_update(bg_gtk_textview_t *, const char * text);
 
 GtkWidget * bg_gtk_textview_get_widget(bg_gtk_textview_t * t);
 
-#if 0
-typedef struct bg_gtk_textwindow_s bg_gtk_textwindow_t;
-bg_gtk_textwindow_t *
-bg_gtk_textwindow_create(const char * text, const char * title);
-void bg_gtk_textwindow_show(bg_gtk_textwindow_t * w, int modal, GtkWidget * parent);
-#endif
+#endif // BG_GTK_TEXTVIEW_H_INCLUDED
+

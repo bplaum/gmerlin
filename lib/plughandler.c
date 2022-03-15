@@ -30,7 +30,7 @@
 #include <gmerlin/httpserver.h>
 #include <gmerlin/plug_handler.h>
 #include <gmerlin/upnp/upnputils.h>
-#include <upnp/didl.h>
+// #include <upnp/didl.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>

@@ -22,9 +22,11 @@
 #ifndef BG_REMOTEDEV_H_INCLUDED
 #define BG_REMOTEDEV_H_INCLUDED
 
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/parameter.h>
 #include <gmerlin/msgqueue.h>
-#include <gmerlin/bgsocket.h>
+
 #include <gmerlin/httpserver.h>
 
 // BG_MSG_NS_BACKEND

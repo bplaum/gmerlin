@@ -30,7 +30,7 @@
 #include <gmerlin/xmlutils.h>
 
 #include <gmerlin/utils.h>
-#include <upnp/didl.h>
+#include <gmerlin/upnp/didl.h>
 
 
 #include <gmerlin/translation.h>

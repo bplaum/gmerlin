@@ -28,7 +28,6 @@
 #include <config.h>
 
 #include <gmerlin/pluginregistry.h>
-#include <gui_gtk/plugin.h>
 
 #include <gui_gtk/driveselect.h>
 #include <gui_gtk/gtkutils.h>
@@ -40,111 +39,8 @@ struct bg_gtk_drivesel_s
   GtkWidget * window;
   GtkWidget * add_button;
   GtkWidget * close_button;
-  GtkWidget * drive_menu;
-  
-  const bg_plugin_info_t * plugin_info;
-  bg_gtk_plugin_menu_t * plugin_menu;
-  
-  void (*add_files)(char ** files, void * data);
-
-  void (*close_notify)(bg_gtk_drivesel_t * f, void * data);
-  
-  void * callback_data;
-
-  int is_modal;
-  int num_drives;
-
-  bg_plugin_registry_t * plugin_reg;
   };
 
-static void plugin_change_callback(bg_gtk_plugin_menu_t * m, void * data)
-  {
-  int i;
-  bg_gtk_drivesel_t * ds;
-  bg_device_info_t * devices;
-  
-  ds = (bg_gtk_drivesel_t*)data;
-  
-  for(i = 0; i < ds->num_drives; i++)
-    bg_gtk_combo_box_remove_text(ds->drive_menu, 0);
-  
-  ds->plugin_info = bg_plugin_find_by_name(ds->plugin_reg,
-                                           bg_gtk_plugin_menu_get_plugin(ds->plugin_menu));
-  
-  devices = ds->plugin_info->devices;
-
-  if(!devices)
-    return;
-    
-  ds->num_drives = 0;
-  while(devices[ds->num_drives].device)
-    {
-    if(devices[ds->num_drives].name)
-      bg_gtk_combo_box_append_text(ds->drive_menu,
-                                   devices[ds->num_drives].name);
-    else
-      bg_gtk_combo_box_append_text(ds->drive_menu,
-                                   devices[ds->num_drives].device);
-    ds->num_drives++;
-    }
-  /* Select first entry */
-  gtk_combo_box_set_active(GTK_COMBO_BOX(ds->drive_menu), 0);
-  }
-
-static void button_callback(GtkWidget * w, gpointer data)
-  {
-  bg_gtk_drivesel_t * f;
-
-  char * drives[2];
-  
-  f = (bg_gtk_drivesel_t *)data;
-
-  if(w == f->add_button)
-    {
-    
-    //    plugin = menu_get_current(&f->plugins);
-    
-    drives[0] = f->plugin_info->devices[gtk_combo_box_get_active(GTK_COMBO_BOX(f->drive_menu))].device;
-    drives[1] = NULL;
-
-    if(f->plugin_info->protocols && (f->plugin_info->protocols->num_entries >= 1))
-      {
-      char * tmp_string = bg_sprintf("%s://%s",
-                                     gavl_string_array_get(f->plugin_info->protocols, 0), drives[0]);
-      drives[0] = tmp_string;
-      f->add_files(drives, f->callback_data);
-      free(tmp_string);
-      }
-    else
-      f->add_files(drives, f->callback_data);
-    }
-  
-  else if((w == f->window) || (w == f->close_button))
-    {
-    if(f->close_notify)
-      f->close_notify(f, f->callback_data);
-    
-    gtk_widget_hide(f->window);
-    if(f->is_modal)
-      gtk_main_quit();
-    bg_gtk_drivesel_destroy(f);
-    }
-
-  }
-
-static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
-                                gpointer data)
-  {
-  button_callback(w, data);
-  return TRUE;
-  }
-
-static gboolean destroy_callback(GtkWidget * w, GdkEvent * event,
-                                  gpointer data)
-  {
-  button_callback(w, data);
-  return TRUE;
-  }
 
 bg_gtk_drivesel_t *
 bg_gtk_drivesel_create(const char * title,
@@ -176,23 +72,8 @@ bg_gtk_drivesel_create(const char * title,
     gtk_window_set_transient_for(GTK_WINDOW(ret->window),
                                  GTK_WINDOW(parent_window));
     gtk_window_set_destroy_with_parent(GTK_WINDOW(ret->window), TRUE);
-    g_signal_connect(G_OBJECT(ret->window), "destroy-event",
-                     G_CALLBACK(destroy_callback), ret);
     }
 
-  /* Create device menu */
-
-  ret->drive_menu = bg_gtk_combo_box_new_text();
-  gtk_widget_show(ret->drive_menu);
-  
-  /* Create plugin menu */
-
-  ret->plugin_reg = plugin_reg;
-  ret->plugin_menu = bg_gtk_plugin_menu_create(0, plugin_reg, 
-                                               type_mask, flag_mask);
-
-  bg_gtk_plugin_menu_set_change_callback(ret->plugin_menu, plugin_change_callback,
-                                         ret);
   /* Create Buttons */
 
   ret->add_button = gtk_button_new_with_mnemonic("_Add");
@@ -201,14 +82,6 @@ bg_gtk_drivesel_create(const char * title,
   bg_gtk_widget_set_can_default(ret->close_button, TRUE);
   bg_gtk_widget_set_can_default(ret->add_button, TRUE);
   
-  /* Set callbacks */
-
-  g_signal_connect(G_OBJECT(ret->window), "delete-event",
-                   G_CALLBACK(delete_callback), ret);
-  g_signal_connect(G_OBJECT(ret->add_button),
-                   "clicked", G_CALLBACK(button_callback), ret);
-  g_signal_connect(G_OBJECT(ret->close_button),
-                   "clicked", G_CALLBACK(button_callback), ret);
 
   /* Show Buttons */
 
@@ -224,14 +97,10 @@ bg_gtk_drivesel_create(const char * title,
   gtk_grid_set_column_spacing(GTK_GRID(table), 5);
   gtk_grid_set_row_spacing(GTK_GRID(table), 5);
   
-  bg_gtk_plugin_menu_attach(ret->plugin_menu, table,
-                            0, 0);
-  
   label = gtk_label_new(TR("Drive:"));
   gtk_widget_show(label);
 
   bg_gtk_table_attach(table, label, 0, 1, 1, 2, 0, 0);
-  bg_gtk_table_attach_defaults(table, ret->drive_menu, 1, 2, 1, 2);
   
   gtk_widget_show(table);
   bg_gtk_box_pack_start(mainbox, table, 1);
@@ -245,14 +114,6 @@ bg_gtk_drivesel_create(const char * title,
   
   gtk_widget_show(mainbox);
   gtk_container_add(GTK_CONTAINER(ret->window), mainbox);
-  
-  /* Set pointers */
-  
-  ret->add_files = add_files;
-  ret->close_notify = close_notify;
-  ret->callback_data = user_data;
-
-  plugin_change_callback(ret->plugin_menu, ret);
   
   return ret;
   }
@@ -284,7 +145,6 @@ void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal,
   gtk_widget_grab_focus(drivesel->close_button);
   gtk_widget_grab_default(drivesel->close_button);
   
-  drivesel->is_modal = modal;
   if(modal)
     gtk_main();
   

@@ -19,9 +19,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_QUESTION_H_INCLUDED
+#define BG_GTK_QUESTION_H_INCLUDED
+
+
 /*
  * Pop up a dialog with "question", an ok- and a
  * cancel button
  */
 
 int bg_gtk_question(const char * question, GtkWidget * parent);
+
+#endif // BG_GTK_QUESTION_H_INCLUDED
+

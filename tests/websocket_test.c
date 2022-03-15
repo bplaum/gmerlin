@@ -24,13 +24,15 @@
 
 
 #include <config.h>
+#include <gavl/gavlsocket.h>
+
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/cfgctx.h>
 #include <gmerlin/cmdline.h>
-#include <gmerlin/bgsocket.h>
+
 #include <gmerlin/httpserver.h>
 #include <gmerlin/application.h>
 

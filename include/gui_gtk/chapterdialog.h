@@ -19,6 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTK_CHAPTERDIALOG_H_INCLUDED
+#define BG_GTK_CHAPTERDIALOG_H_INCLUDED
 
 void bg_gtk_chapter_dialog_show(gavl_chapter_list_t ** list,
                                 gavl_time_t duration, GtkWidget * parent);
+
+#endif // BG_GTK_CHAPTERDIALOG_H_INCLUDED
+

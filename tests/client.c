@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <gavl/gavlsocket.h>
 
-#include <gmerlin/bgsocket.h>
 #include <gmerlin/utils.h>
 
 #define INET_PORT 1122

@@ -59,9 +59,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <gavl/gavlsocket.h>
+
 
 #include <gmerlin/utils.h>
-#include <gmerlin/bgsocket.h>
+
 
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "socket"

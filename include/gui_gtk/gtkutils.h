@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_GTKUTILS_H_INCLUDED
+#define BG_GTKUTILS_H_INCLUDED
 
 #include <gmerlin/translation.h>
 #include <gavl/gavl.h>
@@ -121,4 +123,6 @@ GdkPixbuf * bg_gtk_load_track_image(const gavl_dictionary_t * dict, int max_widt
 int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   void * cb_data,
                                   const gavl_dictionary_t * track, int max_width, int max_height);
+
+#endif // BG_GTKUTILS_H_INCLUDED
 
