@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BG_X11_WINDOW_PRIVATE_H_INCLUDED
+#define BG_X11_WINDOW_PRIVATE_H_INCLUDED
+
 #include <config.h>
 
 #include <X11/Xlib.h>
@@ -477,3 +480,5 @@ void x11_window_accel_pressed(bg_x11_window_t * win, int id);
 #define XEMBED_MODIFIER_SUPER    (1 << 3)
 #define XEMBED_MODIFIER_HYPER    (1 << 4)
 
+
+#endif // BG_X11_WINDOW_PRIVATE_H_INCLUDED
