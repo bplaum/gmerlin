@@ -116,7 +116,7 @@ const bg_cmdline_app_data_t app_data =
     .package =  PACKAGE,
     .version =  VERSION,
     .synopsis = TRS("[options]\n"),
-    .help_before = TRS("gavf decoder\n"),
+    .help_before = TRS("gavf reader\n"),
     .args = (bg_cmdline_arg_array_t[]) { { TRS("Options"), global_options },
                                        {  } },
     .files = (bg_cmdline_ext_doc_t[])
@@ -156,6 +156,28 @@ static int handle_msg_open(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
+static void select_track(int track)
+  {
+  gavl_dictionary_t * track_info;
+  gavl_dictionary_t m;
+  
+  bg_mediaconnector_init(&conn);  
+  
+  bg_input_plugin_set_track(h, track);
+  track_info = bg_input_plugin_get_track_info(h, track);
+
+  //  num_msg_streams     = gavl_track_get_num_msg_streams(track_info);
+  
+  /* Extract metadata */
+  gavl_dictionary_init(&m);
+  gavl_dictionary_copy(&m, gavl_track_get_metadata(track_info));
+
+  gavftools_set_output_metadata(&m);
+  gavftools_set_stream_actions(h->src);
+  
+  bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM, BG_STREAM_ACTION_DECODE);
+  }
+
 static int handle_msg_out(void * priv, gavl_msg_t * msg)
   {
   fprintf(stderr, "gavf-read: Got backchannel message\n");
@@ -172,13 +194,9 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
           t = gavl_msg_get_arg_int(msg, 0);
           
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Select track: %d", t);
-
-          /* Call came during playback. Need to interrupt playback */
-          if(current_track >= 0)
-            got_select_track = t;
-          /* Core was waiting for this */
-          else
-            current_track = t;
+          
+          /* Select input track */
+          select_track(t);
           }
           break;
         case GAVL_CMD_SRC_SEEK:
@@ -193,15 +211,29 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
 
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Seek: %"PRId64" %d", t, scale);
           bg_input_plugin_seek(h, &t, scale);
-          
-          /* Resync */
-          bg_plug_write_resync(out_plug, t, scale, 1, 1);
-          bg_mediaconnector_reset(&conn);
-          
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Seek done");
           }
           break;
+        case GAVL_CMD_SRC_RESUME:
+          {
+          bg_input_plugin_resume(h);
+          }
+          break;
+        case GAVL_CMD_SRC_PAUSE:
+          {
+          bg_input_plugin_pause(h);
+          }
+          break;
+        case GAVL_CMD_SRC_START:
+          {
+          bg_input_plugin_start(h);
+
+          /* Set up media connector */
+          
+          }
+          break;
         }
+      
       
     }
   
@@ -209,7 +241,7 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
   }
 
 /* Play one track. If return value is non-zero, decode the next track. */
-
+#if 0
 static int play_track(bg_plugin_handle_t * h, int track)
   {
   bg_controllable_t * controllable;
@@ -229,11 +261,9 @@ static int play_track(bg_plugin_handle_t * h, int track)
   gavl_dictionary_copy(&m, gavl_track_get_metadata(track_info));
 
   gavftools_set_output_metadata(&m);
-  
   gavftools_set_stream_actions(h->src);
   
-  if(num_msg_streams)
-    bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM, BG_STREAM_ACTION_DECODE);
+  bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM, BG_STREAM_ACTION_DECODE);
   
   /* Start plugin */
   bg_input_plugin_start(h);
@@ -293,7 +323,7 @@ static int play_track(bg_plugin_handle_t * h, int track)
   
   while(1)
     {
-    if(gavftools_stop() || bg_plug_got_error(out_plug))
+    if(gavftools_stop())
       return 0;
     
     if(!bg_mediaconnector_iteration(&conn))
@@ -319,12 +349,12 @@ static int play_track(bg_plugin_handle_t * h, int track)
   
   return 1;
   }
+#endif
 
 /* Main */
 
 int main(int argc, char ** argv)
   {
-  int multitrack = 0;
   int ret = EXIT_FAILURE;
   //  bg_mediaconnector_t * conn;
   //  bg_mediaconnector_t file_conn;
@@ -391,7 +421,7 @@ int main(int argc, char ** argv)
 
   //  fprintf(stderr, "Got media info:\n");
   //  gavl_dictionary_dump(mi, 2);
-
+#if 0
   if(gavl_get_num_tracks(mi) > 1)
     {
     /* Send header */
@@ -405,14 +435,18 @@ int main(int argc, char ** argv)
     fprintf(stderr, "Entering singletrack mode:\n");
     current_track = 0;
     }
+#endif
   
   /* Open output */
   
   /* Wait for select track */
-  
+
+#if 0  
   while((current_track < 0) && 
         bg_plug_next_backchannel_msg(out_plug))
     ;
+
+
   
   while(1)
     {
@@ -442,6 +476,8 @@ int main(int argc, char ** argv)
       }
     
     }
+#endif
+  
   
   ret = EXIT_SUCCESS;
   

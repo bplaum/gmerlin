@@ -735,18 +735,6 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
           bg_player_set_current_track(p, p->src->track_info);
           }
           break;
-        case GAVL_MSG_SRC_RESYNC:
-          {
-          int64_t msg_time;
-          int msg_scale;
-          // int discard;
-
-          gavl_msg_get_src_resync(msg, &msg_time, &msg_scale, NULL, NULL);
-          
-          bg_player_set_resync(p, msg_time, msg_scale);
-          }
-
-
         }
       break;
       

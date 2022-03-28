@@ -355,8 +355,7 @@ int main(int argc, char ** argv)
   while(1)
     {
     if(gavftools_stop() ||
-       bg_mediaconnector_done(&conn) ||
-       bg_plug_got_error(out_plug))
+       bg_mediaconnector_done(&conn))
       break;
     gavl_time_delay(&delay_time);
     }

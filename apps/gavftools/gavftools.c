@@ -754,3 +754,176 @@ int gavftools_open_input(bg_plug_t * in_plug, const char * ifile)
   
   return ret;
   }
+
+static void send_start_messages(gavl_handle_msg_func func,
+                                void * func_data)
+  {
+  gavl_msg_t msg;
+
+  gavl_msg_init(&msg);
+  gavl_msg_set_id_ns(&msg, GAVL_CMD_SRC_SELECT_TRACK, GAVL_MSG_NS_SRC);
+  gavl_msg_set_arg_int(&msg, 0, 0);
+  func(func_data, &msg);
+  gavl_msg_free(&msg);
+
+  gavl_msg_init(&msg);
+  gavl_msg_set_id_ns(&msg, GAVL_CMD_SRC_START, GAVL_MSG_NS_SRC);
+  func(func_data, &msg);
+  gavl_msg_free(&msg);
+  
+  }
+
+#define STATE_IDLE    1
+#define STATE_RUNNING 2
+
+static void handle_msg(bg_plug_t * out_plug,
+                       bg_mediaconnector_t * conn,
+                       gavl_handle_msg_func func,
+                       void * func_data, int multi_thread, gavl_msg_t * msg, int * state)
+  {
+  
+  switch(msg->NS)
+    {
+    case GAVL_MSG_NS_SRC:
+      {
+      switch(msg->ID)
+        {
+        case GAVL_CMD_SRC_SELECT_TRACK:
+          {
+          if(multi_thread)
+            bg_mediaconnector_create_threads(conn, 1);
+          
+
+          func(func_data, msg);
+          
+          /* TODO: Reset out plug */
+          
+          
+          }
+          break;
+        case GAVL_CMD_SRC_START:
+          {
+          if(*state == STATE_RUNNING)
+            {
+            
+            }
+          
+          func(func_data, msg);
+          
+          if(multi_thread)
+            {
+            bg_mediaconnector_create_threads(conn, 1);
+            bg_mediaconnector_threads_init_separate(conn);
+            bg_mediaconnector_threads_start(conn);
+            }
+          
+          }
+          break;
+        case GAVL_CMD_SRC_SEEK:
+          {
+          /* TODO: Reset out plug */
+          
+          }
+          break;
+        case GAVL_CMD_SRC_PAUSE:
+          {
+          
+          if(multi_thread)
+            {
+            
+            }
+          
+          }
+          break;
+        case GAVL_CMD_SRC_RESUME:
+          {
+          
+          
+          }
+          break;
+        }
+      }
+    }
+  }
+
+
+void gavftools_run(bg_plug_t * out_plug,
+                   bg_mediaconnector_t * conn,
+                   gavl_handle_msg_func func,
+                   void * func_data, int multi_thread)
+  {
+  int read_msg = 0;
+  gavf_io_t * io;
+  int state = STATE_IDLE;
+  
+  if(out_plug && (io = bg_plug_get_io(out_plug)))
+    {
+    int flags = gavf_io_get_flags(io);
+
+    if(flags & GAVF_IO_IS_REGULAR)
+      multi_thread = 0;
+    
+    if(flags & GAVF_IO_IS_DUPLEX)
+      read_msg = 1;
+    }
+
+  if(!multi_thread)
+    {
+    /* Single thread */
+    if(!read_msg)
+      send_start_messages(func, func_data);
+    
+    while(1)
+      {
+      if(gavftools_stop())
+        return;
+      
+      }
+    }
+  else
+    {
+    /* Multi thread */
+    
+    if(!read_msg) // Batch
+      {
+      send_start_messages(func, func_data);
+
+      while(1)
+        {
+        if(gavftools_stop())
+          return;
+        }
+      }
+
+    else
+      {
+      /* Interactive */
+
+      while(1)
+        {
+        if(gavftools_stop())
+          return;
+
+        if(gavf_io_can_read(io, 50))
+          {
+          gavl_msg_t msg;
+          gavl_msg_init(&msg);
+
+          if(!gavl_msg_read(&msg, io))
+            {
+            gavl_msg_free(&msg);
+            return;
+            }
+          
+          handle_msg(out_plug, conn, func, func_data, multi_thread, &msg, &state);
+          
+          gavl_msg_free(&msg);
+          }
+        
+        }
+
+      }
+
+    }
+  
+  }

@@ -173,7 +173,7 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time)
   pthread_mutex_unlock(&player->time_offset_mutex);
   
   }
-
+#if 0
 void bg_player_set_resync(bg_player_t * player, int64_t time, int scale)
   {
   if(scale > 0)
@@ -209,3 +209,4 @@ int bg_player_get_resync(bg_player_t * player, int64_t * time, int * scale)
   return ret;
   }
 
+#endif

@@ -430,16 +430,16 @@ struct bg_player_s
 
   /* Resync */
 
-  int64_t resync_time;
-  int     resync_scale;
-  pthread_mutex_t resync_mutex;
+  //  int64_t resync_time;
+  //  int     resync_scale;
+  //  pthread_mutex_t resync_mutex;
   
   int visualization_mode;
   
   };
 
-void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
-int bg_player_get_resync(bg_player_t * player, int64_t * time, int * scale);
+// void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
+// int bg_player_get_resync(bg_player_t * player, int64_t * time, int * scale);
 
 // void bg_player_set_current(bg_player_t * player);
 

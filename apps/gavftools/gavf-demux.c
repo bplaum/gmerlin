@@ -311,8 +311,6 @@ int main(int argc, char ** argv)
   
   while(1)
     {
-    if(bg_plug_got_error(in_plug))
-      break;
 
     if(gavftools_stop() ||
        !bg_mediaconnector_iteration(&conn))

@@ -403,6 +403,7 @@ static int has_messages(bg_plug_t * p)
 /* gavf instance, which *reads* A/V data */
 static int msg_cb_read_av(void * data, gavl_msg_t * msg)
   {
+#if 0
   bg_plug_t * p = data;
 
   switch(msg->NS)
@@ -435,7 +436,7 @@ static int msg_cb_read_av(void * data, gavl_msg_t * msg)
           break;
         }
     }
-  
+#endif
   return 1;
   }
 
@@ -819,7 +820,6 @@ static void init_streams_read(bg_plug_t * p)
         break;
       case GAVL_STREAM_TEXT:
         {
-        s->vfmt = gavl_stream_get_video_format_nc(s->h);
         if(s->ci.id == GAVL_CODEC_ID_NONE)
           s->source_s->action = BG_STREAM_ACTION_DECODE;
         else
@@ -827,6 +827,7 @@ static void init_streams_read(bg_plug_t * p)
         }
       case GAVL_STREAM_OVERLAY:
         {
+        s->vfmt = gavl_stream_get_video_format_nc(s->h);
         if(s->ci.id == GAVL_CODEC_ID_NONE)
           s->source_s->action = BG_STREAM_ACTION_DECODE;
         else
@@ -1207,6 +1208,7 @@ static int init_write_common(bg_plug_t * p, stream_t * s)
 
 static int handle_msg_forward(void * data, gavl_msg_t * msg)
   {
+#if 0
   stream_t * s = data;
 
   switch(msg->NS)
@@ -1236,7 +1238,7 @@ static int handle_msg_forward(void * data, gavl_msg_t * msg)
     }
   //  else
   //    fprintf(stderr, "Blupp 2\n");
-  
+#endif
   return 1;
   }
 
@@ -1512,9 +1514,9 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
     flags = gavf_options_get_flags(p->opt);
 
     if(p->io_flags & BG_PLUG_IO_IS_REGULAR)
-      flags |= (GAVF_OPT_FLAG_SYNC_INDEX | GAVF_OPT_FLAG_PACKET_INDEX);
+      flags |= GAVF_OPT_FLAG_PACKET_INDEX;
     else
-      flags &= ~(GAVF_OPT_FLAG_SYNC_INDEX | GAVF_OPT_FLAG_PACKET_INDEX);
+      flags &= ~GAVF_OPT_FLAG_PACKET_INDEX;
     
     gavf_options_set_flags(p->opt, flags);
     
@@ -1523,9 +1525,9 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
   
   /* Read */
   
-  flags = gavf_options_get_flags(p->opt);
-  flags |= GAVF_OPT_FLAG_BUFFER_READ;
-  gavf_options_set_flags(p->opt, flags);
+  //  flags = gavf_options_get_flags(p->opt);
+  //  flags |= GAVF_OPT_FLAG_BUFFER_READ;
+  //  gavf_options_set_flags(p->opt, flags);
   
   /* Multitrack mode */
   
@@ -1895,7 +1897,7 @@ int bg_plug_setup_reader(bg_plug_t * p, bg_mediaconnector_t * conn)
   return 1;
   }
 
-
+#if 0
 int bg_plug_got_error(bg_plug_t * p)
   {
   int ret;
@@ -1904,6 +1906,7 @@ int bg_plug_got_error(bg_plug_t * p)
   pthread_mutex_unlock(&p->mutex);
   return ret;
   }
+#endif
 
 gavl_sink_status_t bg_plug_put_packet(bg_plug_t * p,
                                       gavl_packet_t * pkt)
@@ -1980,9 +1983,92 @@ int bg_plug_seek(bg_plug_t * p, const gavl_msg_t * msg)
 
 /* Handle messages *before* they are sent to the backchannel by the reader */
 
+gavf_io_t * bg_plug_get_io(bg_plug_t * p)
+  {
+  return p->io;
+  }
+
 static int msg_sink_func_read(void * data, gavl_msg_t * msg)
   {
   bg_plug_t* p = data;
+  
+  switch(msg->NS)
+    {
+    case GAVL_MSG_NS_SRC:
+      switch(msg->ID)
+        {
+        case GAVL_CMD_SRC_SELECT_TRACK:
+          {
+          
+#if 0
+          int track = gavl_msg_get_arg_int(msg, 0);
+          gavl_dictionary_t * dict;
+          //          bg_media_source_stream_t * st;
+
+          //          fprintf(stderr, "Select track %d\n", track);
+          
+          if(!bgav_select_track(avdec->dec, track))
+            {
+            
+            }
+          bg_media_source_cleanup(&avdec->src);
+          bg_media_source_init(&avdec->src);
+          
+          /* Build media source structure */
+          if((dict = bgav_get_media_info(avdec->dec)) &&
+             (dict = gavl_get_track_nc(dict, track)))
+            bg_media_source_set_from_track(&avdec->src, dict);
+#endif
+          }
+          break;
+          
+        case GAVL_CMD_SRC_START:
+          //          bg_avdec_start(data);
+          break;
+        case GAVL_CMD_SRC_PAUSE:
+          //          bgav_pause(avdec->dec);
+          break;
+        case GAVL_CMD_SRC_RESUME:
+          //          bgav_resume(avdec->dec);
+          break;
+        case GAVL_CMD_SRC_SEEK:
+          {
+#if 0
+          
+          bg_msg_hub_t * hub;
+          int64_t time = gavl_msg_get_arg_long(msg, 0);
+          int scale = gavl_msg_get_arg_int(msg, 1);
+
+          /* Seek */
+          bgav_seek_scaled(avdec->dec, &time, scale);
+
+          hub = bg_media_source_get_msg_hub_by_id(&avdec->src, GAVL_META_STREAM_ID_MSG_PROGRAM);
+
+          if(hub)
+            {
+            gavl_msg_t * resp;
+            bg_msg_sink_t * sink = bg_msg_hub_get_sink(hub);
+            
+            resp = bg_msg_sink_get(sink);
+            gavl_msg_set_src_resync(resp, time, scale, 1, 1);
+            bg_msg_sink_put(sink, resp);
+            }
+#endif
+          }
+          break;
+        }
+      
+      break;
+    }
+  return 1;
+  }
+
+#if 0
+static int msg_sink_func_read(void * data, gavl_msg_t * msg)
+  {
+  bg_plug_t* p = data;
+
+
   
   //  fprintf(stderr, "msg_sink_func_read\n");
   //  gavl_msg_dump(msg, 2);
@@ -1993,6 +2079,8 @@ static int msg_sink_func_read(void * data, gavl_msg_t * msg)
       {
       switch(msg->ID)
         {
+
+
         case GAVL_CMD_SRC_SELECT_TRACK:
           bg_plug_select_track(p, msg);
           return 1;
@@ -2019,6 +2107,7 @@ static int msg_sink_func_read(void * data, gavl_msg_t * msg)
   
   //  return gavl_msg_write(msg, p->io_msg);
   }
+#endif
 
 bg_controllable_t * bg_plug_get_controllable(bg_plug_t * p)
   {

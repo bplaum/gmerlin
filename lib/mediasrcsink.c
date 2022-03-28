@@ -441,6 +441,7 @@ int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id,
 
 /* Synchronous seeking */
 
+#if 0
 typedef struct
   {
   int scale;
@@ -467,21 +468,22 @@ static int handle_msg_seek(void * data, gavl_msg_t * msg)
     }
   return 1;
   }
+#endif
 
 void bg_media_source_seek(bg_media_source_t * src, bg_msg_sink_t * cmd_sink, bg_msg_hub_t * evt_hub,
                           int64_t * t, int scale)
   {
-  seek_t s;
+  //  seek_t s;
 
   gavl_msg_t * cmd;
-  bg_msg_sink_t * sink;
+  //  bg_msg_sink_t * sink;
 
-  s.time = t;
-  s.scale = scale;
+  //  s.time = t;
+  //  s.scale = scale;
   
-  sink = bg_msg_sink_create(handle_msg_seek, &s, 1);
+  //  sink = bg_msg_sink_create(handle_msg_seek, &s, 1);
 
-  bg_msg_hub_connect_sink(evt_hub, sink);
+  //  bg_msg_hub_connect_sink(evt_hub, sink);
   
   /* Here we emulate synchronous seeking for asynchronous sources */
   /* Currently the only asynchronous source is the plug over pipes or sockets */
@@ -495,7 +497,7 @@ void bg_media_source_seek(bg_media_source_t * src, bg_msg_sink_t * cmd_sink, bg_
   
   bg_msg_sink_put(cmd_sink, cmd);
   
-  bg_msg_hub_disconnect_sink(evt_hub, sink);
+  //  bg_msg_hub_disconnect_sink(evt_hub, sink);
   }
 
 /*

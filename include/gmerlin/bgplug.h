@@ -110,7 +110,7 @@ void bg_plug_set_parameter(void * data, const char * name,
 
 int bg_plug_open(bg_plug_t *, gavf_io_t * io, int io_flags);
 
-int bg_plug_set_multitrack(bg_plug_t *, const gavl_dictionary_t * mi);
+//  int bg_plug_set_multitrack(bg_plug_t *, const gavl_dictionary_t * mi);
 
 int bg_plug_start_program(bg_plug_t *, const gavl_dictionary_t * metadata, int discard);
 
@@ -132,6 +132,8 @@ void bg_plug_write_resync(bg_plug_t * plug,
                           int64_t time, int scale, int discard, int discont);
 
 gavf_t * bg_plug_get_gavf(bg_plug_t*);
+
+gavf_io_t * bg_plug_get_io(bg_plug_t*);
 
 const gavl_dictionary_t * bg_plug_get_metadata(bg_plug_t*);
 
@@ -175,7 +177,7 @@ gavl_sink_status_t bg_plug_put_packet(bg_plug_t * p,
 
 gavl_dictionary_t * bg_plug_get_media_info(bg_plug_t * p);
 
-int bg_plug_got_error(bg_plug_t * p);
+// int bg_plug_got_error(bg_plug_t * p);
 
 void bg_plug_transfer_messages(bg_plug_t * in_plug, bg_plug_t * out_plug);
 

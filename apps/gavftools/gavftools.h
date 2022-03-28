@@ -102,6 +102,13 @@ void gavftools_set_stream_actions(bg_media_source_t * s);
 
 void gavftools_set_output_metadata(gavl_dictionary_t * m);
 
+void gavftools_run(bg_plug_t * out_plug,
+                   bg_mediaconnector_t * conn,
+                   gavl_handle_msg_func func,
+                   void * func_data, int multi_thread);
+
+
+
 #define GAVFTOOLS_INPLUG_OPTIONS                \
   {                                             \
     .arg =         "-i",                        \
