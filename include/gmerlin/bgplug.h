@@ -97,7 +97,11 @@ bg_plug_t * bg_plug_create_writer(void);
 
 void bg_plug_destroy(bg_plug_t *);
 
-int bg_plug_next_backchannel_msg(bg_plug_t * plug);
+int bg_plug_ping(bg_plug_t *);
+int bg_plug_set_media_info(bg_plug_t * p, const gavl_dictionary_t * mi);
+
+
+// int bg_plug_next_backchannel_msg(bg_plug_t * plug);
 
 const bg_parameter_info_t *
 bg_plug_get_input_parameters();
@@ -105,12 +109,17 @@ bg_plug_get_input_parameters();
 const bg_parameter_info_t *
 bg_plug_get_output_parameters();
 
+
+
 void bg_plug_set_parameter(void * data, const char * name,
                            const gavl_value_t * val);
 
-int bg_plug_open(bg_plug_t *, gavf_io_t * io, int io_flags);
+// int bg_plug_open(bg_plug_t *, gavf_io_t * io, int io_flags);
 
 //  int bg_plug_set_multitrack(bg_plug_t *, const gavl_dictionary_t * mi);
+
+bg_controllable_t *
+bg_plug_get_controllable(bg_plug_t *);
 
 int bg_plug_start_program(bg_plug_t *, const gavl_dictionary_t * metadata, int discard);
 
@@ -121,6 +130,7 @@ int bg_plug_set_from_track(bg_plug_t *,
 
 int bg_plug_open_location(bg_plug_t * p, const char * location);
 
+#if 0
 int bg_plug_select_track(bg_plug_t * p, const gavl_msg_t * msg);
 int bg_plug_select_track_by_idx(bg_plug_t * p, int track);
 
@@ -130,16 +140,17 @@ int bg_plug_seek(bg_plug_t * p, const gavl_msg_t * msg);
 
 void bg_plug_write_resync(bg_plug_t * plug,
                           int64_t time, int scale, int discard, int discont);
+gavf_io_t * bg_plug_get_io(bg_plug_t*);
+#endif
 
 gavf_t * bg_plug_get_gavf(bg_plug_t*);
 
-gavf_io_t * bg_plug_get_io(bg_plug_t*);
 
 const gavl_dictionary_t * bg_plug_get_metadata(bg_plug_t*);
 
 /* These must be called *before* the plug is openend to
    set up the message passing */
-// bg_msg_hub_t * bg_plug_get_msg_hubxb(bg_plug_t*);
+// bg_msg_hub_t * bg_plug_get_msg_hub(bg_plug_t*);
 // bg_msg_sink_t * bg_plug_get_msg_sink(bg_plug_t*);
 
 /* Initialization function for readers and writers */
@@ -179,11 +190,6 @@ gavl_dictionary_t * bg_plug_get_media_info(bg_plug_t * p);
 
 // int bg_plug_got_error(bg_plug_t * p);
 
-void bg_plug_transfer_messages(bg_plug_t * in_plug, bg_plug_t * out_plug);
-
-bg_controllable_t * bg_plug_get_controllable(bg_plug_t * in_plug);
-bg_control_t * bg_plug_get_control(bg_plug_t * out_plug);
-
 
 /* I/O Stuff */
 
@@ -207,6 +213,7 @@ bg_control_t * bg_plug_get_control(bg_plug_t * out_plug);
 #define BG_PLUG_MSG_SRC_METADATA_CHANGED 1
 #define BG_PLUG_MSG_SRC_ 1
 
+#if 0
 #define BG_PLUG_SCHEMA_UNIX "gavf-unix"
 #define BG_PLUG_PREFIX_UNIX BG_PLUG_SCHEMA_UNIX"://"
 
@@ -221,10 +228,11 @@ bg_control_t * bg_plug_get_control(bg_plug_t * out_plug);
 
 #define BG_PLUG_SCHEMA "gavf"
 #define BG_PLUG_PREFIX BG_PLUG_SCHEMA"://"
+#endif
 
 extern const char * bg_plug_app_id; // User-Agent and Server
 
-extern char const * const bg_plug_mimetype;
+// extern char const * const bg_plug_mimetype;
 
 /* Called by bg_plug_open_location */
 

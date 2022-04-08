@@ -27,7 +27,6 @@ gavf-filter \
 gavf-info \
 gavf-mux \
 gavf-recompress \
-gavf-record \
 gavf-tee \
 gavf-visualize
 
@@ -39,7 +38,6 @@ gavf-filter.1 \
 gavf-info.1 \
 gavf-mux.1 \
 gavf-recompress.1 \
-gavf-record.1 \
 gavf-tee.1 \
 gavf-visualize.1
 

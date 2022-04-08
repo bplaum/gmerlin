@@ -24,8 +24,6 @@
 
 #define LOG_DOMAIN "gavf-demux"
 
-static bg_plug_t * in_plug = NULL;
-
 static bg_plug_t ** out_plugs = NULL;
 
 static int num_out_plugs = 0;
@@ -177,7 +175,7 @@ static char * get_out_name(bg_mediaconnector_stream_t * st)
   const char * label;
   char * opt = NULL;
   
-  m = bg_plug_get_metadata(in_plug);
+  m = bg_plug_get_metadata(gavftools_in_plug);
   
   switch(st->type)
     {
@@ -239,7 +237,6 @@ int main(int argc, char ** argv)
   {
   int ret = EXIT_FAILURE;
   int i;
-  bg_mediaconnector_t conn;
   bg_mediaconnector_stream_t * st;
 
   bg_app_init("gavf-demux", TRS("Gavf Demultiplexer"));
@@ -247,7 +244,6 @@ int main(int argc, char ** argv)
   gavftools_init();
   
   gavftools_block_sigpipe();
-  bg_mediaconnector_init(&conn);
 
   gavftools_set_cmdline_parameters(global_options);
 
@@ -257,33 +253,33 @@ int main(int argc, char ** argv)
   if(!bg_cmdline_check_unsupported(argc, argv))
     return -1;
 
-  in_plug = gavftools_create_in_plug();
+  gavftools_in_plug = gavftools_create_in_plug();
   
-  if(!gavftools_open_input(in_plug, gavftools_in_file))
+  if(!gavftools_open_input(gavftools_in_plug, gavftools_in_file))
     goto fail;
   
-  gavftools_set_stream_actions(bg_plug_get_source(in_plug));
+  gavftools_set_stream_actions(bg_plug_get_source(gavftools_in_plug));
 
-  if(!bg_plug_start(in_plug))
+  if(!bg_plug_start(gavftools_in_plug))
     goto fail;
   
-  if(!bg_plug_setup_reader(in_plug, &conn))
+  if(!bg_plug_setup_reader(gavftools_in_plug, &gavftools_conn))
     goto fail;
 
-  bg_mediaconnector_create_conn(&conn);
+  bg_mediaconnector_create_conn(&gavftools_conn);
 
   /* Create out plugs */
-  num_out_plugs = conn.num_streams;
+  num_out_plugs = gavftools_conn.num_streams;
   out_plugs = calloc(num_out_plugs, sizeof(*out_plugs));
   
-  for(i = 0; i < conn.num_streams; i++)
+  for(i = 0; i < gavftools_conn.num_streams; i++)
     {
     char * filename;
     //    const gavf_stream_header_t * h;
     bg_media_sink_stream_t * ms;
     bg_media_sink_t * sink;
     
-    st = conn.streams[i];
+    st = gavftools_conn.streams[i];
 
     if(!(filename = get_out_name(st)))
       goto fail;
@@ -291,7 +287,7 @@ int main(int argc, char ** argv)
     out_plugs[i] = gavftools_create_out_plug();
     
     if(!gavftools_open_out_plug_from_in_plug(out_plugs[i], filename,
-                                             in_plug) ||
+                                             gavftools_in_plug) ||
        !bg_plug_add_mediaconnector_stream(out_plugs[i], st) ||
        !bg_plug_start(out_plugs[i]) ||
        !(sink = bg_plug_get_sink(out_plugs[i])) ||
@@ -305,7 +301,7 @@ int main(int argc, char ** argv)
     }
 
   /* Fire up connector */
-  bg_mediaconnector_start(&conn);
+  bg_mediaconnector_start(&gavftools_conn);
   
   /* Main loop */
   
@@ -313,7 +309,7 @@ int main(int argc, char ** argv)
     {
 
     if(gavftools_stop() ||
-       !bg_mediaconnector_iteration(&conn))
+       !bg_mediaconnector_iteration(&gavftools_conn))
       break;
     }
   
@@ -322,11 +318,6 @@ int main(int argc, char ** argv)
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cleaning up");
 
-  bg_mediaconnector_free(&conn);
-
-  if(in_plug)
-    bg_plug_destroy(in_plug);
-  
   for(i = 0; i < num_out_plugs; i++)
     {
     if(out_plugs[i])

@@ -24,8 +24,6 @@
 #include <gmerlin/encoder.h>
 #include <gavl/metatags.h>
 
-static bg_plug_t * in_plug = NULL;
-
 #define LOG_DOMAIN "gavf-encode"
 
 static gavl_dictionary_t ac_options;
@@ -226,7 +224,6 @@ int main(int argc, char ** argv)
   int do_delete;
   int ret = EXIT_FAILURE;
   int i, num;
-  bg_mediaconnector_t conn;
   bg_encoder_t * enc = NULL;
   bg_mediaconnector_stream_t * cs;
 
@@ -252,7 +249,6 @@ int main(int argc, char ** argv)
   gavl_dictionary_init(&oc_options);
   gavl_dictionary_init(&tc_options);
   
-  bg_mediaconnector_init(&conn);
   gavftools_init();
 
   /* Create encoder parameters */
@@ -279,7 +275,7 @@ int main(int argc, char ** argv)
   bg_cmdline_init(&app_data);
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
 
-  in_plug = gavftools_create_in_plug();
+  gavftools_in_plug = gavftools_create_in_plug();
   
   enc = bg_encoder_create(bg_plugin_reg,
                           enc_section, // bg_cfg_section_t * section,
@@ -289,10 +285,10 @@ int main(int argc, char ** argv)
   
   /* Open */
 
-  if(!gavftools_open_input(in_plug, gavftools_in_file))
+  if(!gavftools_open_input(gavftools_in_plug, gavftools_in_file))
     goto fail;
   
-  src = bg_plug_get_source(in_plug);
+  src = bg_plug_get_source(gavftools_in_plug);
 
   m = gavl_track_get_metadata(src->track);
   
@@ -392,17 +388,17 @@ int main(int argc, char ** argv)
   
   /* Start decoder and initialize media connector */
 
-  if(!bg_plug_start(in_plug) ||
-     !bg_plug_setup_reader(in_plug, &conn))
+  if(!bg_plug_start(gavftools_in_plug) ||
+     !bg_plug_setup_reader(gavftools_in_plug, &gavftools_conn))
     return 0;
 
-  bg_mediaconnector_create_conn(&conn);
+  bg_mediaconnector_create_conn(&gavftools_conn);
   
   /* Set up encoder */
 
-  for(i = 0; i < conn.num_streams; i++)
+  for(i = 0; i < gavftools_conn.num_streams; i++)
     {
-    cs = conn.streams[i];
+    cs = gavftools_conn.streams[i];
     switch(cs->type)
       {
       case GAVL_STREAM_AUDIO:
@@ -482,9 +478,9 @@ int main(int argc, char ** argv)
 
   /* Connect sinks */
 
-  for(i = 0; i < conn.num_streams; i++)
+  for(i = 0; i < gavftools_conn.num_streams; i++)
     {
-    cs = conn.streams[i];
+    cs = gavftools_conn.streams[i];
 
     asink = NULL;
     vsink = NULL;
@@ -528,7 +524,7 @@ int main(int argc, char ** argv)
 
   /* Fire up connector */
 
-  bg_mediaconnector_start(&conn);
+  bg_mediaconnector_start(&gavftools_conn);
   
   /* Main loop */
 
@@ -537,7 +533,7 @@ int main(int argc, char ** argv)
   while(1)
     {
     if(gavftools_stop() ||
-       !bg_mediaconnector_iteration(&conn))
+       !bg_mediaconnector_iteration(&gavftools_conn))
       break;
     }
   
@@ -549,11 +545,6 @@ int main(int argc, char ** argv)
   
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cleaning up");
   
-  bg_mediaconnector_free(&conn);
-
-  if(in_plug)
-    bg_plug_destroy(in_plug);
-
   if(enc)
     bg_encoder_destroy(enc, do_delete);
   

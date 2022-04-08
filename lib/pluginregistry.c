@@ -4873,6 +4873,7 @@ static void load_location(bg_plugin_registry_t * reg,
   gavl_dictionary_destroy(mi);
   }
 
+#if 0
 static void load_location_plug(const char * uri, gavl_array_t * ret)
   {
   gavl_value_t track_val;
@@ -4899,6 +4900,7 @@ static int uri_is_bgplug(const char * uri)
     }
   return 0;
   }
+#endif
 
 /* Value can be either a single string or a string array */
 void bg_plugin_registry_load_locations(bg_plugin_registry_t * reg,
@@ -4911,10 +4913,11 @@ void bg_plugin_registry_load_locations(bg_plugin_registry_t * reg,
   if(val->type == GAVL_TYPE_STRING)
     {
     uri = gavl_value_get_string(val);
-    
+#if 0
     if(uri_is_bgplug(uri))
       load_location_plug(uri, ret);
     else
+#endif
       load_location(reg, uri, flags, ret);
     }
   else if(val->type == GAVL_TYPE_ARRAY)
@@ -4926,10 +4929,12 @@ void bg_plugin_registry_load_locations(bg_plugin_registry_t * reg,
       {
       if((uri = gavl_string_array_get(arr, i)))
         {
+#if 0
         if(!i && (arr->num_entries == 1) &&
            uri_is_bgplug(uri))
           load_location_plug(uri, ret);
         else
+#endif
           load_location(reg, uri, flags, ret);
         }
       }

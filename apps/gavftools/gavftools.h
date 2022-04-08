@@ -100,14 +100,8 @@ bg_plug_t * gavftools_create_out_plug();
 
 void gavftools_set_stream_actions(bg_media_source_t * s);
 
-void gavftools_set_output_metadata(gavl_dictionary_t * m);
-
-void gavftools_run(bg_plug_t * out_plug,
-                   bg_mediaconnector_t * conn,
-                   gavl_handle_msg_func func,
-                   void * func_data, int multi_thread);
-
-
+void gavftools_run(gavl_handle_msg_func func,
+                   void * func_data);
 
 #define GAVFTOOLS_INPLUG_OPTIONS                \
   {                                             \
@@ -207,7 +201,7 @@ void gavftools_run(bg_plug_t * out_plug,
 bg_stream_action_t gavftools_get_stream_action(gavl_stream_type_t type,
                                                  int num);
 
-void gavftools_set_compresspor_options(bg_cmdline_arg_t * global_options);
+void gavftools_set_compressor_options(bg_cmdline_arg_t * global_options);
 
 void gavftools_block_sigpipe(void);
 
@@ -219,5 +213,15 @@ int gavftools_open_out_plug_from_in_plug(bg_plug_t * out_plug,
 
 // void gavftools_set_stream_actions(bg_plug_t * p);
 
-/* Open input and select track */
 int gavftools_open_input(bg_plug_t * in_plug, const char * ifile);
+
+extern bg_plug_t * gavftools_out_plug;
+extern bg_plug_t * gavftools_in_plug;
+extern const gavl_dictionary_t * gavftools_media_info_in;
+extern bg_controllable_t       * gavftools_ctrl_in;
+
+/* track number from the &track= uri argument. -1 means to loop through all tracks */
+extern int gavftools_track;
+extern bg_mediaconnector_t gavftools_conn;
+extern bg_media_source_t * gavftools_src;
+

@@ -112,7 +112,6 @@ bggavl.c \
 bgladspa.c \
 bgfrei0r.c \
 bgplug.c \
-bgplug_io.c \
 bgxml.c \
 cairo.c \
 cfg_ctx.c \

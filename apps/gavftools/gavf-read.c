@@ -32,12 +32,11 @@
 int current_track = -1;
 
 /* Need to interrupt playback due to select_track event */
-int got_select_track = -1;
+// int got_select_track = -1;
 
 static char * input_file   = "-";
 
 //static char * input_plugin = NULL;
-static bg_plug_t * out_plug = NULL;
 static int selected_track = 0;
 
 bg_stream_action_t * audio_actions = NULL;
@@ -50,8 +49,6 @@ double seek_pos = -1.0;
 bg_control_t open_ctrl;
 bg_controllable_t out_ctrl;
 bg_plugin_handle_t * h = NULL;
-
-bg_mediaconnector_t conn;
 
 
 static void opt_t(void * data, int * argc, char *** _argv, int arg)
@@ -161,8 +158,6 @@ static void select_track(int track)
   gavl_dictionary_t * track_info;
   gavl_dictionary_t m;
   
-  bg_mediaconnector_init(&conn);  
-  
   bg_input_plugin_set_track(h, track);
   track_info = bg_input_plugin_get_track_info(h, track);
 
@@ -172,7 +167,6 @@ static void select_track(int track)
   gavl_dictionary_init(&m);
   gavl_dictionary_copy(&m, gavl_track_get_metadata(track_info));
 
-  gavftools_set_output_metadata(&m);
   gavftools_set_stream_actions(h->src);
   
   bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM, BG_STREAM_ACTION_DECODE);
@@ -194,9 +188,10 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
           t = gavl_msg_get_arg_int(msg, 0);
           
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Select track: %d", t);
-          
           /* Select input track */
           select_track(t);
+
+          gavftools_src = h->src;
           }
           break;
         case GAVL_CMD_SRC_SEEK:
@@ -226,14 +221,27 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
           break;
         case GAVL_CMD_SRC_START:
           {
-          bg_input_plugin_start(h);
+          /* Called implicitely */
+          //  bg_input_plugin_start(h);
 
           /* Set up media connector */
           
           }
           break;
         }
-      
+    case GAVL_MSG_NS_GAVF:
+      switch(msg->ID)
+        {
+        case GAVL_CMD_GAVF_SELECT_STREAM:
+          {
+          int id = gavl_msg_get_arg_int(msg, 0);
+          int on = gavl_msg_get_arg_int(msg, 1);
+
+          bg_media_source_set_msg_action_by_id(h->src, id,
+                                               on ? 
+                                               BG_STREAM_ACTION_READRAW : BG_STREAM_ACTION_DECODE);
+          }
+        }
       
     }
   
@@ -287,11 +295,11 @@ static int play_track(bg_plugin_handle_t * h, int track)
   
   bg_mediaconnector_create_conn(&conn);
 
-  if(!bg_plug_start_program(out_plug, &m, 0))
+  if(!bg_plug_start_program(gavftools_out_plug, &m, 0))
     return 0;
 
   /* Initialize output plug */
-  if(!bg_plug_setup_writer(out_plug, &conn))
+  if(!bg_plug_setup_writer(gavftools_out_plug, &conn))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
     return 0;
@@ -317,7 +325,7 @@ static int play_track(bg_plugin_handle_t * h, int track)
       }
     
     /* Reconnect */
-    //    bg_controllable_connect(controllable, bg_plug_get_control(out_plug));
+    //    bg_controllable_connect(controllable, bg_plug_get_control(gavftools_out_plug));
     }
 #endif
   
@@ -334,14 +342,14 @@ static int play_track(bg_plugin_handle_t * h, int track)
     }
   
   if(got_select_track >= 0)
-    bg_plug_finish_program(out_plug, 1);
+    bg_plug_finish_program(gavftools_out_plug, 1);
   else
-    bg_plug_finish_program(out_plug, 0);
+    bg_plug_finish_program(gavftools_out_plug, 0);
 
 #if 0  
   if(h->plugin->get_controllable &&
      (controllable = h->plugin->get_controllable(h->priv)))
-    bg_controllable_disconnect(controllable, bg_plug_get_control(out_plug));
+    bg_controllable_disconnect(controllable, bg_plug_get_control(gavftools_out_plug));
 #endif
   
   bg_mediaconnector_free(&conn);
@@ -356,10 +364,6 @@ static int play_track(bg_plugin_handle_t * h, int track)
 int main(int argc, char ** argv)
   {
   int ret = EXIT_FAILURE;
-  //  bg_mediaconnector_t * conn;
-  //  bg_mediaconnector_t file_conn;
-
-  gavl_dictionary_t * mi; // Media info (global)
   
   gavl_dictionary_t m;
 
@@ -386,19 +390,23 @@ int main(int argc, char ** argv)
   
   /* Create out plug */
 
-  out_plug = gavftools_create_out_plug();
+  gavftools_out_plug = gavftools_create_out_plug();
 
-  if(!bg_plug_open_location(out_plug, gavftools_out_file))
+  
+  
+  if(!bg_plug_open_location(gavftools_out_plug, gavftools_out_file))
     {
     //    gavl_dictionary_free(&m);
     return ret;
     }
 
+#if 0  
   bg_controllable_init(&out_ctrl,
                        bg_msg_sink_create(handle_msg_out, NULL, 1),
                        bg_msg_hub_create(1));
 
-  bg_controllable_connect(&out_ctrl, bg_plug_get_control(out_plug));
+  bg_controllable_connect(&out_ctrl, bg_plug_get_control(gavftools_out_plug));
+#endif
   
   if(!input_file)
     {
@@ -409,14 +417,17 @@ int main(int argc, char ** argv)
   
   /* */
 
-  bg_control_init(&open_ctrl, bg_msg_sink_create(handle_msg_open, out_plug, 0));
+  bg_control_init(&open_ctrl, bg_msg_sink_create(handle_msg_open, gavftools_out_plug, 0));
 
   /* Open input file */
 
   if(!bg_input_plugin_load(bg_plugin_reg, input_file, &h, &open_ctrl))
     return ret;
 
-  if(!(mi = bg_input_plugin_get_media_info(h)))
+  gavftools_media_info_in = bg_input_plugin_get_media_info(h);
+  gavftools_ctrl_in = &h->ctrl_ext;
+  
+  if(!(gavftools_media_info_in = bg_input_plugin_get_media_info(h)))
     return ret;
 
   //  fprintf(stderr, "Got media info:\n");
@@ -425,7 +436,7 @@ int main(int argc, char ** argv)
   if(gavl_get_num_tracks(mi) > 1)
     {
     /* Send header */
-    bg_plug_set_multitrack(out_plug, mi);
+    bg_plug_set_multitrack(gavftools_out_plug, mi);
     
     fprintf(stderr, "Entering multitrack mode:\n");
     multitrack = 1;
@@ -443,7 +454,7 @@ int main(int argc, char ** argv)
 
 #if 0  
   while((current_track < 0) && 
-        bg_plug_next_backchannel_msg(out_plug))
+        bg_plug_next_backchannel_msg(gavftools_out_plug))
     ;
 
 
@@ -468,7 +479,7 @@ int main(int argc, char ** argv)
       current_track = -1;
     
       while((current_track < 0) && 
-            bg_plug_next_backchannel_msg(out_plug))
+            bg_plug_next_backchannel_msg(gavftools_out_plug))
         {
         if(gavftools_stop())
           break;
@@ -492,9 +503,6 @@ int main(int argc, char ** argv)
     free(text_actions);
   if(overlay_actions)
     free(overlay_actions);
-  
-  if(out_plug)
-    bg_plug_destroy(out_plug);
   
   if(h)
     bg_plugin_unref(h);

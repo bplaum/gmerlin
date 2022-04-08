@@ -27,9 +27,20 @@
 
 #define LOG_DOMAIN "gavftools"
 
+bg_plug_t * gavftools_out_plug  = NULL;
+bg_plug_t * gavftools_in_plug  = NULL;
+
+const gavl_dictionary_t * gavftools_media_info_in = NULL;
+bg_controllable_t       * gavftools_ctrl_in = NULL;
+
+int gavftools_multi_thread = 1;
 
 char * gavftools_in_file  = NULL;
 char * gavftools_out_file = NULL;
+
+int gavftools_track = 0;
+
+bg_mediaconnector_t gavftools_conn;
 
 /* Quality parameters */
 
@@ -37,6 +48,9 @@ bg_cfg_section_t * aq_section = NULL;
 bg_cfg_section_t * vq_section = NULL;
 
 static gavl_dictionary_t stream_options;
+
+bg_media_source_t * gavftools_src = NULL;
+
 
 static const bg_parameter_info_t aq_params[] =
   {
@@ -72,6 +86,8 @@ void gavftools_init()
   {
   bg_plugins_init();
 
+  bg_mediaconnector_init(&gavftools_conn);  
+  
   if(bg_plugin_registry_changed(bg_plugin_reg))
     {
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Plugin registry changed");
@@ -101,6 +117,13 @@ int num_meta_fields = 0;
 
 void gavftools_cleanup(int save_regs)
   {
+  if(gavftools_in_plug)
+    bg_plug_destroy(gavftools_in_plug);
+  
+  if(gavftools_out_plug)
+    bg_plug_destroy(gavftools_out_plug);
+
+  
   bg_plugins_cleanup();
   bg_cfg_registry_cleanup();
   
@@ -123,29 +146,6 @@ void gavftools_cleanup(int save_regs)
 
   xmlCleanupParser();
  
-  }
-
-void gavftools_set_output_metadata(gavl_dictionary_t * m)
-  {
-  int i;
-  char * key;
-  char * pos;
-  for(i = 0; i < num_meta_fields; i++)
-    {
-    pos = strchr(meta_fields[i], '=');
-    if(!pos)
-      {
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Ignoring metadata string \"%s\" ('=' missing)",
-             meta_fields[i]);
-      continue;
-      }
-    key = gavl_strndup(meta_fields[i], pos);
-    pos++;
-    if(*pos == '\0')
-      pos = NULL;
-    gavl_dictionary_set_string(m, key, pos);
-    free(key);
-    }
   }
 
 
@@ -647,7 +647,7 @@ bg_plug_t * gavftools_create_out_plug()
                        out_plug);
 
   /* Initialize messages */
-  bg_plug_get_control(out_plug);
+  //  bg_plug_get_control(out_plug);
   
   return out_plug;
   }
@@ -679,7 +679,7 @@ int gavftools_open_out_plug_from_in_plug(bg_plug_t * out_plug,
     //    gavl_dictionary_free(&m);
     return 0;
     }
-  bg_plug_transfer_messages(in_plug, out_plug);
+  // bg_plug_transfer_messages(in_plug, out_plug);
   
   //  gavl_dictionary_free(&m);
   return 1;
@@ -724,29 +724,18 @@ void gavftools_set_stream_actions(bg_plug_t * p)
 
 int gavftools_open_input(bg_plug_t * in_plug, const char * ifile)
   {
-  const gavl_dictionary_t * dict;
-  int track_index = 0;
-  int num_tracks;
-  
   int ret = 0;
-  
-  track_index = bg_url_get_track(ifile);
   
   if(!bg_plug_open_location(in_plug, ifile))
     goto fail;
 
-  if(!(dict = bg_plug_get_media_info(in_plug)))
+  if(!(gavftools_media_info_in = bg_plug_get_media_info(in_plug)))
     goto fail;
 
   //  fprintf(stderr, "gavftools_open_input\n");
   //  gavl_dictionary_dump(dict, 2);
-  
-  num_tracks = gavl_get_num_tracks(dict);
 
-  if((track_index < 0) || (track_index >= num_tracks))
-    goto fail;
-  
-  bg_plug_select_track_by_idx(in_plug, track_index);
+  gavftools_ctrl_in = bg_plug_get_controllable(in_plug);
   
   ret = 1;
   
@@ -776,12 +765,9 @@ static void send_start_messages(gavl_handle_msg_func func,
 #define STATE_IDLE    1
 #define STATE_RUNNING 2
 
-static void handle_msg(bg_plug_t * out_plug,
-                       bg_mediaconnector_t * conn,
-                       gavl_handle_msg_func func,
-                       void * func_data, int multi_thread, gavl_msg_t * msg, int * state)
+static void handle_msg(gavl_handle_msg_func func,
+                       void * func_data, gavl_msg_t * msg, int * state)
   {
-  
   switch(msg->NS)
     {
     case GAVL_MSG_NS_SRC:
@@ -790,13 +776,20 @@ static void handle_msg(bg_plug_t * out_plug,
         {
         case GAVL_CMD_SRC_SELECT_TRACK:
           {
-          if(multi_thread)
-            bg_mediaconnector_create_threads(conn, 1);
-          
+          if(gavftools_multi_thread)
+            bg_mediaconnector_create_threads(&gavftools_conn, 1);
 
+          /* Send to input */
+          if(gavftools_ctrl_in)
+            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+          
           func(func_data, msg);
+
+          if(gavftools_in_plug)
+            gavftools_src = bg_plug_get_source(gavftools_in_plug);
           
           /* TODO: Reset out plug */
+          
           
           
           }
@@ -808,19 +801,28 @@ static void handle_msg(bg_plug_t * out_plug,
             
             }
           
+          /* Send to input */
+          if(gavftools_ctrl_in)
+            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+          
           func(func_data, msg);
           
-          if(multi_thread)
+          if(gavftools_multi_thread)
             {
-            bg_mediaconnector_create_threads(conn, 1);
-            bg_mediaconnector_threads_init_separate(conn);
-            bg_mediaconnector_threads_start(conn);
+            bg_mediaconnector_create_threads(&gavftools_conn, 1);
+            bg_mediaconnector_threads_init_separate(&gavftools_conn);
+            bg_mediaconnector_threads_start(&gavftools_conn);
             }
           
           }
           break;
         case GAVL_CMD_SRC_SEEK:
           {
+          /* Send to input */
+          if(gavftools_ctrl_in)
+            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+          
+          func(func_data, msg);
           /* TODO: Reset out plug */
           
           }
@@ -828,7 +830,7 @@ static void handle_msg(bg_plug_t * out_plug,
         case GAVL_CMD_SRC_PAUSE:
           {
           
-          if(multi_thread)
+          if(gavftools_multi_thread)
             {
             
             }
@@ -846,28 +848,35 @@ static void handle_msg(bg_plug_t * out_plug,
     }
   }
 
-
-void gavftools_run(bg_plug_t * out_plug,
-                   bg_mediaconnector_t * conn,
-                   gavl_handle_msg_func func,
-                   void * func_data, int multi_thread)
+/*
+ *   Run modes:
+ *   * Multi-threaded and interactive
+ *   * Single threaded and non-interactive.
+ *   
+ */
+void gavftools_run(gavl_handle_msg_func func,
+                   void * func_data)
   {
   int read_msg = 0;
   gavf_io_t * io;
+  gavf_t * g;
+
   int state = STATE_IDLE;
   
-  if(out_plug && (io = bg_plug_get_io(out_plug)))
+  if(gavftools_out_plug &&
+     (g = bg_plug_get_gavf(gavftools_out_plug)) &&
+     (io = gavf_get_io(g)))
     {
     int flags = gavf_io_get_flags(io);
 
     if(flags & GAVF_IO_IS_REGULAR)
-      multi_thread = 0;
+      gavftools_multi_thread = 0;
     
     if(flags & GAVF_IO_IS_DUPLEX)
       read_msg = 1;
     }
 
-  if(!multi_thread)
+  if(!gavftools_multi_thread)
     {
     /* Single thread */
     if(!read_msg)
@@ -915,7 +924,7 @@ void gavftools_run(bg_plug_t * out_plug,
             return;
             }
           
-          handle_msg(out_plug, conn, func, func_data, multi_thread, &msg, &state);
+          handle_msg(func, func_data, &msg, &state);
           
           gavl_msg_free(&msg);
           }

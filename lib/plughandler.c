@@ -122,7 +122,7 @@ static void thread_func_plug(bg_http_connection_t * conn, void * priv)
   gavl_dictionary_set_string(&conn->res, "Server", bg_upnp_get_server_string());
   bg_http_header_set_date(&conn->res, "Date");
   
-  gavl_dictionary_set_string(&conn->res, "Content-Type", bg_plug_mimetype);
+  //  gavl_dictionary_set_string(&conn->res, "Content-Type", bg_plug_mimetype);
   
   bg_http_connection_write_res(conn);
   
@@ -234,7 +234,7 @@ void bg_plug_handler_add_uris(bg_plug_handler_t * h, gavl_dictionary_t * track)
     
   uri      = bg_sprintf("gavf-tcp%s"PLUG_PATH"%s", pos, id);
   
-  gavl_metadata_add_src(m, GAVL_META_SRC, bg_plug_mimetype, uri);
+  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
   
   free(uri);
   

@@ -21,8 +21,6 @@
 
 #include "gavftools.h"
 
-static bg_plug_t * in_plug = NULL;
-static bg_plug_t * out_plug = NULL;
 
 #define LOG_DOMAIN "gavf-recompress"
 
@@ -230,7 +228,6 @@ get_stream_action(bg_stream_action_t action, bg_cfg_section_t * section,
 int main(int argc, char ** argv)
   {
   int ret = EXIT_FAILURE;
-  bg_mediaconnector_t conn;
   int i;
   int num_text_streams;
   int num;
@@ -247,7 +244,7 @@ int main(int argc, char ** argv)
   gavl_dictionary_init(&vc_options);
   gavl_dictionary_init(&oc_options);
   
-  bg_mediaconnector_init(&conn);
+  bg_mediaconnector_init(&gavftools_conn);
   gavftools_init();
 
   ac_parameters = bg_plugin_registry_get_audio_compressor_parameter();
@@ -267,15 +264,15 @@ int main(int argc, char ** argv)
     goto fail;
   
   /* Open input plug */
-  in_plug = gavftools_create_in_plug();
-  out_plug = gavftools_create_out_plug();
+  gavftools_in_plug = gavftools_create_in_plug();
+  gavftools_out_plug = gavftools_create_out_plug();
 
-  if(!gavftools_open_input(in_plug, gavftools_in_file))
+  if(!gavftools_open_input(gavftools_in_plug, gavftools_in_file))
     goto fail;
  
 
   /* Check which streams we have */
-  src = bg_plug_get_source(in_plug);
+  src = bg_plug_get_source(gavftools_in_plug);
   
   num_audio_streams = gavl_track_get_num_streams(src->track, GAVL_STREAM_AUDIO);
   num_video_streams = gavl_track_get_num_streams(src->track, GAVL_STREAM_VIDEO);
@@ -342,18 +339,18 @@ int main(int argc, char ** argv)
     }
   /* Start decoder and initialize media connector */
 
-  if(!bg_plug_start(in_plug) ||
-     !bg_plug_setup_reader(in_plug, &conn))
+  if(!bg_plug_start(gavftools_in_plug) ||
+     !bg_plug_setup_reader(gavftools_in_plug, &gavftools_conn))
     goto fail;
 
-  bg_mediaconnector_create_conn(&conn);
+  bg_mediaconnector_create_conn(&gavftools_conn);
 
   /* Set encode sections in the media connector */
 
-  num = bg_mediaconnector_get_num_streams(&conn, GAVL_STREAM_AUDIO);
+  num = bg_mediaconnector_get_num_streams(&gavftools_conn, GAVL_STREAM_AUDIO);
   for(i = 0; i < num; i++)
     {
-    mc = bg_mediaconnector_get_stream(&conn, GAVL_STREAM_AUDIO, i);
+    mc = bg_mediaconnector_get_stream(&gavftools_conn, GAVL_STREAM_AUDIO, i);
     if(mc->asrc)
       {
       gavl_dictionary_t * encode_section = bg_stream_get_cfg_encoder_nc(mc->s);
@@ -361,10 +358,10 @@ int main(int argc, char ** argv)
       }
     }
 
-  num = bg_mediaconnector_get_num_streams(&conn, GAVL_STREAM_VIDEO);
+  num = bg_mediaconnector_get_num_streams(&gavftools_conn, GAVL_STREAM_VIDEO);
   for(i = 0; i < num; i++)
     {
-    mc = bg_mediaconnector_get_stream(&conn, GAVL_STREAM_VIDEO, i);
+    mc = bg_mediaconnector_get_stream(&gavftools_conn, GAVL_STREAM_VIDEO, i);
     if(mc->vsrc)
       {
       gavl_dictionary_t * encode_section = bg_stream_get_cfg_encoder_nc(mc->s);
@@ -373,10 +370,10 @@ int main(int argc, char ** argv)
     
     }
 
-  num = bg_mediaconnector_get_num_streams(&conn, GAVL_STREAM_OVERLAY);
+  num = bg_mediaconnector_get_num_streams(&gavftools_conn, GAVL_STREAM_OVERLAY);
   for(i = 0; i < num; i++)
     {
-    mc = bg_mediaconnector_get_stream(&conn, GAVL_STREAM_OVERLAY, i);
+    mc = bg_mediaconnector_get_stream(&gavftools_conn, GAVL_STREAM_OVERLAY, i);
     if(mc->vsrc)
       {
       gavl_dictionary_t * encode_section = bg_stream_get_cfg_encoder_nc(mc->s);
@@ -384,10 +381,10 @@ int main(int argc, char ** argv)
       }
     }
   
-  if(!gavftools_open_out_plug_from_in_plug(out_plug, NULL, in_plug))
+  if(!gavftools_open_out_plug_from_in_plug(gavftools_out_plug, NULL, gavftools_in_plug))
     goto fail;
   
-  if(!bg_plug_setup_writer(out_plug, &conn))
+  if(!bg_plug_setup_writer(gavftools_out_plug, &gavftools_conn))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
     goto fail;
@@ -395,14 +392,14 @@ int main(int argc, char ** argv)
 
   /* Fire up connector */
 
-  bg_mediaconnector_start(&conn);
+  bg_mediaconnector_start(&gavftools_conn);
 
   /* Run */
 
   while(1)
     {
     if(gavftools_stop() ||
-       !bg_mediaconnector_iteration(&conn))
+       !bg_mediaconnector_iteration(&gavftools_conn))
       break;
     }
   
@@ -416,14 +413,6 @@ int main(int argc, char ** argv)
   destroy_stream_sections(ac_sections, num_audio_streams);
   destroy_stream_sections(vc_sections, num_video_streams);
   destroy_stream_sections(oc_sections, num_overlay_streams);
-
-  bg_mediaconnector_free(&conn);
-
-  if(in_plug)
-    bg_plug_destroy(in_plug);
-
-  if(out_plug)
-    bg_plug_destroy(out_plug);
   
   gavftools_cleanup();
 

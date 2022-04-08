@@ -24,7 +24,6 @@
 #define LOG_DOMAIN "gavf-mux"
 
 static bg_plug_t ** in_plugs = NULL;
-static bg_plug_t * out_plug = NULL;
 
 static char ** infiles = NULL;
 static int num_infiles = 0;
@@ -90,14 +89,12 @@ int main(int argc, char ** argv)
   {
   int ret = EXIT_FAILURE;
   int i;
-  bg_mediaconnector_t conn;
-
+  
   bg_app_init("gavf-mux", TRS("Multiplex multiple gavf stream into one"));
   
   gavftools_init();
   
   gavftools_block_sigpipe();
-  bg_mediaconnector_init(&conn);
 
   gavftools_set_cmdline_parameters(global_options);
 
@@ -113,7 +110,7 @@ int main(int argc, char ** argv)
     goto fail;
     }
 
-  out_plug = gavftools_create_out_plug();
+  gavftools_out_plug = gavftools_create_out_plug();
   
   in_plugs = calloc(num_infiles, sizeof(*in_plugs));
   for(i = 0; i < num_infiles; i++)
@@ -131,21 +128,21 @@ int main(int argc, char ** argv)
     if(!bg_plug_start(in_plugs[i]))
       goto fail;
 
-    if(!bg_plug_setup_reader(in_plugs[i], &conn))
+    if(!bg_plug_setup_reader(in_plugs[i], &gavftools_conn))
       goto fail;
 
     /* Copy metadata and so on from first source */
     if(!i)
       {
-      if(!gavftools_open_out_plug_from_in_plug(out_plug, NULL,
+      if(!gavftools_open_out_plug_from_in_plug(gavftools_out_plug, NULL,
                                                in_plugs[i]))
         goto fail;
       }
     }
 
-  bg_mediaconnector_create_conn(&conn);
+  bg_mediaconnector_create_conn(&gavftools_conn);
   
-  if(!bg_plug_setup_writer(out_plug, &conn))
+  if(!bg_plug_setup_writer(gavftools_out_plug, &gavftools_conn))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
     goto fail;
@@ -153,14 +150,14 @@ int main(int argc, char ** argv)
 
   /* Fire up connector */
 
-  bg_mediaconnector_start(&conn);
+  bg_mediaconnector_start(&gavftools_conn);
 
   /* Run */
 
   while(1)
     {
     if(gavftools_stop() ||
-       !bg_mediaconnector_iteration(&conn))
+       !bg_mediaconnector_iteration(&gavftools_conn))
       break;
     }
   
@@ -169,10 +166,7 @@ int main(int argc, char ** argv)
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cleaning up");
 
-  bg_mediaconnector_free(&conn);
-  
-  if(out_plug)
-    bg_plug_destroy(out_plug);
+  bg_mediaconnector_free(&gavftools_conn);
   
   for(i = 0; i < num_infiles; i++)
     {
