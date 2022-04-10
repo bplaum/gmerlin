@@ -196,12 +196,10 @@ void gavftools_run(gavl_handle_msg_func func,
     .callback =    gavftools_opt_vq,                               \
   }
 
-
-
 bg_stream_action_t gavftools_get_stream_action(gavl_stream_type_t type,
-                                                 int num);
+                                               int num);
 
-void gavftools_set_compressor_options(bg_cmdline_arg_t * global_options);
+// void gavftools_set_compressor_options(bg_cmdline_arg_t * global_options);
 
 void gavftools_block_sigpipe(void);
 

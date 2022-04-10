@@ -413,7 +413,6 @@ int main(int argc, char ** argv)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No input file or source given");
     return ret;
     }
-
   
   /* */
 
@@ -424,71 +423,12 @@ int main(int argc, char ** argv)
   if(!bg_input_plugin_load(bg_plugin_reg, input_file, &h, &open_ctrl))
     return ret;
 
-  gavftools_media_info_in = bg_input_plugin_get_media_info(h);
   gavftools_ctrl_in = &h->ctrl_ext;
   
   if(!(gavftools_media_info_in = bg_input_plugin_get_media_info(h)))
     return ret;
 
-  //  fprintf(stderr, "Got media info:\n");
-  //  gavl_dictionary_dump(mi, 2);
-#if 0
-  if(gavl_get_num_tracks(mi) > 1)
-    {
-    /* Send header */
-    bg_plug_set_multitrack(gavftools_out_plug, mi);
-    
-    fprintf(stderr, "Entering multitrack mode:\n");
-    multitrack = 1;
-    }
-  else
-    {
-    fprintf(stderr, "Entering singletrack mode:\n");
-    current_track = 0;
-    }
-#endif
-  
-  /* Open output */
-  
-  /* Wait for select track */
-
-#if 0  
-  while((current_track < 0) && 
-        bg_plug_next_backchannel_msg(gavftools_out_plug))
-    ;
-
-
-  
-  while(1)
-    {
-    if(!play_track(h, current_track))
-      break;
-    
-    if(!multitrack)
-      break;
-
-    /* Wait for the next select track event */
-
-    if(got_select_track >= 0)
-      {
-      current_track = got_select_track;
-      got_select_track = -1;
-      }
-    else
-      {
-      current_track = -1;
-    
-      while((current_track < 0) && 
-            bg_plug_next_backchannel_msg(gavftools_out_plug))
-        {
-        if(gavftools_stop())
-          break;
-        }
-      }
-    
-    }
-#endif
-  
+  gavftools_run(handle_msg_out, NULL);
   
   ret = EXIT_SUCCESS;
   

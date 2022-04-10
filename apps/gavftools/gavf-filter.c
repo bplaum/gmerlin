@@ -328,13 +328,8 @@ int main(int argc, char ** argv)
 
   if(!gavftools_open_out_plug_from_in_plug(gavftools_out_plug, NULL, gavftools_in_plug))
     goto fail;
-  
-  if(!bg_plug_setup_writer(gavftools_out_plug, &gavftools_conn))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
-    goto fail;
-    }
 
+  
   /* Fire up connector */
 
   bg_mediaconnector_start(&gavftools_conn);

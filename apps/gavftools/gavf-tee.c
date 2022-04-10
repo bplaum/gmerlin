@@ -131,11 +131,6 @@ int main(int argc, char ** argv)
                                              gavftools_in_plug))
       goto fail;
     
-    if(!bg_plug_setup_writer(out_plugs[i], &gavftools_conn))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
-      goto fail;
-      }
     }
   /* Fire up connector */
 

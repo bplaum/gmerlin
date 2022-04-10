@@ -121,9 +121,10 @@ void bg_plug_set_parameter(void * data, const char * name,
 bg_controllable_t *
 bg_plug_get_controllable(bg_plug_t *);
 
-int bg_plug_start_program(bg_plug_t *, const gavl_dictionary_t * metadata, int discard);
-
 void bg_plug_finish_program(bg_plug_t * p, int discard);
+
+/* Convenience fuction */
+void bg_plug_select_track(bg_plug_t * p, int track);
 
 int bg_plug_set_from_track(bg_plug_t *,
                            const gavl_dictionary_t * track);
@@ -162,7 +163,9 @@ int bg_plug_connect_mediaconnector_stream(bg_mediaconnector_stream_t * s,
                                           bg_media_sink_stream_t * ms);
 
 /* Set up a writer from a media connector */
-int bg_plug_setup_writer(bg_plug_t*, bg_mediaconnector_t * conn);
+// int bg_plug_setup_writer(bg_plug_t*, bg_mediaconnector_t * conn);
+
+int bg_plug_start_program(bg_plug_t*, const bg_media_source_t * src);
 
 /* Set up a media connector from a reader */
 int bg_plug_setup_reader(bg_plug_t*, bg_mediaconnector_t * conn);

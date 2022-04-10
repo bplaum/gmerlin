@@ -142,12 +142,7 @@ int main(int argc, char ** argv)
 
   bg_mediaconnector_create_conn(&gavftools_conn);
   
-  if(!bg_plug_setup_writer(gavftools_out_plug, &gavftools_conn))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting up plug writer failed");
-    goto fail;
-    }
-
+  
   /* Fire up connector */
 
   bg_mediaconnector_start(&gavftools_conn);

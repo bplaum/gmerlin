@@ -60,10 +60,12 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
+  int num_tracks;
   int ret = EXIT_FAILURE;
   bg_media_source_t * src;
-  gavf_t * g;
 
+  const gavl_dictionary_t * mi;
+  
   bg_app_init("gavf-info", "Print gavf stream info");
     
   gavftools_init();
@@ -78,19 +80,27 @@ int main(int argc, char ** argv)
 
   if(!gavftools_open_input(gavftools_in_plug, gavftools_in_file))
     goto fail;
+
+  mi = bg_plug_get_media_info(gavftools_in_plug);
+  gavl_dictionary_dump(mi, 2);
+  
+#if 0  
+  
+  bg_plug_select_track(gavftools_in_plug, int track)
   
   /* Do a full open */
   gavftools_set_stream_actions(bg_plug_get_source(gavftools_in_plug));
+
+  
+  
   if(!bg_plug_start(gavftools_in_plug))
     goto fail;
 
   src = bg_plug_get_source(gavftools_in_plug);
-  g = bg_plug_get_gavf(gavftools_in_plug);
   
   /* Dump info */
   gavl_dictionary_dump(src->track, 0);
   ret = EXIT_SUCCESS;
-  fail:
 
   if(ret == EXIT_SUCCESS)
     {
@@ -100,6 +110,9 @@ int main(int argc, char ** argv)
         gavf_clear_buffers(g);
       }
     }
+#endif
+
+  fail:
   
   gavftools_cleanup();
 

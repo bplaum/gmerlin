@@ -62,7 +62,7 @@ typedef struct
   int id;
     
   /* Reading */
-  gavl_packet_source_t * src_int;
+  //  gavl_packet_source_t * src_int;
   
   /* Writing */
   gavl_packet_sink_t * sink_int;
@@ -72,11 +72,9 @@ typedef struct
   gavl_packet_t * p_ext;
   
   /* Audio stuff */
-  gavl_audio_frame_t * aframe;
   gavl_audio_format_t * afmt;
   
   /* Video stuff */
-  gavl_video_frame_t * vframe;
   gavl_video_format_t * vfmt;
   gavl_compression_info_t ci;
 
@@ -96,6 +94,53 @@ typedef struct
   
   } stream_t;
 
+typedef struct
+  {
+  bg_plugin_handle_t * codec_handle;
+
+  /* Audio stuff */
+  gavl_audio_format_t * afmt;
+  
+  /* Video stuff */
+  gavl_video_format_t * vfmt;
+  gavl_compression_info_t ci;
+  } stream_priv_t;
+
+static void free_stream_priv(void * data)
+  {
+  stream_priv_t * p = data;
+  if(p->codec_handle)
+    bg_plugin_unref(p->codec_handle);
+
+  gavl_compression_info_free(&p->ci);
+  
+  }
+
+static stream_priv_t * create_stream_priv(gavl_dictionary_t * s, gavl_stream_type_t type)
+  {
+  stream_priv_t * ret = calloc(1, sizeof(*ret));
+
+  gavl_stream_get_compression_info(s, &ret->ci);
+  
+  switch(type)
+    {
+    case GAVL_STREAM_AUDIO:
+      ret->afmt = gavl_stream_get_audio_format_nc(s);
+      break;
+    case GAVL_STREAM_VIDEO:
+      ret->vfmt = gavl_stream_get_video_format_nc(s);
+      break;
+    case GAVL_STREAM_OVERLAY:
+      ret->vfmt = gavl_stream_get_video_format_nc(s);
+      break;
+    case GAVL_STREAM_TEXT:
+    case GAVL_STREAM_NONE:
+    case GAVL_STREAM_MSG:
+      break;
+    }
+  return ret;
+  }
+  
 struct bg_plug_s
   {
   int wr;
@@ -590,23 +635,18 @@ static int init_read_common(bg_plug_t * p,
   
   gavl_stream_get_id(s->h, &id);
   
-  
   if(s->source_s->action == BG_STREAM_ACTION_OFF)
     {
     gavf_stream_set_skip(p->g, id);
     return 0;
     }
   
-  s->src_int = gavf_get_packet_source(p->g, id);
-
-  //  if(s->type != GAVL_STREAM_MSG)
-  //    gavl_packet_source_set_lock_funcs(s->src_int, lock_func_read, unlock_func, s);
-  
-  s->source_s->psrc = s->src_int;
+  s->source_s->psrc = gavf_get_packet_source(p->g, id);
 
   return 1;
   }
 
+#if 0
 /* Uncompressed source funcs */
 static gavl_source_status_t read_audio_func(void * priv,
                                             gavl_audio_frame_t ** f)
@@ -661,6 +701,7 @@ static gavl_source_status_t read_overlay_func(void * priv,
   // fprintf(stderr, "Read video func done\n");
   return GAVL_SOURCE_OK;
   }
+#endif
 
 static const struct
   {
@@ -734,13 +775,15 @@ static int init_read(bg_plug_t * p)
         
         if(s->ci.id == GAVL_CODEC_ID_NONE)
           {
-          s->source_s->asrc_priv = gavl_audio_source_create(read_audio_func, s,
-                                                            GAVL_SOURCE_SRC_ALLOC,
-                                                            s->afmt);
-          
-          s->source_s->asrc = s->source_s->asrc_priv;
+          int id;
+          gavl_stream_get_id(s->h, &id);
 
-          s->aframe = gavl_audio_frame_create(NULL);
+          if(s->source_s->action == BG_STREAM_ACTION_DECODE)
+            {
+            s->source_s->asrc = gavf_get_audio_source(p->g, id);
+            s->source_s->psrc = NULL;
+            }
+          
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
@@ -769,14 +812,14 @@ static int init_read(bg_plug_t * p)
 
         if(s->ci.id == GAVL_CODEC_ID_NONE)
           {
-          s->source_s->vsrc_priv =
-            gavl_video_source_create(read_video_func, s,
-                                     GAVL_SOURCE_SRC_ALLOC,
-                                     s->vfmt);
+          int id;
+          gavl_stream_get_id(s->h, &id);
 
-          s->source_s->vsrc = s->source_s->vsrc_priv;
-          
-          s->vframe = gavl_video_frame_create(NULL);
+          if(s->source_s->action == BG_STREAM_ACTION_DECODE)
+            {
+            s->source_s->vsrc = gavf_get_video_source(p->g, id);
+            s->source_s->psrc = NULL;
+            }
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
@@ -798,7 +841,6 @@ static int init_read(bg_plug_t * p)
             gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing video decoder failed");
             return 0;
             }
-
           }
 
         break;
@@ -807,13 +849,14 @@ static int init_read(bg_plug_t * p)
       case GAVL_STREAM_OVERLAY:
         if(s->ci.id == GAVL_CODEC_ID_NONE)
           {
-          s->source_s->vsrc_priv =
-            gavl_video_source_create(read_overlay_func, s,
-                                     GAVL_SOURCE_SRC_ALLOC |
-                                     GAVL_SOURCE_SRC_DISCONTINUOUS, 
-                                     s->vfmt);
-          s->source_s->vsrc = s->source_s->vsrc_priv;
-          s->vframe = gavl_video_frame_create(NULL);
+          int id;
+          gavl_stream_get_id(s->h, &id);
+
+          if(s->source_s->action == BG_STREAM_ACTION_DECODE)
+            {
+            s->source_s->vsrc = gavf_get_video_source(p->g, id);
+            s->source_s->psrc = NULL;
+            }
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
@@ -856,7 +899,7 @@ static int init_read(bg_plug_t * p)
   }
 
 /* Uncompressed Sink funcs */
-
+#if 0
 static gavl_audio_frame_t * get_audio_func(void * priv)
   {
   stream_t * as = priv;
@@ -919,7 +962,7 @@ static gavl_sink_status_t put_overlay_func(void * priv,
 #endif
   return gavl_packet_sink_put_packet(vs->sink_s->psink, vs->p_ext);;
   }
-
+#endif
 
 
 /* Packet */
@@ -979,6 +1022,7 @@ static int handle_msg_forward(void * data, gavl_msg_t * msg)
 
 static void create_sinks(bg_plug_t * p)
   {
+#if 0
   int i;
   stream_t * s;
   
@@ -1034,7 +1078,38 @@ static void create_sinks(bg_plug_t * p)
         break;
       }
     }
+#endif
   }
+
+int bg_plug_start_program(bg_plug_t * p, const bg_media_source_t * src)
+  {
+  int i;
+  gavl_dictionary_t dict;
+  
+  if(!p->wr)
+    return 0;
+
+  gavl_dictionary_init(&dict);
+  gavl_dictionary_copy(&dict, src->track);
+  
+  /* TODO: Create sink streams */
+  for(i = 0; i < src->num_streams; i++)
+    {
+    bg_media_source_stream_t * s;
+    s = src->streams[i];
+    
+    if(s->action == BG_STREAM_ACTION_OFF)
+      continue;
+
+    
+    
+    }
+  
+  /* TODO: Initialize encoders */
+  
+  return 1;
+  }
+
 
 static int init_write(bg_plug_t * p)
   {
@@ -1371,6 +1446,12 @@ int bg_plug_open_location(bg_plug_t * p, const char * location)
     {
     if(!gavf_open_uri_read(p->g, location))
       return 0;
+
+    if(!(p->mi = gavf_get_media_info(p->g)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read media info");
+      return 0;
+      }
     }
   
   return 1;
@@ -1561,6 +1642,7 @@ int bg_plug_connect_mediaconnector_stream(bg_mediaconnector_stream_t * s,
 
 /* Setup writer */
 
+#if 0
 int bg_plug_setup_writer(bg_plug_t * p, bg_mediaconnector_t * conn)
   {
   int i;
@@ -1589,6 +1671,7 @@ int bg_plug_setup_writer(bg_plug_t * p, bg_mediaconnector_t * conn)
     }
   return 1;
   }
+#endif
 
 /* Setup the input side for the media connector. The plug needs to be started already */
 int bg_plug_setup_reader(bg_plug_t * p, bg_mediaconnector_t * conn)
@@ -1617,78 +1700,22 @@ gavl_sink_status_t bg_plug_put_packet(bg_plug_t * p,
   return gavl_packet_sink_put_packet(s->sink_s->psink, pkt);
   }
 
-#if 0
-static int index_ext_to_int(bg_plug_t * p, int idx, gavl_stream_type_t type)
-  {
-  int i;
-  int cnt = 0;
-  
-  for(i = 0; i < p->num_streams; i++)
-    {
-    if(p->streams[i].type == type)
-      {
-      if(cnt == idx)
-        return i;
-      cnt++;
-      }
-    }
-  return -1;
-  }
-
-/* Writable */
-static void put_msg(gavl_msg_t * msg, gavl_packet_sink_t * sink)
-  {
-  gavl_packet_t * pkt = NULL;
-  pkt = gavl_packet_sink_get_packet(sink);
-  gavf_msg_to_packet(msg, pkt);
-  gavl_packet_sink_put_packet(sink, pkt);
-  }
-
-static int msg_sink_func_write(void * data, gavl_msg_t * msg)
-  {
-  bg_plug_t* p = data;
-  
-  /* Interleave messages with A/V data */
-  bg_media_sink_stream_t * s = bg_media_sink_get_stream_by_id(&p->sink, GAVL_META_STREAM_ID_MSG_PROGRAM);
-  put_msg(msg, s->psink);
-  return 1;
-  }
-#endif
-
 /*
   
  */
 
-#if 0
-int bg_plug_select_track_by_idx(bg_plug_t * p, int track)
+static void init_media_source(bg_plug_t* p)
   {
-  int ret;
-  gavl_msg_t msg;
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_CMD_SRC_SELECT_TRACK, GAVL_MSG_NS_SRC);
-  gavl_msg_set_arg_int(&msg, 0, track);
-  ret = bg_plug_select_track(p, &msg);
-  gavl_msg_free(&msg);
-  return ret;
-  }
+  int i;
+  bg_media_source_set_from_track(&p->src, p->cur);
 
-int bg_plug_select_track(bg_plug_t * p, const gavl_msg_t * msg)
-  {
-  return 0;
+  for(i = 0; i < p->src.num_streams; i++)
+    {
+    p->src.streams[i]->user_data = create_stream_priv(p->src.streams[i]->s, p->src.streams[i]->type);
+    p->src.streams[i]->free_user_data = free_stream_priv;
+    }
+  
   }
-
-int bg_plug_seek(bg_plug_t * p, const gavl_msg_t * msg)
-  {
-  return 0;
-  }
-
-/* Handle messages *before* they are sent to the backchannel by the reader */
-
-gavf_io_t * bg_plug_get_io(bg_plug_t * p)
-  {
-  return p->io;
-  }
-#endif
 
 static int handle_cmd_reader(void * data, gavl_msg_t * msg)
   {
@@ -1705,13 +1732,149 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
           bg_media_source_cleanup(&p->src);
           bg_media_source_init(&p->src);
           p->cur = gavf_get_current_track_nc(p->g);
-          bg_media_source_set_from_track(&p->src, p->cur);
+          init_media_source(p);
           }
           break;
           
         case GAVL_CMD_SRC_START:
+          {
+          /* Enable streams */
+          int i, id;
+          
+          for(i = 0; i < p->src.num_streams; i++)
+            {
+            if(!gavl_stream_get_id(p->src.streams[i]->s, &id))
+              continue;
+
+            if(p->src.streams[i]->action == BG_STREAM_ACTION_OFF)
+              gavf_stream_set_skip(p->g, id);
+            }
+          
           gavf_handle_reader_command(p->g, msg);
-          //          bg_avdec_start(data);
+
+          /* TODO: Initialize codecs */
+          for(i = 0; i < p->src.num_streams; i++)
+            {
+            int id;
+
+            stream_priv_t * s = p->src.streams[i]->user_data;
+            gavl_stream_get_id(p->src.streams[i]->s, &id);
+            
+            switch(p->src.streams[i]->action)
+              {
+              case BG_STREAM_ACTION_OFF:
+                continue;
+                break;
+              case BG_STREAM_ACTION_DECODE:
+                {
+                if(s->ci.id == GAVL_CODEC_ID_NONE)
+                  {
+                  
+                  switch(p->src.streams[i]->type)
+                    {
+                    case GAVL_STREAM_AUDIO:
+                      p->src.streams[i]->asrc = gavf_get_audio_source(p->g, id);
+                      break;
+                    case GAVL_STREAM_VIDEO:
+                    case GAVL_STREAM_OVERLAY:
+                      p->src.streams[i]->vsrc = gavf_get_video_source(p->g, id);
+                      break;
+                    case GAVL_STREAM_TEXT:
+                      p->src.streams[i]->psrc = gavf_get_packet_source(p->g, id);
+                      break;
+                    case GAVL_STREAM_MSG:
+                    case GAVL_STREAM_NONE:
+                      break;
+                    }
+                  
+                  }
+                else
+                  {
+                  /* Initialize decoders */
+                  
+                  switch(p->src.streams[i]->type)
+                    {
+                    case GAVL_STREAM_AUDIO:
+                      {
+                      bg_codec_plugin_t * codec;
+                      /* Add decoder */
+                      if(!(s->codec_handle = load_decompressor(s->ci.id,
+                                                               BG_PLUGIN_DECOMPRESSOR_AUDIO)))
+                        return 0;
+
+                      codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
+
+                      p->src.streams[i]->asrc = codec->connect_decode_audio(s->codec_handle->priv,
+                                                                            gavf_get_packet_source(p->g, id),
+                                                                            &s->ci,
+                                                                            s->afmt,
+                                                                            gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+                      if(!p->src.streams[i]->asrc)
+                        {
+                        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio decoder failed");
+                        return 0;
+                        }
+                      }
+                      break;
+                    case GAVL_STREAM_VIDEO:
+                      {
+                      bg_codec_plugin_t * codec;
+                      /* Add decoder */
+                      if(!(s->codec_handle = load_decompressor(s->ci.id,
+                                                               BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+                        return 0;
+
+                      codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
+
+                      p->src.streams[i]->vsrc = codec->connect_decode_video(s->codec_handle->priv,
+                                                                            gavf_get_packet_source(p->g, id),
+                                                                            &s->ci,
+                                                                            s->vfmt,
+                                                                            gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+                      if(!p->src.streams[i]->vsrc)
+                        {
+                        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio decoder failed");
+                        return 0;
+                        }
+                      }
+
+                    case GAVL_STREAM_OVERLAY:
+                      {
+                      bg_codec_plugin_t * codec;
+                      /* Add decoder */
+                      if(!(s->codec_handle = load_decompressor(s->ci.id,
+                                                               BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+                        return 0;
+                      codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
+                      
+                      p->src.streams[i]->vsrc = codec->connect_decode_overlay(s->codec_handle->priv,
+                                                                              gavf_get_packet_source(p->g, id),
+                                                                              &s->ci,
+                                                                              s->vfmt,
+                                                                              gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+                      if(!p->src.streams[i]->vsrc)
+                        {
+                        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing overlay decoder failed");
+                        return 0;
+                        }
+                      }
+                      break;
+                    case GAVL_STREAM_TEXT:
+                    case GAVL_STREAM_MSG:
+                    case GAVL_STREAM_NONE:
+                      break;
+                    }
+
+                  }
+                }
+                break;
+              case BG_STREAM_ACTION_READRAW:
+                p->src.streams[i]->psrc = gavf_get_packet_source(p->g, id);
+                break;
+              }
+            }
+          
+          }
           break;
         case GAVL_CMD_SRC_PAUSE:
           gavf_handle_reader_command(p->g, msg);
@@ -1754,54 +1917,18 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-#if 0
-static int msg_sink_func_read(void * data, gavl_msg_t * msg)
-  {
-  bg_plug_t* p = data;
-
-
-  
-  //  fprintf(stderr, "msg_sink_func_read\n");
-  //  gavl_msg_dump(msg, 2);
-  
-  switch(msg->NS)
-    {
-    case GAVL_MSG_NS_SRC:
-      {
-      switch(msg->ID)
-        {
-        case GAVL_CMD_SRC_SELECT_TRACK:
-          bg_plug_select_track(p, msg);
-          return 1;
-        case GAVL_CMD_SRC_SEEK:
-          bg_plug_seek(p, msg);
-          return 1;
-          break;
-        case GAVL_CMD_SRC_START:
-          bg_plug_start(p);
-          return 1;
-          break;
-        }
-      break;
-      
-      default:
-        break;
-      }
-    }
-  
-  return 1;
-  
-  /* Backchannel */
-  
-  //  return gavl_msg_write(msg, p->io_msg);
-  }
-#endif
-
 bg_controllable_t * bg_plug_get_controllable(bg_plug_t * p)
   {
   return &p->controllable;
   }
 
+void bg_plug_select_track(bg_plug_t * p, int track)
+  {
+  gavl_msg_t * cmd = bg_msg_sink_get(p->controllable.cmd_sink);
+  gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SELECT_TRACK, GAVL_MSG_NS_SRC);
+  gavl_msg_set_arg_int(cmd, 0, track);
+  bg_msg_sink_put(p->controllable.cmd_sink, cmd);
+  }
 
 /*
  *  Input plugin

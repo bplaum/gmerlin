@@ -35,8 +35,8 @@ bg_controllable_t       * gavftools_ctrl_in = NULL;
 
 int gavftools_multi_thread = 1;
 
-char * gavftools_in_file  = NULL;
-char * gavftools_out_file = NULL;
+char * gavftools_in_file  = "gavf://-";
+char * gavftools_out_file = "gavf://-";
 
 int gavftools_track = 0;
 
@@ -313,37 +313,55 @@ static bg_stream_action_t * stream_actions_from_arg(const char * arg, int * num_
   }
 #endif
 
-void
-gavftools_opt_as(void * data, int * argc, char *** _argv, int arg)
+static void
+stream_option_idx(const char * opt, void * data, int idx, int * argc, char *** _argv, int arg)
   {
+  gavl_dictionary_t * dict;
+  char * name;
+  
   if(arg >= *argc)
     {
-    fprintf(stderr, "Option -as requires an argument\n");
+    fprintf(stderr, "Option -%s requires an argument\n", opt);
     exit(-1);
     }
 
-  gavl_dictionary_set_string(&stream_options, "as", (*_argv)[arg]);
+  
+  dict = gavl_dictionary_get_dictionary_create(&stream_options, opt);
+
+  name = gavl_sprintf("%d", idx);
+  gavl_dictionary_set_string(dict, name, (*_argv)[arg]);
+  free(name);
   
   bg_cmdline_remove_arg(argc, _argv, arg);
+  }
+
+static void
+stream_option(const char * opt, void * data, int * argc, char *** _argv, int arg)
+  {
+  gavl_dictionary_t * dict;
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -%s requires an argument\n", opt);
+    exit(-1);
+    }
+
+  dict = gavl_dictionary_get_dictionary_create(&stream_options, opt);
+
+  gavl_dictionary_set_string(dict, "default", (*_argv)[arg]);
   
+  bg_cmdline_remove_arg(argc, _argv, arg);
+  }
+
+void
+gavftools_opt_as(void * data, int * argc, char *** _argv, int arg)
+  {
+  stream_option("as", data, argc, _argv, arg);
   }
 
 void
 gavftools_opt_as_idx(void * data, int idx, int * argc, char *** _argv, int arg)
   {
-  char * name;
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -as requires an argument\n");
-    exit(-1);
-    }
-
-  name = bg_sprintf("as-%d", idx);
-  gavl_dictionary_set_string(&stream_options, name, (*_argv)[arg]);
-  free(name);
-  
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  
+  stream_option_idx("as", data, idx, argc, _argv, arg);
   }
 
 void
@@ -496,17 +514,24 @@ gavftools_get_stream_actions(int num, gavl_stream_type_t type)
 
 static const char * get_stream_option(int idx, const char * option)
   {
+  const gavl_dictionary_t * dict;
+  
   const char * var;
-  char * name = bg_sprintf("%s-%d", option, idx+1);
+  char * name;
+  
+  dict = gavl_dictionary_get_dictionary(&stream_options, option);
+  if(!dict)
+    return NULL;
 
+  name = bg_sprintf("%d", idx+1);
   var = gavl_dictionary_get_string(&stream_options, name);
   free(name);
   
   if(var)
     return var;
-
+  
   return
-    gavl_dictionary_get_string(&stream_options, option);
+    gavl_dictionary_get_string(dict, "default");
   }
 
 bg_stream_action_t gavftools_get_stream_action(gavl_stream_type_t type, int idx)
@@ -537,7 +562,7 @@ bg_stream_action_t gavftools_get_stream_action(gavl_stream_type_t type, int idx)
   var = get_stream_option(idx, option);
   
   if(!var)
-    return BG_STREAM_ACTION_READRAW;
+    return BG_STREAM_ACTION_OFF;
 
   switch(var[0])
     {
@@ -755,6 +780,9 @@ static void send_start_messages(gavl_handle_msg_func func,
   func(func_data, &msg);
   gavl_msg_free(&msg);
 
+  /* Select all tracks */
+  
+  
   gavl_msg_init(&msg);
   gavl_msg_set_id_ns(&msg, GAVL_CMD_SRC_START, GAVL_MSG_NS_SRC);
   func(func_data, &msg);
@@ -766,7 +794,7 @@ static void send_start_messages(gavl_handle_msg_func func,
 #define STATE_RUNNING 2
 
 static void handle_msg(gavl_handle_msg_func func,
-                       void * func_data, gavl_msg_t * msg, int * state)
+                       void * func_data, gavl_msg_t * msg)
   {
   switch(msg->NS)
     {
@@ -796,16 +824,25 @@ static void handle_msg(gavl_handle_msg_func func,
           break;
         case GAVL_CMD_SRC_START:
           {
-          if(*state == STATE_RUNNING)
-            {
-            
-            }
           
           /* Send to input */
           if(gavftools_ctrl_in)
             bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
           
           func(func_data, msg);
+
+          /*
+              gavftools_src should have it's final value now.
+              Initialize connector
+           */
+          
+          if(gavftools_out_plug)
+            {
+            if(!bg_plug_start_program(gavftools_out_plug, gavftools_src))
+              {
+              
+              }
+            }
           
           if(gavftools_multi_thread)
             {
@@ -854,33 +891,80 @@ static void handle_msg(gavl_handle_msg_func func,
  *   * Single threaded and non-interactive.
  *   
  */
+
+static void run_singlethread(gavl_handle_msg_func func,
+                             void * func_data)
+  {
+  send_start_messages(func, func_data);
+
+  while(1)
+    {
+    
+    }
+
+  }
+
+static void run_multithread(gavl_handle_msg_func func,
+                            void * func_data)
+  {
+  gavf_io_t * io = NULL;
+  gavf_t * g;
+  
+  if(gavftools_out_plug &&
+     (g = bg_plug_get_gavf(gavftools_out_plug)))
+    io = gavf_get_io(g);
+  
+  while(1)
+    {
+    if(gavftools_stop())
+      return;
+
+    if(gavf_io_can_read(io, 50))
+      {
+      gavl_msg_t msg;
+      gavl_msg_init(&msg);
+
+      if(!gavl_msg_read(&msg, io))
+        {
+        gavl_msg_free(&msg);
+        return;
+        }
+          
+      handle_msg(func, func_data, &msg);
+          
+      gavl_msg_free(&msg);
+      }
+
+    
+    }
+  }
+
 void gavftools_run(gavl_handle_msg_func func,
                    void * func_data)
   {
-  int read_msg = 0;
-  gavf_io_t * io;
   gavf_t * g;
+  gavf_io_t * io;
 
-  int state = STATE_IDLE;
+  if(gavftools_out_plug && gavftools_media_info_in)
+    bg_plug_set_media_info(gavftools_out_plug, gavftools_media_info_in);
   
   if(gavftools_out_plug &&
      (g = bg_plug_get_gavf(gavftools_out_plug)) &&
      (io = gavf_get_io(g)))
     {
     int flags = gavf_io_get_flags(io);
-
+    
     if(flags & GAVF_IO_IS_REGULAR)
       gavftools_multi_thread = 0;
-    
-    if(flags & GAVF_IO_IS_DUPLEX)
-      read_msg = 1;
     }
-
+  
   if(!gavftools_multi_thread)
+    run_singlethread(func,  func_data);
+  else
+    run_multithread(func,  func_data);
+
+#if 0  
     {
-    /* Single thread */
-    if(!read_msg)
-      send_start_messages(func, func_data);
     
     while(1)
       {
@@ -910,29 +994,11 @@ void gavftools_run(gavl_handle_msg_func func,
 
       while(1)
         {
-        if(gavftools_stop())
-          return;
-
-        if(gavf_io_can_read(io, 50))
-          {
-          gavl_msg_t msg;
-          gavl_msg_init(&msg);
-
-          if(!gavl_msg_read(&msg, io))
-            {
-            gavl_msg_free(&msg);
-            return;
-            }
-          
-          handle_msg(func, func_data, &msg, &state);
-          
-          gavl_msg_free(&msg);
-          }
         
         }
 
       }
 
     }
-  
+#endif  
   }
