@@ -48,6 +48,8 @@ var pagesize = 1000;
 
 var playqueue          = null;
 
+var playqueue_children   = null;
+
 var local_items = 0;
 
 /* Array */
@@ -67,8 +69,7 @@ function playqueue_create()
   root_elements[0].v = new Object();
     
   playqueue = root_elements[0].v;
-
-//  console.log("playqueue_init");
+  playqueue_children = new Array();
     
   dict_set_string(m, GAVL_META_LABEL, "No player configured");
   dict_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_PLAYQUEUE);
@@ -82,16 +83,17 @@ function playqueue_init()
   {
   /* If this is the current track (after the page reload) initialize browser */
   if((app_state.widget == "browser") &&
-     (app_state.id == BG_PLAYQUEUE_ID) &&
-     (!widgets.browser.container))
+     (app_state.id == BG_PLAYQUEUE_ID))
     {
     widgets.browser.set_container(playqueue);
     /* set_container will call BG_FUNC_DB_BROWSE_CHILDREN */
     }
+
   /* Browse object */
-  var msg = msg_create(BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
+  let msg = msg_create(BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
   dict_set_string(msg.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
   player.handle_command(msg);
+
   }
 
 
@@ -350,11 +352,13 @@ function my_get_children(obj, start, num)
   var id = obj_get_id(obj);
   var msg;
 
+  /* Avoid us to be called recursively */    
+    
   msg = msg_create(BG_FUNC_DB_BROWSE_CHILDREN, BG_MSG_NS_DB);
   dict_set_string(msg.header, GAVL_MSG_CONTEXT_ID, id);
 
-  console.log("my_get_children " + id + " " + start + " " + num);
-  console.trace();
+//  console.log("my_get_children " + id + " " + start + " " + num);
+//  console.trace();
     
   if((start > 0) || (num > 0))
     {
@@ -363,8 +367,20 @@ function my_get_children(obj, start, num)
     if(num > 0)
       msg_set_arg_int(msg, 1, num);
     }
-  if(id == BG_PLAYQUEUE_ID)
-    player.handle_command(msg);
+  if((id == BG_PLAYQUEUE_ID) && (player.ready))
+    {
+    if(!playqueue.have_children)
+      player.handle_command(msg);
+    else
+      {
+      let res = set_browse_children_response(msg, playqueue_children);
+
+      console.log("set_browse_children_response " + JSON.stringify(playqueue_children));
+	
+
+      widgets.browser.handle_msg(res);
+      }
+    }
   else if(id == "/")
     {
     let res = set_browse_children_response(msg, root_elements);
@@ -770,20 +786,21 @@ function app_state_apply()
 
   if(app_state.widget == "browser")
     {
-    if(!current_widget.container ||
-       (app_state.id != obj_get_id(current_widget.container)))
+    if(!widgets.browser.container ||
+       (app_state.id != obj_get_id(widgets.browser.container)))
       {
       widgets.browser.page_changed = true;
-      current_widget.set_container(app_state.id);
+      widgets.browser.set_container(app_state.id);
       }
     /* Only the page changed */
-    else if(current_widget.container &&
-            (app_state.id == obj_get_id(current_widget.container)) &&
-            ((app_state.start != current_widget.start) ||
-             (app_state.num != current_widget.num)))
+    else if(widgets.browser.container &&
+            (app_state.id == obj_get_id(widgets.browser.container)) &&
+            ((app_state.start != widgets.browser.start) ||
+             (app_state.num != widgets.browser.num)))
       {
-      console.log("page_changed " + app_state.start + " " + app_state.num + " " +
-		    current_widget.start + " " + current_widget.num);
+//      console.log("page_changed " + app_state.start + " " + app_state.num + " " +
+//		  widgets.browser.start + " " + widgets.browser.num);
+//      console.trace();
       widgets.browser.page_changed = true;
       }
     else if(current_widget.container && (app_state.id == obj_get_id(current_widget.container)))
@@ -1522,9 +1539,8 @@ function player_create_websocket(ret, url)
   ret.ws.onopen = function()
     {
     console.log("Renderer websocket open :)");
-
-
-      playqueue_init();
+    ret.ready = true;
+    playqueue_init();
     };
 
   ret.ws.onmessage = function(evt)
@@ -1550,7 +1566,8 @@ function player_create()
   var ret = new Object();
   var url;
   var idx;
-      
+  ret.ready = false;
+   
   if((idx = player_uri.indexOf("://")) > 0)
     url = "ws" + player_uri.slice(idx);
   else if(player_uri == "local:")
@@ -1591,6 +1608,7 @@ function player_create()
     console.log("create player " + url);
 
     ret.h5p = html5player_create(ret, "audio-element", null);
+    ret.ready = true;
     }
   else      
     player_create_websocket(ret, url);
@@ -2734,8 +2752,11 @@ function create_browser()
     if(id)
       {
       if(app_state.id != id)
+	{
         push_state();
-
+//        this.start = 0;
+//        this.num = 0;
+	}
       app_state.id = id;
 
       if(sel_id)
@@ -2747,8 +2768,7 @@ function create_browser()
     app_state.widget = "browser";
     app_state_apply();
     update_hash();
-    this.start = 0;
-    this.num = 0;
+    console.log("Blupp 1");
     }
       
   ret.set_current = function(id)
@@ -3205,6 +3225,9 @@ function create_browser()
             if(!this.container)
 	      return 1;
 
+            if(msg.id == BG_RESP_DB_BROWSE_CHILDREN)
+              this.page_changed = false;
+	      
 //            console.log("Browse children response 1: " + JSON.stringify(msg));
             
 		
@@ -3304,7 +3327,7 @@ function create_browser()
 
 	      if(last)
                 { 
-                this.have_children = true;
+                this.container.have_children = true;
                 load_progress(-1.0);
 		}
               else if(this.num_children > 0)
@@ -3554,7 +3577,7 @@ function create_browser()
   /* Called only by app_state_apply */
   ret.set_range_internal = function(start, num)
     {
-//    console.log("set_range_internal " + start + " " + num + " " + ret.container);
+//    console.log("set_range_internal 1 " + start + " " + num + " " + this.container);
 //    console.trace();
 /*
     if((this.start == start) &&
@@ -3566,6 +3589,7 @@ function create_browser()
     if(!this.container)
       {
       this.start = 0;
+      console.log("Blupp 2");
       this.num   = 0;
       this.start_internal = start;
       this.num_internal = num;
@@ -3574,11 +3598,11 @@ function create_browser()
       {
       this.start = start;
       this.num = num;
+      console.log("Blupp 3 " + num);
       }
 
     if(this.container && this.container[GAVL_META_CHILDREN])
       delete this.container[GAVL_META_CHILDREN];
-    this.have_children = false;
 
     this.num_children = this.num;
     if(this.container)
@@ -3587,6 +3611,9 @@ function create_browser()
     this.page = this.offset_to_page(this.start);
     this.pager.set_page(this.page, this.num_pages, this.start, this.num, this.total_children);
     this.page_changed = false;
+
+    console.log("set_range_internal 2 " + this.start + " " + this.num);
+
     }
 
   ret.set_range = function(start, num)
@@ -3666,7 +3693,6 @@ function create_browser()
     if(this.container)
       {
       delete this.container[GAVL_META_CHILDREN];
-	//      playqueue_delete();
       clear_element(this.div);
       delete_my_event_handler(this.container, this);
       this.container = null;
@@ -4177,28 +4203,28 @@ function create_player_control()
           case BG_MSG_DB_SPLICE_CHILDREN:
           case BG_RESP_DB_BROWSE_CHILDREN:
 	    {
-            var div;
-            var children;
-            var m;
+            let idx = msg.args[0].v;
+            let del = msg.args[1].v;
+            let add = msg.args[2].v;
 
-/*	      
-            if(msg.id == BG_RESP_DB_BROWSE_CHILDREN)
-	      {
-              console.log("playqueue BG_RESP_DB_BROWSE_CHILDREN");
-              console.trace();
-	      }		
+            if(del)
+              playqueue_children.splice(idx, del);
+
+            if(is_array(msg.args[2].v))
+              {
+	      let i;
+	      for(i = 0; i < msg.args[2].v.length; i++)
+		{
+                playqueue_children.splice(idx+i, 0, msg.args[2].v[i]);
+		}
+              }
             else
-	      {
-              console.log("playqueue BG_RESP_DB_SPLICE_CHILDREN");
-
-	      }		
-*/		
+              playqueue_children.splice(idx, 0, msg.args[2]);
 	      
             if((current_widget == widgets.browser) &&
                (widgets.browser.container == playqueue))
 	      {
               widgets.browser.handle_msg(msg);
-	      
 	      }
             break;
 	    }

@@ -1779,8 +1779,8 @@ function obj_get_id(obj)
 
 function obj_make_playqueue_id(obj)
   {
-  console.log("obj_make_playqueue_id " + obj_get_id(obj));
-  console.trace();
+//  console.log("obj_make_playqueue_id " + obj_get_id(obj));
+//  console.trace();
   return BG_PLAYQUEUE_ID + "/" + client_id + "~" + obj_get_id(obj).replaceAll("/", "~");
   }
 
