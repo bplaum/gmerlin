@@ -190,6 +190,7 @@ gavl_sink_status_t bg_plug_put_packet(bg_plug_t * p,
                                       gavl_packet_t * pkt);
 
 gavl_dictionary_t * bg_plug_get_media_info(bg_plug_t * p);
+gavl_dictionary_t * bg_plug_get_current_track(bg_plug_t * p);
 
 // int bg_plug_got_error(bg_plug_t * p);
 

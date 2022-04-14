@@ -60,12 +60,12 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
-  int num_tracks;
+  int num_tracks, i;
   int ret = EXIT_FAILURE;
   bg_media_source_t * src;
-
   const gavl_dictionary_t * mi;
-  
+  const gavl_dictionary_t * cur;
+
   bg_app_init("gavf-info", "Print gavf stream info");
     
   gavftools_init();
@@ -82,11 +82,22 @@ int main(int argc, char ** argv)
     goto fail;
 
   mi = bg_plug_get_media_info(gavftools_in_plug);
-  gavl_dictionary_dump(mi, 2);
+  //  gavl_dictionary_dump(mi, 2);
+
+  num_tracks = gavl_get_num_tracks(mi);
+
+  for(i = 0; i < num_tracks; i++)
+    {
+    bg_plug_select_track(gavftools_in_plug, i);
+
+    cur = bg_plug_get_current_track(gavftools_in_plug);
+
+    gavl_dprintf("TRACK %d\n", i+1);
+    
+    gavl_dictionary_dump(mi, 2);
+    }
   
 #if 0  
-  
-  bg_plug_select_track(gavftools_in_plug, int track)
   
   /* Do a full open */
   gavftools_set_stream_actions(bg_plug_get_source(gavftools_in_plug));

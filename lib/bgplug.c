@@ -319,6 +319,11 @@ const gavl_dictionary_t * bg_plug_get_metadata(bg_plug_t * p)
   return gavl_track_get_metadata(p->cur);
   }
 
+gavl_dictionary_t * bg_plug_get_current_track(bg_plug_t * p)
+  {
+  return p->cur;
+  }
+
 
 /* Message callbacks for the gavf instances */
 
@@ -984,9 +989,9 @@ static int init_write_common(bg_plug_t * p, stream_t * s)
   return 1;
   }
 
+#if 0
 static int handle_msg_forward(void * data, gavl_msg_t * msg)
   {
-#if 0
   stream_t * s = data;
 
   switch(msg->NS)
@@ -1016,9 +1021,9 @@ static int handle_msg_forward(void * data, gavl_msg_t * msg)
     }
   //  else
   //    fprintf(stderr, "Blupp 2\n");
-#endif
   return 1;
   }
+#endif
 
 static void create_sinks(bg_plug_t * p)
   {
@@ -1447,7 +1452,7 @@ int bg_plug_open_location(bg_plug_t * p, const char * location)
     if(!gavf_open_uri_read(p->g, location))
       return 0;
 
-    if(!(p->mi = gavf_get_media_info(p->g)))
+    if(!(p->mi = gavf_get_media_info_nc(p->g)))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read media info");
       return 0;
