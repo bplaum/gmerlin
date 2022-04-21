@@ -64,8 +64,6 @@ int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t *
 int bg_http_head(const char * url, gavl_dictionary_t * res);
 
 
-/* Read a http body (chunked or not) */
-int bg_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * ret);
 
 int bg_http_read_body_start(gavf_io_t * io, const gavl_dictionary_t * res,
                             int * total_size,

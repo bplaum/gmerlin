@@ -3513,12 +3513,14 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
   return result;
   }
 
-int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
-                              const char * location,
-                              bg_plugin_handle_t ** ret,
-                              bg_control_t * ctrl)
+int input_plugin_load_full(bg_plugin_registry_t * reg,
+                           const char * location,
+                           bg_plugin_handle_t ** ret,
+                           bg_control_t * ctrl,
+                           char ** redirect_url)
   {
   const char * url;
+  const char * klass;
   gavl_dictionary_t * track_info;
   int track_index = 0;
   gavl_dictionary_t vars;
@@ -3548,12 +3550,19 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
     bg_plugin_unref(*ret);
     return 0;
     }
-
-  tm = gavl_track_get_metadata_nc(track_info);
   
+  tm = gavl_track_get_metadata_nc(track_info);
+
   /* Do redirection */
-  if((url = gavl_dictionary_get_string(tm, GAVL_META_REFURL)))
+  if((klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)) &&
+     !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) &&
+     gavl_dictionary_get_src(tm, GAVL_META_SRC, 0,
+                             NULL, &url))
     {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
+    *redirect_url = gavl_strdup(url);
+    return 1;
+#if 0
     gavl_dictionary_t m;
     gavl_dictionary_init(&vars);
     bg_url_get_vars_c(url, &vars);
@@ -3565,7 +3574,6 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
     gavl_dictionary_init(&m);
     gavl_dictionary_copy(&m, tm);
 
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
     
     result = bg_input_plugin_load(reg, url, ret, ctrl);
     
@@ -3581,12 +3589,12 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
         }
       else
         {
-        gavl_dictionary_set_string(&m, GAVL_META_REFURL, NULL);
         gavl_dictionary_merge2(tm, &m);
         }
       }
     gavl_dictionary_free(&m);
     gavl_dictionary_free(&vars);
+#endif
     }
   else
     result = 1;
@@ -3609,6 +3617,45 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
     }
   
   return result;
+  }
+
+#define MAX_REDIRECTIONS 5
+
+int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
+                              const char * location1,
+                              bg_plugin_handle_t ** ret,
+                              bg_control_t * ctrl)
+  {
+  int i;
+  char * redirect_url = NULL;
+  char * location = gavl_strdup(location1);
+  
+  for(i = 0; i < MAX_REDIRECTIONS; i++)
+    {
+    if(!input_plugin_load_full(reg,
+                               location,
+                               ret,
+                               ctrl,
+                               &redirect_url))
+      {
+      free(location);
+      return 0;
+      }
+    
+    if(redirect_url)
+      {
+      free(location);
+      location = redirect_url;
+      redirect_url = NULL;
+      }
+    else
+      {
+      free(location);
+      return 1;
+      }
+    }
+  
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections");
   }
 
 

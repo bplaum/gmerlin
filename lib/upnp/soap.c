@@ -163,7 +163,7 @@ int bg_soap_request_read_req(gavl_dictionary_t * s, bg_http_connection_t * conn)
 
   gavl_buffer_init(&buf);
   
-  if(!bg_http_read_body(io, &conn->req, &buf))
+  if(!gavl_http_read_body(io, &conn->req, &buf))
     {
     gavf_io_destroy(io);
     return 0;
@@ -483,7 +483,7 @@ int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd)
   io = gavf_io_create_socket(*fd, 30000, 0);
   
   if(!gavl_http_response_read(io, res) ||
-     !bg_http_read_body(io, res, &buf))
+     !gavl_http_read_body(io, res, &buf))
     {
     //    fprintf(stderr, "Reading soap res failed\n");
     //    gavl_dictionary_dump(s, 2);

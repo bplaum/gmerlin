@@ -306,7 +306,7 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
     bg_http_connection_check_keepalive(conn);
 
     if(!(io = gavf_io_create_socket(conn->fd, 10000, 0)) ||
-       !bg_http_read_body(io, &conn->req, &buffer) ||
+       !gavl_http_read_body(io, &conn->req, &buffer) ||
        !bg_server_storage_put(s, id, real_path, buffer.buf, buffer.len))
       bg_http_connection_init_res(conn, conn->protocol, 400, "Bad Request");
     else

@@ -384,7 +384,7 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
 
   io = gavf_io_create_socket(conn->fd, 30000, 0);
   
-  if(!bg_http_read_body(io, &conn->req, &buf))
+  if(!gavl_http_read_body(io, &conn->req, &buf))
     {
     gavf_io_destroy(io);
     return 0;

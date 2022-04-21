@@ -314,7 +314,7 @@ static int set_station(bg_mdb_backend_t * be,
   /* Streams are set via a proxy mechanism */
   
   tmp_string = bg_sprintf("%sm3u/url/%s", RADIO_BROWSER_ROOT, v);
-  gavl_metadata_add_src(m, GAVL_META_SRC, "audio/mpegurl", tmp_string);
+  gavl_metadata_add_src(m, GAVL_META_SRC, "audio/x-mpegurl", tmp_string);
 
   //  fprintf(stderr, "Adding mp3 url: %s\n", tmp_string);
 
