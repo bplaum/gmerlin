@@ -101,6 +101,9 @@ static int array_contains(gavl_array_t * arr, const char * dir)
   {
   int i;
   const char * arr_dir;
+
+  if(!dir)
+    return 0;
   
   for(i = 0; i < arr->num_entries; i++)
     {
@@ -132,11 +135,11 @@ static int do_export(bg_media_dirs_t * dirs, const char * path)
   cpath = bg_canonical_filename(path);
   
   /* Check if it is allowed */
-  if((find_by_local_path(dirs, path) >= 0) ||
-     (find_by_local_path(dirs, cpath) >= 0))
+  if((path && find_by_local_path(dirs, path) >= 0) ||
+     (cpath && find_by_local_path(dirs, cpath) >= 0))
     ret = 1;
-  else if((array_contains(&dirs->export_dirs, path) ||
-           array_contains(&dirs->export_dirs, cpath)))
+  else if(array_contains(&dirs->export_dirs, path) ||
+          array_contains(&dirs->export_dirs, cpath))
     ret = 1;
   
   /* Check if it is forbidden */
@@ -149,7 +152,7 @@ static int do_export(bg_media_dirs_t * dirs, const char * path)
   free(cpath);
 
   if(!ret)
-    fprintf(stderr, "Not exporting %s\n", path);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Not exporting %s", path);
   
   return ret;
   
@@ -350,10 +353,12 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
     }
   else
     {
+#if 0
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 1: idx: %d, dict: %p\n",
             idx, dict);
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 2: str_local: %s\n",
             str_local);
+#endif
     }
   
   pthread_mutex_unlock(&d->mutex);

@@ -3446,10 +3446,10 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
 
     for(i = 0; i < num_tracks; i++)
       {
+      const char * track_uri;
       gavl_dictionary_t * m;
       gavl_dictionary_t * ti;
       gavl_dictionary_t * src;
-      char * new_location;
         
       ti = bg_input_plugin_get_track_info(*ret, i);
       m = gavl_track_get_metadata_nc(ti);
@@ -3461,17 +3461,22 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
         fprintf(stderr, "pluginregistry: Adding src: %s\n", location_c);
         src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location_c);
         }
+
+      if((track_uri = gavl_dictionary_get_string(src, GAVL_META_URI)) &&
+         !strcmp(track_uri, location_c))
+        {
+        char * new_location;
+        
+        new_location = gavl_strdup(gavl_dictionary_get_string(src, GAVL_META_URI));
       
-      new_location = gavl_strdup(gavl_dictionary_get_string(src, GAVL_META_URI));
-        
-      bg_url_get_vars(new_location, &vars);
-      gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
-
-      new_location = bg_url_append_vars(new_location, &vars);
-
-      gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
-        
-      gavl_dictionary_reset(&vars);
+        bg_url_get_vars(new_location, &vars);
+        gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
+      
+        new_location = bg_url_append_vars(new_location, &vars);
+      
+        gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
+        gavl_dictionary_reset(&vars);
+        }
       }
     }
 
@@ -3513,11 +3518,11 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
   return result;
   }
 
-int input_plugin_load_full(bg_plugin_registry_t * reg,
-                           const char * location,
-                           bg_plugin_handle_t ** ret,
-                           bg_control_t * ctrl,
-                           char ** redirect_url)
+static int input_plugin_load_full(bg_plugin_registry_t * reg,
+                                  const char * location,
+                                  bg_plugin_handle_t ** ret,
+                                  bg_control_t * ctrl,
+                                  char ** redirect_url)
   {
   const char * url;
   const char * klass;
@@ -3656,6 +3661,7 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
     }
   
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections");
+  return 0;
   }
 
 

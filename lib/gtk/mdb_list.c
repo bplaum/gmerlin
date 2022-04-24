@@ -592,7 +592,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
   g_free(markup);
 
 
-  if((buf = bg_gtk_load_track_image(dict, 48, -1)))
+  if((buf = bg_gtk_load_track_image(dict, 48, 72)))
     {
     gtk_image_set_from_pixbuf(GTK_IMAGE(l->tab_image), buf);
     g_object_unref(buf);
