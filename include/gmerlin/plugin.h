@@ -66,6 +66,10 @@
  *  a plugin. Plugins should not rely on the presence of any callback
  */
 
+#define BG_PLUGIN_INPUT_STATE_CTX         "input"
+#define BG_PLUGIN_INPUT_STATE_METADATA    "metadata"
+#define BG_PLUGIN_INPUT_STATE_SEEK_WINDOW "seekwin"
+
 
 /** \ingroup plugin
  *  \brief Generic prototype for reading audio

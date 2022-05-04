@@ -439,7 +439,7 @@ function server_connection_init()
     var msg = msg_parse(evt.data);
     var old_var;
 	
-    // console.log("Got message " + msg.ns + " " + msg.id + " " + evt.data);
+//    console.log("Got server message " + msg.ns + " " + msg.id + " " + evt.data);
 
     switch(msg.ns)
       {
@@ -449,7 +449,7 @@ function server_connection_init()
           case BG_MSG_STATE_CHANGED:
 	    state_ctx = msg.args[1].v;
 	    state_var = msg.args[2].v;
-//	    console.log("state changed " + state_ctx + " " + state_var);
+//	    console.log("state changed " + state_ctx + " " + state_var + " " + JSON.stringify(msg.args[3].v));
 	    switch(state_ctx)
 	      {
 	      case "mdb":

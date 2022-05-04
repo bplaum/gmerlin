@@ -911,6 +911,7 @@ bg_mimetype_t bg_mimetypes[] =
     /* audio */
     { "pls",  "audio/x-scpls",           "PLS", NULL, BG_MIME_SUPPORTS_MULTITRACK  },
     { "m3u",  "audio/x-mpegurl",         "M3U", NULL, BG_MIME_SUPPORTS_MULTITRACK  },
+    { "m3u8", "application/x-mpegURL",   "M3U8", NULL, BG_MIME_SUPPORTS_MULTITRACK },
     { "mp3",  "audio/mpeg",              "MP3"            },
     { "aac",  "audio/aacp",              "AAC+"         },
     { "aac",  "audio/aac",               "AAC"            },

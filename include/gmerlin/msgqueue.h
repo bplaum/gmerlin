@@ -506,7 +506,7 @@ void bg_control_cleanup(bg_control_t * c);
 
 #define BG_MSG_NS_PLAYER_PRIV       109
 #define BG_MSG_NS_MENU              111
-#define BG_MSG_NS_STATE             112
+#define BG_MSG_NS_STATE             GAVL_MSG_NS_STATE
 #define BG_MSG_NS_RECORDER          113
 #define BG_MSG_NS_DB                114
 #define BG_MSG_NS_SSDP              115 // ssdh.h

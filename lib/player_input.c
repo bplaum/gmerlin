@@ -163,7 +163,7 @@ int bg_player_input_start(bg_player_t * p)
     }
   else
     {
-    fprintf(stderr, "Cannot connect input messages %p\n", s);
+    fprintf(stderr, "Cannot connect input messages %p %p\n", s, s->msghub);
     }
   
   
@@ -709,9 +709,83 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
 
   switch(msg->NS)
     {
+    case GAVL_MSG_NS_STATE:
+      switch(msg->ID)
+        {
+        case GAVL_MSG_STATE_CHANGED:
+          {
+          int last = 0;
+          const char * ctx = NULL;
+          const char * var = NULL;
+          gavl_value_t val;
+          gavl_value_init(&val);
+          
+          gavl_msg_get_state(msg, &last,
+                             &ctx, &var, &val,
+                             NULL);
+
+          if(!strcmp(ctx, GAVL_STATE_CTX_SRC))
+            {
+            if(!strcmp(var, GAVL_STATE_SRC_METADATA))
+              {
+              gavl_dictionary_t * m_dst;
+              const gavl_dictionary_t * m_new;
+              gavl_dictionary_t tmp;
+          
+              if(!p->src || !p->src->track_info)
+                return 1;
+          
+              // fprintf(stderr, "player metadata changed\n");
+          
+              m_dst = gavl_track_get_metadata_nc(p->src->track_info);
+              m_new = gavl_value_get_dictionary_nc(&val);
+              
+              gavl_dictionary_init(&tmp);
+              gavl_dictionary_merge(&tmp, m_new, m_dst);
+          
+              gavl_dictionary_free(m_dst);
+              gavl_dictionary_move(m_dst, &tmp);
+              
+              bg_player_set_current_track(p, p->src->track_info);
+              }
+            else if(!strcmp(var, GAVL_STATE_SRC_SEEK_WINDOW))
+              {
+              const gavl_dictionary_t * d;
+
+              if((d = gavl_value_get_dictionary(&val)))
+                {
+                gavl_time_t start = 0;
+                gavl_time_t end = 0;
+                char start_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
+                char end_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
+
+                gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
+                gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
+
+                gavl_time_prettyprint_absolute(start, start_str, 1);
+                gavl_time_prettyprint_absolute(end, end_str, 1);
+                fprintf(stderr, "Got seek window %s -> %s\n", start_str, end_str);
+
+
+                }
+              bg_player_state_set_local(p, 1, ctx, var, &val);
+              }
+            else if(!strcmp(var, GAVL_STATE_SRC_START_TIME_ABSOLUTE))
+              {
+              fprintf(stderr, "Got absolute time\n");
+              bg_player_state_set_local(p, 1, ctx, var, &val);
+              }
+            }
+          
+          gavl_value_free(&val);
+          }
+          break;
+        }
+      break;
     case GAVL_MSG_NS_SRC:
       switch(msg->ID)
         {
+#if 0
         case GAVL_MSG_SRC_METADATA_CHANGED:
           {
           gavl_dictionary_t * m_dst;
@@ -735,6 +809,13 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
           bg_player_set_current_track(p, p->src->track_info);
           }
           break;
+        case GAVL_MSG_SRC_SEEK_WINDOW:
+          {
+          gavl_time_t start = gavl_msg_get_arg_long(msg, 0);
+          gavl_time_t end = gavl_msg_get_arg_long(msg, 1);
+          fprintf(stderr, "Got seek window: %lld %lld\n", start, end);
+          }
+#endif
         }
       break;
       

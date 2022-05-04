@@ -177,6 +177,7 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
         {
         case BG_MSG_STATE_CHANGED:
           {
+#if 1
           int last;
           const char * ctx_p = NULL;
           const char * var_p = NULL;
@@ -194,18 +195,10 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
           //          fprintf(stderr, "\n");
           
           gavl_value_free(&val);
+#endif
           }
           break;
         }
-      break;
-    case GAVL_MSG_NS_SRC:
-#if 0 // Remove?
-      switch(msg->ID)
-        {
-        case GAVL_MSG_SRC_EOF:
-          break;
-        }
-#endif
       break;
     }
 
@@ -459,7 +452,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
       info = info->next;
       continue;
       }
-    if(gavl_string_array_indexof(info->extensions, extension) >= 0)
+    if(gavl_string_array_indexof_i(info->extensions, extension) >= 0)
       {
       if(max_priority < info->priority)
         {
@@ -492,7 +485,7 @@ const bg_plugin_info_t * bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
       info = info->next;
       continue;
       }
-    if(gavl_string_array_indexof(info->mimetypes, mimetype) >= 0)
+    if(gavl_string_array_indexof_i(info->mimetypes, mimetype) >= 0)
       {
       if(max_priority < info->priority)
         {
@@ -525,7 +518,7 @@ bg_plugin_registry_set_multipart_edl(bg_plugin_registry_t * reg,
   const char * location;
   const char * klass;
   
-  /* Build an edl description from a multipart move so we can play them
+  /* Build an edl description from a multipart movie so we can play them
      as if they were one file */
   
   if(!(m = gavl_track_get_metadata(track)) ||
@@ -3564,42 +3557,14 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
      gavl_dictionary_get_src(tm, GAVL_META_SRC, 0,
                              NULL, &url))
     {
+    if(gavl_dictionary_get_num_items(tm, GAVL_META_SRC) > 1)
+      {
+      /* TODO: Choose according to the bitrate */
+      }
+      
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
     *redirect_url = gavl_strdup(url);
     return 1;
-#if 0
-    gavl_dictionary_t m;
-    gavl_dictionary_init(&vars);
-    bg_url_get_vars_c(url, &vars);
-    
-    track_index = 0;
-    if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
-      track_index--;
-    
-    gavl_dictionary_init(&m);
-    gavl_dictionary_copy(&m, tm);
-
-    
-    result = bg_input_plugin_load(reg, url, ret, ctrl);
-    
-    if(result)
-      {
-      /* Merge metadata */
-      track_info = bg_input_plugin_get_track_info(*ret, track_index);
-        
-      if(!track_info)
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No track %d in %s", track_index + 1, url);
-        result = 0;
-        }
-      else
-        {
-        gavl_dictionary_merge2(tm, &m);
-        }
-      }
-    gavl_dictionary_free(&m);
-    gavl_dictionary_free(&vars);
-#endif
     }
   else
     result = 1;

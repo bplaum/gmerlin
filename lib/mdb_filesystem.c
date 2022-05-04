@@ -36,6 +36,7 @@
 
 #include <gmerlin/mdb.h>
 #include <gmerlin/backend.h>
+#include <gmerlin/bggavl.h>
 
 #include <mdb_private.h>
 
@@ -819,6 +820,32 @@ static void scan_directory_full(bg_mdb_backend_t * be, const char * ctx_id, gavl
   bg_mdb_set_next_previous(ret);
   }
 
+static int dirs_equal(const gavl_array_t * dir1, 
+                      const gavl_array_t * dir2)
+  {
+  int found;
+  int i, j;
+  
+  if(dir1->num_entries != dir2->num_entries)
+    return 0;
+
+  for(i = 0; i < dir1->num_entries; i++)
+    {
+    found = 0;
+    for(j = 0; j < dir1->num_entries; j++)
+      {
+      if(!gavl_value_compare(&dir1->entries[i], &dir2->entries[j]))
+        {
+        found = 1;
+        break;
+        }
+      }
+    if(!found)
+      return 0;
+    }
+  return 1;
+  }
+                      
 static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
                                              const char * path,
                                              const char * ctx_id)
@@ -857,9 +884,16 @@ static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache object contains no Element "META_DIR, path);
     goto rescan;
     }
-  if(gavl_array_compare(cache_dir, &dir))
+  if(!dirs_equal(cache_dir, &dir))
     {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache expired", path);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache expired %d %d", path,
+             cache_dir->num_entries, dir.num_entries);
+
+    /* Save arrays to file */
+    //    fprintf(stderr, "Saving arrays\n");
+    //    bg_array_save_xml(cache_dir, "cache_dir.xml", "dir");
+    //    bg_array_save_xml(&dir, "dir.xml", "dir");
+    
     goto rescan;
     }
 

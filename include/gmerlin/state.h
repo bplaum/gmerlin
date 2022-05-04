@@ -22,6 +22,8 @@
 #ifndef BG_STATE_H_INCLUDED
 #define BG_STATE_H_INCLUDED
 
+#include <gavl/state.h>
+
 typedef struct
   {
   const char * name;
@@ -92,6 +94,11 @@ const gavl_value_t * bg_state_get(gavl_dictionary_t * state,
   
  */
 
+#define bg_msg_set_state gavl_msg_set_state 
+#define bg_msg_set_state_nocopy gavl_msg_set_state_nocopy
+#define bg_msg_get_state gavl_msg_get_state
+
+#if 0
 void bg_msg_set_state(gavl_msg_t * msg,
                       int id,
                       int last,
@@ -112,18 +119,12 @@ void bg_msg_get_state(const gavl_msg_t * msg,
                       const char ** var_p,
                       gavl_value_t * val,
                       gavl_dictionary_t * dict);
-
-const char * bg_state_get_uuid(gavl_dictionary_t * state,
-                               const char * ctx,
-                               const char * var,
-                               bg_msg_sink_t * sink, int id);
-
+#endif
 
 /* String initalizer for UUID. Will be changed to a real UUID when encountered */
 
 //                                "550e8400-e29b-11d4-a716-446655440000"
-
-#define BG_STATE_UUID_INITILAIZER "----- GMERLIN UUID INITIALIZER -----"
+// #define BG_STATE_UUID_INITILAIZER "----- GMERLIN UUID INITIALIZER -----"
 
 /* Standardized variables */
 

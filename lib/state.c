@@ -41,6 +41,7 @@
 #define MIN_DICT "$min"
 #define MAX_DICT "$max"
 
+#if 0
 void bg_msg_set_state(gavl_msg_t * msg,
                       int id,
                       int last,
@@ -108,7 +109,7 @@ void bg_msg_get_state(const gavl_msg_t * msg,
     }
   
   }
-
+#endif
 
 typedef struct
   {
@@ -234,37 +235,6 @@ const gavl_value_t * bg_state_get(gavl_dictionary_t * state,
   return gavl_dictionary_get(child, var);
   }
 
-const char * bg_state_get_uuid(gavl_dictionary_t * state,
-                               const char * ctx,
-                               const char * var,
-                               bg_msg_sink_t * sink, int id)
-  {
-  const char * ret;
-  gavl_dictionary_t * child;
-
-  child = gavl_dictionary_get_dictionary_create(state, ctx);
-  
-  if(!(ret = gavl_dictionary_get_string(child, var)))
-    {
-    uuid_t u;
-    char uuid_str[37];
-    gavl_value_t val;
-    
-    uuid_generate(u);
-    uuid_unparse(u, uuid_str);
-
-    gavl_value_init(&val);
-    gavl_value_set_string(&val, uuid_str);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Generated uuid: ctx: %s var: %s uuid: %s",
-           ctx, var, uuid_str);
-    
-    bg_state_set(state, 1, ctx, var, &val, sink, id);
-    ret = gavl_dictionary_get_string(child, var);
-    gavl_value_free(&val);
-    }
-  return ret;
-  }
-
 void bg_state_set_range(gavl_dictionary_t * state,
                         const char * ctx, const char * var,
                         const gavl_value_t * min,
@@ -368,12 +338,7 @@ void bg_state_init_ctx(gavl_dictionary_t * state,
     
     //    fprintf(stderr, "State init ctx: %p %s %s\n", state, ctx, desc[i].name);
 
-    if((desc[i].val_default.type == GAVL_TYPE_STRING) &&
-       !strcmp(desc[i].val_default.v.str, BG_STATE_UUID_INITILAIZER))
-      {
-      //      if(!bg_state_get(state, ctx, BG_PLAYER_STATE_CURRENT_TRACK)
-      }
-    else if(desc[i].val_default.type != GAVL_TYPE_UNDEFINED)
+    if(desc[i].val_default.type != GAVL_TYPE_UNDEFINED)
       bg_state_set(state,
                    1,
                    ctx,

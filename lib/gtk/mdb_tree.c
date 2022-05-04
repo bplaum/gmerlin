@@ -659,8 +659,9 @@ static int id_to_iter(GtkTreeView *treeview, const char * id, GtkTreeIter * ret)
       return 1;
       }
     iter = child_iter;
-    gtk_tree_model_iter_children(model, &child_iter, &iter);
-    
+
+    if(!gtk_tree_model_iter_children(model, &child_iter, &iter))
+      return 0;
     
     if((pos = strchr(end+1, '/')))
       end = pos;

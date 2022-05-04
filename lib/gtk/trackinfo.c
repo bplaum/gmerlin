@@ -332,6 +332,17 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
                                 &mimetype, &location))
     {
     //    fprintf(stderr, "Append link %s %s\n", mimetype, location);
+
+    if(!mimetype)
+      {
+      const char * pos = strrchr(location, '.');
+
+      if(pos)
+        {
+        pos++;
+        mimetype = bg_ext_to_mimetype(pos);
+        }
+      }
     
     if(!mimetype || !(format = bg_mimetype_to_name(mimetype)))
       continue;

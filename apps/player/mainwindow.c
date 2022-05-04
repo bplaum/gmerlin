@@ -573,7 +573,7 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
               duration = GAVL_TIME_UNDEFINED;
               can_seek = 0;
               
-              fprintf(stderr, "Track changed\n");
+              // fprintf(stderr, "Track changed\n");
               
               if(!(dict = gavl_value_get_dictionary(&val)) ||
                  !(m = gavl_track_get_metadata(dict)))
@@ -690,11 +690,17 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
                 main_menu_set_log_window_item(w->g->main_menu, enable);
                 }
               }
+#if 0
             else
               fprintf(stderr, "State changed %s\n", var);
-
+#endif
             }
-          
+          else if(!strcmp(ctx, GAVL_STATE_CTX_SRC))
+            {
+            fprintf(stderr, "src state changed: %s\n", var);
+            gavl_value_dump(&val, 2);
+            }
+          gavl_value_free(&val);
           }
           break;
         }
