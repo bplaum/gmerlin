@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <string.h>
 
+
 #include <gmerlin/httpserver.h>
 #include <gmerlin/utils.h>
 
@@ -30,6 +31,9 @@
 
 #define LOG_DOMAIN "mediadirs"
 #include <gmerlin/log.h>
+
+#include <gavl/utils.h>
+#include <gavl/http.h>
 
 
 
@@ -327,7 +331,7 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
   gavl_dictionary_t vars;
 
   gavl_dictionary_init(&vars);
-  bg_url_get_vars_c(path, &vars);
+  gavl_url_get_vars_c(path, &vars);
 
   if(gavl_dictionary_get(&vars, BG_URL_VAR_TRACK) ||
      gavl_dictionary_get(&vars, BG_URL_VAR_EDL))

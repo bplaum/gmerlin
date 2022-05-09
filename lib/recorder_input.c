@@ -218,7 +218,7 @@ static int open_recorder(void * priv, const char * filename)
     
   /* We support the URL variables a=[0|1] and v=[0|1] */
   gavl_dictionary_init(&vars);
-  bg_url_get_vars_c(filename, &vars);
+  gavl_url_get_vars_c(filename, &vars);
 
   if((var = gavl_dictionary_get_string(&vars, "a")))
     r->as.enable = atoi(var);

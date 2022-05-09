@@ -267,9 +267,11 @@ void bg_url_get_vars(char * path,
  *  variables from the url
  *  
  */
- 
-void bg_url_get_vars_c(const char * path,
-                       gavl_dictionary_t * vars);
+
+// #define bg_url_get_vars_c gavl_url_get_vars_c
+// #define bg_url_get_vars gavl_url_get_vars
+// #define bg_url_append_vars gavl_url_append_vars
+
 
 /*
  *  \brief Get the track index

@@ -72,7 +72,7 @@ static void thread_func_plug(bg_http_connection_t * conn, void * priv)
   //  fprintf(stderr, "Client thread\n");
   
   id = gavl_strdup(conn->path);
-  bg_url_get_vars(id, NULL);
+  gavl_url_get_vars(id, NULL);
 
   if(strcmp(conn->method, "GET") && strcmp(conn->method, "HEAD"))
     {

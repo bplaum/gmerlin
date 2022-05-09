@@ -52,6 +52,7 @@
 #include <gmerlin/pluginregistry.h>
 
 #include <gavl/metatags.h>
+#include <gavl/http.h>
 
 
 #include <md5.h>
@@ -342,6 +343,8 @@ int bg_url_split(const char * url,
   return 1;
   }
 
+#if 0
+
 /*
  *  Split off vars like path?var1=val1&var2=val2#fragment
  */
@@ -375,7 +378,6 @@ static void url_vars_to_metadata(const char * pos, gavl_dictionary_t * vars)
     }
   gavl_strbreak_free(str);
   }
-
 
 void bg_url_get_vars_c(const char * path,
                        gavl_dictionary_t * vars)
@@ -415,13 +417,14 @@ void bg_url_get_vars(char * path,
   if(vars)
     url_vars_to_metadata(pos, vars);
   }
+#endif
 
 int bg_url_get_track(const char * path)
   {
   int ret = 0;
   gavl_dictionary_t vars;
   gavl_dictionary_init(&vars);
-  bg_url_get_vars_c(path, &vars);
+  gavl_url_get_vars_c(path, &vars);
   if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &ret))
     ret--;
   
@@ -435,7 +438,7 @@ int bg_url_extract_track(char ** path)
   gavl_dictionary_t vars;
   gavl_dictionary_init(&vars);
 
-  bg_url_get_vars(*path, &vars);
+  gavl_url_get_vars(*path, &vars);
 
   if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &ret))
     {

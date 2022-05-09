@@ -185,7 +185,7 @@ int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   while(!strncmp(req->path, "//", 2))
     req->path++;
 
-  bg_url_get_vars_c(req->path, &req->url_vars);
+  gavl_url_get_vars_c(req->path, &req->url_vars);
   
   return 1;
   }

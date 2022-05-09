@@ -43,6 +43,7 @@
 #include <gmerlin/utils.h>
 
 #include <gavl/metatags.h>
+#include <gavl/http.h>
 
 #define EXTFS_ID_PREFIX "/extfs"
 
@@ -519,7 +520,7 @@ static char * path_to_id(const bg_mdb_backend_t * be, const char * path)
 
         gavl_dictionary_init(&url_vars);
 
-        bg_url_get_vars_c(path, &url_vars);
+        gavl_url_get_vars_c(path, &url_vars);
         if(gavl_dictionary_get_int(&url_vars, BG_URL_VAR_TRACK, &track) && (track > 0))
           ret = bg_sprintf("%s/%d", gavl_dictionary_get_string(d, GAVL_META_ID), track);
         else
@@ -639,7 +640,7 @@ static int browse_object_internal(bg_mdb_backend_t * be,
 
     gavl_dictionary_init(&url_vars);
     base_path = gavl_strdup(path);
-    bg_url_get_vars(base_path, &url_vars);
+    gavl_url_get_vars(base_path, &url_vars);
 
     if(!(volume = volume_by_uri(be, base_path)) ||
        !(container = get_volume_container(be, volume)))
@@ -756,6 +757,16 @@ static int browse_object_internal(bg_mdb_backend_t * be,
       }
     
     m = gavl_track_get_metadata_nc(ret);
+
+    if(!m)
+      {
+      fprintf(stderr, "Got no metadata\nEntry:\n");
+      gavl_dictionary_dump(entry, 2);
+      fprintf(stderr, "Ret:\n");
+      gavl_dictionary_dump(ret, 2);
+      fprintf(stderr, "mi:\n");
+      gavl_dictionary_dump(mi, 2);
+      }
     gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, path_to_id(be, path));
     
     if(mi)
@@ -974,7 +985,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
 
     gavl_dictionary_init(&url_vars);
     base_path = gavl_strdup(path);
-    bg_url_get_vars(base_path, &url_vars);
+    gavl_url_get_vars(base_path, &url_vars);
     
     /* Find volume */
     if(!(volume = volume_by_uri(be, base_path)) ||

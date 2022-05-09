@@ -32,6 +32,7 @@
 #include <gmerlin/log.h>
 
 #include <gavl/metatags.h>
+#include <gavl/http.h>
 
 #define LOG_DOMAIN "player"
 
@@ -393,7 +394,7 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     real_location = gavl_strdup(src->location);
     
     gavl_dictionary_init(&vars);
-    bg_url_get_vars(real_location, &vars);
+    gavl_url_get_vars(real_location, &vars);
 
     gavl_dictionary_set_int(&vars, BG_URL_VAR_CMDLINE, 1);
 
@@ -484,7 +485,7 @@ static int set_source_from_track(bg_player_t * p,
     {
     if(!strncasecmp(src->location, "file://", 7))
       memmove(src->location, src->location + 7, strlen(src->location + 7) + 1);
-    bg_url_get_vars_c(src->location, &src->url_vars);
+    gavl_url_get_vars_c(src->location, &src->url_vars);
     }
 
   if(gavl_dictionary_get_int(&src->url_vars, BG_URL_VAR_TRACK, &src->track_idx))

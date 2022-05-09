@@ -55,6 +55,7 @@
 
 #include <gmerlin/log.h>
 #include <gmerlin/filters.h>
+#include <gavl/http.h>
 
 #include <bgladspa.h>
 #include <bgfrei0r.h>
@@ -577,7 +578,7 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
       {
       char * tmp_string = gavl_strdup(location);
 
-      bg_url_get_vars(tmp_string, NULL);
+      gavl_url_get_vars(tmp_string, NULL);
       
       if(access(tmp_string, R_OK))
         {
@@ -3365,7 +3366,7 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
   gavl_dictionary_init(&vars);
   location = gavl_strdup(location_c);
 
-  bg_url_get_vars(location, &vars);
+  gavl_url_get_vars(location, &vars);
 
   /* Check for a forbidden extension */
 
@@ -3462,7 +3463,7 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
         
         new_location = gavl_strdup(gavl_dictionary_get_string(src, GAVL_META_URI));
       
-        bg_url_get_vars(new_location, &vars);
+        gavl_url_get_vars(new_location, &vars);
         gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
       
         new_location = bg_url_append_vars(new_location, &vars);
@@ -3490,7 +3491,7 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
          (m = gavl_track_get_metadata_nc(ti)))
         {
         new_location = gavl_strdup(location_c);
-        bg_url_get_vars(new_location, &vars);
+        gavl_url_get_vars(new_location, &vars);
         gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
         gavl_dictionary_set_int(&vars, BG_URL_VAR_EDL, 1);
         new_location = bg_url_append_vars(new_location, &vars);
@@ -3527,7 +3528,7 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
 
   gavl_dictionary_init(&vars);
   
-  bg_url_get_vars_c(location, &vars);
+  gavl_url_get_vars_c(location, &vars);
 
   if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
     track_index--;
@@ -5030,8 +5031,8 @@ int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dic
   cur_url_priv  = gavl_strdup(cur_url);
   next_url_priv = gavl_strdup(next_url);
 
-  bg_url_get_vars(cur_url_priv, &cur_vars);
-  bg_url_get_vars(next_url_priv, &next_vars);
+  gavl_url_get_vars(cur_url_priv, &cur_vars);
+  gavl_url_get_vars(next_url_priv, &next_vars);
 
   if(!strcmp(cur_url_priv, next_url_priv) &&
      gavl_dictionary_get_int(&cur_vars, BG_URL_VAR_TRACK, &cur_track) &&

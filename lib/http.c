@@ -377,73 +377,6 @@ int bg_http_send_request(const char * url,
   if(!gavl_http_request_write(io, &req))
     goto fail;
 
-#if 0  
-  if(!gavl_http_response_read(io, res))
-    goto fail;
-
-  
-  
-  //  fprintf(stderr, "Response:\n");
-  //  gavl_dictionary_dump(res, 2);
-  
-  status = gavl_http_response_get_status_int(res);
-
-  if(status == 200) // Success
-    {
-    if(!gavl_dictionary_get_string_i(res, "Content-Type")) // No mimetype
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No mimetype given for %s", url);
-      goto fail;
-      }
-    /* Read body */
-    if(io_p)
-      {
-      *io_p = io;
-      io = NULL;
-      }
-    ret = 1;
-    }
-  else if((status >= 300) && (status < 400)) // Redirection
-    {
-    *redirect = gavl_strdup(gavl_dictionary_get_string_i(res, "Location"));
-    if(!(*redirect))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-             "No location for redirection for %s", url);
-      goto fail;
-      }
-    }
-  else // Failure
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: %d %s", url, 
-           gavl_http_response_get_status_int(res),
-           gavl_http_response_get_status_str(res));
-    }
-
-  fail:
-
-  if(fd >= 0)
-    gavl_socket_close(fd);
-  
-  if(host)
-    free(host);
-  if(request_host)
-    free(request_host);
-  if(path)
-    free(path);
-  if(protocol)
-    free(protocol);
-
-  if(io)
-    gavf_io_destroy(io);
-  
-  gavl_dictionary_free(&req);
-  
-  if(addr)
-    gavl_socket_address_destroy(addr);
-
-  return ret;
-#else
 
   if(io_p)
     {
@@ -459,10 +392,6 @@ int bg_http_send_request(const char * url,
     gavf_io_destroy(io);
   
   return ret;
-  
-#endif
-
-  
   }
 
 int bg_http_read_response(gavf_io_t * io,
@@ -624,14 +553,6 @@ int bg_http_get(const char * url, gavl_buffer_t * buf, gavl_dictionary_t * dict)
   {
   return bg_http_get_range(url, buf, dict, 0, 0);
   }
-
-#if 0
-int bg_http_get_start(int * fd, const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
-                      int64_t offset, int64_t size)
-  {
-  
-  }
-#endif
 
 int bg_http_head(const char * url, gavl_dictionary_t * res)
   {

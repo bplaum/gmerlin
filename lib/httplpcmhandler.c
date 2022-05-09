@@ -170,7 +170,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
 
   /* Remove lpcm specifig URL-variables to get the right ID */
   id = bg_uri_to_string(conn->path, -1);
-  bg_url_get_vars(id, &url_vars);
+  gavl_url_get_vars(id, &url_vars);
   gavl_dictionary_set(&url_vars, LPCM_VAR_SAMPLERATE, NULL);
   gavl_dictionary_set(&url_vars, LPCM_VAR_CHANNELS, NULL);
   id = bg_url_append_vars(id, &url_vars);
@@ -628,7 +628,7 @@ static void add_uri_lpcm(gavl_dictionary_t * metadata,
   
   uri      = bg_sprintf("%s%s%s", bg_http_server_get_root_url(srv), LPCM_PATH, id);
   
-  bg_url_get_vars(uri, &vars);
+  gavl_url_get_vars(uri, &vars);
   gavl_dictionary_set_int(&vars, LPCM_VAR_SAMPLERATE, samplerate);
   gavl_dictionary_set_int(&vars, LPCM_VAR_CHANNELS, num_channels);
   uri = bg_url_append_vars(uri, &vars);

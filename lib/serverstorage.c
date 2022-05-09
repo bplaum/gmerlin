@@ -270,7 +270,7 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
     }
 
   real_path = gavl_strdup(conn->path);
-  bg_url_get_vars(real_path, NULL);
+  gavl_url_get_vars(real_path, NULL);
   
   if(!strcmp(conn->method, "GET"))
     {

@@ -205,7 +205,7 @@ int bg_read_location(const char * location_orig,
   // fprintf(stderr, "bg_read_location %s\n", location_orig);
   
   gavl_dictionary_init(&vars);
-  bg_url_get_vars(location, &vars);
+  gavl_url_get_vars(location, &vars);
 
   if((var = gavl_dictionary_get_string(&vars, "byterange")))
     {

@@ -334,7 +334,7 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
       //      fprintf(stderr, "Referer: %s\n", var);
       bg_url_split(var, &protocol, NULL, NULL, &host, &port, NULL);
 
-      bg_url_get_vars_c(var, &url_vars);
+      gavl_url_get_vars_c(var, &url_vars);
       if((cid = gavl_dictionary_get_string(&url_vars, BG_URL_VAR_CLIENT_ID)))
         {
         start_url = bg_sprintf("%s://%s:%d/?%s=%s", protocol, host, port,
