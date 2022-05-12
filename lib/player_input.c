@@ -345,6 +345,7 @@ int bg_player_input_get_video_format(bg_player_t * p)
   {
   if(!p->src->video_src)
     return 0;
+
   
   p->video_stream.in_src_int = p->src->video_src;
   
@@ -352,6 +353,13 @@ int bg_player_input_get_video_format(bg_player_t * p)
   
   gavl_video_format_copy(&p->video_stream.input_format,
                          gavl_video_source_get_src_format(p->video_stream.in_src_int));
+
+  /* In some pathological cases there is no video time scale */
+  if(!p->video_stream.input_format.timescale)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot handle zero timescale");
+    return 0;
+    }
   
   if(DO_STILL(p->flags))
     {
