@@ -48,7 +48,7 @@
 
 
 /*
- * /webradio/radiobrowser
+ * /streams/radiobrowser
  *   /by-tag
  *     /j
  *       /jazz
@@ -1046,7 +1046,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
 /* tags, languages, countries */
 
-static int compare_country(const void * p1, const void * p2)
+static int compare_country(const void * p1, const void * p2, void * data)
   {
   const char * s1;
   const char * s2;
@@ -1123,7 +1123,7 @@ static void load_array(bg_mdb_backend_t * be, gavl_array_t * ret,
     }
 
   if(!strcmp(cache_name, "countries"))
-    gavl_array_sort(ret, compare_country);
+    gavl_array_sort(ret, compare_country, NULL);
   
     
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loaded %s, %d entries", url, num);
@@ -1238,7 +1238,7 @@ void bg_mdb_create_radio_browser(bg_mdb_backend_t * b)
   
   priv = calloc(1, sizeof(*priv));
   
-  container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO);
+  container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_STREAMS);
   
   child = gavl_append_track(container, NULL);
   

@@ -33,6 +33,9 @@
 #define DELAY_TIME 10
 
 #define DEFAULT_LABEL "<markup><span weight=\"bold\">Gmerlin Player (version "VERSION")</span></markup>"
+
+#define ERROR_LABEL "<markup><span weight=\"bold\">Playback error, check log messages for details</span></markup>"
+
 /*
   typedef struct
   {
@@ -530,9 +533,29 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
               }
             else if(!strcmp(var, BG_PLAYER_STATE_STATUS))       // int
               {
+              GtkStyleContext * context;
               const char * icon = bg_player_get_state_icon(val.v.i);
               gtk_label_set_text(GTK_LABEL(w->status_label), icon);
 
+              context = gtk_widget_get_style_context(w->track_info);
+
+              if(val.v.i == BG_PLAYER_STATUS_ERROR)
+                {
+                if(gtk_style_context_has_class(context, "track-info"))
+                  {
+                  gtk_style_context_remove_class(context,"track-info");
+                  gtk_style_context_add_class(context,"error-info");
+                  }
+                }
+              else
+                {
+                if(gtk_style_context_has_class(context, "error-info"))
+                  {
+                  gtk_style_context_remove_class(context,"error-info");
+                  gtk_style_context_add_class(context,"track-info");
+                  }
+                }
+              
               switch(val.v.i)
                 {
                 case BG_PLAYER_STATUS_STOPPED:
@@ -542,7 +565,14 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
                   gtk_widget_set_sensitive(w->seek_slider, FALSE);
                   break;
                 case BG_PLAYER_STATUS_ERROR:
+                  {
+                  gtk_widget_hide(w->track_image);
+                  gtk_widget_hide(w->track_icon);
+                  
+                  gtk_label_set_markup(GTK_LABEL(w->track_info), ERROR_LABEL);
+                  gtk_widget_set_sensitive(w->seek_slider, FALSE);
                   bg_gtk_log_window_flush(w->g->log_window);
+                  }
                   break;
                 case BG_PLAYER_STATUS_PLAYING:
                   w->seek_flags = 0;
@@ -918,7 +948,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   subsubgrid = gtk_grid_new();
   
   ret->status_label = gtk_label_new(BG_ICON_STOP);
-  set_css_class(ret->status_label, ret->skin_provider, ret->icon_provider, "state-label");
+  set_css_class(ret->status_label, ret->skin_provider, ret->icon_provider, "status-label");
   gtk_widget_set_hexpand(ret->status_label, FALSE);
   gtk_widget_set_vexpand(ret->status_label, FALSE);
   gtk_widget_set_halign(ret->status_label, GTK_ALIGN_START); 

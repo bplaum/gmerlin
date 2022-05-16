@@ -1720,7 +1720,7 @@ var obj_icons = [
     { type: GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,    icon: "icon-playlist"      },
     { type: GAVL_META_MEDIA_CLASS_ROOT_MOVIES,       icon: "icon-film"          },
     { type: GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,     icon: "icon-tv"            },
-    { type: GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO,     icon: "icon-radio" },
+    { type: GAVL_META_MEDIA_CLASS_ROOT_STREAMS,     icon: "icon-network" },
     { type: GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,  icon: "icon-hdd" },
     { type: GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,       icon: "icon-photo" },
     { type: GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,     icon: "icon-rss"    },

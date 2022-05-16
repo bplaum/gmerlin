@@ -155,6 +155,7 @@ mdb_radiobrowser.c \
 mdb_remote.c \
 mdb_podcast.c \
 mdb_sqlite.c \
+mdb_streams.c \
 mdb_thumbnail.c \
 mdb_xml.c \
 mdb.c \

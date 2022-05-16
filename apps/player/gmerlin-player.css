@@ -27,7 +27,7 @@
      margin-right: 3px;
    }
 
-.state-label, .mode-label
+.status-label, .mode-label
    {
      font-size: 150%;
      margin-left: 3px;
@@ -74,6 +74,16 @@
   {
       margin-right: 3px;
 
+  }
+
+.track-info, .status-label, .mode-label, .time-label
+  {
+      color: #000000;
+  }
+
+.error-info
+  {
+      color: #ff0000;
   }
 
 .display

@@ -27,6 +27,7 @@
 
 #include <gavl/gavl.h>
 #include <gavl/metatags.h>
+#include <gavl/http.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
 #include <gmerlin/utils.h>
@@ -159,7 +160,7 @@ icons[] =
     { GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,         BG_ICON_PLAYLIST      }, 
     { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,            BG_ICON_FILM          },
     { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,          BG_ICON_TV            },
-    { GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO,          BG_ICON_RADIO },
+    { GAVL_META_MEDIA_CLASS_ROOT_STREAMS,           BG_ICON_NETWORK },
     { GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,          BG_ICON_RSS   },
 
     { GAVL_META_MEDIA_CLASS_ROOT_INCOMING,          BG_ICON_INCOMING      },

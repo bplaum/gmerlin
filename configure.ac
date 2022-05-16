@@ -914,9 +914,7 @@ apps/playerproxy/Makefile \
 apps/controlpanel/Makefile \
 apps/cmdlineplayer/Makefile \
 apps/cmdlinerecorder/Makefile \
-apps/recorder/Makefile \
 apps/transcoder/Makefile \
-apps/visualizer/Makefile \
 apps/thumbnailer/Makefile \
 apps/mdb-tool/Makefile \
 apps/mediainfo/Makefile \

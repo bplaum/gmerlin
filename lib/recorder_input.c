@@ -10,6 +10,7 @@
 #include <pluginreg_priv.h>
 
 #include <gavl/trackinfo.h>
+#include <gavl/http.h>
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "recorder"

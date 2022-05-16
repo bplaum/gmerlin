@@ -43,6 +43,7 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 #define MDB_BACKEND_XML            "xml"
 #define MDB_BACKEND_REMOTE         "remote"
 #define MDB_BACKEND_PODCASTS       "podcasts"
+#define MDB_BACKEND_STREAMS        "streams"
 
 /* Backend flags */
 #define BE_FLAG_DO_CACHE (1<<0)
@@ -102,7 +103,7 @@ void bg_mdb_create_sqlite(bg_mdb_backend_t * b);
 /* Tuner */
 
 /* Icecast */
-void bg_mdb_create_icecast(bg_mdb_backend_t * b);
+// void bg_mdb_create_icecast(bg_mdb_backend_t * b);
 
 /* radio-browser.info */
 void bg_mdb_create_radio_browser(bg_mdb_backend_t * b);
@@ -114,6 +115,8 @@ void bg_mdb_create_standard(bg_mdb_backend_t * b);
 void bg_mdb_create_remote(bg_mdb_backend_t * b);
 
 void bg_mdb_create_podcasts(bg_mdb_backend_t * b);
+
+void bg_mdb_create_streams(bg_mdb_backend_t * b);
 
 /* id is e.g.: /upnp-2/upnp_id */
 

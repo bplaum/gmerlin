@@ -38,7 +38,7 @@
 #define BG_MDB_ID_MUSICALBUMS       "/albums"
 #define BG_MDB_ID_SONGS             "/songs"
 #define BG_MDB_ID_PLAYLISTS         "/playlists"
-#define BG_MDB_ID_WEBRADIO          "/webradio"
+#define BG_MDB_ID_STREAMS           "/streams"
 #define BG_MDB_ID_MOVIES            "/movies"
 #define BG_MDB_ID_TV_SHOWS          "/series"
 #define BG_MDB_ID_LIBRARY           "/library"
