@@ -28,7 +28,7 @@
 
 #include <gavl/metatags.h>
 
-#include <gmerlin/gui_gtk/gtkutils.h>
+#include <gui_gtk/gtkutils.h>
 
 #define DELAY_TIME 10
 
