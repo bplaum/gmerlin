@@ -31,7 +31,6 @@
 #include <gmerlin/bggavl.h>
 #include <gmerlin/textrenderer.h>
 #include <gmerlin/osd.h>
-#include <gmerlin/converters.h>
 #include <gmerlin/filters.h>
 #include <gmerlin/visualize.h>
 

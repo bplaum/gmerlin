@@ -47,7 +47,6 @@
 
 #include <gmerlin/textrenderer.h>
 
-#include <gmerlin/converters.h>
 #include <gmerlin/filters.h>
 
 // #include <gui_gtk/display.h>

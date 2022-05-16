@@ -41,7 +41,6 @@
 #include <gmerlin/subtitle.h>
 
 #include <gmerlin/textrenderer.h>
-#include <gmerlin/converters.h>
 #include <gmerlin/filters.h>
 #include <gmerlin/encoder.h>
 

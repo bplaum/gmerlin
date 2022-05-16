@@ -34,7 +34,6 @@
 
 #include <gmerlin/textrenderer.h>
 
-#include <gmerlin/converters.h>
 #include <gmerlin/filters.h>
 
 

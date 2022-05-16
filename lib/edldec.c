@@ -28,7 +28,6 @@
 
 
 #include <gmerlin/pluginregistry.h>
-#include <gmerlin/converters.h>
 #include <gmerlin/utils.h>
 
 #include <pluginreg_priv.h>
