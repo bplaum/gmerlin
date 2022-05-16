@@ -27,7 +27,7 @@
 #include <gmerlin/translation.h>
 
 #include <gmerlin/pluginregistry.h>
-#include <gmerlin/converters.h>
+// #include <gmerlin/converters.h>
 
 
 #include <gmerlin/utils.h>
