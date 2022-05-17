@@ -157,9 +157,9 @@ bg_recorder_set_audio_parameter(void * data,
       if(as->input_handle)
         bg_plugin_unref(as->input_handle);
     
-      as->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                     bg_multi_menu_get_selected(val));
-      as->input_plugin = (bg_recorder_plugin_t*)(as->input_handle->plugin);
+      if((as->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
+                                                         bg_multi_menu_get_selected(val))))
+        as->input_plugin = (bg_recorder_plugin_t*)(as->input_handle->plugin);
       }
     }
   }

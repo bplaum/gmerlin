@@ -195,10 +195,10 @@ bg_recorder_set_video_parameter(void * data,
     
       if(vs->input_handle)
         bg_plugin_unref(vs->input_handle);
-
-      vs->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                     bg_multi_menu_get_selected(val));
-      vs->input_plugin = (bg_recorder_plugin_t*)vs->input_handle->plugin;
+      
+      if((vs->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
+                                                         bg_multi_menu_get_selected(val))))
+        vs->input_plugin = (bg_recorder_plugin_t*)vs->input_handle->plugin;
       }
     
     }
