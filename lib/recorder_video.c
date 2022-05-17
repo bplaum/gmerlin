@@ -286,10 +286,10 @@ bg_recorder_set_video_monitor_parameter(void * data,
 
       fprintf(stderr, "Opening monitor plugin %s\n", rec->display_string);
       
-      vs->monitor_handle = bg_ov_plugin_load(rec->plugin_reg,
-                                             sel,
-                                             rec->display_string);
-      vs->monitor_plugin = (bg_ov_plugin_t*)vs->monitor_handle->plugin;
+      if((vs->monitor_handle = bg_ov_plugin_load(rec->plugin_reg,
+                                                 sel,
+                                                 rec->display_string)))
+        vs->monitor_plugin = (bg_ov_plugin_t*)vs->monitor_handle->plugin;
       
       if(vs->monitor_plugin->common.get_controllable)
         {
