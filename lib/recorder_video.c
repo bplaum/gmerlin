@@ -402,14 +402,16 @@ bg_recorder_set_video_snapshot_parameter(void * data,
       if(vs->snapshot_handle)
         bg_plugin_unref(vs->snapshot_handle);
 
-      vs->snapshot_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                        bg_multi_menu_get_selected(val));
+      if((vs->snapshot_handle = bg_plugin_load_with_options(rec->plugin_reg,
+                                                            bg_multi_menu_get_selected(val))))
+        {
+        vs->snapshot_plugin = (bg_image_writer_plugin_t*)vs->snapshot_handle->plugin;
       
-      vs->snapshot_plugin = (bg_image_writer_plugin_t*)vs->snapshot_handle->plugin;
+        if(vs->snapshot_plugin->set_callbacks)
+          vs->snapshot_plugin->set_callbacks(vs->snapshot_handle->priv,
+                                             &vs->snapshot_cb);
+        }
       
-      if(vs->snapshot_plugin->set_callbacks)
-        vs->snapshot_plugin->set_callbacks(vs->snapshot_handle->priv,
-                                           &vs->snapshot_cb);
       }
 
     
