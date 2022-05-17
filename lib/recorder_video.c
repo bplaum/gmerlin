@@ -290,8 +290,10 @@ bg_recorder_set_video_monitor_parameter(void * data,
                                                  sel,
                                                  rec->display_string)))
         vs->monitor_plugin = (bg_ov_plugin_t*)vs->monitor_handle->plugin;
+      else
+        vs->monitor_plugin = NULL;
       
-      if(vs->monitor_plugin->common.get_controllable)
+      if(vs->monitor_plugin && vs->monitor_plugin->common.get_controllable)
         {
         bg_controllable_t * ctrl;
         ctrl =
