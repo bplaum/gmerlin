@@ -2328,7 +2328,7 @@ bg_plugin_handle_t * bg_plugin_load_with_options(bg_plugin_registry_t * reg,
   const bg_plugin_info_t * info;
   bg_plugin_handle_t * ret;
   
-  if(!(plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)))
+  if(!dict || !(plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)))
     return NULL;
   
   if(!(info = bg_plugin_find_by_name(reg, plugin_name)))
