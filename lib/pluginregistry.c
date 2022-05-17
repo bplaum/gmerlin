@@ -2350,6 +2350,12 @@ bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
   bg_plugin_handle_t * ret;
   const char * name;
   const bg_plugin_info_t * info;
+
+  if(!options)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No OV plugin to load");
+    return NULL;
+    }
   
   if(!(name = gavl_dictionary_get_string(options, BG_CFG_TAG_NAME)))
     {
