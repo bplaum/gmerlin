@@ -86,17 +86,18 @@ int main(int argc, char ** argv)
   bg_cfg_registry_init("transcoder");
   bg_plugins_init();
   
-  bg_gtk_init(&argc, &argv, "transcoder_icon.png");
 
   /* We must initialize the random number generator if we want the
      Vorbis encoder to work */
   srand(time(NULL));
     
-  win = transcoder_window_create();
 
   bg_cmdline_init(&app_data);
 
   bg_cmdline_parse(args, &argc, &argv, win);
+
+  bg_gtk_init(&argc, &argv, "transcoder_icon.png");
+  win = transcoder_window_create();
   
   transcoder_window_run(win);
 
