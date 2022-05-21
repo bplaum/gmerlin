@@ -65,6 +65,7 @@ backends[] =
     { bg_mdb_create_remote,        MDB_BACKEND_REMOTE,        "Remote"       },
     { bg_mdb_create_radio_browser, MDB_BACKEND_RADIO_BROWSER, "Radiobrowser" },
     { bg_mdb_create_podcasts,      MDB_BACKEND_PODCASTS,      "Podcasts"     },
+    { bg_mdb_create_streams,       MDB_BACKEND_STREAMS,       "Streams"      },
   };
 
 #define num_backends (sizeof(backends)/sizeof(backends[0]))

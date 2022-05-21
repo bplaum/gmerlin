@@ -380,6 +380,11 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
     if(gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
       {
       char md5[MD5STRING_LEN];
+      if(!location)
+        {
+        fprintf(stderr, "Track has a src but no location??\n");
+        gavl_dictionary_dump(m, 2);
+        }
       bg_md5_buffer_str(location, strlen(location), md5);
       gavl_track_set_id(track, md5);
       }
