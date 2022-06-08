@@ -32,6 +32,8 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
 
+#include <gavl/utils.h>
+
 #define LOG_DOMAIN "i_cdaudio"
 
 #include <gavl/metatags.h>
@@ -282,7 +284,7 @@ static int open_cdaudio(void * data, const char * arg)
   destroy_cd_data(cd);
   
   cd->device_name = gavl_strrep(cd->device_name, arg);
-  bg_url_get_vars(cd->device_name, NULL);
+  gavl_url_get_vars(cd->device_name, NULL);
 
   uri = bg_sprintf("cda://%s", cd->device_name);
   

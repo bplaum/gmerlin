@@ -1083,11 +1083,12 @@ static const char * search_string_skip[] =
     NULL
   };
 
+
 const char * bg_get_search_string(const char * str)
   {
   int i, len;
-  
   i = 0;
+  
   while(search_string_skip[i])
     {
     len = strlen(search_string_skip[i]);

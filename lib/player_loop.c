@@ -179,6 +179,7 @@ static int init_audio_stream(bg_player_t * p)
   {
   if(!bg_player_audio_init(p, p->src->audio_stream))
     {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio stream failed");
     bg_player_set_status(p, BG_PLAYER_STATUS_ERROR);
     return 0;
     }
@@ -189,6 +190,7 @@ static int init_video_stream(bg_player_t * p)
   {
   if(!bg_player_video_init(p, p->src->video_stream))
     {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing video stream failed");
     bg_player_set_status(p, BG_PLAYER_STATUS_ERROR);
     return 0;
     }
@@ -200,6 +202,7 @@ static int init_subtitle_stream(bg_player_t * p)
   if(!bg_player_subtitle_init(p))
     {
     bg_player_set_status(p, BG_PLAYER_STATUS_ERROR);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing subtitle stream failed");
     return 0;
     }
   return 1;
@@ -267,8 +270,10 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
   /* Initialize audio and video streams  */
   
   if(!init_streams(p))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "init_playback: failed to initialize streams");
     return 0;
-  
+    }
   /* Set up visualizations */
   
   if(DO_VISUALIZE(p->flags))
@@ -851,12 +856,14 @@ static void play_cmd(bg_player_t * player)
       const gavl_dictionary_t * m;
       int64_t duration = GAVL_TIME_UNDEFINED;
 
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Getting right duration");
               
       m = gavl_track_get_metadata(player->src->track_info);
       if((gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration)) &&
-         (duration != GAVL_TIME_UNDEFINED))
+         (duration > 0))
+        {
         player->tl.duration = duration;
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Getting right duration");
+        }
       }
     }
   

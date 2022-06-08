@@ -23,9 +23,12 @@
 #include <bgsqlite.h>
 
 #include <string.h>
+#include <ctype.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
+#include <gmerlin/mdb.h>
+
 #define LOG_DOMAIN "sqlite"
 
 void bg_sqlite_start_transaction(sqlite3 * db)
@@ -310,4 +313,121 @@ static int compare_func(void* udp, int sizeA, const void* textA, int sizeB, cons
 void bg_sqlite_init_strcoll(sqlite3 * db)
   {
   sqlite3_create_collation(db, "strcoll", SQLITE_UTF8, NULL, compare_func);
+  }
+
+char * bg_sqlite_make_group_condition(const char * id)
+  {
+  id += BG_MDB_GROUP_PREFIX_LEN;
+
+  if(!strcmp(id, "0-9"))
+    {
+    return gavl_strdup(" GLOB '[0-9]*'");
+    }
+  else if(!strcmp(id, "others"))
+    {
+    return gavl_strdup(" NOT GLOB '[0-9a-zA-Z]*'");
+    }
+  else if((*id >= 'a') && (*id <= 'z'))
+    {
+    //    return bg_sprintf(" LIKE '%c%%'", *id);
+    return bg_sprintf(" GLOB '[%c%c]*'", *id, toupper(*id));
+    }
+  return NULL;
+  }
+
+int bg_sqlite_count_groups(sqlite3 * db, const char * tmpl)
+  {
+  int ret = 0;
+  int i;
+  char * sql;
+  char * cond;
+  
+  for(i = 0; i < bg_mdb_num_groups; i++)
+    {
+    cond = bg_sqlite_make_group_condition(bg_mdb_groups[i].id);
+    sql = gavl_sprintf(tmpl, cond);
+
+    //    fprintf(stderr, "Count groups: %s\n", sql);
+    
+    if(bg_sqlite_get_int(db, sql) > 0)
+      {
+      //      fprintf(stderr, "Found\n", sql);
+      ret++;
+      }
+#if 0
+    else
+      {
+      fprintf(stderr, "Not found\n", sql);
+      }
+#endif
+    free(cond);
+    free(sql);
+    }
+  return ret;
+  }
+
+int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
+                         const char * parent_id,
+                         const char * tmpl,
+                         const gavl_dictionary_t * m_tmpl,
+                         int start, int num)
+  {
+  int i;
+  char * sql;
+  char * cond;
+  int num_children;
+  
+  for(i = 0; i < bg_mdb_num_groups; i++)
+
+    {
+    cond = bg_sqlite_make_group_condition(bg_mdb_groups[i].id);
+    sql = gavl_sprintf(tmpl, cond);
+
+    num_children = bg_sqlite_get_int(db, sql);
+
+    free(cond);
+    free(sql);
+
+    if(num_children > 0)
+      {
+      if(start > 0)
+        {
+        start--;
+        }
+      else
+        {
+        const char * var;
+        gavl_value_t val;
+        gavl_dictionary_t * dict;
+        gavl_dictionary_t * m;
+        
+        gavl_value_init(&val);
+        dict = gavl_value_set_dictionary(&val);
+        
+        m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
+        gavl_dictionary_copy(m, m_tmpl);
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+
+        var = gavl_dictionary_get_string(m_tmpl, GAVL_META_CHILD_CLASS);
+        if(var && gavl_string_starts_with(var, "container"))
+          gavl_track_set_num_children(dict, num_children, 0);
+        else
+          gavl_track_set_num_children(dict, 0, num_children);
+
+        gavl_track_set_id_nocopy(dict, gavl_sprintf("%s/%s", parent_id, bg_mdb_groups[i].id));
+        gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_groups[i].label);
+        
+        gavl_array_splice_val_nocopy(ret, -1, 0, &val);
+
+        if(ret->num_entries == num)
+          break;
+
+        
+
+        }
+      }
+    
+    }
+  return ret->num_entries;
+  
   }

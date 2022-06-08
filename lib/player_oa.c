@@ -113,7 +113,7 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
   bg_player_audio_stream_t * s;
   char tmp_string[128];
   s = &p->audio_stream;
-  
+#if 0
   if(!s->has_first_timestamp_o)
     {
     if(frame->timestamp)
@@ -129,7 +129,7 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
       }
     s->has_first_timestamp_o = 1;
     }
-
+#endif
   if(frame->valid_samples)
     {
     pthread_mutex_lock(&s->mute_mutex);

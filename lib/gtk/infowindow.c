@@ -44,6 +44,8 @@
 
 #include <gmerlin/utils.h>
 
+#if 0 // Old version
+
 #define FG_SENSITIVE   "#000000"
 #define FG_INSENSITIVE "#808080"
 
@@ -286,77 +288,6 @@ void bg_gtk_info_window_set(bg_gtk_info_window_t * w, const gavl_dictionary_t * 
   set_dict_internal(model, NULL, dict);
   }
 
-#if 0
-static int put_msg(void * data, gavl_msg_t * msg)
-  {
-
-  bg_gtk_info_window_t * w = data;
-
-  switch(msg->NS)
-    {
-    case GAVL_MSG_NS_SRC:
-      switch(msg->ID)
-        {
-        }
-      break;
-    case BG_MSG_NS_STATE:
-      switch(gavl_msg_get_id(msg))
-        {
-        case BG_MSG_STATE_CHANGED:
-          {
-          gavl_value_t val;
-          const char * ctx;
-          const char * var;
-          int last;
-          
-          gavl_value_init(&val);
-
-          bg_msg_get_state(msg,
-                           &last,
-                           &ctx,
-                           &var,
-                           &val, NULL);
-
-          if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
-            {
-            if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TRACK))         // dictionary
-              {
-              const gavl_dictionary_t * t;
-
-              if(!(t = gavl_value_get_dictionary(&val)))
-                {
-                gavl_value_free(&val);
-                break;
-                }
-              set_dict(w, t);
-              gavl_value_free(&val);
-              break;
-              }
-            else if(!strcmp(var, BG_PLAYER_STATE_MODE))          // int
-              {
-              }
-            else if(!strcmp(var, BG_PLAYER_STATE_MUTE))          // int
-              {
-              }
-            }
-          gavl_value_free(&val);
-          break;
-          }
-        }
-      break;
-    }
-  
-  return 1;
-  }
-
-static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
-                                gpointer data)
-  {
-  bg_gtk_info_window_hide(data);  
-  return TRUE;
-  }
-#endif
-
 // #define FREE(str) if(str) free(str);str=NULL;
 
 /* Clipboard */
@@ -517,12 +448,12 @@ static gboolean button_press_callback(GtkWidget * wid, GdkEventButton * evt,
   return FALSE;
   }
 
-
 GtkWidget *
 bg_gtk_info_window_get_widget(bg_gtk_info_window_t * w)
   {
   return w->window;
   }
+
 
 bg_gtk_info_window_t *
 bg_gtk_info_window_create(void)
@@ -613,7 +544,71 @@ void bg_gtk_info_window_destroy(bg_gtk_info_window_t * w)
   free(w);
   }
 
+#else
 
-/* Show/hide the window */
+struct bg_gtk_info_window_s
+  {
+  /* We store everything interesting locally */
+  
+  GtkWidget * window;
+  bg_gtk_dict_view_t * w;
+  
+  };
+
+bg_gtk_info_window_t *
+bg_gtk_info_window_create(void)
+  {
+  GtkWidget * scrolledwin;
+
+  bg_gtk_info_window_t * ret;
+
+  ret = calloc(1, sizeof(*ret));
+  
+  /* Create objects */
+  
+  ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_default_size(GTK_WINDOW(ret->window), 500, 300);
+  
+  gtk_window_set_title(GTK_WINDOW(ret->window), TR("Gmerlin Track Info"));
+  
+  /* Create treeview */
+
+  ret->w = bg_gtk_dict_view_create();
+  
+  /* pack objects */
+  
+  scrolledwin = gtk_scrolled_window_new(NULL, NULL);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolledwin),
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  
+  gtk_container_add(GTK_CONTAINER(scrolledwin), bg_gtk_dict_view_get_widget(ret->w));
+  gtk_widget_show(scrolledwin);
+
+  /* */
+  gtk_container_add(GTK_CONTAINER(ret->window), scrolledwin);
+  
+  return ret;
+    
+  }
+  
+GtkWidget *
+bg_gtk_info_window_get_widget(bg_gtk_info_window_t * w)
+  {
+  return w->window;
+  }
+
+void bg_gtk_info_window_destroy(bg_gtk_info_window_t * w)
+  {
+  bg_gtk_dict_view_destroy(w->w);
+
+  gtk_widget_destroy(w->window);
+  free(w);
+  }
+
+void bg_gtk_info_window_set(bg_gtk_info_window_t * w, const gavl_dictionary_t * dict)
+  {
+  bg_gtk_dict_view_set_dict(w->w, dict);
+  }
 
 
+#endif

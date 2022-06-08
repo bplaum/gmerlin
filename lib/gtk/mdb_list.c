@@ -1281,11 +1281,6 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     }
   else if((item == tree->menu.track_menu.info_item))
     {
-    fprintf(stderr, "Info\n");
-
-    //    void bg_gtk_trackinfo_show(const gavl_dictionary_t * m,
-    //                               GtkWidget * parent)
-    
     if(tree->menu_ctx.item)
       bg_gtk_trackinfo_show(tree->menu_ctx.item, tree->menu_ctx.widget);
     }

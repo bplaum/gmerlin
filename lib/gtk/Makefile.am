@@ -35,6 +35,7 @@ cfg_string.c \
 cfg_stringlist.c \
 cfg_time.c \
 chapterdialog.c \
+dictview.c \
 display.c \
 driveselect.c \
 fileselect.c \

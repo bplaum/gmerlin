@@ -135,7 +135,7 @@ void x11_window_accel_pressed(bg_x11_window_t * win, int id)
       gavl_value_init(&delta);
       gavl_value_init(&val);
 
-      if(id == ACCEL_INC_ZOOM)
+      if(id == ACCEL_INC_SQUEEZE)
         gavl_value_set_float(&delta, BG_OV_SQUEEZE_DELTA);
       else
         gavl_value_set_float(&delta, -BG_OV_SQUEEZE_DELTA);

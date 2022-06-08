@@ -120,7 +120,7 @@ void bg_media_source_set_eof(bg_media_source_t * src, int eof)
     }
   }
 
-int bg_media_source_get_num_streams(bg_media_source_t * src, gavl_stream_type_t type)
+int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type)
   {
   int i;
   int ret = 0;
@@ -132,6 +132,50 @@ int bg_media_source_get_num_streams(bg_media_source_t * src, gavl_stream_type_t 
     }
   return ret;
   }
+
+static gavl_time_t get_start_time(bg_media_source_stream_t * s)
+  {
+  int timescale = 0;
+  gavl_stream_stats_t stats;
+  const gavl_dictionary_t * m = NULL;
+
+  gavl_stream_stats_init(&stats);
+  if((gavl_stream_get_stats(s->s, &stats)) &&
+     (m = gavl_stream_get_metadata(s->s)) &&
+     gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &timescale))
+    return gavl_time_unscale(timescale, stats.pts_start);
+  else
+    return 0;
+  }
+
+gavl_time_t bg_media_source_get_start_time(bg_media_source_t * src)
+  {
+  int num;
+  int i;
+  bg_media_source_stream_t * s;
+  
+  if((num = bg_media_source_get_num_streams(src, GAVL_STREAM_AUDIO)))
+    {
+    for(i = 0; i < num; i++)
+      {
+      s = bg_media_source_get_stream(src, GAVL_STREAM_AUDIO, i);
+      if(s->action != BG_STREAM_ACTION_OFF)
+        return get_start_time(s);
+      }
+    }
+
+  if((num = bg_media_source_get_num_streams(src, GAVL_STREAM_VIDEO)))
+    {
+    for(i = 0; i < num; i++)
+      {
+      s = bg_media_source_get_stream(src, GAVL_STREAM_VIDEO, i);
+      if(s->action != BG_STREAM_ACTION_OFF)
+        return get_start_time(s);
+      }
+    }
+  return 0;
+  }
+
 
 bg_media_source_stream_t *
 bg_media_source_append_stream(bg_media_source_t * src, gavl_stream_type_t type)
@@ -673,6 +717,8 @@ bg_media_sink_stream_t * bg_media_sink_get_stream_by_id(bg_media_sink_t * sink, 
     }
   return NULL;
   }
+
+
 
 #if 0
 void bg_media_sink_set_from_sink(bg_media_sink_t * dst,

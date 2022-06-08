@@ -57,23 +57,42 @@ typedef struct bg_gtk_trackinfo_s
   {
   GtkWidget * window;
   GtkWidget * close_button;
+  GtkWidget * mode_button;
 
   GtkWidget * textview;
-  GtkWidget * scrolledwindow;
-  
   GtkWidget * cover;
 
   GtkCssProvider * css;
 
+  GtkWidget * notebook;
+  bg_gtk_dict_view_t * dw;
+  
   } bg_gtk_trackinfo_t;
 
 static void button_callback(GtkWidget * w, gpointer data)
   {
-  bg_gtk_trackinfo_t * win;
-  win = (bg_gtk_trackinfo_t*)data;
-  gtk_widget_hide(win->window);
-  gtk_widget_destroy(win->window);
-  free(win);
+  bg_gtk_trackinfo_t * win = data;
+
+  if(w == win->close_button)
+    {
+    gtk_widget_hide(win->window);
+    gtk_widget_destroy(win->window);
+    free(win);
+    }
+  else if(w == win->mode_button)
+    {
+    if(gtk_notebook_get_current_page(GTK_NOTEBOOK(win->notebook)) == 0)
+      {
+      gtk_notebook_set_current_page(GTK_NOTEBOOK(win->notebook), 1);
+      gtk_button_set_label(GTK_BUTTON(win->mode_button), TR("Simple"));
+      }
+    else
+      {
+      gtk_notebook_set_current_page(GTK_NOTEBOOK(win->notebook), 0);
+      gtk_button_set_label(GTK_BUTTON(win->mode_button), TR("Details"));
+      }
+    }
+  
   } 
 
 static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
@@ -109,15 +128,6 @@ static char * append_row(char * str, const char * icon, const char * val)
   g_free(text_escaped);
   return str;
   }
-
-#if 0
-static const gavl_pixelformat_t pfmts[] =
-  {
-    GAVL_RGB_24,
-    GAVL_RGBA_32,
-    GAVL_PIXELFORMAT_NONE,
-  };
-#endif
 
 static void pixbuf_from_uri_callback(void * data, GdkPixbuf * pb)
   {
@@ -382,7 +392,9 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   GtkWidget * box;
   GtkWidget * table;
   bg_gtk_trackinfo_t * ret;
-
+  GtkWidget * scrolledwindow;
+  GtkWidget * w;
+  
   const gavl_dictionary_t * m;
 
   //  fprintf(stderr, "bg_gtk_trackinfo_create\n");
@@ -412,15 +424,21 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   /* Create close button */
 
   ret->close_button = gtk_button_new_with_mnemonic("_Close");
+  ret->mode_button = gtk_button_new_with_label(TR("Details"));
   
   bg_gtk_widget_set_can_default(ret->close_button, TRUE);
+  bg_gtk_widget_set_can_default(ret->mode_button, TRUE);
 
   g_signal_connect(G_OBJECT(ret->close_button), "clicked",
                    G_CALLBACK(button_callback), (gpointer)ret);
+  g_signal_connect(G_OBJECT(ret->mode_button), "clicked",
+                   G_CALLBACK(button_callback), (gpointer)ret);
   gtk_widget_show(ret->close_button);
+  gtk_widget_show(ret->mode_button);
 
   /* Button box */
   box = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+  gtk_container_add(GTK_CONTAINER(box), ret->mode_button);
   gtk_container_add(GTK_CONTAINER(box), ret->close_button);
   gtk_widget_show(box);
   
@@ -444,7 +462,7 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
 
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(ret->textview), GTK_WRAP_WORD);
 
-  ret->scrolledwindow =
+  scrolledwindow =
     gtk_scrolled_window_new(gtk_scrollable_get_hadjustment(GTK_SCROLLABLE(ret->textview)),
                             gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(ret->textview)));
 
@@ -452,19 +470,13 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   gtk_widget_set_hexpand(ret->textview, TRUE);
   gtk_widget_set_vexpand(ret->textview, TRUE);
 
-  //  gtk_widget_set_halign(ret->textview, GTK_ALIGN_START);
-  //  gtk_widget_set_valign(ret->textview, GTK_ALIGN_START);
+  gtk_widget_set_hexpand(scrolledwindow, TRUE);
+  gtk_widget_set_vexpand(scrolledwindow, TRUE);
   
-  gtk_widget_set_hexpand(ret->scrolledwindow, TRUE);
-  gtk_widget_set_vexpand(ret->scrolledwindow, TRUE);
-
-  //  gtk_widget_set_halign(ret->scrolledwindow, GTK_ALIGN_START);
-  //  gtk_widget_set_valign(ret->scrolledwindow, GTK_ALIGN_START);
-    
-  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ret->scrolledwindow),
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolledwindow),
                                  GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-  gtk_container_add(GTK_CONTAINER(ret->scrolledwindow), ret->textview);
-  gtk_widget_show(ret->scrolledwindow);
+  gtk_container_add(GTK_CONTAINER(scrolledwindow), ret->textview);
+  gtk_widget_show(scrolledwindow);
   
   create_markup(ret, m);
   
@@ -477,16 +489,52 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   if(ret->cover)
     {
     gtk_grid_attach(GTK_GRID(table), ret->cover, 0, 0, 1, 1);
-    gtk_grid_attach(GTK_GRID(table), ret->scrolledwindow, 1, 0, 1, 1);
-    gtk_grid_attach(GTK_GRID(table), box, 0, 1, 2, 1);
+    gtk_grid_attach(GTK_GRID(table), scrolledwindow, 1, 0, 1, 1);
     }
   else
     {
-    gtk_grid_attach(GTK_GRID(table), ret->scrolledwindow, 0, 0, 1, 1);
-    gtk_grid_attach(GTK_GRID(table), box, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(table), scrolledwindow, 0, 0, 1, 1);
     }
-  
+
   gtk_widget_show(table);
+  ret->notebook = gtk_notebook_new();
+  gtk_notebook_set_show_tabs(GTK_NOTEBOOK(ret->notebook), 0);
+  
+  gtk_notebook_append_page(GTK_NOTEBOOK(ret->notebook), table, NULL);
+
+  ret->dw = bg_gtk_dict_view_create();                           
+  
+  bg_gtk_dict_view_set_dict(ret->dw, dictp);
+  w = bg_gtk_dict_view_get_widget(ret->dw);
+  
+  scrolledwindow =
+    gtk_scrolled_window_new(gtk_scrollable_get_hadjustment(GTK_SCROLLABLE(w)),
+                            gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(w)));
+
+  gtk_widget_set_hexpand(w, TRUE);
+  gtk_widget_set_vexpand(w, TRUE);
+
+  gtk_widget_set_hexpand(scrolledwindow, TRUE);
+  gtk_widget_set_vexpand(scrolledwindow, TRUE);
+  
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolledwindow),
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_container_add(GTK_CONTAINER(scrolledwindow), w);
+  gtk_widget_show(scrolledwindow);
+  
+  gtk_notebook_append_page(GTK_NOTEBOOK(ret->notebook), scrolledwindow, NULL);
+  gtk_widget_show(ret->notebook);
+
+  table = gtk_grid_new();
+
+  gtk_grid_set_row_spacing(GTK_GRID(table), 5);
+  gtk_grid_set_column_spacing(GTK_GRID(table), 5);
+  gtk_container_set_border_width(GTK_CONTAINER(table), 5);
+
+  gtk_grid_attach(GTK_GRID(table), ret->notebook, 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(table), box, 0, 1, 1, 1);
+  gtk_widget_show(table);
+  
   gtk_container_add(GTK_CONTAINER(ret->window), table);
     
   return ret;
@@ -506,7 +554,7 @@ static void trackinfo_show(bg_gtk_trackinfo_t * w, int modal, GtkWidget * parent
   gtk_widget_show(w->window);
   }
 
-/* This pops up a which shows all informations about a selected track */
+/* This pops up a window which shows all informations about a selected track */
 
 #define S(s) (s?s:"(NULL)")
 

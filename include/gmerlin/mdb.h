@@ -120,6 +120,9 @@ typedef struct
   const char * id;
   } bg_mdb_group_t;
 
+#define BG_MDB_GROUP_PREFIX     "~group~"
+#define BG_MDB_GROUP_PREFIX_LEN 7
+
 extern const bg_mdb_group_t bg_mdb_groups[];
 extern const int bg_mdb_num_groups;
 

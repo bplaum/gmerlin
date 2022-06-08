@@ -35,6 +35,7 @@
 
 void bg_player_time_init(bg_player_t * player)
   {
+  bg_media_source_t * src;
   bg_player_audio_stream_t * s = &player->audio_stream;
   
   if(s->plugin && (s->plugin->get_delay) &&
@@ -48,6 +49,29 @@ void bg_player_time_init(bg_player_t * player)
     s->sync_mode = SYNC_SOFTWARE;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with software timer");
     }
+
+  pthread_mutex_lock(&player->time_offset_mutex);
+  if((player->src->input_plugin && player->src->input_plugin->get_src &&
+      (src = player->src->input_plugin->get_src(player->src->input_handle->priv))))
+    {
+    player->time_offset_src = bg_media_source_get_start_time(src);
+    
+    if(player->time_offset_src)
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, player->time_offset_src);
+
+      if(s->sync_mode == SYNC_SOUNDCARD)
+        {
+        s->samples_written =
+          gavl_time_to_samples(s->output_format.samplerate,
+                               player->time_offset_src);
+        }
+      
+      }
+    }
+  else
+    player->time_offset_src = 0;
+  pthread_mutex_unlock(&player->time_offset_mutex);
   }
 
 void bg_player_time_start(bg_player_t * player)
@@ -141,7 +165,7 @@ void bg_player_time_get(bg_player_t * player, int exact,
   if(ret)
     {
     pthread_mutex_lock(&player->time_offset_mutex);
-    *ret = t - player->time_offset;
+    *ret = t - player->time_offset - player->time_offset_src;
     pthread_mutex_unlock(&player->time_offset_mutex);
     }
   }

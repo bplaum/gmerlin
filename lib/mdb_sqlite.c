@@ -154,22 +154,6 @@ static void update_root_containers(bg_mdb_backend_t * b);
 
 static void create_root_containers(bg_mdb_backend_t * b);
 
-static char * make_group_condition(const char * id)
-  {
-  if(!strcmp(id, "0-9"))
-    {
-    return gavl_strdup(" GLOB '[0-9]*'");
-    }
-  else if(!strcmp(id, "others"))
-    {
-    return gavl_strdup(" NOT GLOB '[0-9a-zA-Z]*'");
-    }
-  else if((*id >= 'a') && (*id <= 'z'))
-    {
-    return bg_sprintf(" LIKE '%c%%'", *id);
-    }
-  return NULL;
-  }
 
 static void delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
                                    const char * uri, int del_flags);
@@ -638,37 +622,21 @@ static void set_image_type(bg_mdb_backend_t * b, int64_t image_id, int type)
   }
 
 
-static void send_lock_message(bg_mdb_backend_t * b, int lock, gavl_dictionary_t * obj)
-  {
-  gavl_msg_t * msg;
-
-  if(!obj)
-    return;
-  
-  gavl_track_set_lock(obj, lock);
-  msg = bg_msg_sink_get(b->ctrl.evt_sink);
-  gavl_msg_set_id_ns(msg, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
-  
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(obj));
-  gavl_msg_set_arg_dictionary(msg, 0, obj);
-  bg_msg_sink_put(b->ctrl.evt_sink, msg);
-  }
-
 static void lock_root_containers(bg_mdb_backend_t * b, int lock)
   {
   sqlite_priv_t * p = b->priv;
 
   if(p->movies_id)
-    send_lock_message(b, lock, &p->movies);
+    bg_mdb_track_lock(b, lock, &p->movies);
   
   if(p->series_id)
-    send_lock_message(b, lock, &p->series);
+    bg_mdb_track_lock(b, lock, &p->series);
 
   if(p->albums_id)
-    send_lock_message(b, lock, &p->albums);
+    bg_mdb_track_lock(b, lock, &p->albums);
 
   if(p->songs_id)
-    send_lock_message(b, lock, &p->songs);
+    bg_mdb_track_lock(b, lock, &p->songs);
   }
 
 static int create_tables(bg_mdb_backend_t * b)
@@ -3709,7 +3677,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
               int64_t num_children = 0;
               char * cond;
               
-              cond = make_group_condition(id);
+              cond = bg_sqlite_make_group_condition(id);
             
               sql = bg_sprintf("SELECT count(songs."META_DB_ID") "
                                "FROM song_genres_arr INNER JOIN songs "
@@ -5142,7 +5110,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             {
             char * cond;
 
-            if((cond = make_group_condition(id)))
+            if((cond = bg_sqlite_make_group_condition(id)))
               {
               sql = bg_sprintf("SELECT ID FROM song_artists WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5420,7 +5388,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if(!(pos = strchr(id, '/')))
               {
-              char * cond = make_group_condition(id);
+              char * cond = bg_sqlite_make_group_condition(id);
 
               if(cond)
                 {
@@ -5516,7 +5484,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             {
             char * cond;
 
-            if((cond = make_group_condition(id)))
+            if((cond = bg_sqlite_make_group_condition(id)))
               {
               sql = bg_sprintf("SELECT ID FROM album_artists WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5871,7 +5839,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             {
             char * cond;
 
-            if((cond = make_group_condition(id)))
+            if((cond = bg_sqlite_make_group_condition(id)))
               {
               sql = bg_sprintf("SELECT ID FROM movie_actors WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -6031,7 +5999,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             {
             char * cond;
 
-            if((cond = make_group_condition(id)))
+            if((cond = bg_sqlite_make_group_condition(id)))
               {
               sql = bg_sprintf("SELECT ID FROM movie_directors WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  

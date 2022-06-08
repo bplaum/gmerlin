@@ -170,8 +170,9 @@ int bg_media_source_set_text_action(bg_media_source_t * src, int idx, bg_stream_
 int bg_media_source_set_overlay_action(bg_media_source_t * src, int idx, bg_stream_action_t action);
 int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id, bg_stream_action_t action);
 
-int bg_media_source_get_num_streams(bg_media_source_t * src, gavl_stream_type_t type);
+int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type);
 
+gavl_time_t bg_media_source_get_start_time(bg_media_source_t * src);
 
 /* Sink */
 
@@ -183,7 +184,7 @@ typedef struct
   gavl_stream_type_t type;
 
   gavl_dictionary_t    * s;
-  gavl_dictionary_t    info;
+  //  gavl_dictionary_t    info;
   gavl_audio_sink_t  * asink;
   gavl_video_sink_t  * vsink;
   gavl_packet_sink_t * psink;

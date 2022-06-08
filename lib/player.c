@@ -124,32 +124,6 @@ void bg_player_key_pressed(bg_player_t * player, int key, int mask)
 
 /* Input callbacks */
 
-#if 0
-static void metadata_changed(void * data, const gavl_dictionary_t * m)
-  {
-  gavl_dictionary_t m_tmp;
-  bg_player_t * p = data;
-
-  fprintf(stderr, "Player metadata changed\n");
-  
-  gavl_dictionary_init(&m_tmp);
-
-  if(p->src)
-    {
-    gavl_dictionary_merge(&m_tmp, m, &p->src->m);
-    m = &m_tmp;
-    }
-  
-  bg_player_set_metadata(p, m);
-  if(gavl_dictionary_get_string(m, GAVL_META_APPROX_DURATION))
-    {
-    pthread_mutex_lock(&p->time_offset_mutex);
-    bg_player_time_get(p, 0, &p->time_offset, NULL);
-    pthread_mutex_unlock(&p->time_offset_mutex);
-    }
-  gavl_dictionary_free(&m_tmp);
-  }
-#endif
 
 #if 0
 static void buffer_notify(void * data, float percentage)

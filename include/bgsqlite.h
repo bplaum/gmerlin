@@ -118,5 +118,20 @@ int64_t bg_sqlite_get_int(sqlite3 * db, const char * sql);
 
 
 void bg_sqlite_init_strcoll(sqlite3 * db);
-  
+
+char * bg_sqlite_make_group_condition(const char * id);
+
+/* tmpl must be an sqlite statement, which contains exactly one %s for inserting the
+   group condition and returns 1 if group exists or not */
+int bg_sqlite_count_groups(sqlite3 * db, const char * tmpl);
+
+/* tmpl must be an sqlite statement, which contains exactly one %s for inserting the
+   group condition and returns the number of group members */
+int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
+                         const char * parent_id,
+                         const char * tmpl,
+                         const gavl_dictionary_t * m_tmpl,
+                         int start, int num);
+
+
 #endif // BGSQLITE_H_INCLUDED

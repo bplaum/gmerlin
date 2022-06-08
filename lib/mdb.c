@@ -63,7 +63,7 @@ backends[] =
     { bg_mdb_create_sqlite,        MDB_BACKEND_SQLITE,        "SQLite"       },
     { bg_mdb_create_xml,           MDB_BACKEND_XML,           "XML"          },
     { bg_mdb_create_remote,        MDB_BACKEND_REMOTE,        "Remote"       },
-    { bg_mdb_create_radio_browser, MDB_BACKEND_RADIO_BROWSER, "Radiobrowser" },
+    //    { bg_mdb_create_radio_browser, MDB_BACKEND_RADIO_BROWSER, "Radiobrowser" },
     { bg_mdb_create_podcasts,      MDB_BACKEND_PODCASTS,      "Podcasts"     },
     { bg_mdb_create_streams,       MDB_BACKEND_STREAMS,       "Streams"      },
   };
@@ -186,7 +186,7 @@ void bg_mdb_set_browse_obj_response(gavl_msg_t * res, const gavl_dictionary_t * 
   dict = gavl_value_set_dictionary(&val);
   gavl_dictionary_copy(dict, obj);
   
-  finalize(dict, -1, -1);
+  finalize(dict, idx, total);
   gavl_msg_set_arg_nocopy(res, 0, &val);
   gavl_value_free(&val);
 
@@ -442,7 +442,8 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
 
   //  fprintf(stderr, "mdb: Got command:\n");
   //  gavl_msg_dump(msg, 2);
-  
+
+#if 0  
   /* messages sent directly to the backends */
   if((be_name = bg_mdb_msg_get_backend(msg)) &&
      (be = be_from_name(db, be_name)))
@@ -450,7 +451,8 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
     bg_msg_sink_put(be->ctrl.cmd_sink, msg);
     return 1;
     }
-
+#endif
+  
   /* Messages to be handled by the core */
   switch(msg->NS)
     {
@@ -549,7 +551,10 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
               {
               const gavl_array_t * arr = gavl_get_tracks(obj);
               gavl_msg_t * res = bg_msg_sink_get(db->ctrl.evt_sink);
- 
+
+              //              fprintf(stderr, "mdb: Got no backend\n");
+              //              gavl_dictionary_dump(obj, 2);
+              
               if(!bg_mdb_adjust_num(start, &num, arr->num_entries))
                 return 1;
               
@@ -1718,7 +1723,7 @@ const char * bg_mdb_container_get_backend(const gavl_dictionary_t * track)
   {
   const gavl_dictionary_t * m;
 
-  if((m = gavl_track_get_metadata(track)))
+  if((m = gavl_dictionary_get_dictionary(track, BG_MDB_DICT)))
     return gavl_dictionary_get_string(m, MDB_BACKEND_TAG);
   return NULL;
   }
@@ -1727,19 +1732,10 @@ void bg_mdb_container_set_backend(gavl_dictionary_t * track, const char * be)
   {
   gavl_dictionary_t * m;
   
-  m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
+  m = gavl_dictionary_get_dictionary_create(track, BG_MDB_DICT);
   gavl_dictionary_set_string(m, MDB_BACKEND_TAG, be);
   }
 
-const char * bg_mdb_msg_get_backend(gavl_msg_t * msg)
-  {
-  return gavl_dictionary_get_string(&msg->header, MDB_BACKEND_TAG);
-  }
-
-void bg_mdb_msg_set_backend(gavl_msg_t * msg, const char * be)
-  {
-  gavl_dictionary_set_string(&msg->header, MDB_BACKEND_TAG, be);
-  }
 
 static int has_id(const gavl_array_t * arr, const char * id)
   {
@@ -2452,42 +2448,44 @@ static void finalize(gavl_dictionary_t * dict, int idx, int total)
 
 /* Grouping */
 
+
 const bg_mdb_group_t bg_mdb_groups[] =
   {
-    { "0-9",    "0-9" },
-    { "A",      "a" },
-    { "B",      "b" },
-    { "C",      "c" },
-    { "D",      "d" },
-    { "E",      "e" },
-    { "F",      "f" },
-    { "G",      "g" },
-    { "H",      "h" },
-    { "I",      "i" },
-    { "J",      "j" },
-    { "K",      "k" },
-    { "L",      "l" },
-    { "M",      "m" },
-    { "N",      "n" },
-    { "O",      "o" },
-    { "P",      "p" },
-    { "Q",      "q" },
-    { "R",      "r" },
-    { "S",      "s" },
-    { "T",      "t" },
-    { "U",      "u" },
-    { "V",      "v" },
-    { "W",      "w" },
-    { "X",      "x" },
-    { "Y",      "y" },
-    { "Z",      "z" },
-    { "Others", "others" },
+    { "0-9",    BG_MDB_GROUP_PREFIX"0-9" },
+    { "A",      BG_MDB_GROUP_PREFIX"a" },
+    { "B",      BG_MDB_GROUP_PREFIX"b" },
+    { "C",      BG_MDB_GROUP_PREFIX"c" },
+    { "D",      BG_MDB_GROUP_PREFIX"d" },
+    { "E",      BG_MDB_GROUP_PREFIX"e" },
+    { "F",      BG_MDB_GROUP_PREFIX"f" },
+    { "G",      BG_MDB_GROUP_PREFIX"g" },
+    { "H",      BG_MDB_GROUP_PREFIX"h" },
+    { "I",      BG_MDB_GROUP_PREFIX"i" },
+    { "J",      BG_MDB_GROUP_PREFIX"j" },
+    { "K",      BG_MDB_GROUP_PREFIX"k" },
+    { "L",      BG_MDB_GROUP_PREFIX"l" },
+    { "M",      BG_MDB_GROUP_PREFIX"m" },
+    { "N",      BG_MDB_GROUP_PREFIX"n" },
+    { "O",      BG_MDB_GROUP_PREFIX"o" },
+    { "P",      BG_MDB_GROUP_PREFIX"p" },
+    { "Q",      BG_MDB_GROUP_PREFIX"q" },
+    { "R",      BG_MDB_GROUP_PREFIX"r" },
+    { "S",      BG_MDB_GROUP_PREFIX"s" },
+    { "T",      BG_MDB_GROUP_PREFIX"t" },
+    { "U",      BG_MDB_GROUP_PREFIX"u" },
+    { "V",      BG_MDB_GROUP_PREFIX"v" },
+    { "W",      BG_MDB_GROUP_PREFIX"w" },
+    { "X",      BG_MDB_GROUP_PREFIX"x" },
+    { "Y",      BG_MDB_GROUP_PREFIX"y" },
+    { "Z",      BG_MDB_GROUP_PREFIX"z" },
+    { "Others", BG_MDB_GROUP_PREFIX"others" },
   };
 
 const int bg_mdb_num_groups = sizeof(bg_mdb_groups) / sizeof(bg_mdb_groups[0]);
 
 int bg_mdb_test_group_condition(const char * id, const char * str)
   {
+  id += BG_MDB_GROUP_PREFIX_LEN;
   if(!strcmp(id, "0-9"))
     {
     if(isdigit(*str))
@@ -2708,4 +2706,20 @@ void bg_mdb_object_cleanup(gavl_dictionary_t * dict)
   
   m_new = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
   gavl_dictionary_move(m_new, &m_dst);
+  }
+
+void bg_mdb_track_lock(bg_mdb_backend_t * b, int lock, gavl_dictionary_t * obj)
+  {
+  gavl_msg_t * msg;
+
+  if(!obj)
+    return;
+  
+  gavl_track_set_lock(obj, lock);
+  msg = bg_msg_sink_get(b->ctrl.evt_sink);
+  gavl_msg_set_id_ns(msg, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+  
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(obj));
+  gavl_msg_set_arg_dictionary(msg, 0, obj);
+  bg_msg_sink_put(b->ctrl.evt_sink, msg);
   }

@@ -255,8 +255,8 @@ char * bg_url_get_host(const char * host, int port);
  *  
  */
  
-void bg_url_get_vars(char * path,
-                     gavl_dictionary_t * vars);
+// void bg_url_get_vars(char * path,
+//                     gavl_dictionary_t * vars);
 
 /*
  *  \brief Split off URL variables

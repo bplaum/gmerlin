@@ -124,5 +124,15 @@ int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   void * cb_data,
                                   const gavl_dictionary_t * track, int max_width, int max_height);
 
+/* Tree-like view for a dictionary */
+
+typedef struct bg_gtk_dict_view_s bg_gtk_dict_view_t;
+
+bg_gtk_dict_view_t * bg_gtk_dict_view_create();
+GtkWidget * bg_gtk_dict_view_get_widget(bg_gtk_dict_view_t * w);
+void bg_gtk_dict_view_set_dict(bg_gtk_dict_view_t * w, const gavl_dictionary_t * dict);
+void bg_gtk_dict_view_destroy(bg_gtk_dict_view_t * w);
+
+
 #endif // BG_GTKUTILS_H_INCLUDED
 

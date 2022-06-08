@@ -98,6 +98,30 @@ typedef struct
   //  gavl_stream_type_t type;  
   } stream_t;
 
+struct edldec_s
+  {
+  int streaming;
+  
+  int num_sources;
+  source_t * sources;
+
+  stream_t * streams;
+  int num_streams;
+  
+  //  const gavl_edl_t * edl;
+  //  const gavl_edl_track_t * t;
+
+  gavl_dictionary_t mi;
+  gavl_dictionary_t * ti_cur;
+
+  bg_media_source_t src;
+  
+  bg_plugin_registry_t * plugin_reg;
+
+  bg_controllable_t controllable;
+  
+  };
+
 typedef struct edldec_s edldec_t;
 
 static void streams_destroy(stream_t * s, int num);
@@ -127,8 +151,7 @@ static int64_t edl_src_time_to_dst(const stream_t * st,
 
 
 static int source_init(source_t * s, 
-                       bg_plugin_registry_t * plugin_reg,
-                       const gavl_dictionary_t * edl, 
+                       edldec_t * dec,
                        const edl_segment_t * seg,
                        gavl_stream_type_t type)
   {
@@ -136,9 +159,9 @@ static int source_init(source_t * s,
   
   s->location = gavl_dictionary_get_string(seg->seg, GAVL_META_URI);
   if(!s->location)
-    s->location = gavl_dictionary_get_string(edl, GAVL_META_URI);
+    s->location = gavl_dictionary_get_string(&dec->mi, GAVL_META_URI);
   
-  if(!bg_input_plugin_load(plugin_reg,
+  if(!bg_input_plugin_load(bg_plugin_reg,
                            s->location,
                            &s->h,
                            NULL))
@@ -154,7 +177,7 @@ static int source_init(source_t * s,
     return 0;
   ti = bg_input_plugin_get_track_info(s->h, s->track);
   
-  if(!gavl_track_can_seek(ti))
+  if(!gavl_track_can_seek(ti) && !dec->streaming)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EDL only works with seekable sources");
     return 0;
@@ -244,27 +267,6 @@ static void stream_cleanup(stream_t * s)
 
 
 
-struct edldec_s
-  {
-  int num_sources;
-  source_t * sources;
-
-  stream_t * streams;
-  int num_streams;
-  
-  //  const gavl_edl_t * edl;
-  //  const gavl_edl_track_t * t;
-
-  gavl_dictionary_t mi;
-  gavl_dictionary_t * ti_cur;
-
-  bg_media_source_t src;
-  
-  bg_plugin_registry_t * plugin_reg;
-
-  bg_controllable_t controllable;
-  
-  };
 
 static const edl_segment_t *
 edl_dst_time_to_src(edldec_t * dec,
@@ -275,6 +277,14 @@ edl_dst_time_to_src(edldec_t * dec,
   {
   int i;
   const edl_segment_t * ret = NULL;
+
+  /* Streaming case */
+  if((st->num_segs == 1) && (st->segs[0].dst_duration < 0))
+    {
+    *src_time = 0;
+    *mute_time = 0;
+    return &st->segs[0];
+    }
   
   for(i = 0; i < st->num_segs; i++)
     {
@@ -370,13 +380,16 @@ static source_t * get_source(edldec_t * dec, gavl_stream_type_t type,
 
   if(!ret->location)
     {
-    if(!source_init(ret, dec->plugin_reg, &dec->mi, seg, type))
+    if(!source_init(ret, dec, seg, type))
       return NULL;
     }
 
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeking to %"PRId64, src_time);
-  bg_input_plugin_seek(ret->h, &src_time, seg->timescale);
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeked to %"PRId64, src_time);
+  if(!dec->streaming)
+    {
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeking to %"PRId64, src_time);
+    bg_input_plugin_seek(ret->h, &src_time, seg->timescale);
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeked to %"PRId64, src_time);
+    }
   
   return ret;  
   }
@@ -408,6 +421,8 @@ static void streams_create(edldec_t * dec)
 
   bg_media_source_set_from_track(&dec->src, dec->ti_cur);
   
+  dec->streaming = 1;
+  
   for(i = 0; i < num; i++)
     {
     const gavl_dictionary_t * d;
@@ -417,9 +432,16 @@ static void streams_create(edldec_t * dec)
       if(!stream_init(&dec->streams[i], d, dec))
         goto fail;
       dec->streams[i].src_s = dec->src.streams[i];
-      
+
+      if((dec->streams[i].num_segs > 1) ||
+         ((dec->streams[i].num_segs == 1) && (dec->streams[i].segs[0].dst_duration > 0)))
+        dec->streaming = 0;
       }
     }
+
+  if(dec->streaming)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switching to streaming mode");
+  
   return;
   
   fail:
@@ -623,8 +645,10 @@ static int start_audio_stream(edldec_t * ed, int idx_rel)
     return 1;
   if(!(s->seg = edl_dst_time_to_src(ed, s, 0,
                                     &src_time, &s->mute_time)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no audio segment");
     return 0;
-
+    }
   if(!(s->asrc_int = get_audio_source(ed, s->seg, &s->src, src_time)))
     return 0;
 
@@ -1091,7 +1115,6 @@ static const bg_input_plugin_t edl_plugin =
       //      .get_parameters = get_parameters_edl,
       //      .set_parameter =  set_parameter_edl
     },
-    //    .open =          open_input,
     .get_media_info = get_media_info_edl,
     
     .get_src           = get_src_edl,
@@ -1139,7 +1162,8 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           }
           break;
         case GAVL_CMD_SRC_START:
-          start_edl(data);
+          if(!start_edl(data))
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Starting EDL decoder failed");
           break;
         case GAVL_CMD_SRC_SEEK:
           {

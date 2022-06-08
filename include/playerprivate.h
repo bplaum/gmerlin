@@ -398,7 +398,8 @@ struct bg_player_s
   int last_status;
   
   pthread_mutex_t state_mutex;
-
+  
+  gavl_time_t time_offset_src; // Time offset for the current source (e.g. live streams)
   gavl_time_t time_offset;
   pthread_mutex_t time_offset_mutex;
   

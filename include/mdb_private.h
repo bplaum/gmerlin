@@ -45,6 +45,11 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 #define MDB_BACKEND_PODCASTS       "podcasts"
 #define MDB_BACKEND_STREAMS        "streams"
 
+/* Special dictionary to store MDB specific data in
+   gavl tracks. Will be removed before passed to the outer world */
+  
+#define BG_MDB_DICT                "$mdb"
+
 /* Backend flags */
 #define BE_FLAG_DO_CACHE (1<<0)
 #define BE_FLAG_REMOTE   (1<<1) // We want remote devices
@@ -74,8 +79,7 @@ void bg_mdb_unexport_media_directory(bg_msg_sink_t * sink, const char * path);
 const char * bg_mdb_container_get_backend(const gavl_dictionary_t * track);
 void bg_mdb_container_set_backend(gavl_dictionary_t * track, const char * be);
 
-const char * bg_mdb_msg_get_backend(gavl_msg_t * msg);
-void bg_mdb_msg_set_backend(gavl_msg_t * msg, const char * be);
+void bg_mdb_track_lock(bg_mdb_backend_t * b, int lock, gavl_dictionary_t * obj);
 
 /* upnp */
 

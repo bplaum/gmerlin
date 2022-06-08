@@ -33,7 +33,7 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-// #define DUMP_TIMESTAMPS
+#define DUMP_TIMESTAMPS
 
 static int handle_message(void * data, gavl_msg_t * msg)
   {
@@ -409,8 +409,12 @@ void * bg_player_ov_thread(void * data)
                         frame->timestamp);
 
     pthread_mutex_lock(&p->config_mutex);
-    s->frame_time += p->sync_offset;
+    s->frame_time += p->sync_offset; // Passed by user
     pthread_mutex_unlock(&p->config_mutex);
+
+    pthread_mutex_lock(&p->time_offset_mutex);
+    s->frame_time -= p->time_offset_src;
+    pthread_mutex_unlock(&p->time_offset_mutex);
     
     /* Subtitle handling */
     if(DO_SUBTITLE(p->flags))
