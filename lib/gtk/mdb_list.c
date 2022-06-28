@@ -59,6 +59,9 @@ static void create_playlist(bg_gtk_mdb_tree_t * tree);
 static void create_folder(bg_gtk_mdb_tree_t * tree);  
 static void load_uri(bg_gtk_mdb_tree_t * tree);
 
+static void create_stream_source(bg_gtk_mdb_tree_t * tree);
+
+
 static void insert_selection_data(album_t * a, GtkSelectionData *data,
                                   int idx);
 
@@ -730,6 +733,8 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   gtk_widget_hide(t->menu.album_menu.load_url_item);
   gtk_widget_hide(t->menu.album_menu.new_playlist_item);
   gtk_widget_hide(t->menu.album_menu.new_container_item);
+  gtk_widget_hide(t->menu.album_menu.new_stream_source_item);
+
   gtk_widget_hide(t->menu.album_menu.delete_item);
   
   
@@ -754,11 +759,17 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   
   if(t->menu_ctx.album)
     {
+    const char * klass;
+    const gavl_dictionary_t * m;
+    
     if(t->menu_ctx.tree && t->menu_ctx.parent && bg_mdb_is_editable(t->menu_ctx.parent))
       gtk_widget_show(t->menu.album_menu.delete_item);
     
     if(bg_mdb_is_editable(t->menu_ctx.album))
       {
+      m = gavl_track_get_metadata(t->menu_ctx.album);
+      klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+
       gtk_widget_show(t->menu.track_menu.paste_item);
  
       if(!t->menu_ctx.tree)
@@ -768,18 +779,23 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
 
       gtk_widget_show(t->menu.album_menu.sort_item);
 
-      if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_SONG))
-        gtk_widget_show(t->menu.album_menu.load_files_item);
+      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_STREAMS))
+        gtk_widget_show(t->menu.album_menu.new_stream_source_item);
+      else
+        {
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_SONG))
+          gtk_widget_show(t->menu.album_menu.load_files_item);
 
-      if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_CONTAINER))
-        gtk_widget_show(t->menu.album_menu.new_container_item);
-      else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_PLAYLIST))
-        gtk_widget_show(t->menu.album_menu.new_playlist_item);
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_CONTAINER))
+          gtk_widget_show(t->menu.album_menu.new_container_item);
+        else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_PLAYLIST))
+          gtk_widget_show(t->menu.album_menu.new_playlist_item);
       
-      if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-         bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST) ||
-         bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_LOCATION))
-        gtk_widget_show(t->menu.album_menu.load_url_item);
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
+           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST) ||
+           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_LOCATION))
+          gtk_widget_show(t->menu.album_menu.load_url_item);
+        }
       }
 
     if(!strcmp(gavl_track_get_id(t->menu_ctx.album), BG_PLAYQUEUE_ID))
@@ -1274,9 +1290,13 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     {
     create_folder(tree);
     }
+  else if(item == tree->menu.album_menu.new_stream_source_item)
+    {
+    /* TODO: New stream source */
+    create_stream_source(tree);
+    }
   else if(item == tree->menu.album_menu.delete_item)
     {
-    fprintf(stderr, "Delete album\n");
     bg_gtk_mdb_tree_delete_selected_album(tree);
     }
   else if((item == tree->menu.track_menu.info_item))
@@ -1359,6 +1379,8 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->album_menu.load_url_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_GLOBE, "Add URL", 0, 0);
   m->album_menu.new_playlist_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_PLAYLIST, "New playlist...", 0, 0);
   m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New folder...", 0, 0);
+  m->album_menu.new_stream_source_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_NETWORK, "New source...", 0, 0);
+
   m->album_menu.delete_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_TRASH, "Delete", 0, 0);
   
   gtk_widget_show(m->album_menu.menu);
@@ -2308,6 +2330,36 @@ static char * ask_string(GtkWidget * w, const char * title, const char * label)
   return str;
   }
 
+static void set_parameter_ask_stream_source(void * data, const char * name, const gavl_value_t * val)
+  {
+  gavl_dictionary_t * d = data;
+  if(!name)
+    return;
+  gavl_dictionary_set(d, name, val);
+  }
+
+
+static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
+  {
+  bg_dialog_t * dlg;
+  bg_parameter_info_t info[3];
+  
+  memset(&info[0], 0, sizeof(info));
+
+  info[0].name = GAVL_META_LABEL;
+  info[0].long_name = TRS("Label");
+  info[0].type = BG_PARAMETER_STRING;
+
+  info[1].name = GAVL_META_URI;
+  info[1].long_name = TRS("Location");
+  info[1].type = BG_PARAMETER_STRING;
+  info[1].help_string = TRS("Location can be a local file, an http(s) URI in a suppored playlist format (e.g. m3u). Use the special URI radiobrowser:// for importing stations from radio-browser.info");
+  
+  dlg = bg_dialog_create(NULL, set_parameter_ask_stream_source, ret, info, TRS("Add stream source"));
+  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
+  bg_dialog_destroy(dlg);
+  }
+
 static void create_container(bg_gtk_mdb_tree_t * tree,
                              char * label,
                              const char * klass)
@@ -2332,11 +2384,67 @@ static void create_container(bg_gtk_mdb_tree_t * tree,
   gavl_msg_set_arg_int(msg, 1, 0);
   gavl_msg_set_arg_dictionary_nocopy(msg, 2, c);
 
-  fprintf(stderr, "Create container\n");
-  gavl_msg_dump(msg, 0);
+  //  fprintf(stderr, "Create container\n");
+  //  gavl_msg_dump(msg, 0);
   
   bg_msg_sink_put(tree->ctrl.cmd_sink, msg);
   }
+
+static void add_stream_source(bg_gtk_mdb_tree_t * tree,
+                              const char * label,
+                              const char * uri)
+  {
+  gavl_msg_t * msg;
+  gavl_dictionary_t * c;
+  gavl_dictionary_t * m;
+
+  c = gavl_dictionary_create();
+  m = gavl_dictionary_get_dictionary_create(c, GAVL_META_METADATA);
+
+  gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
+  
+  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
+  
+  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  
+  msg = bg_msg_sink_get(tree->ctrl.cmd_sink);
+  
+  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(tree->menu_ctx.album));
+  gavl_msg_set_arg_int(msg, 0, -1);
+  gavl_msg_set_arg_int(msg, 1, 0);
+  gavl_msg_set_arg_dictionary_nocopy(msg, 2, c);
+
+  //  fprintf(stderr, "Create container\n");
+  //  gavl_msg_dump(msg, 0);
+  
+  bg_msg_sink_put(tree->ctrl.cmd_sink, msg);
+  }
+
+static void create_stream_source(bg_gtk_mdb_tree_t * tree)
+  {
+  const char *uri;
+  const char *label;
+  
+  gavl_dictionary_t dict;
+
+  gavl_dictionary_init(&dict);
+
+  ask_stream_source(tree->menu_ctx.widget, &dict);
+
+  uri = gavl_dictionary_get_string(&dict, GAVL_META_URI);
+  label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
+
+  if(uri)
+    {
+    if(label)
+      add_stream_source(tree, label, uri);
+    else
+      add_stream_source(tree, "New stream source", uri);
+    }
+  gavl_dictionary_free(&dict);
+  }
+
 
 static void create_playlist(bg_gtk_mdb_tree_t * tree)
   {
@@ -2353,7 +2461,7 @@ static void create_folder(bg_gtk_mdb_tree_t * tree)
   {
   char * str;
   
-  str = ask_string(tree->menu_ctx.widget, "Create playlist", "Name");
+  str = ask_string(tree->menu_ctx.widget, "Create folder", "Name");
   if(!str)
     return;
 

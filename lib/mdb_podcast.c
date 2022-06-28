@@ -959,14 +959,14 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           const char * ctx_id;
           gavl_msg_t * res;
           
-          gavl_value_init(&add);
-          
-          gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
           
           ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
 
           if(strcmp(ctx_id, BG_MDB_ID_PODCASTS))
             break;
+
+          gavl_value_init(&add);
+          gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
           
           /* Load root container */
           index_filename = bg_sprintf("%s/index", p->dir);

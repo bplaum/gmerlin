@@ -144,17 +144,21 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
     
     if(do_mute)
       {
+      //      fprintf(stderr, "Mute\n");
       gavl_audio_frame_mute(frame,
                             &s->output_format);
       }
     else
       {
+      //      fprintf(stderr, "Volume\n");
+      
       pthread_mutex_lock(&s->volume_mutex);
       gavl_volume_control_apply(s->volume,
                                 frame);
       
       pthread_mutex_unlock(&s->volume_mutex);
       }
+    
     }
   }
 
@@ -208,6 +212,9 @@ void * bg_player_oa_thread(void * data)
     
     if(f->valid_samples)
       {
+      // fprintf(stderr, "Sending frame\n");
+      // gavl_hexdump((void*)f->samples.s_16, 32, 16);
+      
       if(gavl_audio_sink_put_frame(s->sink, f) != GAVL_SINK_OK)
         {
         if(bg_player_audio_set_eof(p))

@@ -682,12 +682,18 @@ static void * thread_func(void * data)
           {
           send_download_done(d, dl->id, NULL, NULL);
           
-          gavf_io_destroy(dl->io);
+          //          gavf_io_destroy(dl->io);
+          
 #ifdef USE_STATS
           d->num_errors++;
 #endif
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initialization of body reading failed for %s",
                    gavl_dictionary_get_string(dl->dict, GAVL_META_URI));
+
+          send_download_done(d, d->downloads_i[i].id, NULL, NULL);
+          free_download_i(d, i);
+          actions++;
+          continue;
           }
         else
           gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Download started successfully %d bytes", dl->total_bytes);

@@ -63,6 +63,7 @@ static void splice_children_tree_internal(bg_gtk_mdb_tree_t * t,
                                           const char * id,
                                           int idx, int del, const gavl_value_t * add);
 
+static int row_is_expanded(bg_gtk_mdb_tree_t * t, const char * id);
 
 enum
 {
@@ -696,16 +697,28 @@ static void check_dummy_entry(bg_gtk_mdb_tree_t * widget, GtkTreeIter * parent_i
   {
   GtkTreeIter child_iter;
   GtkTreeModel * model;
+  GtkTreePath* path;
   
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(widget->treeview));
 
-  //  fprintf(stderr, "Add dummy entry\n");
+  //  fprintf(stderr, "check dummy entry\n");
   //  gavl_dictionary_dump(parent_obj, 2);
     
   if(gavl_track_is_locked(parent_obj))
     {
     return;
     }
+
+  /* Need to use gtk here to query expanded status */
+
+  path = gtk_tree_model_get_path(model, parent_iter);
+  
+  if(gtk_tree_view_row_expanded(GTK_TREE_VIEW(widget->treeview), path))
+    {
+    gtk_tree_path_free(path);
+    return;
+    }
+  gtk_tree_path_free(path);
   
   /* Container has no child containers */
   
@@ -1095,10 +1108,12 @@ static void splice_children_tree_internal(bg_gtk_mdb_tree_t * t,
   const gavl_array_t * arr;
 
   int offset = 0;
-  
-  //  fprintf(stderr, "splice_children_tree_internal %s %d %d\n", id, idx, del);
-  //  gavl_value_dump(add, 2);
-  //  fprintf(stderr, "\n");
+
+  /*  
+  fprintf(stderr, "splice_children_tree_internal %s %d %d\n", id, idx, del);
+  gavl_value_dump(add, 2);
+  fprintf(stderr, "\n");
+  */
   
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(t->treeview));
     
@@ -1127,27 +1142,30 @@ static void splice_children_tree_internal(bg_gtk_mdb_tree_t * t,
     {
     for(i = 0; i < del; i++)
       {
-      if((idx_real = tree_transform_idx(dict, idx + i)) >= 0)
+      if((idx_real = tree_transform_idx(dict, idx)) >= 0)
         {
         /* Remove container */
-
-        GValue value={0,};
-        const char * iter_id;
         
-        gtk_tree_model_iter_nth_child(model, &iter, parent, idx_real + offset);
-        gtk_tree_model_get_value(model, &iter, TREE_COLUMN_ID, &value);
+        if(gtk_tree_model_iter_nth_child(model, &iter, parent,
+                                          idx_real + offset))
+          {
+          GValue value={0,};
+          const char * iter_id;
+          
+          gtk_tree_model_get_value(model, &iter, TREE_COLUMN_ID, &value);
         
-        iter_id = g_value_get_string(&value);
-
+          iter_id = g_value_get_string(&value);
         
-        album_array_delete_by_ancestor(t, &t->tab_albums, iter_id);
-        album_array_delete_by_ancestor(t, &t->win_albums, iter_id);
-        album_array_delete_by_ancestor(t, &t->exp_albums, iter_id);
+          album_array_delete_by_ancestor(t, &t->tab_albums, iter_id);
+          album_array_delete_by_ancestor(t, &t->win_albums, iter_id);
+          album_array_delete_by_ancestor(t, &t->exp_albums, iter_id);
         
-        g_value_unset(&value);
+          g_value_unset(&value);
         
-        if(!gtk_tree_store_remove(GTK_TREE_STORE(model), &iter))
-          break;
+          if(!gtk_tree_store_remove(GTK_TREE_STORE(model), &iter))
+            break;
+          
+          }
         }
       }
     }
@@ -1502,7 +1520,7 @@ static void row_collapsed_callback(GtkTreeView *treeview,
   a = album_array_get_by_id(&t->exp_albums, id);
   
   tree_model = gtk_tree_view_get_model(treeview);
-  
+
   if(gtk_tree_model_iter_nth_child(tree_model, &child_iter, arg1, 0))
     {
     if(!is_dummy_entry(t, &child_iter))
@@ -1513,8 +1531,9 @@ static void row_collapsed_callback(GtkTreeView *treeview,
       check_dummy_entry(t, arg1, a->a);
       }
     }
-  
+
   row_set_expanded(t, id, 0);
+  
   free(id);
   }
 

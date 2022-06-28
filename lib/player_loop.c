@@ -493,6 +493,9 @@ static int set_source_from_track(bg_player_t * p,
     gavl_url_get_vars_c(src->location, &src->url_vars);
     }
 
+  //  fprintf(stderr, "Got url vars %s:\n", src->location);
+  //  gavl_dictionary_dump(&src->url_vars, 2);
+  
   if(gavl_dictionary_get_int(&src->url_vars, BG_URL_VAR_TRACK, &src->track_idx))
     src->track_idx--;
   

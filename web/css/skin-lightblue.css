@@ -244,8 +244,10 @@ progress, progress::-webkit-progress-bar {
 
 
 .track-image > img {
-  height: 60vh;
+  height: auto;
   width: auto;
+  max-height: 60vh;
+  max-width: 30vw;
   margin-left:  1vw;
   margin-right: 1vw;
 }

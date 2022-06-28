@@ -133,5 +133,8 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
                          const gavl_dictionary_t * m_tmpl,
                          int start, int num);
 
+int bg_sqlite_set_group_container(sqlite3 * db, gavl_dictionary_t * ret, const char * id, const char * template,
+                                  const char * child_class, int * idxp, int * totalp);
+
 
 #endif // BGSQLITE_H_INCLUDED

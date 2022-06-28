@@ -676,8 +676,8 @@ static void * dbus_thread_func(void * data)
   int ret = 0;
   int no_connections;
 
-  bg_dbus_connection_t * system_conn_local;
-  bg_dbus_connection_t * session_conn_local;
+  //  bg_dbus_connection_t * system_conn_local;
+  //  bg_dbus_connection_t * session_conn_local;
   
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   
@@ -689,24 +689,25 @@ static void * dbus_thread_func(void * data)
     //    fprintf(stderr, "dbus_thread_func 1\n");
     
     dbus_lock();
-    system_conn_local = system_conn;
-    session_conn_local = session_conn;
-    dbus_unlock();
+    //    system_conn_local = system_conn;
+    //    session_conn_local = session_conn;
     
     //    fprintf(stderr, "dbus_thread_func 2\n");
 
-    if(system_conn_local)
-      ret += bg_dbus_connection_update(system_conn_local);
+    if(system_conn)
+      ret += bg_dbus_connection_update(system_conn);
 
     //    fprintf(stderr, "dbus_thread_func 3\n");
     
-    if(session_conn_local)
-      ret += bg_dbus_connection_update(session_conn_local);
+    if(session_conn)
+      ret += bg_dbus_connection_update(session_conn);
     
     //    fprintf(stderr, "dbus_thread_func 4\n");
     
     if(!session_conn && !system_conn)
       no_connections = 1;
+    
+    dbus_unlock();
     
     //    fprintf(stderr, "dbus_thread_func 5\n");
     
@@ -790,7 +791,7 @@ void bg_dbus_connection_unref(bg_dbus_connection_t * conn)
   if(!conn->refcount)
     destroy = 1;
 
-  // fprintf(stderr, "*** bg_dbus_connection_unref: %d\n", conn->refcount);
+  //  fprintf(stderr, "*** bg_dbus_connection_unref: %d\n", conn->refcount);
   
   
   if(destroy)
@@ -1078,9 +1079,9 @@ gavl_array_t * bg_dbus_get_array_property(bg_dbus_connection_t * conn,
   if(!(res = get_property(conn, addr, path, interface, name)))
     return NULL;
 
-  fprintf(stderr, "bg_dbus_get_array_property result:\n");
-  gavl_msg_dump(res, 2);
-  fprintf(stderr, "\n");
+  //  fprintf(stderr, "bg_dbus_get_array_property result:\n");
+  //  gavl_msg_dump(res, 2);
+  //  fprintf(stderr, "\n");
   
   ret = gavl_array_create();
 

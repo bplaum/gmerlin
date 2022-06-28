@@ -376,6 +376,9 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
   char * sql;
   char * cond;
   int num_children;
+
+  const char * last_id = NULL;
+  gavl_dictionary_t * last_m = NULL;
   
   for(i = 0; i < bg_mdb_num_groups; i++)
 
@@ -393,8 +396,9 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
       if(start > 0)
         {
         start--;
+        last_id = bg_mdb_groups[i].id;
         }
-      else
+      else if((num < 1) || (ret->num_entries < num))
         {
         const char * var;
         gavl_value_t val;
@@ -408,6 +412,17 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
         gavl_dictionary_copy(m, m_tmpl);
         gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
 
+        if(last_id)
+          {
+          gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID, gavl_sprintf("%s/%s", parent_id, last_id));
+          last_id = NULL;
+          }
+        if(last_m)
+          {
+          gavl_dictionary_set_string_nocopy(last_m, GAVL_META_NEXT_ID, gavl_sprintf("%s/%s", parent_id, bg_mdb_groups[i].id));
+          last_m = NULL;
+          }
+        
         var = gavl_dictionary_get_string(m_tmpl, GAVL_META_CHILD_CLASS);
         if(var && gavl_string_starts_with(var, "container"))
           gavl_track_set_num_children(dict, num_children, 0);
@@ -419,15 +434,114 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
         
         gavl_array_splice_val_nocopy(ret, -1, 0, &val);
 
-        if(ret->num_entries == num)
-          break;
+        //        if(ret->num_entries == num)
+        //          break;
 
-        
-
+        last_id = bg_mdb_groups[i].id;
+        last_m = m;
+        }
+      else
+        {
+        if(last_m)
+          gavl_dictionary_set_string_nocopy(last_m, GAVL_META_NEXT_ID, gavl_sprintf("%s/%s", parent_id, bg_mdb_groups[i].id));
+        break;
         }
       }
     
     }
+
+  /* Set next/previous */
+  
+  
   return ret->num_entries;
+  
+  }
+
+int bg_sqlite_set_group_container(sqlite3 * db, gavl_dictionary_t * ret,
+                                  const char * id, const char * template,
+                                  const char * child_class, int * idxp, int * totalp)
+  {
+  int count;
+  int i, idx = 0;
+  int num_children = 0;
+  char * sql;
+  char * cond;
+  gavl_dictionary_t * m;
+  gavl_array_t siblings;
+  int result = 0;
+  const char * group_id = strrchr(id, '/');
+  
+  if(!group_id)
+    goto fail;
+
+  group_id++;
+
+  m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
+  
+  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(group_id));
+  gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_class);
+  
+  /* Get number of children */
+  
+  gavl_array_init(&siblings);
+  
+  for(i = 0; i < bg_mdb_num_groups; i++)
+    {
+    cond = bg_sqlite_make_group_condition(bg_mdb_groups[i].id);
+    sql = gavl_sprintf(template, cond);
+    
+    count = bg_sqlite_get_int(db, sql);
+    free(sql);
+    free(cond);
+
+    if(!count)
+      continue;
+
+    if(!strcmp(group_id, bg_mdb_groups[i].id))
+      {
+      idx = siblings.num_entries;
+      num_children = count;
+      }
+    gavl_string_array_add(&siblings, bg_mdb_groups[i].id);
+    }
+
+  if((idx < 0) || (num_children < 1))
+    goto fail;
+
+  if((idx > 0) || (idx < siblings.num_entries - 1))
+    {
+    char * parent_id;
+
+    parent_id = bg_mdb_get_parent_id(id);
+
+    if(idx > 0)
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID,
+                                        gavl_sprintf("%s/%s", parent_id, gavl_string_array_get(&siblings, idx-1)));
+    if(idx < siblings.num_entries - 1)
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_NEXT_ID,
+                                        gavl_sprintf("%s/%s", parent_id, gavl_string_array_get(&siblings, idx+1)));
+    free(parent_id);
+    }
+
+  if(gavl_string_starts_with(child_class, GAVL_META_MEDIA_CLASS_CONTAINER))
+    gavl_track_set_num_children(ret, num_children, 0);
+  else
+    gavl_track_set_num_children(ret, 0, num_children);
+
+  
+    
+  if(idxp)
+    *idxp = idx;
+  if(totalp)
+    *totalp = siblings.num_entries;
+  
+  result = 1;
+
+  fail:
+
+  gavl_array_free(&siblings);
+  
+  return result;
   
   }

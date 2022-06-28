@@ -97,7 +97,7 @@
 
   sources( ID, LABEL, NUM_LANGUAGES, NUM_TAGS, NUM_COUNTRIES, NUM_CATEGORIES)
   
-  stations( DBID, LABEL, LOGO_URI, HOMEPAGE_URI, STREAM_URI, TYPE, SOURCE_ID )
+  stations( DBID, LABEL, LOGO_URI, HOMEPAGE_URI, STREAM_URI, MIMETYPE, TYPE, SOURCE_ID )
 
   categories( ID, NAME )
   station_categories( ID, DBID, CATEGORY_ID )
@@ -120,6 +120,8 @@ typedef struct
   const char * stream_uri;
   const char * station_uri; // Homepage
   const char * logo_uri;
+  const char * mimetype;
+  
   int type;
   int64_t source_id;
 
@@ -134,13 +136,12 @@ typedef struct
 typedef struct
   {
   sqlite3 * db;
-
-  int64_t num_stations;
-  int64_t num_sources;
-
+  int64_t next_id;
+  
   gavl_dictionary_t * root_container;
 
   gavl_array_t sources;
+  int new_file;
   
   } streams_t;
 
@@ -148,17 +149,28 @@ static struct
   {
   int mode;
   const char * table;
+  const char * id;
+  const char * label;
   }
 browse_tables[] =
   {
-    { BROWSE_BY_TAG,      "tags"     },
-    { BROWSE_BY_LANGUAGE, "languages" },
-    { BROWSE_BY_CATEGORY, "categories" },
-    { BROWSE_BY_COUNTRY,   "countries" },
+    { BROWSE_BY_TAG,      "tags",       "tag"      },
+    { BROWSE_BY_LANGUAGE, "languages",  "language" },
+    { BROWSE_BY_CATEGORY, "categories", "category" },
+    { BROWSE_BY_COUNTRY,   "countries", "country"  },
+    { BROWSE_ALL,          NULL,        "all"      },
     { /* End */ },
   };
 
 static void init_sources(bg_mdb_backend_t * b);
+
+static int query_children(bg_mdb_backend_t * be,
+                          bg_sqlite_id_tab_t * tab,
+                          int browse_mode,
+                          int64_t source_id,
+                          int64_t attribute,
+                          const char * group);
+
 
 
 static const char * get_browse_table(int browse_mode)
@@ -173,8 +185,49 @@ static const char * get_browse_table(int browse_mode)
   return NULL;
   }
 
+static const char * get_browse_mode_id(int browse_mode)
+  {
+  int i = 0;
+  while(browse_tables[i].id)
+    {
+    if(browse_tables[i].mode == browse_mode)
+      return browse_tables[i].id;
+    i++;
+    }
+  return NULL;
+  }
 
+static int get_browse_mode_by_id(const char * id)
+  {
+  int i = 0;
+  while(browse_tables[i].id)
+    {
+    if(!strcmp(browse_tables[i].id, id))
+      return browse_tables[i].mode;
+    i++;
+    }
+  return -1;
+  }
+
+#if 0
+static int get_browse_mode_info(const char * id, int * mode, const char ** table, const char ** label)
+  {
+  int i = 0;
+  while(browse_tables[i].id)
+    {
+    if(!strcmp(browse_tables[i].id, id))
+      {
+      *mode = browse_tables[i].mode;
+      *table = browse_tables[i].table;
+      
+      return 1;
+      }
+    i++;
+    }
   
+  }
+#endif
+
 static const gavl_dictionary_t * get_source_by_id(streams_t * p, int64_t id)
   {
   int i;
@@ -193,6 +246,7 @@ static const gavl_dictionary_t * get_source_by_id(streams_t * p, int64_t id)
     }
   return NULL;
   }
+
 
 static int64_t get_source_count(streams_t * p, int64_t id, const char * var)
   {
@@ -219,8 +273,13 @@ static int64_t get_source_count(streams_t * p, int64_t id, const char * var)
   }
 
 // static void import_icecast(bg_mdb_backend_t * b);
-static int import_radiobrowser(bg_mdb_backend_t * b);
-static void import_m3u(bg_mdb_backend_t * b);
+static int import_radiobrowser(bg_mdb_backend_t * b, int64_t source_id);
+
+// static void import_m3u(bg_mdb_backend_t * b);
+
+static int import_source(bg_mdb_backend_t * b, int64_t id, const char * uri);
+static int import_m3u(bg_mdb_backend_t * b, int64_t id, const char * uri);
+    
 
 static void station_init(station_t * s)
   {
@@ -241,6 +300,7 @@ typedef struct
   {
   gavl_dictionary_t * dict;
   gavl_dictionary_t * m;
+  int64_t mimetype_id;
   } browse_station_t;
 
 static int
@@ -248,12 +308,17 @@ browse_station_callback(void * data, int argc, char **argv, char **azColName)
   {
   int i;
   browse_station_t * b = data;
-
+  b->mimetype_id = -1;
+  
   for(i = 0; i < argc; i++)
     {
     if(!strcmp(azColName[i], META_DB_ID))
       {
       
+      }
+    else if(!strcmp(azColName[i], "MIMETYPE_ID"))
+      {
+      b->mimetype_id = strtoll(argv[i], NULL, 10);
       }
     else if(!strcmp(azColName[i], GAVL_META_LABEL))
       {
@@ -334,6 +399,17 @@ static int browse_station(bg_mdb_backend_t * b,
 
   if(!result)
     return 0;
+
+  if(bs.mimetype_id >= 0)
+    {
+    gavl_dictionary_t * src =  gavl_dictionary_get_src_nc(bs.m, GAVL_META_SRC, 0);
+    gavl_dictionary_set_string_nocopy(src, GAVL_META_MIMETYPE,
+                                      bg_sqlite_id_to_string(p->db,
+                                                             "mimetypes",
+                                                             "NAME",
+                                                             "ID",
+                                                             bs.mimetype_id));
+    }
   
   browse_array(b, bs.m, "tags", GAVL_META_TAG, id); 
   browse_array(b, bs.m, "countries", GAVL_META_COUNTRY, id); 
@@ -392,24 +468,50 @@ static void add_station(bg_mdb_backend_t * b, station_t * s)
   {
   char * sql;
   int result;
+  int64_t mimetype_id = -1;
   char * name = gavl_strdup(s->name);
   streams_t * p = b->priv;
 
   name = gavl_strip_space(name);
   
-  s->id = ++p->num_stations;
+  s->id = ++p->next_id;
+  
+  if(!s->mimetype)
+    {
+    char *pos;
+    char *uri = gavl_strdup(s->stream_uri);
+    if((pos = strrchr(uri, '?')))
+      *pos = '\0';
 
+    if((pos = strchr(uri, '#')))
+      *pos = '\0';
 
+    if((pos = strrchr(uri, '.')))
+      {
+      pos++;
+      s->mimetype = bg_ext_to_mimetype(pos);
+      }
+    free(uri);
+    }
+  
+  if(s->mimetype)
+    {
+    mimetype_id = bg_sqlite_string_to_id_add(p->db,
+                                             "mimetypes",
+                                             "ID",
+                                             "NAME",
+                                             s->mimetype);
+    }
   
   if(strchr(s->name, '\n'))
     {
     }
   
-  sql = sqlite3_mprintf("INSERT INTO stations ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_SEARCH_TITLE", "GAVL_META_URI", "GAVL_META_STATION_URL", "GAVL_META_LOGO_URL", TYPE, SOURCE_ID) "
+  sql = sqlite3_mprintf("INSERT INTO stations ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_SEARCH_TITLE", "GAVL_META_URI", "GAVL_META_STATION_URL", "GAVL_META_LOGO_URL", TYPE, SOURCE_ID, MIMETYPE_ID) "
                         "VALUES"
-                        " (%"PRId64", %Q, %Q, %Q, %Q, %Q, %d, %"PRId64"); ",
-                        s->id, name, get_search_name(name), s->stream_uri, s->station_uri, s->logo_uri, s->type, s->source_id);
-
+                        " (%"PRId64", %Q, %Q, %Q, %Q, %Q, %d, %"PRId64", %"PRId64"); ",
+                        s->id, name, get_search_name(name), s->stream_uri, s->station_uri, s->logo_uri, s->type, s->source_id, mimetype_id);
+  
   free(name);
   
   result = bg_sqlite_exec(p->db, sql, NULL, NULL);
@@ -424,18 +526,18 @@ static void add_station(bg_mdb_backend_t * b, station_t * s)
   
   }
 
-static void add_source(bg_mdb_backend_t * b, const char * label, int64_t * source_id)
+static void add_source(bg_mdb_backend_t * b, const char * label, const char * uri, int64_t * source_id)
   {
   char * sql;
   int result;
 
   streams_t * p = b->priv;
-  *source_id = ++p->num_sources;
-
-  sql = sqlite3_mprintf("INSERT INTO sources ("META_DB_ID", "GAVL_META_LABEL") "
+  *source_id = bg_sqlite_get_max_int(p->db, "sources", META_DB_ID) + 1;
+  
+  sql = sqlite3_mprintf("INSERT INTO sources ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_URI") "
                         "VALUES"
-                        " (%"PRId64", %Q);",
-                        *source_id, label);
+                        " (%"PRId64", %Q, %Q);",
+                        *source_id, label, uri);
   
   result = bg_sqlite_exec(p->db, sql, NULL, NULL);
   sqlite3_free(sql);
@@ -455,29 +557,41 @@ static void destroy_streams(bg_mdb_backend_t * b)
   free(p);
   }
 
-static void rescan(bg_mdb_backend_t * be)
+static void broadcast_root_folder(bg_mdb_backend_t * be)
   {
-  int64_t num_languages;
-  int64_t num_countries;
-  int64_t num_tags;
-  int64_t num_categories;
-  int64_t num_stations;
-  char * sql;
-  int i;
-  bg_sqlite_id_tab_t tab;
   gavl_msg_t * evt;
   streams_t * p = be->priv;
-    
-  bg_mdb_track_lock(be, 1, p->root_container);
+
+  evt = bg_msg_sink_get(be->ctrl.evt_sink);
+  gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
   
-  p->num_stations = 0;
-  p->num_sources = 0;
+  gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_STREAMS);
+  
+  gavl_msg_set_arg_dictionary(evt, 0, p->root_container);
+  bg_msg_sink_put(be->ctrl.evt_sink, evt);
+  
+  }
+
+static void rescan(bg_mdb_backend_t * be)
+  {
+  int i;
+  bg_sqlite_id_tab_t tab;
+  streams_t * p = be->priv;
+
+  if(p->new_file)
+    {
+    p->new_file = 0;
+    //    goto end;
+    return;
+    }
+  
+  bg_mdb_track_lock(be, 1, p->root_container);
   
   bg_sqlite_start_transaction(p->db);
   
   /* We re-build the whole database */
 
-  bg_sqlite_exec(p->db, "DELETE FROM sources", NULL, NULL);
+  //  bg_sqlite_exec(p->db, "DELETE FROM sources", NULL, NULL);
   
   bg_sqlite_exec(p->db, "DELETE FROM stations", NULL, NULL);
   bg_sqlite_exec(p->db, "DELETE FROM categories", NULL, NULL);
@@ -492,52 +606,28 @@ static void rescan(bg_mdb_backend_t * be)
   bg_sqlite_exec(p->db, "DELETE FROM tags", NULL, NULL);
   bg_sqlite_exec(p->db, "DELETE FROM station_tags", NULL, NULL);
 
-  //  import_icecast(be);
-  import_radiobrowser(be);
-  import_m3u(be);
-
-  /* Get summary */
   bg_sqlite_id_tab_init(&tab);
+  bg_sqlite_exec(p->db, "SELECT "META_DB_ID" FROM sources", bg_sqlite_append_id_callback, &tab);
 
-  bg_sqlite_exec(p->db,                              /* An open database */
-                 "SELECT "META_DB_ID" from sources;",                           /* SQL to be evaluated */
-                 bg_sqlite_append_id_callback,  /* Callback function */
-                 &tab);                               /* 1st argument to callback */
-
-  fprintf(stderr, "Got %d sources\n", tab.num_val);
-  
   for(i = 0; i < tab.num_val; i++)
     {
-    sql = sqlite3_mprintf("select count(distinct attr_id) from station_countries where SOURCE_ID = %"PRId64";", tab.val[i]);
-    num_countries = bg_sqlite_get_int(p->db, sql);
-    sqlite3_free(sql);
-
-    sql = sqlite3_mprintf("select count(distinct attr_id) from station_languages where SOURCE_ID = %"PRId64";", tab.val[i]);
-    num_languages = bg_sqlite_get_int(p->db, sql);
-    sqlite3_free(sql);
-
-    sql = sqlite3_mprintf("select count(distinct attr_id) from station_categories where SOURCE_ID = %"PRId64";", tab.val[i]);
-    num_categories = bg_sqlite_get_int(p->db, sql);
-    sqlite3_free(sql);
-
-    sql = sqlite3_mprintf("select count(distinct attr_id) from station_tags where SOURCE_ID = %"PRId64";", tab.val[i]);
-    num_tags = bg_sqlite_get_int(p->db, sql);
-    sqlite3_free(sql);
-
-    sql = sqlite3_mprintf("select count("META_DB_ID") from stations where SOURCE_ID = %"PRId64";", tab.val[i]);
-    num_stations = bg_sqlite_get_int(p->db, sql);
-    sqlite3_free(sql);
-
-    sql = sqlite3_mprintf("UPDATE SOURCES set NUM_COUNTRIES = %"PRId64", NUM_LANGUAGES = %"PRId64", NUM_CATEGORIES = %"PRId64", NUM_TAGS = %"PRId64", NUM_STATIONS = %"PRId64" where "META_DB_ID" = %"PRId64";", num_countries, num_languages, num_categories, num_tags, num_stations, tab.val[i]);
-
-    fprintf(stderr, "SQL: %s\n", sql);
-    
-    bg_sqlite_exec(p->db, sql, NULL, NULL);
-    sqlite3_free(sql);
+    char * uri = bg_sqlite_id_to_string(p->db,
+                                        "sources",
+                                        GAVL_META_URI,
+                                        META_DB_ID,
+                                        tab.val[i]);
+    if(uri)
+      {
+      import_source(be, tab.val[i], uri);
+      free(uri);
+      }
     }
-  
+
   bg_sqlite_id_tab_free(&tab);
   
+  //  import_icecast(be);
+  //  import_radiobrowser(be);
+
   bg_sqlite_end_transaction(p->db);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Finished rescannig streams");
@@ -545,18 +635,28 @@ static void rescan(bg_mdb_backend_t * be)
 
   /* Update root folder */
   init_sources(be);
-
-  evt = bg_msg_sink_get(be->ctrl.evt_sink);
-  gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+  broadcast_root_folder(be);
   
-  gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_STREAMS);
+  //  end:
   
-  gavl_msg_set_arg_dictionary(evt, 0, p->root_container);
-  bg_msg_sink_put(be->ctrl.evt_sink, evt);
-
   
   }
 
+static int import_source(bg_mdb_backend_t * be, int64_t id, const char * uri)
+  {
+  if(!strcmp(uri, "radiobrowser://"))
+    {
+    return import_radiobrowser(be, id);
+    }
+  else if(gavl_string_starts_with_i(uri, "http://") ||
+          gavl_string_starts_with_i(uri, "https://") ||
+          gavl_string_starts_with(uri, "/"))
+    {
+    return import_m3u(be, id, uri);
+    }
+  else
+    return 0;
+  }
 
 static void create_tables(bg_mdb_backend_t * be)
   {
@@ -565,11 +665,11 @@ static void create_tables(bg_mdb_backend_t * be)
   /* Object table */  
   if(!bg_sqlite_exec(priv->db,
                      "CREATE TABLE IF NOT EXISTS sources("META_DB_ID" INTEGER PRIMARY KEY, "
-                     GAVL_META_LABEL" TEXT, NUM_LANGUAGES INTEGER, NUM_TAGS INTEGER, NUM_COUNTRIES INTEGER, NUM_CATEGORIES INTEGER, NUM_STATIONS INTEGER);",
+                     GAVL_META_LABEL" TEXT, "GAVL_META_URI" TEXT);",
                      NULL, NULL) ||
      !bg_sqlite_exec(priv->db,
                      "CREATE TABLE IF NOT EXISTS stations("META_DB_ID" INTEGER PRIMARY KEY, "
-                     GAVL_META_LABEL" TEXT, "GAVL_META_SEARCH_TITLE" TEXT, "GAVL_META_URI" TEXT, "GAVL_META_STATION_URL" TEXT, "GAVL_META_LOGO_URL" TEXT,"
+                     GAVL_META_LABEL" TEXT, "GAVL_META_SEARCH_TITLE" TEXT, MIMETYPE_ID INTEGER, "GAVL_META_URI" TEXT, "GAVL_META_STATION_URL" TEXT, "GAVL_META_LOGO_URL" TEXT,"
                      "TYPE INTEGER, SOURCE_ID INTEGER);",
                      NULL, NULL) ||
      !bg_sqlite_exec(priv->db,
@@ -587,7 +687,10 @@ static void create_tables(bg_mdb_backend_t * be)
      !bg_sqlite_exec(priv->db,
                      "CREATE TABLE IF NOT EXISTS languages(ID INTEGER PRIMARY KEY, NAME TEXT, CODE TEXT);", NULL, NULL) ||
      !bg_sqlite_exec(priv->db,
-                     "CREATE TABLE IF NOT EXISTS station_languages(ID INTEGER PRIMARY KEY, ATTR_ID INTEGER, STATION_ID INTEGER, SOURCE_ID INTEGER);", NULL, NULL))
+                     "CREATE TABLE IF NOT EXISTS station_languages(ID INTEGER PRIMARY KEY, ATTR_ID INTEGER, STATION_ID INTEGER, SOURCE_ID INTEGER);", NULL, NULL) ||
+     !bg_sqlite_exec(priv->db,
+                     "CREATE TABLE IF NOT EXISTS mimetypes(ID INTEGER PRIMARY KEY, NAME TEXT);", NULL, NULL)
+     )
     return;
   
   }
@@ -597,19 +700,14 @@ static int get_source_callback(void * data, int argc, char **argv, char **azColN
   {
   int i;
   gavl_value_t val;
-  gavl_value_t browse_modes_val;
-  gavl_value_t browse_mode_val;
+  //  gavl_value_t browse_modes_val;
+  //  gavl_value_t browse_mode_val;
   gavl_dictionary_t * dict;
   gavl_dictionary_t * m;
   gavl_dictionary_t * mdb;
-  gavl_array_t * browse_modes;
+  //  gavl_array_t * browse_modes;
   
   int64_t id;
-  int num_items = 0;
-  int num_containers = 0;
-  int num_stations = 0;
-  int num_tags = 0, num_languages = 0, num_categories = 0, num_countries = 0;
-  int num = 0;
   bg_mdb_backend_t * be = data;
   streams_t * p = be->priv;
   
@@ -625,30 +723,15 @@ static int get_source_callback(void * data, int argc, char **argv, char **azColN
     if(!strcmp(azColName[i], META_DB_ID))
       {
       id = strtoll(argv[i], NULL, 10);
+      gavl_dictionary_set_long(mdb, META_DB_ID, id);
       }
     else if(!strcmp(azColName[i], GAVL_META_LABEL))
       {
       gavl_dictionary_set_string(m, GAVL_META_LABEL, argv[i]);
       }
-    else if(!strcmp(azColName[i], "NUM_TAGS") && argv[i])
+    else if(!strcmp(azColName[i], GAVL_META_URI))
       {
-      num_tags = atoi(argv[i]);
-      }
-    else if(!strcmp(azColName[i], "NUM_LANGUAGES") && argv[i])
-      {
-      num_languages = atoi(argv[i]);
-      }
-    else if(!strcmp(azColName[i], "NUM_COUNTRIES") && argv[i])
-      {
-      num_countries = atoi(argv[i]);
-      }
-    else if(!strcmp(azColName[i], "NUM_CATEGORIES") && argv[i])
-      {
-      num_categories = atoi(argv[i]);
-      }
-    else if(!strcmp(azColName[i], "NUM_STATIONS") && argv[i])
-      {
-      num_stations = atoi(argv[i]);
+      gavl_dictionary_set_string(mdb, GAVL_META_URI, argv[i]);
       }
     }
   
@@ -658,84 +741,527 @@ static int get_source_callback(void * data, int argc, char **argv, char **azColN
 
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s/%"PRId64, BG_MDB_ID_STREAMS, id));
 
-  gavl_value_init(&browse_modes_val);
-  gavl_value_init(&browse_mode_val);
-  browse_modes = gavl_value_set_array(&browse_modes_val);
-  
-  if(num_tags)
-    {
-    num++;
-
-    gavl_value_set_int(&browse_mode_val, BROWSE_BY_TAG);
-    gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
-    }
-
-  if(num_categories)
-    {
-    num++;
-    gavl_value_set_int(&browse_mode_val, BROWSE_BY_CATEGORY);
-    gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
-    }
-  
-  if(num_countries)
-    {
-    num++;
-    gavl_value_set_int(&browse_mode_val, BROWSE_BY_COUNTRY);
-    gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
-    }
-  
-  if(num_languages)
-    {
-    num++;
-    gavl_value_set_int(&browse_mode_val, BROWSE_BY_LANGUAGE);
-    gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
-    }
-
-  gavl_value_set_int(&browse_mode_val, BROWSE_ALL);
-  gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
-  
-  if(!num)
-    {
-    //    browse_mode = BROWSE_ALL;
-    
-    num_items = get_source_count(p, id, "num_stations");
-    
-    if(num_items > GROUP_THRESHOLD)
-      {
-      /* TODO: Make groups */
-      }
-    
-    }
-  else
-    num_containers = num+1;
-
-  gavl_dictionary_set_long(mdb, META_DB_ID, id);
-  
-  gavl_dictionary_set_nocopy(mdb, "browse_modes", &browse_modes_val);
-
-  gavl_dictionary_set_int(mdb, "num_stations", num_stations);
-  gavl_dictionary_set_int(mdb, "num_languages", num_languages);
-  gavl_dictionary_set_int(mdb, "num_tags", num_tags);
-  gavl_dictionary_set_int(mdb, "num_categories", num_categories);
-  gavl_dictionary_set_int(mdb, "num_countries", num_countries);
-  
-  gavl_track_set_num_children(dict , num_containers, num_items);
   
   gavl_array_splice_val_nocopy(&p->sources, -1, 0, &val);
   return 0;
   }
 
+static int browse_source_child(bg_mdb_backend_t * be, int browse_mode, int64_t source_id, gavl_dictionary_t * dict)
+  {
+  const char * klass = NULL;
+  const char * child_class = NULL;
+  const char * label = NULL;
+  const char * attr_table = NULL;
+  streams_t * priv;
+  int num_items;
+  int num_containers;
+  char * sql;
+  
+  priv = be->priv;
+  
+  num_items = 0;
+  num_containers = 0;
+  
+  attr_table = get_browse_table(browse_mode);
+  
+  switch(browse_mode)
+    {
+    case BROWSE_ALL:
+      {
+      //      id = "all";
+      label = "All";
+      klass = GAVL_META_MEDIA_CLASS_CONTAINER;
+
+      num_items = get_source_count(priv, source_id, "num_stations");
+      child_class = GAVL_META_MEDIA_CLASS_LOCATION;
+      
+      if(num_items > GROUP_THRESHOLD)
+        {
+        num_items = 0;
+        sql = gavl_sprintf("select exists(select 1 from stations where SOURCE_ID = %"PRId64" AND "GAVL_META_SEARCH_TITLE" %%s);", source_id);
+        num_containers = bg_sqlite_count_groups(priv->db, sql);
+        free(sql);
+        child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
+        }
+      }
+      break;
+    case BROWSE_BY_TAG:
+      {
+      //      id = "tag";
+      label = "Tags";
+      klass = GAVL_META_MEDIA_CLASS_CONTAINER;
+
+      num_containers = get_source_count(priv, source_id, "num_tags");
+              
+      child_class = GAVL_META_MEDIA_CLASS_CONTAINER_TAG;
+            
+      }
+      break;
+    case BROWSE_BY_COUNTRY:
+      {
+      //      id = "country";
+      label = "Countries";
+      klass = GAVL_META_MEDIA_CLASS_CONTAINER;
+            
+      num_containers = get_source_count(priv, source_id, "num_countries");
+      child_class = GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY;
+      }
+      break;
+    case BROWSE_BY_LANGUAGE:
+      {
+      //      id = "language";
+      label = "Languages";
+      klass = GAVL_META_MEDIA_CLASS_CONTAINER;
+            
+      num_containers = get_source_count(priv, source_id, "num_languages");
+      child_class = GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE;
+      }
+      break;
+    case BROWSE_BY_CATEGORY:
+      {
+      //      id = "category";
+      label = "Categories";
+      klass = GAVL_META_MEDIA_CLASS_CONTAINER;
+      child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
+      num_containers = get_source_count(priv, source_id, "num_categories");
+      }
+      break;
+    }
+
+  //  fprintf(stderr, "Bro
+  
+  if(attr_table && (num_containers > GROUP_THRESHOLD))
+    {
+    sql = gavl_sprintf("select exists(select 1 from station_%s inner join %s on station_%s.attr_id = %s.id where SOURCE_ID = %"PRId64" and NAME %%s);", attr_table, attr_table, attr_table, attr_table, source_id);
+          
+    num_containers = bg_sqlite_count_groups(priv->db, sql);
+    free(sql);
+    child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
+    }
+        
+  if(label)
+    {
+    gavl_dictionary_t * m;
+            
+    m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
+    gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
+    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, klass);
+    if(child_class)
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_class);
+    else if(!num_containers && num_items)
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+    
+    gavl_track_set_num_children(dict, num_containers, num_items);
+    return 1;
+    }
+  
+  return 0;
+  }
 
 static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary_t * ret,
                          int * idx, int * total)
   {
-  fprintf(stderr, "Streams: browse_object %s\n", id);
+  const gavl_dictionary_t * source;
+  char ** path;
+  int64_t source_id;
+  int64_t attr_id = -1;
+  int path_idx = 1;
+  streams_t * p = be->priv;
+  int result = 0;
+  int browse_mode = 0;
+  gavl_array_t siblings;
+  bg_sqlite_id_tab_t sibling_ids;
+  //  const char * group = NULL;
+  gavl_dictionary_t * m = NULL;
+  int i;
+  int num_items = 0;
+  int num_containers = 0;
+  const gavl_dictionary_t * mdb;
+  const gavl_array_t * browse_modes;
+  char * sql;
+  const char * group = NULL;
+  
+  gavl_array_init(&siblings);
+  bg_sqlite_id_tab_init(&sibling_ids);
+  
+  
+  
+  //  fprintf(stderr, "Streams: browse_object %s\n", id);
+  
+  path = gavl_strbreak(id+1, '/');
+  
+  if(!path[path_idx])
+    goto end;
+  
+  source_id = strtoll(path[path_idx], NULL, 10);
+
+  if(!(source = get_source_by_id(p, source_id)))
+    {
+    fprintf(stderr, "Got no source for ID %"PRId64"\n", source_id);
+    goto end;
+    }
+
+  if(!(mdb = gavl_dictionary_get_dictionary(source, BG_MDB_DICT)) ||
+     !(browse_modes = gavl_dictionary_get_array(mdb, "browse_modes")))
+    {
+    fprintf(stderr, "Got no browse modes for source ID %"PRId64"\n", source_id);
+    goto end;
+    }
+  
+  path_idx++;
+
+  if(!path[path_idx])
+    {
+    /* /streams/1 */
+    gavl_dictionary_copy(ret, source);
+
+    for(i = 0; i < p->sources.num_entries; i++)
+      {
+      gavl_string_array_add(&siblings,
+                            gavl_track_get_id(gavl_value_get_dictionary(&p->sources.entries[i])));
+      }
+    
+    result = 1;
+    goto end;
+    }
+  
+  browse_mode = get_browse_mode_by_id(path[path_idx]);
+  m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
+  
+  if(browse_mode < 0)
+    {
+    /* All */
+
+    if(gavl_string_starts_with(path[path_idx], BG_MDB_GROUP_PREFIX))
+      {
+      group = path[path_idx];
+      path_idx++;
+
+      if(!path[path_idx])
+        {
+        sql = gavl_sprintf("select count("META_DB_ID") from stations where SOURCE_ID = %"PRId64" and "GAVL_META_SEARCH_TITLE" %%s;",
+                           source_id);
+        
+        if(bg_sqlite_set_group_container(p->db, ret, id, sql, GAVL_META_MEDIA_CLASS_LOCATION, idx, total))
+          result = 1;
+        if(sql)
+          free(sql);
+        goto end;
+        }
+      }
+
+    
+    /* /streams/1/1039 */
+    /* /streams/1/~group~A/1039 */
+    
+    }
+  
+  path_idx++;
+
+  
+  if(!path[path_idx])
+    {
+    char * parent_id;
+    int mode;
+    /* /streams/1/tag */
+    
+    if(!browse_source_child(be, browse_mode, source_id, ret))
+      goto end;
+    
+    result = 1;
+    
+    parent_id = bg_mdb_get_parent_id(id);
+
+    for(i = 0; i < browse_modes->num_entries; i++)
+      {
+      gavl_value_get_int(&browse_modes->entries[i], &mode);
+
+      gavl_string_array_add_nocopy(&siblings,
+                                   gavl_sprintf("%s/%s", parent_id, get_browse_mode_id(mode)));
+      }
+    free(parent_id);
+    goto end;
+    }
+
+  /* /streams/1/tags */
+  
+  if(gavl_string_starts_with(path[path_idx], BG_MDB_GROUP_PREFIX))
+    {
+    group = path[path_idx];
+    /* /streams/1/tag/~group~A */
+    //    group = path[path_idx];
+    path_idx++;
+
+    if(!path[path_idx])
+      {
+      const char * child_class = NULL;
+      /* /streams/1/tag/~group~A */
+
+      switch(browse_mode)
+        {
+        case BROWSE_ALL:
+          child_class = GAVL_META_MEDIA_CLASS_LOCATION;
+          sql = gavl_sprintf("select count("META_DB_ID") from stations where SOURCE_ID = %"PRId64" and "GAVL_META_SEARCH_TITLE" %%s;", source_id);
+          break;
+        case BROWSE_BY_TAG:
+          child_class = GAVL_META_MEDIA_CLASS_CONTAINER_TAG;
+
+          sql = gavl_sprintf("select count(distinct tags.id) from tags inner join station_tags on tags.ID = station_tags.ATTR_ID where SOURCE_ID = %"PRId64" and NAME %%s;", source_id);
+
+          break;
+        case BROWSE_BY_COUNTRY:
+          child_class = GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY;
+          
+          sql = gavl_sprintf("select count(distinct countries.id) from countries inner join station_countries on countries.ID = station_countries.ATTR_ID where SOURCE_ID = %"PRId64" and NAME %%s;", source_id);
+          
+          break;
+        case BROWSE_BY_LANGUAGE:
+          child_class = GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE;
+          sql = gavl_sprintf("select count(distinct languages.id) from languages inner join station_languages on languages.ID = station_languages.ATTR_ID where SOURCE_ID = %"PRId64" and NAME %%s;", source_id);
+          
+          break;
+        case BROWSE_BY_CATEGORY:
+          child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
+          sql = gavl_sprintf("select count(distinct categories.id) from categories inner join station_categories on categories.ID = station_categories.ATTR_ID where SOURCE_ID = %"PRId64" and NAME %%s;", source_id);
+          break;
+        }
+
+      /* Next, previous, idx, total */
+
+      if(bg_sqlite_set_group_container(p->db, ret, id, sql, child_class, idx, total))
+        result = 1;
+      if(sql)
+        free(sql);
+      goto end;
+      }
+    //    else
+    //      group = NULL;
+    }
+  
+  /* /streams/1/tags/[~group~A/]1 */
+
+  attr_id = strtoll(path[path_idx], NULL, 10);
+
+  path_idx++;
+
+  if(!path[path_idx])
+    {
+    char * label;
+    const char * attr_table = NULL;
+    // /streams/1/tags/[~group~A/]1
+    
+    switch(browse_mode)
+      {
+#if 0 // TODO: Handle leafs
+      case BROWSE_ALL:
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+        sql = gavl_sprintf("select count(id) from stations where source_id = %"PRId64";",
+                           source_id, attr_id);
+        num_items = bg_sqlite_get_int(p->db, sql);
+        free(sql);
+        break;
+#endif
+      case BROWSE_BY_TAG:
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
+        attr_table = "tags";
+        
+        /* Children */
+                           
+        sql = gavl_sprintf("select count(id) from station_tags where source_id = %"PRId64" and attr_id = %"PRId64";",
+                           source_id, attr_id);
+        num_items = bg_sqlite_get_int(p->db, sql);
+        free(sql);
+
+        break;
+      case BROWSE_BY_COUNTRY:
+        attr_table = "countries";
+
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
+
+        sql = gavl_sprintf("select count(id) from station_countries where source_id = %"PRId64" and attr_id = %"PRId64";",
+                           source_id, attr_id);
+        num_items = bg_sqlite_get_int(p->db, sql);
+        free(sql);
+
+
+        break;
+      case BROWSE_BY_LANGUAGE:
+        attr_table = "languages";
+
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
+
+        sql = gavl_sprintf("select count(id) from station_languages where source_id = %"PRId64" and attr_id = %"PRId64";",
+                           source_id, attr_id);
+        num_items = bg_sqlite_get_int(p->db, sql);
+        free(sql);
+
+        break;
+      case BROWSE_BY_CATEGORY:
+        attr_table = "categories";
+        
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+
+        sql = gavl_sprintf("select count(id) from station_categories where source_id = %"PRId64" and attr_id = %"PRId64";",
+                           source_id, attr_id);
+        num_items = bg_sqlite_get_int(p->db, sql);
+        free(sql);
+
+        break;
+      }
+    
+    if(num_items > GROUP_THRESHOLD)
+      {
+      num_items = 0;
+      sql = gavl_sprintf("select exists(select 1 from station_%s inner join %s on station_%s.attr_id = %s.id where SOURCE_ID = %"PRId64" and NAME %%s);", attr_table, attr_table, attr_table, attr_table, source_id);
+      
+      num_containers = bg_sqlite_count_groups(p->db, sql);
+      free(sql);
+      
+      //          num_containers = 
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+      }
+    else if(num_items > 0)
+      {
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+      }
+
+    if(attr_table && (label = bg_sqlite_id_to_string(p->db,
+                                                     attr_table,
+                                                     "NAME",
+                                                     "ID",
+                                                     attr_id)))
+      {
+      if(group)
+        {
+        char * cond;
+        cond = bg_sqlite_make_group_condition(group);
+        /* Siblings */
+        sql = gavl_sprintf("select %s.id from station_%s inner join %s on ATTR_ID = %s.ID where SOURCE_ID = %"PRId64" and NAME %s ORDER by NAME COLLATE strcoll;", attr_table, attr_table, attr_table, attr_table, source_id, cond);
+        free(cond);
+        }
+      else
+        sql = gavl_sprintf("select %s.id from station_%s inner join %s on ATTR_ID = %s.ID where SOURCE_ID = %"PRId64" ORDER by NAME COLLATE strcoll;", attr_table, attr_table, attr_table, attr_table, source_id);
+
+      bg_sqlite_exec(p->db,                              /* An open database */
+                     sql,
+                     bg_sqlite_append_id_callback,  /* Callback function */
+                     &sibling_ids);                               /* 1st argument to callback */
+      
+      free(sql);
+      
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, label);
+      
+      
+      
+
+
+      }
+    result = 1;
+    goto end;
+    }
+
+  group = NULL;
+  
+  if(gavl_string_starts_with(path[path_idx], BG_MDB_GROUP_PREFIX))
+    {
+    //    group = path[path_idx];
+    path_idx++;
+
+    /* ..../~group~A */
+    if(!path[path_idx])
+      {
+      const char  * attr_table = NULL;
+      
+      sql = NULL;
+      
+      switch(browse_mode)
+        {
+        case BROWSE_ALL:
+          sql = gavl_sprintf("select count(id) from stations where SOURCE_ID = %"PRId64" and "GAVL_META_SEARCH_TITLE" %%s;",
+                             source_id);
+          break;
+        case BROWSE_BY_TAG:
+          attr_table = "tags";
+          break;
+        case BROWSE_BY_COUNTRY:
+          attr_table = "countries";
+          break;
+        case BROWSE_BY_LANGUAGE:
+          attr_table = "languages";
+          break;
+        case BROWSE_BY_CATEGORY:
+          attr_table = "categories";
+          break;
+        }
+
+      if(attr_table)
+        {
+        sql = gavl_sprintf("select count(stations."META_DB_ID") from station_%s inner join stations on station_%s.STATION_ID = stations."META_DB_ID" where stations.SOURCE_ID = %"PRId64" and ATTR_ID = %"PRId64" and "GAVL_META_SEARCH_TITLE" %%s;", attr_table, attr_table, source_id, attr_id);
+        }
+      
+      if(sql && bg_sqlite_set_group_container(p->db, ret, id, sql,
+                                              GAVL_META_MEDIA_CLASS_LOCATION, idx, total))
+        result = 1;
+      
+      if(sql)
+        free(sql);
+      goto end;
+      }
+    
+    }
 
   
   
-  /* TODO: IDX + total */
+  /* TODO: IDX + total, next, previous */
   
-  return 0;
+  end:
+
+  
+  if(result)
+    {
+
+    if(!siblings.num_entries && sibling_ids.num_val)
+      {
+      char * parent_id = bg_mdb_get_parent_id(id);
+      
+      for(i = 0; i < sibling_ids.num_val; i++)
+        gavl_string_array_add_nocopy(&siblings, gavl_sprintf("%s/%"PRId64, parent_id, sibling_ids.val[i]));
+      }
+
+    if(siblings.num_entries)
+      {
+      if(!m)
+        m = gavl_track_get_metadata_nc(ret);
+      
+      *idx = gavl_string_array_indexof(&siblings, id);
+      *total = siblings.num_entries;
+
+      if(*idx >= 0)
+        {
+        if(*idx > 0)
+          gavl_dictionary_set_string(m, GAVL_META_PREVIOUS_ID, gavl_string_array_get(&siblings, (*idx) - 1));
+        if(*idx < siblings.num_entries-1)
+          gavl_dictionary_set_string(m, GAVL_META_NEXT_ID, gavl_string_array_get(&siblings, (*idx) + 1));
+        }
+      
+      }
+    
+    gavl_track_set_id(ret, id);
+    }
+
+  if(num_containers || num_items)
+    {
+    gavl_track_set_num_children(ret, num_containers, num_items);
+
+    if(!num_containers)
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+    }
+  gavl_array_free(&siblings);
+  bg_sqlite_id_tab_free(&sibling_ids);
+  
+  gavl_strbreak_free(path);
+  
+  return result;
   }
 
 #define APPEND_WHERE() \
@@ -875,6 +1401,7 @@ static void browse_leafs(bg_mdb_backend_t * be, gavl_msg_t * msg,
     {
     gavl_value_t val;
     gavl_dictionary_t * dict;
+    gavl_dictionary_t * m;
     
     gavl_value_init(&val);
     dict = gavl_value_set_dictionary(&val);
@@ -882,11 +1409,26 @@ static void browse_leafs(bg_mdb_backend_t * be, gavl_msg_t * msg,
     if(!browse_station(be, dict, tab.val[i+start]))
       goto fail;
 
+    m = gavl_track_get_metadata_nc(dict);
+    
+    if(i+start > 0)
+      {
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID,
+                                        gavl_sprintf("%s/%"PRId64, parent_id,
+                                                     tab.val[i+start-1]));
+      }
+    if(i < tab.num_val - 1)
+      {
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_NEXT_ID,
+                                        gavl_sprintf("%s/%"PRId64, parent_id,
+                                                     tab.val[i+start+1]));
+      }
+    
     gavl_track_set_id_nocopy(dict, gavl_sprintf("%s/%"PRId64, parent_id, tab.val[i+start]));
     
     gavl_array_splice_val_nocopy(&arr, -1, 0, &val);
 
-    /* TODO: Send partial answers */
+    /* Send partial answers */
     
     if(!one_answer)
       {
@@ -935,6 +1477,14 @@ typedef struct
   const char * attr_table;
   
   streams_t * priv;
+
+  int idx;
+  int start;
+  int num;
+
+  char * last_id;
+  gavl_dictionary_t * last_m;
+  
   } browse_containers_t;
 
 static int
@@ -949,27 +1499,75 @@ browse_containers_callback(void * data, int argc, char **argv, char **azColName)
   int64_t id;
   int num_children;
 
+  if((b->start > 0) && (b->idx < b->start))
+    {
+    if(b->idx == b->start-1)
+      {
+      for(i = 0; i < argc; i++)
+        {
+        if(!strcmp(azColName[i], "ID"))
+          {
+          b->last_id = gavl_sprintf("%s/%s", b->parent_id, argv[i]);
+          }
+        }
+      }
+    b->idx++;
+    return 0;
+    }
+  
+  if((b->num > 0) && (b->idx + b->start >= b->num))
+    {
+    if(b->last_m)
+      {
+      for(i = 0; i < argc; i++)
+        {
+        if(!strcmp(azColName[i], "ID"))
+          {
+          gavl_dictionary_set_string_nocopy(b->last_m, GAVL_META_NEXT_ID, gavl_sprintf("%s/%s", b->parent_id, argv[i]));
+          b->last_m = NULL;
+          }
+        }
+      }
+    b->idx++;
+    return 0;
+    }
+  
   
   gavl_value_init(&val);
   dict = gavl_value_set_dictionary(&val);
   m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
   
   gavl_dictionary_copy(m, &b->m_tmpl);
+
+  if(b->last_id)
+    {
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID, b->last_id);
+    b->last_id = NULL;
+    }
   
   for(i = 0; i < argc; i++)
     {
     if(!strcmp(azColName[i], "ID"))
       {
-      gavl_track_set_id_nocopy(dict, gavl_sprintf("%s/%s", b->parent_id, argv[i]));
+      b->last_id = gavl_sprintf("%s/%s", b->parent_id, argv[i]);
+
+      gavl_track_set_id(dict, b->last_id);
+
       id = strtoll(argv[i], NULL, 10);
+
+      if(b->last_m)
+        {
+        gavl_dictionary_set_string(b->last_m, GAVL_META_NEXT_ID, b->last_id);
+        b->last_m = NULL;
+        }
       }
     else if(!strcmp(azColName[i], "NAME"))
       gavl_dictionary_set_string(m, GAVL_META_LABEL, argv[i]);
     }
 
   sql = gavl_sprintf("select count(id) from station_%s where source_id = %"PRId64" and attr_id = %"PRId64";", b->attr_table, b->source_id, id);
-  
   num_children = bg_sqlite_get_int(b->priv->db, sql);
+  free(sql);
   
   if(num_children > GROUP_THRESHOLD)
     {
@@ -980,9 +1578,18 @@ browse_containers_callback(void * data, int argc, char **argv, char **azColName)
     gavl_track_set_num_children(dict, num_children, 0);
     }
   else 
+    {
     gavl_track_set_num_children(dict, 0, num_children);
 
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+
+    }
   gavl_array_splice_val_nocopy(b->ret, -1, 0, &val);
+
+  b->last_m = m;
+  
+  
+  b->idx++;
   
   return 0;
   }
@@ -1007,6 +1614,13 @@ static void browse_containers(bg_mdb_backend_t * be,
   b.source_id = source_id;
   b.priv = be->priv;
   b.attr_table = get_browse_table(browse_mode);
+
+  b.idx = 0;
+  b.start = start;
+  b.num = num;
+
+  b.last_m = NULL;
+  b.last_id = NULL;
   
   gavl_dictionary_init(&b.m_tmpl);
   
@@ -1094,7 +1708,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
 
   bg_sqlite_id_tab_init(&tab);
   
-  fprintf(stderr, "Streams: browse_children %s\n", ctx_id);
+  // fprintf(stderr, "Streams: browse_children %s\n", ctx_id);
   
   path = gavl_strbreak(ctx_id+1, '/');
   
@@ -1140,121 +1754,87 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
       for(i = 0; i < num; i++)
         {
         int mode;
-        const char * id = NULL;
-        const char * klass = NULL;
-        const char * child_class = NULL;
-        const char * label = NULL;
-
+        const char * id;
+        gavl_value_t val;
+        gavl_dictionary_t * dict;
+        gavl_dictionary_t * m;
+        
         num_items = 0;
         num_containers = 0;
         
         if(!gavl_value_get_int(&browse_modes->entries[i+start], &mode))
           continue;
 
+        
+        
+        id = get_browse_mode_id(mode);
+        
         attr_table = get_browse_table(mode);
+
+        gavl_value_init(&val);
+        dict = gavl_value_set_dictionary(&val);
         
-        switch(mode)
+        if(browse_source_child(be, mode, source_id, dict))
           {
-          case BROWSE_ALL:
-            {
-            id = "all";
-            label = "All";
-            klass = GAVL_META_MEDIA_CLASS_CONTAINER;
-
-            num_items = get_source_count(priv, source_id, "num_stations");
-              
-            if(num_items > GROUP_THRESHOLD)
-              {
-              num_items = 0;
-              sql = gavl_sprintf("select exists(select 1 from stations where SOURCE_ID = %"PRId64" AND "GAVL_META_SEARCH_TITLE" %%s);", source_id);
-              num_containers = bg_sqlite_count_groups(priv->db, sql);
-              free(sql);
-              child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
-              }
-            }
-            break;
-          case BROWSE_BY_TAG:
-            {
-            id = "tag";
-            label = "Tags";
-            klass = GAVL_META_MEDIA_CLASS_CONTAINER;
-
-            num_containers = get_source_count(priv, source_id, "num_tags");
-              
-            child_class = GAVL_META_MEDIA_CLASS_CONTAINER_TAG;
-            
-            }
-            break;
-          case BROWSE_BY_COUNTRY:
-            {
-            id = "country";
-            label = "Countries";
-            klass = GAVL_META_MEDIA_CLASS_CONTAINER;
-            
-            num_containers = get_source_count(priv, source_id, "num_countries");
-            child_class = GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY;
-            }
-            break;
-          case BROWSE_BY_LANGUAGE:
-            {
-            id = "language";
-            label = "Languages";
-            klass = GAVL_META_MEDIA_CLASS_CONTAINER;
-            
-            num_containers = get_source_count(priv, source_id, "num_languages");
-            child_class = GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE;
-            }
-            break;
-          case BROWSE_BY_CATEGORY:
-            {
-            id = "category";
-            label = "Categories";
-            klass = GAVL_META_MEDIA_CLASS_CONTAINER;
-            child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
-            num_containers = get_source_count(priv, source_id, "num_categories");
-            }
-            break;
-          }
-
-        if(attr_table && (num_containers > GROUP_THRESHOLD))
-          {
-          sql = gavl_sprintf("select exists(select 1 from station_%s inner join %s on station_%s.attr_id = %s.id where SOURCE_ID = %"PRId64" and NAME %%s);", attr_table, attr_table, attr_table, attr_table, source_id);
-          
-          num_containers = bg_sqlite_count_groups(priv->db, sql);
-          free(sql);
-          child_class = GAVL_META_MEDIA_CLASS_CONTAINER;
-          }
-        
-        if(label)
-          {
-          gavl_value_t val;
-          gavl_dictionary_t * dict;
-          gavl_dictionary_t * m;
-            
-          gavl_value_init(&val);
-          dict = gavl_value_set_dictionary(&val);
-          m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
-          gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
-          gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s/%s", ctx_id_orig, id));
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, klass);
-          if(child_class)
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_class);
-            
-          gavl_track_set_num_children(dict, num_containers, num_items);
+          gavl_track_set_id_nocopy(dict, gavl_sprintf("%s/%s", ctx_id_orig, id));
           gavl_array_splice_val_nocopy(&arr, -1, 0, &val);
           }
+        else
+          gavl_value_free(&val);
 
+        m = gavl_track_get_metadata_nc(dict);
+        
+        if(i+start > 0)
+          {
+          if(gavl_value_get_int(&browse_modes->entries[i+start-1], &mode) &&
+             (id = get_browse_mode_id(mode)))
+            {
+            gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID, gavl_sprintf("%s/%s", ctx_id_orig, id));
+            }
+          }
+        
+        if(i+start < browse_modes->num_entries-1)
+          {
+          if(gavl_value_get_int(&browse_modes->entries[i+start+1], &mode) &&
+             (id = get_browse_mode_id(mode)))
+            {
+            gavl_dictionary_set_string_nocopy(m, GAVL_META_NEXT_ID, gavl_sprintf("%s/%s", ctx_id_orig, id));
+            }
+          }
+        
         }
         
       }
     else
       {
-      /* TODO: Just "all" available */
+      
+      /* Make groups */
+      if(get_source_count(priv, source_id, "num_stations") > GROUP_THRESHOLD)
+        {
+        gavl_dictionary_t m_tmpl;
+        gavl_dictionary_init(&m_tmpl);
+        gavl_dictionary_set_string(&m_tmpl, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
         
+        sql = gavl_sprintf("select count("META_DB_ID") from stations where SOURCE_ID = %"PRId64" and "GAVL_META_SEARCH_TITLE" %%s",
+                           source_id);
+        
+        bg_sqlite_add_groups(priv->db, &arr, ctx_id_orig, sql, &m_tmpl, start, num);
+        gavl_dictionary_free(&m_tmpl);
+        free(sql);
+        }
+      else
+        browse_leafs(be, msg,
+                     BROWSE_ALL,
+                     source_id,
+                     -1,
+                     NULL,
+                     ctx_id_orig,
+                     start, num, one_answer);
+      
       }
     goto end;
     }
-  // /streams/1/language, /streams/1/country, /streams/1/category, /streams/1/tags 
+  // /streams/1/language, /streams/1/country, /streams/1/category, /streams/1/tag 
 
   if(browse_modes->num_entries > 1)
     {
@@ -1306,7 +1886,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
           {
           gavl_dictionary_t m_tmpl;
           gavl_dictionary_init(&m_tmpl);
-          gavl_dictionary_set_string(&m_tmpl, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
+          gavl_dictionary_set_string(&m_tmpl, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
           
           sql = gavl_sprintf("select count(distinct languages.id) from languages inner join station_languages on languages.ID = station_languages.ATTR_ID where SOURCE_ID = %"PRId64" and NAME %%s", source_id);
           
@@ -1358,7 +1938,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
         break;
       case BROWSE_BY_CATEGORY:
         num_containers = get_source_count(priv, source_id, "num_categories");
-
+        
         if(!group && (num_containers > GROUP_THRESHOLD))
           {
           gavl_dictionary_t m_tmpl;
@@ -1458,10 +2038,114 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
   
   }
 
+static int delete_source(bg_mdb_backend_t * be, int idx)
+  {
+  int64_t id = -1;
+  const gavl_dictionary_t * src;
+  const gavl_dictionary_t * mdb;
+  char * sql;
+  streams_t * s = be->priv;
+
+  if((idx < 0) || (idx > s->sources.num_entries))
+    return 0;
+
+  if(!(src = gavl_value_get_dictionary(&s->sources.entries[idx])))
+    return 0;
+
+  if(!(mdb = gavl_dictionary_get_dictionary(src, BG_MDB_DICT)))
+    return 0;
+  
+  if(!gavl_dictionary_get_long(mdb, META_DB_ID, &id))
+    return 0;
+
+  /* Delete from database */
+
+  sql = gavl_sprintf("DELETE FROM sources WHERE "META_DB_ID" = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  sql = gavl_sprintf("DELETE FROM stations WHERE SOURCE_ID = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  
+  sql = gavl_sprintf("DELETE FROM station_categories WHERE SOURCE_ID = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  sql = gavl_sprintf("DELETE FROM station_tags WHERE SOURCE_ID = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  sql = gavl_sprintf("DELETE FROM station_languages WHERE SOURCE_ID = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  sql = gavl_sprintf("DELETE FROM station_countries WHERE SOURCE_ID = %"PRId64";",
+                     id);
+  bg_sqlite_exec(s->db, sql, NULL, NULL);
+  free(sql);
+
+  gavl_array_splice_val(&s->sources, idx, 1, NULL);
+  
+  return 1;
+  }
+
+static int add_source_dict(bg_mdb_backend_t * be, const gavl_dictionary_t * dict)
+  {
+  const char * uri = NULL;
+  const char * label = NULL;
+  int64_t source_id = -1;
+  streams_t * s = be->priv;
+
+  if(!(dict = gavl_track_get_metadata(dict)) ||
+     !gavl_dictionary_get_src(dict, GAVL_META_SRC, 0,
+                              NULL, &uri) ||
+     !(label = gavl_dictionary_get_string(dict, GAVL_META_LABEL)))
+    return 0;
+
+  /* Check if the source was already added */
+  if(bg_sqlite_string_to_id(s->db,
+                            "sources",
+                            META_DB_ID,
+                            GAVL_META_URI,
+                            uri) > 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Stream source %s is already in the database", uri);
+    return 0;
+    }
+
+  add_source(be, label, uri, &source_id);
+  return import_source(be, source_id, uri);
+  }
+
+static int add_source_str(bg_mdb_backend_t * be, const char * label, const char * uri)
+  {
+  int ret;
+  gavl_dictionary_t dict;
+  gavl_dictionary_t * m;
+
+  gavl_dictionary_init(&dict);
+  m = gavl_dictionary_get_dictionary_create(&dict, GAVL_META_METADATA);
+
+  gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
+  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
+
+  ret = add_source_dict(be, &dict);
+  gavl_dictionary_free(&dict);
+  return ret;
+  }
+
+
 static int handle_msg(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
-  //  streams_t * s = be->priv;
+  streams_t * s = be->priv;
   switch(msg->NS)
     {
     case BG_MSG_NS_DB:
@@ -1499,39 +2183,6 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           break;
         case BG_CMD_DB_RESCAN:
           {
-#if 0
-        case BG_CMD_DB_RESCAN:
-          {
-          int i;
-          gavl_array_t sql_dirs;
-          gavl_msg_t * res;
-          
-          gavl_array_init(&sql_dirs);
-          bg_sqlite_get_string_array(s->db, "scandirs", "PATH", &sql_dirs);
-          
-          /* Rescan */
-          lock_root_containers(be, 1);
-
-          for(i = 0; i < sql_dirs.num_entries; i++)
-            add_directory(be, gavl_string_array_get(&sql_dirs, i));
-
-          /* Update thumbnails */
-          make_thumbnails(be);
-          
-          lock_root_containers(be, 0);
-          
-          gavl_array_free(&sql_dirs);
-
-          /* Send done event */
-          
-          res = bg_msg_sink_get(be->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
-          }
-          break;
-          
-#endif       
-          
           gavl_msg_t * res;
           rescan(be);
           /* Send done event */
@@ -1542,6 +2193,94 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           }
           break;
+        case BG_CMD_DB_SPLICE_CHILDREN:
+          {
+          int i;
+          int last = 0;
+          int idx = 0;
+          int del = 0;
+          gavl_value_t add;
+          const char * ctx_id;
+          int num_added = 0;
+          int old_num = s->sources.num_entries;
+          
+          ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+          if(strcmp(ctx_id, BG_MDB_ID_STREAMS))
+            break;
+
+          gavl_value_init(&add);
+          gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
+
+          //          fprintf(stderr, "Splice: %d %d %d\n", idx, del, last);
+          //          gavl_value_dump(&add, 2);
+
+          if(idx < 0)
+            idx = s->sources.num_entries;
+
+          if(del < 0)
+            del = s->sources.num_entries - idx;
+
+          if(del + idx >= s->sources.num_entries)
+            del = s->sources.num_entries - idx;
+
+          bg_sqlite_start_transaction(s->db);
+          
+          for(i = 0; i < del; i++)
+            delete_source(be, idx);
+          
+          if(add.type == GAVL_TYPE_ARRAY)
+            {
+            gavl_dictionary_t * dict;
+    //    const char * uri;
+
+            gavl_array_t * add_arr = gavl_value_get_array_nc(&add);
+            
+            if(!add_arr->num_entries)
+              {
+              /* Nothing to add */
+              }
+            else if((dict = gavl_value_get_dictionary_nc(&add_arr->entries[0])))
+              {
+              for(i = 0; i < add_arr->num_entries; i++)
+                {
+                if((dict = gavl_value_get_dictionary_nc(&add_arr->entries[i])))
+                  {
+                  if(add_source_dict(be, dict))
+                    num_added++;
+                  }
+                }
+              }
+            }
+          else if(add.type == GAVL_TYPE_DICTIONARY)
+            {
+            gavl_dictionary_t * dict;
+            dict = gavl_value_get_dictionary_nc(&add);
+
+            if(add_source_dict(be, dict))
+              num_added++;
+            }
+          if(del || num_added)
+            {
+            gavl_msg_t * res;
+            
+            init_sources(be);
+
+            res = bg_msg_sink_get(be->ctrl.evt_sink);
+            gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+
+            gavl_dictionary_set_string(&res->header,
+                                       GAVL_MSG_CONTEXT_ID, BG_MDB_ID_STREAMS);           
+            gavl_msg_set_last(res, 1);
+            
+            gavl_msg_set_arg_int(res, 0, 0); // idx
+            gavl_msg_set_arg_int(res, 1, old_num); // del
+            gavl_msg_set_arg_array(res, 2, &s->sources);
+            bg_msg_sink_put(be->ctrl.evt_sink, res);
+            broadcast_root_folder(be);
+            }
+          bg_sqlite_end_transaction(s->db);
+          }
         }
       break;
       }
@@ -1549,37 +2288,202 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static int ping_streams(bg_mdb_backend_t * b)
-  {
-  rescan(b);
-  
-  b->ping_func = NULL;
-  return 1;
-  }
-
 static void init_sources(bg_mdb_backend_t * b)
   {
   int result;
   char * sql;
-    
+  int i;
   streams_t * priv = b->priv;
+
+  priv->next_id = bg_sqlite_get_max_int(priv->db, "stations", META_DB_ID);
+  
+  /* Initialize sources */
+  gavl_array_reset(&priv->sources);
   
   if((result = bg_sqlite_get_int(priv->db, "SELECT count("META_DB_ID") from sources;" )) > 0)
-    {
     gavl_track_set_num_children(priv->root_container, result, 0);
-    }
   else
+    {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no sources");
-
-  /* Initialize sources */
-
+    return;
+    }
+  
   /* Get sources as containers */
 
   sql = sqlite3_mprintf("select * from SOURCES order by "GAVL_META_LABEL" COLLATE strcoll;");
   bg_sqlite_exec(priv->db, sql, get_source_callback, b);
   sqlite3_free(sql);
 
+  /* next/previous, idx, total */
+
+  for(i = 0; i < priv->sources.num_entries; i++)
+    {
+    int num_stations = 0;
+    int num_tags = 0, num_languages = 0, num_categories = 0, num_countries = 0;
+    const char * next_id;
+    const char * prev_id;
+
+    gavl_value_t browse_modes_val;
+    gavl_value_t browse_mode_val;
+    gavl_dictionary_t * m;
+    gavl_dictionary_t * mdb;
+    gavl_array_t * browse_modes;
+    gavl_dictionary_t * dict;
+    int num = 0;
+    int num_items = 0;
+    int num_containers = 0;
+    int64_t id = -1;
+    
+    next_id = NULL;
+    prev_id = NULL;
+    
+    if((i > 0) && (dict = gavl_value_get_dictionary_nc(&priv->sources.entries[i-1])))       
+      prev_id = gavl_track_get_id(dict);
+
+    if((i < priv->sources.num_entries-1) && (dict = gavl_value_get_dictionary_nc(&priv->sources.entries[i+1])))
+      next_id = gavl_track_get_id(dict);
+    
+    if((dict = gavl_value_get_dictionary_nc(&priv->sources.entries[i])))
+      {
+      m = gavl_track_get_metadata_nc(dict);
+      
+      if(next_id)
+        gavl_dictionary_set_string(m, GAVL_META_NEXT_ID, next_id);
+      if(prev_id)
+        gavl_dictionary_set_string(m, GAVL_META_PREVIOUS_ID, prev_id);
+      
+      mdb = gavl_dictionary_get_dictionary_nc(dict, BG_MDB_DICT);
+      gavl_dictionary_get_long(mdb, META_DB_ID, &id);
+      }
+      
+    /* Children */
+
+    sql = sqlite3_mprintf("select count(distinct attr_id) from station_countries where SOURCE_ID = %"PRId64";", id);
+    num_countries = bg_sqlite_get_int(priv->db, sql);
+    sqlite3_free(sql);
+
+    sql = sqlite3_mprintf("select count(distinct attr_id) from station_languages where SOURCE_ID = %"PRId64";", id);
+    num_languages = bg_sqlite_get_int(priv->db, sql);
+    sqlite3_free(sql);
+
+    sql = sqlite3_mprintf("select count(distinct attr_id) from station_categories where SOURCE_ID = %"PRId64";", id);
+    num_categories = bg_sqlite_get_int(priv->db, sql);
+    sqlite3_free(sql);
+
+    sql = sqlite3_mprintf("select count(distinct attr_id) from station_tags where SOURCE_ID = %"PRId64";", id);
+    num_tags = bg_sqlite_get_int(priv->db, sql);
+    sqlite3_free(sql);
+
+    sql = sqlite3_mprintf("select count("META_DB_ID") from stations where SOURCE_ID = %"PRId64";", id);
+    num_stations = bg_sqlite_get_int(priv->db, sql);
+    sqlite3_free(sql);
+
+    gavl_value_init(&browse_modes_val);
+    gavl_value_init(&browse_mode_val);
+    browse_modes = gavl_value_set_array(&browse_modes_val);
+  
+    if(num_tags > 1)
+      {
+      num++;
+      gavl_value_set_int(&browse_mode_val, BROWSE_BY_TAG);
+      gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
+      }
+
+    if(num_categories > 1)
+      {
+      num++;
+      gavl_value_set_int(&browse_mode_val, BROWSE_BY_CATEGORY);
+      gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
+      }
+  
+    if(num_countries > 1)
+      {
+      num++;
+      gavl_value_set_int(&browse_mode_val, BROWSE_BY_COUNTRY);
+      gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
+      }
+  
+    if(num_languages > 1)
+      {
+      num++;
+      gavl_value_set_int(&browse_mode_val, BROWSE_BY_LANGUAGE);
+      gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
+      }
+
+    gavl_value_set_int(&browse_mode_val, BROWSE_ALL);
+    gavl_array_splice_val_nocopy(browse_modes, -1, 0, &browse_mode_val);
+  
+    if(!num)
+      {
+      num_items = num_stations;
+    
+      if(num_items > GROUP_THRESHOLD)
+        {
+        /* Make groups */
+        num_items = 0;
+        sql = gavl_sprintf("select exists(select 1 from stations where SOURCE_ID = %"PRId64" AND "GAVL_META_SEARCH_TITLE" %%s);", id);
+        num_containers = bg_sqlite_count_groups(priv->db, sql);
+        free(sql);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        }
+    
+      }
+    else
+      num_containers = num+1;
+
+    gavl_dictionary_set_long(mdb, META_DB_ID, id);
+  
+    gavl_dictionary_set_nocopy(mdb, "browse_modes", &browse_modes_val);
+
+    gavl_dictionary_set_int(mdb, "num_stations", num_stations);
+    gavl_dictionary_set_int(mdb, "num_languages", num_languages);
+    gavl_dictionary_set_int(mdb, "num_tags", num_tags);
+    gavl_dictionary_set_int(mdb, "num_categories", num_categories);
+    gavl_dictionary_set_int(mdb, "num_countries", num_countries);
+  
+    gavl_track_set_num_children(dict , num_containers, num_items);
+    if(!num_containers && num_items)
+      {
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+      }
+
+    
+    }
+  
   }
+
+static int ping_streams(bg_mdb_backend_t * be)
+  {
+  streams_t * priv = be->priv;
+  //  rescan(b);
+
+  bg_mdb_track_lock(be, 1, priv->root_container);
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creating default database");
+
+  bg_sqlite_start_transaction(priv->db);
+  
+  add_source_str(be, "radio-browser.info", "radiobrowser://");
+  add_source_str(be, "iptv-org",        "https://iptv-org.github.io/iptv/index.m3u");
+  add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
+  add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
+
+  bg_sqlite_end_transaction(priv->db);
+
+  init_sources(be);
+  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Default database created");
+  
+  bg_mdb_track_lock(be, 0, priv->root_container);
+  gavl_track_set_num_children(priv->root_container,
+                              bg_sqlite_get_int(priv->db, "select count("META_DB_ID") from sources;"), 0);
+
+  broadcast_root_folder(be);
+  
+  be->ping_func = NULL;
+  return 1;
+  }
+
 
 void bg_mdb_create_streams(bg_mdb_backend_t * b)
   {
@@ -1589,7 +2493,6 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   //  gavl_dictionary_t * child_m;
   //  const gavl_dictionary_t * container_m;
   char * filename;
-  int new_file = 0;
 
   priv = calloc(1, sizeof(*priv));
   b->priv = priv;
@@ -1599,7 +2502,7 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   filename = gavl_sprintf("%s/streams.sqlite", b->db->path);
 
   if(access(filename, R_OK))
-    new_file = 1;
+    priv->new_file = 1;
   
   sqlite3_open(filename, &priv->db);
   
@@ -1607,11 +2510,16 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   
   create_tables(b);
   
-  priv->root_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_STREAMS);
+  priv->root_container =
+    bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_STREAMS);
 
+  bg_mdb_set_editable(priv->root_container);
+  //  bg_mdb_add_can_add(priv->root_container, GAVL_META_MEDIA_CLASS_LOCATION);
+  
   bg_mdb_container_set_backend(priv->root_container, MDB_BACKEND_STREAMS);
-
-  init_sources(b);
+  
+  if(!priv->new_file)
+    init_sources(b);
   
   bg_controllable_init(&b->ctrl,
                        bg_msg_sink_create(handle_msg, b, 0),
@@ -1619,7 +2527,7 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   
   b->destroy = destroy_streams;
 
-  if(new_file)
+  if(priv->new_file)
     b->ping_func = ping_streams;
   }
 
@@ -1817,6 +2725,7 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
     s.logo_uri    = rb_dict_get_string(child, "favicon");
     s.station_uri = rb_dict_get_string(child, "homepage");
     s.stream_uri  = uri;
+    s.mimetype = "application/mpegurl";
     s.source_id   = source_id;
     
     rb_set_array(child, &s.tags, "tags", 0, 0);
@@ -1837,16 +2746,13 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
   return ret;
   }
 
-static int import_radiobrowser(bg_mdb_backend_t * b)
+static int import_radiobrowser(bg_mdb_backend_t * b, int64_t source_id)
   {
   int start = 0;
   int stations_added = 0;
   int result;
-  int64_t source_id = -1;
 
   gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Importing streams from radio-browser.info");
-  
-  add_source(b, "radio-browser.info", &source_id);
   
   while((result = import_radiobrowser_sub(b, start, source_id)))
     {
@@ -1871,20 +2777,20 @@ static void import_m3u_array(gavl_array_t * ret, const gavl_dictionary_t * m, co
     }
   }
 
-static void import_m3u_sub(bg_mdb_backend_t * b, const char * uri, const char * label)
+static int import_m3u(bg_mdb_backend_t * b, int64_t source_id, const char * uri)
   {
   int i, num;
   station_t s;
   const gavl_dictionary_t * dict;
   const gavl_dictionary_t * m;
-  int64_t source_id = -1;
+  
   int stations_added = 0;
   gavl_dictionary_t * mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing stations from %s", uri);
   
   if(!mi)
-    return;
+    return 0;
   
   num = gavl_get_num_tracks(mi);
   
@@ -1909,8 +2815,6 @@ typedef struct
   } station_t;
 
 #endif
-
-  add_source(b, label, &source_id);
 
   for(i = 0; i < num; i++)
     {
@@ -1938,11 +2842,14 @@ typedef struct
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Imported %d stations from %s", stations_added, uri);
 
+  return stations_added;
   }
 
+#if 0
 static void import_m3u(bg_mdb_backend_t * b)
   {
   import_m3u_sub(b, "https://iptv-org.github.io/iptv/index.m3u", "iptv-org");
   import_m3u_sub(b, "http://bit.ly/kn-kodi-tv", "Kodinerds IPTV");
   import_m3u_sub(b, "http://bit.ly/kn-kodi-radio", "Kodinerds Radio");
   }
+#endif
