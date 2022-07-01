@@ -120,7 +120,7 @@ struct bg_http_server_s
   
   };
 
-int bg_http_playlist_handler_ping(bg_http_playlist_handler_t * h);
+//int bg_http_playlist_handler_ping(bg_http_playlist_handler_t * h);
 void bg_http_server_init_playlist_handler(bg_http_server_t * srv);
 
 void bg_http_playlist_handler_destroy(bg_http_playlist_handler_t * h);

@@ -1011,7 +1011,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           bg_mdb_get_browse_children_request(msg, &ctx_id, &start, &num, &one_answer);
 
-          //    fprintf(stderr, "XML Browse children %s %d %d\n", ctx_id, start, num);
+          fprintf(stderr, "XML Browse children %s %d %d %d\n", ctx_id, start, num, one_answer);
           
           if(browse_children(b, ctx_id, &arr, start, num, &total))
             {
@@ -1034,7 +1034,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               while(!last)
                 {
                 gavl_array_copy_sub(&arr_sub, &arr, start - start1, MAX_CHILDREN);
-                //   fprintf(stderr, "XML Browse children 1 %d %d\n", start, arr_sub.num_entries);
+                fprintf(stderr, "XML Browse children 1 %d %d\n", start, arr_sub.num_entries);
                 if(start + arr_sub.num_entries == end)
                   last = 1;
                 

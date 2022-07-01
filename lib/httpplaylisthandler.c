@@ -37,7 +37,6 @@
 
 #define FORMAT_IDX "fmt"
 #define LOCAL      "local"
-#define DOWNLOAD   "download"
 #define OBJECT     "object"
 
 /*
@@ -82,14 +81,14 @@ void bg_http_playlist_handler_destroy(bg_http_playlist_handler_t * h)
 
 static void send_playlist(bg_http_connection_t * conn,
                           const gavl_dictionary_t * dict,
-                          int local, int downloadable, int fmtidx)
+                          int local, int fmtidx)
   {
   char * str;
   int len;
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
 
-  str = bg_tracks_to_string(dict, formats[fmtidx].format, local, downloadable);
+  str = bg_tracks_to_string(dict, formats[fmtidx].format, local);
   
   len = strlen(str);
   
@@ -113,6 +112,7 @@ static void send_playlist(bg_http_connection_t * conn,
   free(str);
   }
 
+#if 0
 static int handle_message(void * data, gavl_msg_t * msg)
   {
   bg_http_playlist_handler_t * h = data;
@@ -134,8 +134,10 @@ static int handle_message(void * data, gavl_msg_t * msg)
           
           if(!(req = bg_function_get(&h->requests, msg, &idx)) ||
              !(conn_dict = gavl_dictionary_get_dictionary_nc(req, "conn")))
+            {
+            fprintf(stderr, "Request not found\n");
             return 1;
-
+            }
           memset(&conn, 0, sizeof(conn));
           bg_http_connection_from_dict_nocopy(&conn, conn_dict);
           
@@ -169,7 +171,6 @@ static int handle_message(void * data, gavl_msg_t * msg)
               /* Item -> create bogus container and generate playlist */
               int fmt = 0;
               int local = 0;
-              int download = 0;
               gavl_dictionary_t * track;
               gavl_dictionary_t container;
 
@@ -181,9 +182,8 @@ static int handle_message(void * data, gavl_msg_t * msg)
               
               gavl_dictionary_get_int(req, FORMAT_IDX, &fmt);
               gavl_dictionary_get_int(req, LOCAL, &local);
-              gavl_dictionary_get_int(req, DOWNLOAD, &download);
               
-              send_playlist(&conn, &container, local, download, fmt);
+              send_playlist(&conn, &container, local, fmt);
               
               gavl_array_splice_val(&h->requests, idx, 1, NULL);
               bg_http_server_put_connection(h->srv, &conn);
@@ -209,7 +209,6 @@ static int handle_message(void * data, gavl_msg_t * msg)
 
               gavl_dictionary_set(new_req, LOCAL, gavl_dictionary_get(req, LOCAL));
               gavl_dictionary_set(new_req, FORMAT_IDX, gavl_dictionary_get(req, FORMAT_IDX));
-              gavl_dictionary_set(new_req, DOWNLOAD, gavl_dictionary_get(req, DOWNLOAD));
               
               //              fprintf(stderr, "Getting children\n");
               //              gavl_dictionary_dump(new_req, 2);
@@ -235,7 +234,9 @@ static int handle_message(void * data, gavl_msg_t * msg)
             gavl_value_init(&add);
             
             gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
-
+            
+            fprintf(stderr, "Got children %d %d %d\n", last, idx, del);
+            
             /* Append to children */
 
             dict = gavl_dictionary_get_dictionary_nc(req, OBJECT);
@@ -249,16 +250,14 @@ static int handle_message(void * data, gavl_msg_t * msg)
               {
               int fmt = 0;
               int local = 0;
-              int download = 0;
 
               gavl_dictionary_get_int(req, FORMAT_IDX, &fmt);
               gavl_dictionary_get_int(req, LOCAL, &local);
-              gavl_dictionary_get_int(req, DOWNLOAD, &download);
               
               // fprintf(stderr, "Got children %d %d\n", local, fmt);
               // gavl_dictionary_dump(req, 2);
               
-              send_playlist(&conn, dict, local, download, fmt);
+              send_playlist(&conn, dict, local, fmt);
               gavl_array_splice_val(&h->requests, idx, 1, NULL);
               }
             
@@ -273,12 +272,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
     }
   return 1;
   }
-
-int bg_http_playlist_handler_ping(bg_http_playlist_handler_t * h)
-  {
-  bg_msg_sink_iteration(h->ctrl.evt_sink);
-  return bg_msg_sink_get_num(h->ctrl.evt_sink);
-  }
+#endif
 
 static int handle_http_playlist(bg_http_connection_t * conn, void * data)
   {
@@ -286,12 +280,13 @@ static int handle_http_playlist(bg_http_connection_t * conn, void * data)
   int len;
   char * id;
   char * pos;
-  gavl_msg_t * msg;
   bg_http_playlist_handler_t * h = data;
   const char * var;
   
-  gavl_dictionary_t * req;
-  gavl_dictionary_t * conn_dict;
+  gavl_dictionary_t ret;
+  int local;
+  
+  gavl_dictionary_init(&ret);
   
   format_idx = 0;
 
@@ -300,9 +295,7 @@ static int handle_http_playlist(bg_http_connection_t * conn, void * data)
     len = strlen(formats[format_idx].name);
     if(!strncmp(conn->path, formats[format_idx].name, len) &&
        (conn->path[len] == '/'))
-      {
       break;
-      }
     format_idx++;
     }
 
@@ -314,43 +307,16 @@ static int handle_http_playlist(bg_http_connection_t * conn, void * data)
   pos = strrchr(id, '/');
   *pos = '\0';
   
-  /* 1. Generate request message */
-  msg = bg_msg_sink_get(h->ctrl.cmd_sink);
-  
-  gavl_msg_set_id_ns(msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
-  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, id);
-
-  /* 2. Store request */
-
-  req = bg_function_push(&h->requests, msg);
-
-  gavl_dictionary_set_int(req, FORMAT_IDX, format_idx);
-
-  /* TODO */
   if((var = gavl_dictionary_get_string(&conn->url_vars, LOCAL)) &&
      (atoi(var) != 0))
-    gavl_dictionary_set_int(req, LOCAL, 1);
+    local = 1;
+  
+  if(bg_mdb_browse_children_sync(h->srv->mdb, &ret, id, 5000))
+    send_playlist(conn, &ret, local, format_idx);    
   else
-    gavl_dictionary_set_int(req, LOCAL, 0);
-
-  if((var = gavl_dictionary_get_string(&conn->url_vars, DOWNLOAD)) &&
-     (atoi(var) != 0))
-    gavl_dictionary_set_int(req, DOWNLOAD, 1);
-  else
-    gavl_dictionary_set_int(req, DOWNLOAD, 0);
+    bg_http_connection_init_res(conn, "HTTP/1.1", 500, "Internal Server Error");
   
-  gavl_dictionary_set_string(req, GAVL_META_ID, id);
-  
-  conn_dict = gavl_dictionary_get_dictionary_create(req, "conn");
-  
-  bg_http_connection_to_dict_nocopy(conn, conn_dict);
-  conn->fd = -1;
-  
-  fprintf(stderr, "Got playlist request\n");
-  gavl_dictionary_dump(req, 2);
-  
-  /* 3. Send request message */
-  bg_msg_sink_put(h->ctrl.cmd_sink, msg);
+  gavl_dictionary_free(&ret);
   
   return 1;
   }
@@ -363,9 +329,6 @@ void bg_http_server_init_playlist_handler(bg_http_server_t * srv)
   priv->srv = srv;
 
   srv->playlist_handler = priv;
-  
-  bg_control_init(&priv->ctrl, bg_msg_sink_create(handle_message, priv, 0));
-  bg_controllable_connect(bg_mdb_get_controllable(srv->mdb), &priv->ctrl);
   
   bg_http_server_add_handler(srv, handle_http_playlist, BG_HTTP_PROTO_HTTP, "/container/", priv);
   }

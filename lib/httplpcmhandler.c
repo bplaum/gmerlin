@@ -621,6 +621,7 @@ static void add_uri_lpcm(gavl_dictionary_t * metadata,
   char * uri;
   char * mimetype;
   gavl_dictionary_t vars;
+  gavl_dictionary_t * src;
 
   gavl_dictionary_init(&vars);
   
@@ -637,7 +638,8 @@ static void add_uri_lpcm(gavl_dictionary_t * metadata,
   mimetype = bg_sprintf("audio/L16;%s=%d;%s=%d", LPCM_VAR_SAMPLERATE, samplerate, LPCM_VAR_CHANNELS, num_channels);
 
   //  src =
-  gavl_metadata_add_src(metadata, GAVL_META_SRC, mimetype, uri);
+  src = gavl_metadata_add_src(metadata, GAVL_META_SRC, mimetype, uri);
+  gavl_dictionary_set_int(src, GAVL_META_TRANSCODED, 1);
   
   free(mimetype);
   free(uri);
@@ -656,6 +658,8 @@ static void add_uri_wav(gavl_dictionary_t * metadata, bg_http_server_t * srv, co
   const char * pos1;
   const char * pos2;
 
+  gavl_dictionary_t * src;
+  
   if(gavl_dictionary_get_src(metadata, GAVL_META_SRC, 0, NULL, &location) &&
      location &&
      (pos1 = strrchr(location, '/')) &&
@@ -666,7 +670,9 @@ static void add_uri_wav(gavl_dictionary_t * metadata, bg_http_server_t * srv, co
   
   uri = bg_sprintf("%s%s%s/%s.wav", bg_http_server_get_root_url(srv), WAV_PATH, id, label);
   
-  gavl_metadata_add_src(metadata, GAVL_META_SRC, "audio/wav", uri);
+  src = gavl_metadata_add_src(metadata, GAVL_META_SRC, "audio/wav", uri);
+  gavl_dictionary_set_int(src, GAVL_META_TRANSCODED, 1);
+
   free(uri);
   }
 

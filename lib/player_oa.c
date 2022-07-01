@@ -111,7 +111,7 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
   {
   int do_mute;
   bg_player_audio_stream_t * s;
-  char tmp_string[128];
+  //  char tmp_string[128];
   s = &p->audio_stream;
 #if 0
   if(!s->has_first_timestamp_o)

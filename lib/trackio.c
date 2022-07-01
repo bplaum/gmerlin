@@ -39,9 +39,8 @@
  *   as transfer formats
  */
 
-static const char * get_uri(const gavl_dictionary_t * m, int local, int downloadable)
+static const char * get_uri(const gavl_dictionary_t * m, int local)
   {
-  int idx = 0;
 
   /* TODO: kick out lpcm uris, which might come first */
   // int bg_is_http_media_uri(const char * uri)
@@ -55,11 +54,13 @@ static const char * get_uri(const gavl_dictionary_t * m, int local, int download
     }
   else
     {
+    int idx = 0;
+    
     while(gavl_dictionary_get_src(m, GAVL_META_SRC, idx, NULL, &location))
       {
       if(gavl_string_starts_with(location, "http://"))
         {
-        if(!idx || !downloadable || bg_is_http_media_uri(location))
+        if(!idx || bg_is_http_media_uri(location))
           return location;
         }
       idx++;
@@ -78,7 +79,7 @@ static int read_gmerlin(gavl_dictionary_t * dict, const char * str, int len)
   return bg_dictionary_load_xml_string(dict, str, len, GMERLIN_TRACK_ROOT);
   }
 
-static char * write_xspf(const gavl_dictionary_t * dict, int local, int downloadable)
+static char * write_xspf(const gavl_dictionary_t * dict, int local)
   {
   int i, num_tracks;
   char * ret;
@@ -171,7 +172,7 @@ static char * write_xspf(const gavl_dictionary_t * dict, int local, int download
       }
 
     /* location */
-    if((location = get_uri(m, local, downloadable)))
+    if((location = get_uri(m, local)))
       {
       tmp_string = bg_string_to_uri(location, -1);
       bg_xml_append_child_node(track, "location", tmp_string);
@@ -191,7 +192,7 @@ static int read_xspf(gavl_dictionary_t * dict, const char * str, int len)
   
   }
 
-static char * write_m3u(const gavl_dictionary_t * dict, int local, int downloadable)
+static char * write_m3u(const gavl_dictionary_t * dict, int local)
   {
   char * ret;
   int i, num_tracks;
@@ -219,7 +220,7 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local, int downloada
        !(val = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
       continue;
 
-    if(!(location = get_uri(m, local, downloadable)))
+    if(!(location = get_uri(m, local)))
       continue;
     
     if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
@@ -320,7 +321,7 @@ static int read_m3u(gavl_dictionary_t * ret, const char * str, int len)
   return 1;
   }
 
-static char * write_pls(const gavl_dictionary_t * dict, int local, int downloadable)
+static char * write_pls(const gavl_dictionary_t * dict, int local)
   {
   char * ret;
   int i, num_tracks;
@@ -349,7 +350,7 @@ static char * write_pls(const gavl_dictionary_t * dict, int local, int downloada
        !(val = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
       continue;
     
-    if(!(location = get_uri(m, local, downloadable)))
+    if(!(location = get_uri(m, local)))
       continue;
     
     if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
@@ -381,7 +382,7 @@ static int read_pls(gavl_dictionary_t * dict, const char * str, int len)
   
   }
 
-static char * write_urilist(const gavl_dictionary_t * dict, int local, int downloadable)
+static char * write_urilist(const gavl_dictionary_t * dict, int local)
   {
   char * ret;
   int i, num_tracks;
@@ -405,7 +406,7 @@ static char * write_urilist(const gavl_dictionary_t * dict, int local, int downl
        gavl_string_starts_with(val, "container"))
       continue;
     
-    if(!(location = get_uri(m, local, downloadable)))
+    if(!(location = get_uri(m, local)))
       continue;
     
     idx++;
@@ -424,7 +425,7 @@ static int read_urilist(gavl_dictionary_t * dict, const char * str, int len)
   return 0;
   }
 
-char * bg_tracks_to_string(const gavl_dictionary_t * dict, int format, int local, int downloadable)
+char * bg_tracks_to_string(const gavl_dictionary_t * dict, int format, int local)
   {
   //  fprintf(stderr, "bg_tracks_to_string %d\n", format);
   //  gavl_dictionary_dump(dict, 2);
@@ -436,16 +437,16 @@ char * bg_tracks_to_string(const gavl_dictionary_t * dict, int format, int local
       return write_gmerlin(dict);
       break;
     case BG_TRACK_FORMAT_XSPF:
-      return write_xspf(dict, local, downloadable);
+      return write_xspf(dict, local);
       break;
     case BG_TRACK_FORMAT_M3U:
-      return write_m3u(dict, local, downloadable);
+      return write_m3u(dict, local);
       break;
     case BG_TRACK_FORMAT_PLS:
-      return write_pls(dict, local, downloadable);
+      return write_pls(dict, local);
       break;
     case BG_TRACK_FORMAT_URILIST:
-      return write_urilist(dict, local, downloadable);
+      return write_urilist(dict, local);
       break;
     }
   return NULL;

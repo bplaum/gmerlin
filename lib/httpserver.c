@@ -653,9 +653,6 @@ int bg_http_server_iteration(bg_http_server_t * s)
     ret++;
     }
 
-  if(s->playlist_handler)
-    ret += bg_http_playlist_handler_ping(s->playlist_handler);
-  
   return ret;
   }
 

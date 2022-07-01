@@ -805,7 +805,7 @@ json_object * bg_json_from_url(const char * url, char ** mimetype_ptr);
 
 #define bg_tracks_mimetype   "application/gmerlintracks"
 
-char * bg_tracks_to_string(const gavl_dictionary_t * dict, int format, int local, int downloadable);
+char * bg_tracks_to_string(const gavl_dictionary_t * dict, int format, int local);
 int bg_tracks_from_string(gavl_dictionary_t * dict, int format, const char * str, int len);
 
 void bg_string_to_string_array(const char * str, gavl_array_t * arr);

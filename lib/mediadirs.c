@@ -188,7 +188,7 @@ static int find_by_local_path(bg_media_dirs_t * d, const char * path)
   int i;
   const gavl_dictionary_t * dict;
   const char * var;
-  
+
   for(i = 0; i < d->dirs.num_entries; i++)
     {
     if((dict = gavl_value_get_dictionary(&d->dirs.entries[i])) &&

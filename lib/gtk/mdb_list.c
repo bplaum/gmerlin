@@ -240,7 +240,7 @@ static void list_clipboard_get_func(GtkClipboard *clipboard,
   if(!type_atom)
     return;
   
-  str = bg_tracks_to_string(tree->list_clipboard, info, 1, 0);
+  str = bg_tracks_to_string(tree->list_clipboard, info, 1);
 
   if(str)
     {
@@ -1693,7 +1693,7 @@ static void drag_get_callback(GtkWidget *widget,
   
   sel = list_extract_selected(a);
   
-  str = bg_tracks_to_string(sel, info, 1, 0);
+  str = bg_tracks_to_string(sel, info, 1);
 
   if(str)
     {
@@ -2210,7 +2210,7 @@ static void save_selected(bg_gtk_mdb_tree_t * tree)
 
   selected = list_extract_selected(tree->menu_ctx.a);
   
-  str = bg_tracks_to_string(selected, type, 1, 0);
+  str = bg_tracks_to_string(selected, type, 1);
 
   gavl_dictionary_destroy(selected);
 
@@ -2228,7 +2228,7 @@ static void save_tracks(bg_gtk_mdb_tree_t * tree)
   if(!(filename = get_save_filename(tree, TR("Save album"), &type)))
     return;
   
-  str = bg_tracks_to_string(tree->menu_ctx.album, type, 1, 0);
+  str = bg_tracks_to_string(tree->menu_ctx.album, type, 1);
   bg_write_file(filename, str, strlen(str));
   free(str);
   g_free(filename);
