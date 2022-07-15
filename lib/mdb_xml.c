@@ -1034,7 +1034,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               while(!last)
                 {
                 gavl_array_copy_sub(&arr_sub, &arr, start - start1, MAX_CHILDREN);
-                fprintf(stderr, "XML Browse children 1 %d %d\n", start, arr_sub.num_entries);
+                //fprintf(stderr, "XML Browse children 1 %d %d\n", start, arr_sub.num_entries);
                 if(start + arr_sub.num_entries == end)
                   last = 1;
                 

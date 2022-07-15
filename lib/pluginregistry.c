@@ -570,6 +570,9 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
     {
     const char * pos;
     //    fprintf(stderr, "Trying 1: %s\n", location);
+
+    if(gavl_dictionary_get(ret, GAVL_META_EDL))
+      return ret;
     
     if(!strncasecmp(location, "file://", 7))
       location += 7;
@@ -3342,6 +3345,7 @@ int bg_file_is_blacklisted(bg_plugin_registry_t * reg, const char * url)
 static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   {
   gavl_dictionary_set(vars, BG_URL_VAR_TRACK,   NULL);
+  gavl_dictionary_set(vars, BG_URL_VAR_VARIANT, NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_EDL,     NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_SEEK,    NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_PLUGIN,  NULL);
@@ -3531,13 +3535,17 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   gavl_dictionary_t vars;
   int result = 0;
   gavl_dictionary_t * tm;
-
+  int variant = 0;
+  int val_i;
+  
   gavl_dictionary_init(&vars);
   
   gavl_url_get_vars_c(location, &vars);
 
   if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
     track_index--;
+  
+  gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
   
   gavl_dictionary_free(&vars);
   
@@ -3560,18 +3568,40 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
 
   /* Do redirection */
   if((klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)) &&
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) &&
-     gavl_dictionary_get_src(tm, GAVL_META_SRC, 0,
-                             NULL, &url))
+     !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
     {
-    if(gavl_dictionary_get_num_items(tm, GAVL_META_SRC) > 1)
+    const gavl_dictionary_t * src;
+    const gavl_dictionary_t * edl;
+
+    val_i = 0;
+    gavl_dictionary_get_int(tm, GAVL_META_MULTIVARIANT, &val_i);
+    if(val_i)
       {
-      /* TODO: Choose according to the bitrate */
-      }
+      int num_src = gavl_dictionary_get_num_items(tm, GAVL_META_SRC);
+      if(variant >= num_src)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No such variant %d. Track seems unplayable.", variant);
+        goto end;
+        }
       
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
-    *redirect_url = gavl_strdup(url);
-    return 1;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Choosing variant %d", variant);
+      src = gavl_dictionary_get_src(tm, GAVL_META_SRC, variant, NULL, &url);
+      }
+    else
+      src = gavl_dictionary_get_src(tm, GAVL_META_SRC, 0, NULL, &url);
+
+    if((edl = gavl_dictionary_get_dictionary(src, GAVL_META_EDL)))
+      {
+      if(!bg_input_plugin_load_edl(reg, edl, ret, ctrl))
+        goto end;
+      result = 1;
+      }
+    else if(url)
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
+      *redirect_url = gavl_strdup(url);
+      return 1;
+      }
     }
   else
     result = 1;

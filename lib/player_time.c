@@ -37,7 +37,7 @@ void bg_player_time_init(bg_player_t * player)
   {
   bg_media_source_t * src;
   bg_player_audio_stream_t * s = &player->audio_stream;
-  
+
   if(s->plugin && (s->plugin->get_delay) &&
      DO_AUDIO(player->flags))
     {
@@ -55,18 +55,20 @@ void bg_player_time_init(bg_player_t * player)
       (src = player->src->input_plugin->get_src(player->src->input_handle->priv))))
     {
     player->time_offset_src = bg_media_source_get_start_time(src);
-    
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, player->time_offset_src);
+
     if(player->time_offset_src)
       {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, player->time_offset_src);
-
       if(s->sync_mode == SYNC_SOUNDCARD)
         {
         s->samples_written =
           gavl_time_to_samples(s->output_format.samplerate,
                                player->time_offset_src);
         }
-      
+      else if(s->sync_mode == SYNC_SOFTWARE)
+        {
+        s->current_time = player->time_offset_src;
+        }
       }
     }
   else

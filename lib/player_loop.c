@@ -418,9 +418,9 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     free(real_location);
     track_index = -1;
     }
-  else if(src->mp_edl)
+  else if(src->edl)
     {
-    if(!bg_input_plugin_load_edl(bg_plugin_reg, src->mp_edl, &h, NULL))
+    if(!bg_input_plugin_load_edl(bg_plugin_reg, src->edl, &h, NULL))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading multipart EDL failed");
       goto fail;
@@ -476,14 +476,15 @@ static int set_source_from_track(bg_player_t * p,
   
   if(bg_plugin_registry_set_multipart_edl(bg_plugin_reg, &src->track))
     {
-    src->mp_edl = gavl_dictionary_get_dictionary(&src->track, GAVL_META_EDL);
+    src->edl = gavl_dictionary_get_dictionary(&src->track, GAVL_META_EDL);
     
     //    fprintf(stderr, "Got multipart EDL:\n");
     //    gavl_dictionary_dump(src->mp_edl, 2);
     //    fprintf(stderr, "\n");
     }
   else if(!(uri = bg_plugin_registry_get_src(bg_plugin_reg, &src->track, &uri_idx)) ||
-          !(src->location = gavl_strdup(gavl_dictionary_get_string(uri, GAVL_META_URI))))
+          (!(src->edl = gavl_dictionary_get_dictionary(uri, GAVL_META_EDL)) &&
+           !(src->location = gavl_strdup(gavl_dictionary_get_string(uri, GAVL_META_URI)))))
     return 0;
   
   if(src->location)

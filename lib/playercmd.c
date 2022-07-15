@@ -713,6 +713,14 @@ void bg_player_set_chapter(bg_msg_sink_t * sink, int chapter)
   bg_msg_sink_put(sink, msg);
   }
 
+void bg_player_underrun(bg_msg_sink_t * sink)
+  {
+  gavl_msg_t * msg;
+  msg = bg_msg_sink_get(sink);
+  gavl_msg_set_id_ns(msg, GAVL_MSG_SINK_UNDERRUN, GAVL_MSG_NS_SINK);
+  bg_msg_sink_put(sink, msg);
+  }
+
 /* Extract infos from messages */
 
 void bg_player_msg_get_audio_stream(gavl_msg_t * msg, int * idx,

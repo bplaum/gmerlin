@@ -356,6 +356,7 @@ void bg_player_msg_get_stream_metadata(gavl_msg_t * msg, int * idx,
 
 void bg_player_msg_get_num_streams(gavl_msg_t * msg, int * as, int * vs, int * ss);
 
+
 const char * bg_player_get_state_icon(int state);
 
 

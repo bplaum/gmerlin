@@ -23,6 +23,7 @@
 #include <config.h>
 
 #include <string.h>
+#include <math.h>
 
 
 #define GL_GLEXT_PROTOTYPES 1
@@ -100,7 +101,8 @@ typedef struct
   gavl_video_frame_t * texture;
 
   /* Shader program for the texture and for the Overlays */
-  shader_program_t progs[2];
+  shader_program_t progs_cm[2];
+  shader_program_t progs_nocm[2];
   
   GLuint vbo; /* Vertex buffer */
   
@@ -115,6 +117,10 @@ typedef struct
 
   double bsc[4][5]; // Brightness, saturation, contrast
   double cmat[4][5]; // Colorspace conversion
+
+  int use_cmat;
+  int use_cmat_ovl;
+  
   } gl_priv_t;
 
 static int supports_hw_gl(driver_data_t* d,
@@ -246,7 +252,7 @@ static const char * vertex_shader_gles =
   " TexCoord = tex;\n"
   " }";
 
-static const char * fragment_shader_gl =
+static const char * fragment_shader_gl_cm =
   "#version 110\n"
   "varying vec2 TexCoord;" 
   "uniform sampler2D frame;"
@@ -255,6 +261,15 @@ static const char * fragment_shader_gl =
   "void main()"
   "  {"
   "  gl_FragColor = colormatrix * texture2D(frame, TexCoord) + coloroffset;"
+  "  }";
+
+static const char * fragment_shader_gl_nocm =
+  "#version 110\n"
+  "varying vec2 TexCoord;" 
+  "uniform sampler2D frame;"
+  "void main()"
+  "  {"
+  "  gl_FragColor = texture2D(frame, TexCoord);"
   "  }";
 
 #if 0
@@ -273,7 +288,7 @@ static const char * fragment_shader_planar_gl =
   "  }";
 #endif
 
-static const char * fragment_shader_gles =
+static const char * fragment_shader_gles_cm =
   "#version 300 es\n"
   "precision mediump float;\n"
   "in vec2 TexCoord;\n" 
@@ -286,7 +301,18 @@ static const char * fragment_shader_gles =
   "  FragColor = colormatrix * texture2D(frame, TexCoord) + coloroffset;\n"
   "  }";
 
-static const char * fragment_shader_planar_gles =
+static const char * fragment_shader_gles_nocm =
+  "#version 300 es\n"
+  "precision mediump float;\n"
+  "in vec2 TexCoord;\n" 
+  "out vec4 FragColor;\n"
+  "uniform sampler2D frame;\n"
+  "void main()\n"
+  "  {\n"
+  "  FragColor = texture2D(frame, TexCoord);\n"
+  "  }";
+
+static const char * fragment_shader_planar_gles_cm =
   "#version 300 es\n"
   "precision mediump float;\n"
   "in vec2 TexCoord;\n" 
@@ -302,7 +328,20 @@ static const char * fragment_shader_planar_gles =
   "  FragColor = colormatrix * color + coloroffset;\n"
   "  }";
 
-static const char * fragment_shader_gles_ext =
+static const char * fragment_shader_planar_gles_nocm =
+  "#version 300 es\n"
+  "precision mediump float;\n"
+  "in vec2 TexCoord;\n" 
+  "out vec4 FragColor;\n"
+  "uniform sampler2D frame;\n"
+  "uniform sampler2D frame_u;\n"
+  "uniform sampler2D frame_v;\n"
+  "void main()\n"
+  "  {\n"
+  "  FragColor = vec4( texture2D(frame, TexCoord).r, texture2D(frame_u, TexCoord).r, texture2D(frame_v, TexCoord).r, 1.0 );\n"
+  "  }";
+
+static const char * fragment_shader_gles_ext_cm =
   "#version 300 es\n"
   "#extension GL_OES_EGL_image_external : require\n"
   "precision mediump float;\n"
@@ -314,6 +353,19 @@ static const char * fragment_shader_gles_ext =
   "void main()\n"
   "  {\n"
   "  FragColor = colormatrix * texture2D(frame, TexCoord) + coloroffset;\n"
+  /*  "  FragColor = texture2D(frame, TexCoord);\n" */
+  "  }";
+
+static const char * fragment_shader_gles_ext_nocm =
+  "#version 300 es\n"
+  "#extension GL_OES_EGL_image_external : require\n"
+  "precision mediump float;\n"
+  "in vec2 TexCoord;\n" 
+  "out vec4 FragColor;\n"
+  "uniform samplerExternalOES frame;\n"
+  "void main()\n"
+  "  {\n"
+  "  FragColor = texture2D(frame, TexCoord);\n"
   /*  "  FragColor = texture2D(frame, TexCoord);\n" */
   "  }";
 
@@ -359,7 +411,7 @@ static void check_shader(GLuint shader, const char * name)
 #endif
   }
 
-static void create_shader_program(driver_data_t * d, shader_program_t * p, int background)
+static void create_shader_program(driver_data_t * d, shader_program_t * p, int background, int cm)
   {
   const char * shader[2];
   int num = 0;
@@ -408,16 +460,35 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
     {
     case GAVL_HW_EGL_GL_X11:
-      shader[0] = fragment_shader_gl;
+      if(cm)
+        shader[0] = fragment_shader_gl_cm;
+      else
+        shader[0] = fragment_shader_gl_nocm;
+      
       num = 1;
       break;
     case GAVL_HW_EGL_GLES_X11:
       if((priv->mode == MODE_TEXTURE_DMABUF) && background)
-        shader[0] = fragment_shader_gles_ext;
+        {
+        if(cm)
+          shader[0] = fragment_shader_gles_ext_cm;
+        else
+          shader[0] = fragment_shader_gles_ext_nocm;
+        }
       else if(background && (num_planes > 1))
-        shader[0] = fragment_shader_planar_gles;
+        {
+        if(cm)
+          shader[0] = fragment_shader_planar_gles_cm;
+        else
+          shader[0] = fragment_shader_planar_gles_nocm;
+        }
       else
-        shader[0] = fragment_shader_gles;
+        {
+        if(cm)
+          shader[0] = fragment_shader_gles_cm;
+        else
+          shader[0] = fragment_shader_gles_nocm;
+        }
       num = 1;
       break;
     default:
@@ -493,7 +564,7 @@ static void upload_colormatrix(driver_data_t * d, shader_program_t * p, const do
                      1, GL_TRUE, colormatrix);
   
   glUniform4fv(p->coloroffset_location,
-               1, coloroffset );
+               1, coloroffset);
   
   }
 
@@ -742,9 +813,11 @@ static int open_gl(driver_data_t * d)
 
   set_gl(d);
   
-  create_shader_program(d, &priv->progs[0], 1);
-  
-  create_shader_program(d, &priv->progs[1], 0);
+  create_shader_program(d, &priv->progs_cm[0], 1, 1);
+  create_shader_program(d, &priv->progs_cm[1], 0, 1);
+
+  create_shader_program(d, &priv->progs_nocm[0], 1, 0);
+  create_shader_program(d, &priv->progs_nocm[1], 0, 0);
 
   if(priv->mode != MODE_TEXTURE_DMABUF)
     set_pixelformat_matrix(priv->cmat, w->video_format.pixelformat);
@@ -768,6 +841,29 @@ static gavl_video_frame_t * create_frame_gl(driver_data_t * d)
   return ret;
   }
 
+static int is_unity(double cmat[4][5])
+  {
+  int i, j;
+  
+  for(i = 0; i < 4; i++)
+    {
+    for(j = 0; j < 5; j++)
+      {
+      if(i == j)
+        {
+        if(fabs(cmat[i][j] - 1.0) > 1e-6)
+          return 0;
+        }
+      else
+        {
+        if(fabs(cmat[i][j]) > 1e-6)
+          return 0;
+        }
+      }
+    }
+  return 1;
+  }
+
 static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   {
   int i;
@@ -777,9 +873,13 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   gavl_video_frame_t * ovl;
   gl_priv_t * priv;
   gavl_gl_frame_info_t * info;
+
+  double cmat[4][5];
+
+  shader_program_t * p = NULL;
   
   priv = d->priv;
-  
+    
   w = d->win;
   
   if(!TEST_FLAG(w, FLAG_NO_GET_FRAME))
@@ -814,21 +914,38 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   
   set_gl(d);
 
-    
-  glUseProgram(priv->progs[0].program);
-
   if(priv->colormatrix_changed)
     {
-    double mat[4][5];
-
     if(priv->mode == MODE_TEXTURE_DMABUF)
-      upload_colormatrix(d, &priv->progs[0], priv->bsc);
+      matrix_copy(cmat, priv->bsc);
     else
+      matrixmult(priv->bsc, priv->cmat, cmat);
+
+    if(is_unity(cmat))
+      priv->use_cmat = 0;
+    else
+      priv->use_cmat = 1;
+
+    fprintf(stderr, "Use colormatrix %d\n", priv->use_cmat);
+    }
+  
+  if(priv->use_cmat)
+    {
+    glUseProgram(priv->progs_cm[0].program);
+    p = &priv->progs_cm[0];
+    
+    if(priv->colormatrix_changed)
       {
-      matrixmult(priv->bsc, priv->cmat, mat);
-      upload_colormatrix(d, &priv->progs[0], mat);
+      upload_colormatrix(d, &priv->progs_cm[0], cmat);
+      priv->colormatrix_changed = 0;
       }
+    
+    }
+  else
+    {
     priv->colormatrix_changed = 0;
+    glUseProgram(priv->progs_nocm[0].program);
+    p = &priv->progs_nocm[0];
     }
   
   /* Put image into texture */
@@ -838,7 +955,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     {
     glActiveTexture(GL_TEXTURE0 + i);
     glBindTexture(info->texture_target, info->textures[i]);
-    glUniform1i(priv->progs[0].frame_locations[i], i);
+    glUniform1i(p->frame_locations[i], i);
 #if 0
     fprintf(stderr, "Bind texture %d %d %d\n",
             priv->texture_target - GL_TEXTURE_2D,
@@ -882,19 +999,33 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   glDisableVertexAttribArray(1);
   
   //  glUseProgram(0);
-
+  
   /* Draw overlays */
   if(w->num_overlay_streams)
     {
-    if(priv->progs[1].program)
+    if(priv->colormatrix_changed_ovl)
       {
-      glUseProgram(priv->progs[1].program);
-      glUniform1i(priv->progs[1].frame_locations[0], 0);
-      glActiveTexture(GL_TEXTURE0 + 0);
+      if(is_unity(priv->bsc))
+        priv->use_cmat_ovl = 0;
+      else
+        priv->use_cmat_ovl = 1;
+      }
 
+    if(priv->use_cmat_ovl)
+      p = &priv->progs_cm[1];
+    else
+      p = &priv->progs_nocm[1];
+    
+    if(p->program)
+      {
+      glUseProgram(p->program);
+      glUniform1i(p->frame_locations[0], 0);
+      glActiveTexture(GL_TEXTURE0 + 0);
+      
       if(priv->colormatrix_changed_ovl)
         {
-        upload_colormatrix(d, &priv->progs[1], priv->bsc);
+        if(priv->use_cmat_ovl)
+          upload_colormatrix(d, p, priv->bsc);
         priv->colormatrix_changed_ovl = 0;
         }
       }
@@ -1018,8 +1149,10 @@ static void close_gl(driver_data_t * d)
   
   w = d->win;
 
-  delete_program(&priv->progs[0]);
-  delete_program(&priv->progs[1]);
+  delete_program(&priv->progs_cm[0]);
+  delete_program(&priv->progs_cm[1]);
+  delete_program(&priv->progs_nocm[0]);
+  delete_program(&priv->progs_nocm[1]);
   
   set_gl(d);
 

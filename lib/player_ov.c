@@ -33,7 +33,7 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-#define DUMP_TIMESTAMPS
+// #define DUMP_TIMESTAMPS
 
 static int handle_message(void * data, gavl_msg_t * msg)
   {
@@ -337,7 +337,7 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   bg_ov_handle_events(s->ov);
   }
 
-static void wait_or_skip(bg_player_t * p, gavl_time_t diff_time)
+static int wait_or_skip(bg_player_t * p, gavl_time_t diff_time)
   {
   bg_player_video_stream_t * s;
   s = &p->video_stream;
@@ -345,21 +345,16 @@ static void wait_or_skip(bg_player_t * p, gavl_time_t diff_time)
   if(diff_time > 0)
     {
     gavl_time_delay(&diff_time);
-
-    if(s->skip > 0)
-      {
-      s->skip -= diff_time;
-      if(s->skip < 0)
-        s->skip = 0;
-
-      // fprintf(stderr, "Diff time: %ld, skip: %ld\n", diff_time, s->skip);
-      }
+    s->skip = 0;
     }
-  /* TODO: Drop frames */
-  else if(diff_time < -1000) // 1000 ms
+  /* Drop frame */
+  else if(diff_time < -GAVL_TIME_SCALE / 50) // 20 ms
     {
-    s->skip -= diff_time;
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame");
+    s->skip++;
+    return 0;
     }
+  return 1;
   }
 
 void * bg_player_ov_thread(void * data)
@@ -367,20 +362,25 @@ void * bg_player_ov_thread(void * data)
   bg_player_video_stream_t * s;
   gavl_time_t diff_time;
   gavl_time_t current_time;
+  gavl_time_t frame_time;
   
   bg_player_t * p = data;
   gavl_video_frame_t * frame;
   gavl_video_sink_t * sink;
+  gavl_timer_t * timer = gavl_timer_create();
   
   s = &p->video_stream;
-
+  
   bg_thread_wait_for_start(s->th);
   
+  s->frame_time = GAVL_TIME_UNDEFINED;
+  s->skip = 0;
   
   while(1)
     {
     if(!bg_thread_check(s->th))
       {
+      // fprintf(stderr, "bla 1");
       break;
       }
     /*
@@ -404,17 +404,22 @@ void * bg_player_ov_thread(void * data)
     
     /* Get frame time */
 
-    s->frame_time =
-      gavl_time_unscale(s->output_format.timescale,
-                        frame->timestamp);
+    frame_time = gavl_time_unscale(s->output_format.timescale,
+                                   frame->timestamp);
 
     pthread_mutex_lock(&p->config_mutex);
-    s->frame_time += p->sync_offset; // Passed by user
+    frame_time += p->sync_offset; // Passed by user
     pthread_mutex_unlock(&p->config_mutex);
 
     pthread_mutex_lock(&p->time_offset_mutex);
-    s->frame_time -= p->time_offset_src;
+    frame_time -= p->time_offset_src;
     pthread_mutex_unlock(&p->time_offset_mutex);
+    
+    if((s->frame_time == GAVL_TIME_UNDEFINED))
+      {
+      gavl_timer_set(timer, frame_time);
+      }
+    s->frame_time = frame_time;
     
     /* Subtitle handling */
     if(DO_SUBTITLE(p->flags))
@@ -423,10 +428,25 @@ void * bg_player_ov_thread(void * data)
     
     /* Handle stuff */
     bg_osd_update(s->osd);
-    
+
     /* Check Timing */
+    
+    /* Check for underruns */
+    if(s->frame_time - gavl_timer_get(timer) < -GAVL_TIME_SCALE)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "Detected underrun due to slow reading (e.g. slow network)");
+      }
+    
     bg_player_time_get(p, 1, NULL, &current_time);
     diff_time =  s->frame_time - current_time;
+
+#if 0
+    if(diff_time < -GAVL_TIME_SCALE)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Detected underrun due to slow video pipeline");
+      }
+#endif
     
 #ifdef DUMP_TIMESTAMPS
     bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
@@ -439,7 +459,8 @@ void * bg_player_ov_thread(void * data)
       {
       //      diff_time = current_time - s->last_time;
       //      fprintf(stderr, "Diff time: %"PRId64"\n", diff_time);
-      wait_or_skip(p, diff_time);
+      if(!wait_or_skip(p, diff_time))
+        continue;
       }
     
     s->last_time = current_time;
@@ -453,8 +474,13 @@ void * bg_player_ov_thread(void * data)
     //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
     gavl_video_sink_put_frame(sink, frame);
     s->frames_written++;
-    }
 
+    if(!gavl_timer_is_running(timer))
+      gavl_timer_start(timer);
+    }
+  
+  gavl_timer_destroy(timer);
+  
   return NULL;
   }
 

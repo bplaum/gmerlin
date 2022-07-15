@@ -307,7 +307,7 @@ typedef struct
 
   gavl_dictionary_t track; // External metadata
 
-  const gavl_dictionary_t * mp_edl; // EDL from a multipart file
+  const gavl_dictionary_t * edl; // EDL
   
   gavl_dictionary_t url_vars; // URL variables
   
@@ -442,6 +442,8 @@ struct bg_player_s
 // int bg_player_get_resync(bg_player_t * player, int64_t * time, int * scale);
 
 // void bg_player_set_current(bg_player_t * player);
+
+void bg_player_underrun(bg_msg_sink_t * sink);
 
 int  bg_player_get_status(bg_player_t * player);
 void bg_player_set_status(bg_player_t * player, int status);
