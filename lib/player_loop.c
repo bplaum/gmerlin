@@ -684,6 +684,9 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   // fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
   
   old_state = bg_player_get_status(player);
+
+  if(old_state == BG_PLAYER_STATUS_PAUSED)
+    bg_input_plugin_resume(player->src->input_handle);
   
   //  gavl_video_frame_t * vf;
   interrupt_cmd(player, BG_PLAYER_STATUS_SEEKING);
@@ -747,6 +750,8 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
     
     if(DO_VIDEO(player->flags))
       bg_player_ov_update_still(player);
+    
+    bg_input_plugin_pause(player->src->input_handle);
     }
   else
     start_playback(player);

@@ -270,8 +270,6 @@ static void position_changed(bg_player_tracklist_t * l)
   l->duration_after = 0;
   l->duration = GAVL_TIME_UNDEFINED;
   
-  //  l->idx_real = idx_real_new;
-  
   gavl_value_init(&val);
   gavl_value_set_int(&val, l->idx_real);
   
@@ -476,7 +474,8 @@ char * bg_player_tracklist_make_id(const char * client_id, const char * original
   }
 
 
-static void splice(bg_player_tracklist_t * l, int idx, int del, int last, gavl_value_t * val, const char * client_id)
+static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
+                   gavl_value_t * val, const char * client_id)
   {
   gavl_msg_t * evt;
   const gavl_dictionary_t * cur;
@@ -562,12 +561,15 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last, gavl_v
   l->idx = -1;
   l->idx_real = -1;
 
+#if 0  
   if(!last_num && (list->num_entries > 0))
     {
     l->idx = 0;
-    l->idx_real = 0;
+    l->idx_real = -1;
     }
-  else if(cur_id)
+  else
+#endif
+    if(cur_id)
     {
     int i;
     for(i = 0; i < list->num_entries; i++)
@@ -1000,8 +1002,29 @@ gavl_dictionary_t *
 bg_player_tracklist_get_current_track(bg_player_tracklist_t * l)
   {
   gavl_array_t * list = gavl_get_tracks_nc(l->cnt);
+
+  fprintf(stderr, "bg_player_tracklist_get_current_track: %d %d\n", l->idx, l->idx_real);
+  
   if(l->idx_real < 0)
-    return NULL;
+    {
+    if(!list->num_entries)
+      return NULL;
+    
+    if(l->idx < 0)
+      l->idx = 0;
+    
+    if(l->mode == BG_PLAYER_MODE_SHUFFLE)
+      {
+      if(!l->shuffle_list)
+        l->shuffle_list = create_shuffle_list(list->num_entries);
+
+      /* Start with random track */
+      l->idx_real = l->shuffle_list[l->idx];
+      }
+    else
+      l->idx_real = l->idx;
+    }
+  
   return list->entries[l->idx_real].v.dictionary;
   }
   

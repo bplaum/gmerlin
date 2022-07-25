@@ -41,8 +41,6 @@ var current_track_id  = null;
 
 var has_video = false;
 
-var pagesize = 1000;
-
 /* Container for the current playlist. It is inserted on message level into
    the browser so we don't need special handling by the frontend */
 
@@ -306,8 +304,8 @@ function playqueue_add_album(container, replace, play)
   
   if(play && (children.length > 0))
     {
-    msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-    msg_set_arg_string(msg, 0, obj_make_playqueue_id(children[0].v));
+    msg = msg_create(BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
+//    msg_set_arg_string(msg, 0, obj_make_playqueue_id(children[0].v));
     player.handle_command(msg);
     }
   
@@ -360,13 +358,6 @@ function my_get_children(obj, start, num)
 //  console.log("my_get_children " + id + " " + start + " " + num);
 //  console.trace();
     
-  if((start > 0) || (num > 0))
-    {
-    msg_set_arg_int(msg, 0, start);
-
-    if(num > 0)
-      msg_set_arg_int(msg, 1, num);
-    }
   if((id == BG_PLAYQUEUE_ID) && (player.ready))
     {
     if(!playqueue.have_children)
@@ -665,8 +656,6 @@ function app_state_copy(a)
   ret.sel_id  = a.sel_id;
   ret.info_id = a.info_id;
   ret.image_id = a.image_id;
-  ret.start = a.start;
-  ret.num = a.num;
   return ret;
   }
 
@@ -676,10 +665,6 @@ function app_state_to_hash(a)
   ret += "#cntid=" + a.id;
   if(a.sel_id)
     ret += ";selid=" + a.sel_id;	  
-  if(a.start > 0)
-    ret += ";start=" + a.start;	  
-  if(a.num > 0)
-    ret += ";num=" + a.num;
   if(a.image_id)
     ret += ";imageid=" + a.image_id;	  
 
@@ -697,7 +682,6 @@ function app_state_from_hash(a, str)
 
   a.menu = false;
   a.last = null;
-  a.start = 0;
   for(i = 0; i < arr.length; i++)
     {
     var arr1 = arr[i].split("=");
@@ -712,12 +696,6 @@ function app_state_from_hash(a, str)
         break;
       case "imageid":
         a.image_id = decodeURIComponent(arr1[1]);
-        break;
-      case "start":
-        a.start = parseInt(arr1[1]);
-        break;
-      case "num":
-        a.num = parseInt(arr1[1]);
         break;
       }
     }
@@ -789,19 +767,7 @@ function app_state_apply()
     if(!widgets.browser.container ||
        (app_state.id != obj_get_id(widgets.browser.container)))
       {
-      widgets.browser.page_changed = true;
       widgets.browser.set_container(app_state.id);
-      }
-    /* Only the page changed */
-    else if(widgets.browser.container &&
-            (app_state.id == obj_get_id(widgets.browser.container)) &&
-            ((app_state.start != widgets.browser.start) ||
-             (app_state.num != widgets.browser.num)))
-      {
-//      console.log("page_changed " + app_state.start + " " + app_state.num + " " +
-//		  widgets.browser.start + " " + widgets.browser.num);
-//      console.trace();
-      widgets.browser.page_changed = true;
       }
     else if(current_widget.container && (app_state.id == obj_get_id(current_widget.container)))
       {
@@ -839,20 +805,6 @@ function app_state_apply()
     push_state();
 */
     
-  if((app_state.widget == "browser") &&
-     widgets.browser.page_changed ||
-      !last_app_state ||
-      (last_app_state.id != app_state.id) ||
-      (last_app_state.start != app_state.start) ||
-      (last_app_state.sel_id != app_state.sel_id))
-    {
-    if(widgets.browser.page_changed)
-      {
-      widgets.browser.page_changed = false;
-      widgets.browser.set_range_internal(app_state.start, app_state.num);
-      }
-//    window.history.replaceState( my_history_state(0), null, app_state_to_hash(app_state));
-    }
     
   last_app_state = app_state_copy(app_state);
   }
@@ -2261,12 +2213,6 @@ function cfg_set_parameter(name, val)
       menu_button_set(name, val);
       }
       break;
-    case "pagesize":
-      {
-      menu_button_set(name, val);
-      pagesize = parseInt(val);
-      }
-      break;
     case "playercontrol_visible":
       {
       if(val)
@@ -2379,17 +2325,6 @@ function cfg_info_init()
     
   cfg_info.push(info);
 
-  /* Page size */
-
-  info = cfg_item_create("pagesize", CFG_TYPE_ENUM, "Page size");
-  info.menu_data = create_menu_data_item(undefined, "pagesize");
-
-  create_menu_data_item(info.menu_data, 100, null, "100");
-  create_menu_data_item(info.menu_data, 200, null, "200");
-  create_menu_data_item(info.menu_data, 500, null, "500");
-  create_menu_data_item(info.menu_data, 1000, null, "1000");
-  
-  cfg_info.push(info);
   }
 
 function cfg_menu_handle_msg(msg)
@@ -2573,53 +2508,6 @@ function load_progress(p)
       
   }
 
-function create_pager()
-  {
-  var ret;
-  ret = new Object();
-
-  ret.start_button    = document.getElementById("pager-start");
-  ret.next_button     = document.getElementById("pager-next");
-  ret.previous_button = document.getElementById("pager-previous");
-  ret.end_button      = document.getElementById("pager-end");
-  ret.div =             document.getElementById("pager");
-  ret.label =           document.getElementById("pager-label");
-
-  ret.start_button.pager    = ret;
-  ret.next_button.pager     = ret;
-  ret.previous_button.pager = ret;
-  ret.end_button.pager      = ret;
-    
-  ret.start_button.onclick = function() { this.pager.browser.set_page(0); };
-  ret.next_button.onclick = function() { this.pager.browser.set_page_rel(1); };
-
-  ret.previous_button.onclick = function() { this.pager.browser.set_page_rel(-1); };
-  ret.end_button.onclick = function() { this.pager.browser.set_page(this.pager.browser.num_pages - 1); };
-    
-  ret.show = function(browser)
-    {
-    this.div.style.display = "block";
-    this.browser = browser;
-    };
-
-  ret.hide = function(browser)
-    {
-    this.div.style.display = "none";
-    this.browser = browser;
-    };
-    
-  ret.set_page = function(page, total, start, num, total_children)
-    {
-    clear_element(ret.label);
-      append_dom_text(ret.label, "Page " + (page+1) + "/" + total + " " +
-		      "[" + (start+1) + "-" + (start+num) + "/" + total_children + "]");
-    }
-    
-  return ret;
-   
-  }
-
-
 var tile_modes =
   [
     {
@@ -2647,17 +2535,8 @@ function create_browser()
   ret.div.dataset.id = "browser";
   ret.cur_id = null;
 
-  ret.start = -1;
-  ret.num = 0;
-  ret.total_children = 0;
-  ret.page = 0;
-  ret.num_pages = 0;
   ret.num_columns = 1;
     
-  ret.page_changed = false;
-    
-  ret.pager = create_pager();
-
   ret.mode = BROWSER_MODE_LIST;
 
   ret.mode_button = document.getElementById("browse-mode-button");
@@ -2746,16 +2625,12 @@ function create_browser()
     
   ret.jump_to = function(id, sel_id)
     {
-    app_state.start = 0;
-    app_state.num = 0;
       
     if(id)
       {
       if(app_state.id != id)
 	{
         push_state();
-//        this.start = 0;
-//        this.num = 0;
 	}
       app_state.id = id;
 
@@ -2768,7 +2643,6 @@ function create_browser()
     app_state.widget = "browser";
     app_state_apply();
     update_hash();
-    console.log("Blupp 1");
     }
       
   ret.set_current = function(id)
@@ -2789,8 +2663,6 @@ function create_browser()
       console.log("Change up " + my_history_pos + " " + parent_id);
       if((my_history_pos > 0) && (my_history[my_history_pos-1].id == parent_id))
         {
-        console.log("Using history " + my_history[my_history_pos-1].start + " " +
-                    my_history[my_history_pos-1].num);
         my_history_go(-1);
 	}
       else
@@ -3225,9 +3097,6 @@ function create_browser()
             if(!this.container)
 	      return 1;
 
-            if(msg.id == BG_RESP_DB_BROWSE_CHILDREN)
-              this.page_changed = false;
-	      
 //            console.log("Browse children response 1: " + JSON.stringify(msg));
             
 		
@@ -3318,9 +3187,9 @@ function create_browser()
 
 //            console.log("Browse children response 2: " + JSON.stringify(add));
 
-            this.splice(last, msg.args[0].v - this.start, msg.args[1].v, add);
+            this.splice(last, msg.args[0].v, msg.args[1].v, add);
 
-            obj_splice_children(this.container, msg.args[0].v - this.start, msg.args[1].v, msg.args[2]);
+            obj_splice_children(this.container, msg.args[0].v, msg.args[1].v, msg.args[2]);
 
             if(msg.id == BG_RESP_DB_BROWSE_CHILDREN)
               {
@@ -3573,116 +3442,6 @@ function create_browser()
     clear_element(foot);
     append_dom_text(foot, (idx+1) + "/" + num_children);
     };
-
-  /* Called only by app_state_apply */
-  ret.set_range_internal = function(start, num)
-    {
-//    console.log("set_range_internal 1 " + start + " " + num + " " + this.container);
-//    console.trace();
-/*
-    if((this.start == start) &&
-       (this.num == num))
-      return;
-*/
-    clear_element(this.div);
-      
-    if(!this.container)
-      {
-      this.start = 0;
-      console.log("Blupp 2");
-      this.num   = 0;
-      this.start_internal = start;
-      this.num_internal = num;
-      }
-    else
-      {
-      this.start = start;
-      this.num = num;
-      console.log("Blupp 3 " + num);
-      }
-
-    if(this.container && this.container[GAVL_META_CHILDREN])
-      delete this.container[GAVL_META_CHILDREN];
-
-    this.num_children = this.num;
-    if(this.container)
-      my_get_children(this.container, this.start, this.num);
-
-    this.page = this.offset_to_page(this.start);
-    this.pager.set_page(this.page, this.num_pages, this.start, this.num, this.total_children);
-    this.page_changed = false;
-
-    console.log("set_range_internal 2 " + this.start + " " + this.num);
-
-    }
-
-  ret.set_range = function(start, num)
-    {
-//    console.log("set_range " + start + " " + num);
-//    console.trace();
-      /* Update app state */
-    app_state.start = start;
-    app_state.num   = num;
-
-    this.page_changed = true;
-      
-    replace_state();
-    app_state_apply();
-    update_hash();
-    }
-
-  ret.offset_to_page = function(start)
-    {
-    var page;
-      if(start % this.pagesize == 0)
-      page = start / this.pagesize;
-    else
-      page = 0;
-
-    if(page < 0)
-      page = 0;
-    else if(page >= this.num_pages)
-      page = this.num_pages - 1;
-    return page;
-    }
-
-  ret.page_to_offset = function(p)
-    {
-    if(p < 0)
-      p = 0;
-    if((this.num_pages > 0) && (p >= this.num_pages))
-      p = this.num_pages-1;
-    return p * this.pagesize;
-    }
-
-  ret.page_to_num = function(p)
-    {
-    var num = this.pagesize;
-    var start;
-    if(p < 0)
-      p = 0;
-    if((this.num_pages > 0) && (p >= this.num_pages))
-      p = this.num_pages-1;
-
-    start = p * this.pagesize;
-      
-    if(start + num > this.total_children)
-      num = this.total_children - start;
-    return num;
-    }
-    
-  ret.set_page = function(p)
-    {
-    var start = this.page_to_offset(p);
-    var num   = this.page_to_num(p);
-
-    this.set_range(start, num);
-    }
-
-  ret.set_page_rel = function(p)
-    {
-    this.set_page(this.page + p);
-    }
     
   ret.set_container = function(obj)
     {
@@ -3718,9 +3477,6 @@ function create_browser()
 	
       this.set_mode_internal(this.get_browse_mode());
   	
-      this.page_changed = true;
-	
-	
       add_my_event_handler(this.container, this);
 
       set_header(this.container);
@@ -3733,34 +3489,8 @@ function create_browser()
 	this.have_container_image = false;
 
       set_wallpaper(this.container);
-      this.pagesize = pagesize;
-      this.total_children = dict_get_int(m, GAVL_META_NUM_CHILDREN);
-
-      this.num_pages = Math.floor((this.total_children - 1 + this.pagesize) / this.pagesize);
 	
-      if(this.num_pages > 1)
-        {
-        this.pager.show(this);
-	}
-      else
-	{
-        this.pager.hide(this);
-	}
-
-      if(this.num_internal)
-	{
-        console.log("set_range_internal " + this.start_internal + " " + this.num_internal);
-	this.set_range_internal(this.start_internal, this.num_internal);
-        delete this.start_internal;
-        delete this.num_internal;
-	}
-      else
-	{
-        this.set_page(0);
-	}
-	
-//      this.set_range();
-
+      my_get_children(this.container);
       update_nav_popup();
       adjust_header_footer(this.div);
       }
@@ -4726,28 +4456,6 @@ function create_image_viewer()
         break;
       case "Escape":
         {
-        let idx;
-        let total;
-        let page;
-        if(this.iv.obj)
-	  {
-          idx = obj_get_int( this.iv.obj, GAVL_META_IDX);
-          total = obj_get_int(this.iv.obj, GAVL_META_TOTAL);
-          console.log("idx: " + idx + " total: " + total);
-          if((total > 0) && (idx >= 0))
-	    {
-            page = Math.floor(idx / pagesize);
-            my_history[my_history_pos-1].start = page * pagesize;
-            my_history[my_history_pos-1].num = pagesize;
-
-            if(page * pagesize + pagesize > total)
-              {
-              my_history[my_history_pos-1].num = page * pagesize + pagesize - total;
-	      }
-	      
-	    }
-          my_history[my_history_pos-1].sel_id = obj_get_id(this.iv.obj);
-	  }
 	my_history_back(false);
 /*        app_state.widget = "browser";
 	delete app_state.image_id;

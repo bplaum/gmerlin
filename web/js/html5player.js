@@ -368,10 +368,23 @@ function html5player_play(p, do_pause)
   var el;
   var uri = null;
     
-//  console.log("html5player_play");
+  console.log("html5player_play");
   
   if(!p.cur || !p.el)
     {
+    if((p.cur_idx < 0) && (p.tracks && (p.tracks.length > 0)))
+      {
+      let mode = html5player_get_state_local(p, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MODE).v;
+      console.log("html5player_play");
+  
+      p.cur_idx = 0;
+      if(mode == BG_PLAYER_MODE_SHUFFLE)
+        html5player_create_shuffle_list(p);
+
+      p.cur_idx = 0;
+      
+      p.cur_idx_real = html5player_shuffle(p, p.cur_idx);
+      }
     if(p.tracks && (p.cur_idx >= 0) && (p.cur_idx < p.tracks.length))
       {
       html5player_set_current_track(p, p.cur_idx);
@@ -786,6 +799,8 @@ function html5player_handle_msg(msg)
         {
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
+          let old_length = this.tracks.length;
+	    
           if(dict_get_string(msg.header, GAVL_MSG_CONTEXT_ID) != BG_PLAYQUEUE_ID)
             return
 //          console.log("html5player Splice children");
@@ -843,8 +858,15 @@ function html5player_handle_msg(msg)
           html5player_set_state_local(this, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_QUEUE_LEN,
                                       value_create(GAVL_TYPE_INT, this.tracks.length));
           html5player_update_playqueue(this);
-	  break;
-	  }    
+
+          if((old_length == 0) && (this.tracks.length > 0))
+            {
+	    this.cur_idx = -1;
+            this.cur_idx_real = -1;
+	    }
+	    
+          break;
+	  }
         case BG_FUNC_DB_BROWSE_CHILDREN:
 //	  console.log("html5player Browse children");
           resp = set_browse_children_response(msg, this.tracks)
