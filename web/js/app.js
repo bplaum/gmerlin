@@ -3456,9 +3456,6 @@ function create_browser()
       delete_my_event_handler(this.container, this);
       this.container = null;
       set_wallpaper();
-      this.start = -1;
-
-
       }
     if(!obj)
       return;
