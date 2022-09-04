@@ -129,7 +129,7 @@ static char * append_row(char * str, const char * icon, const char * val)
   return str;
   }
 
-static void pixbuf_from_uri_callback(void * data, GdkPixbuf * pb)
+static void pixbuf_from_uri_callback(void * data, const char * id, GdkPixbuf * pb)
   {
   GtkWidget * image = data;
   gtk_image_set_from_pixbuf(GTK_IMAGE(image), pb);

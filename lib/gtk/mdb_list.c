@@ -164,20 +164,22 @@ int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
   return 0;
   }
 
-void bg_gtk_mdb_list_set_pixbuf(load_image_t * d, GdkPixbuf * pb)
+void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPixbuf * pb)
   {
   album_t * a;
   GtkTreeIter iter;
   char * parent_id = NULL;
   GtkTreeModel * model;
+
+  //  fprintf(stderr, "bg_gtk_mdb_list_set_pixbuf %s %p\n", id, pb);
   
-  if(!d->id || !(parent_id = bg_mdb_get_parent_id(d->id)))
+  if(!id || !(parent_id = bg_mdb_get_parent_id(id)))
     goto fail;
     
-  if(!(a = bg_gtk_mdb_album_is_open(d->tree, parent_id)))
+  if(!(a = bg_gtk_mdb_album_is_open(tree, parent_id)))
     goto fail;
 
-  if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(a->list->listview), &iter, d->id))
+  if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(a->list->listview), &iter, id))
     goto fail;
 
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(a->list->listview));
@@ -1412,7 +1414,6 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
                 gpointer user_data)
   {
   //  GdkDragContext* ctx;
-  GtkTargetList * tl;
   GtkTreeSelection * selection;
   int num_selected;
 
@@ -1423,20 +1424,22 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
   
   num_selected = gtk_tree_selection_count_selected_rows(selection);
 
-  tl = gtk_target_list_new(list_src_entries, num_list_src_entries);
   
   if(evt->state & GDK_BUTTON1_MASK)
     {
+    GtkTargetList * tl;
+
     if((abs((int)(evt->x) - a->list->mouse_x) + abs((int)(evt->y) - a->list->mouse_y) < 10) ||
        (!num_selected))
       return FALSE;
 
+    tl = gtk_target_list_new(list_src_entries, num_list_src_entries);
+
     // ctx = 
     gtk_drag_begin_with_coordinates(w, tl, GDK_ACTION_COPY, 1, (GdkEvent*)evt, -1, -1);
-    
+    gtk_target_list_unref(tl);
     }
 
-  gtk_target_list_unref(tl);
   
   return TRUE;
   }

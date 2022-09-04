@@ -1100,8 +1100,8 @@ static int start_edl(void * priv)
       src_dict = ed->streams[i].src->st;
       dst_dict = ed->streams[i].s;
       
-      fprintf(stderr, "Copy stats\n");
-      gavl_dictionary_dump(src_dict, 2);
+      //      fprintf(stderr, "Copy stats\n");
+      //      gavl_dictionary_dump(src_dict, 2);
       
       gavl_dictionary_set(dst_dict,
                           GAVL_META_STREAM_STATS,

@@ -185,6 +185,7 @@ struct bg_plug_s
 static int handle_cmd_reader(void * data, gavl_msg_t * msg);
 // static int msg_sink_func_write(void * data, gavl_msg_t * msg);
 
+#if 0
 static int plug_was_locked(bg_plug_t * p, int keep_lock)
   {
   if(!pthread_mutex_trylock(&p->mutex))
@@ -204,6 +205,7 @@ static void set_flag(bg_plug_t * p, int flag)
   pthread_mutex_unlock(&p->flags_mutex);
   }
 
+
 static int has_flag(bg_plug_t * p, int flag)
   {
   int ret;
@@ -215,7 +217,6 @@ static int has_flag(bg_plug_t * p, int flag)
   return ret;
   }
 
-#if 0
 static int has_flag_all(bg_plug_t * p, int flag)
   {
   int ret;
@@ -299,12 +300,14 @@ int bg_plug_ping(bg_plug_t * plug)
   return 1;
   }
 
+#if 0
 static void clear_flag(bg_plug_t * p, int flag)
   {
   pthread_mutex_lock(&p->flags_mutex);
   p->flags &= ~flag;
   pthread_mutex_unlock(&p->flags_mutex);
   }
+#endif
 
 // static void init_streams_read(bg_plug_t * p);
 static void cleanup_streams(bg_plug_t * p);
@@ -972,7 +975,7 @@ static gavl_sink_status_t put_overlay_func(void * priv,
 
 /* Packet */
 
-
+#if 0
 static int init_write_common(bg_plug_t * p, stream_t * s)
   {
   s->plug = p;
@@ -989,7 +992,6 @@ static int init_write_common(bg_plug_t * p, stream_t * s)
   return 1;
   }
 
-#if 0
 static int handle_msg_forward(void * data, gavl_msg_t * msg)
   {
   stream_t * s = data;

@@ -25,6 +25,7 @@
 
 #include <gmerlin/mdb.h>
 #include <gmerlin/utils.h>
+#include <gavl/http.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
@@ -72,6 +73,9 @@
  */
 
 #define META_DB_ID       "DBID"
+#define META_SOURCE_ID   "SOURCE_ID"
+#define META_STATION_ID  "STATION_ID"
+
 
 #define STREAM_TYPE_UNKOWN 0
 #define STREAM_TYPE_RADIO  1
@@ -95,10 +99,12 @@
 /*
   tables:
 
-  sources( ID, LABEL, NUM_LANGUAGES, NUM_TAGS, NUM_COUNTRIES, NUM_CATEGORIES)
+  sources( ID, LABEL)
   
   stations( DBID, LABEL, LOGO_URI, HOMEPAGE_URI, STREAM_URI, MIMETYPE, TYPE, SOURCE_ID )
 
+  uris( DBID, STATION_ID, STREAM_URI, MIMETYPE, WIDTH, HEIGHT, BITRATE )
+  
   categories( ID, NAME )
   station_categories( ID, DBID, CATEGORY_ID )
 
@@ -113,6 +119,7 @@
   
 */
 
+#if 0
 typedef struct
   {
   int64_t id;
@@ -131,6 +138,7 @@ typedef struct
   gavl_array_t languages; // Labels
   
   } station_t;
+#endif
 
 
 typedef struct
@@ -274,13 +282,14 @@ static int64_t get_source_count(streams_t * p, int64_t id, const char * var)
 
 // static void import_icecast(bg_mdb_backend_t * b);
 static int import_radiobrowser(bg_mdb_backend_t * b, int64_t source_id);
+static int import_iptv_org(bg_mdb_backend_t * b, int64_t source_id);
 
 // static void import_m3u(bg_mdb_backend_t * b);
 
 static int import_source(bg_mdb_backend_t * b, int64_t id, const char * uri);
 static int import_m3u(bg_mdb_backend_t * b, int64_t id, const char * uri);
     
-
+#if 0
 static void station_init(station_t * s)
   {
   memset(s, 0, sizeof(*s));
@@ -294,13 +303,70 @@ static void station_reset(station_t * s)
   gavl_array_free(&s->languages);
   station_init(s);
   }
+#endif
 
+typedef struct
+  {
+  sqlite3 * db;
+  gavl_dictionary_t * m;
+  } browse_url_t;
+
+static int
+browse_url_callback(void * data, int argc, char **argv, char **azColName)
+  {
+  int i;
+  int val_i;
+  int64_t mimetype_id = -1;
+  gavl_dictionary_t * src;
+  browse_url_t * d = data;
+  gavl_dictionary_t * m = d->m;
+  
+  src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, NULL);
+
+  for(i = 0; i < argc; i++)
+    {
+    if(!strcmp(azColName[i], "MIMETYPE_ID"))
+      {
+      mimetype_id = strtoll(argv[i], NULL, 10);
+      }
+    else if(!strcmp(azColName[i], GAVL_META_URI))
+      {
+      gavl_dictionary_set_string(src, GAVL_META_URI, argv[i]);
+      }
+    else if(!strcmp(azColName[i], GAVL_META_WIDTH))
+      {
+      val_i = atoi(argv[i]);
+      if(val_i > 0)
+        gavl_dictionary_set_int(src, GAVL_META_WIDTH, val_i);
+      }
+    else if(!strcmp(azColName[i], GAVL_META_HEIGHT))
+      {
+      val_i = atoi(argv[i]);
+      if(val_i > 0)
+        gavl_dictionary_set_int(src, GAVL_META_HEIGHT, val_i);
+      }
+    else if(!strcmp(azColName[i], GAVL_META_BITRATE))
+      {
+      val_i = atoi(argv[i]);
+      if(val_i > 0)
+        gavl_dictionary_set_int(src, GAVL_META_BITRATE, val_i);
+      }
+    }
+
+  if(mimetype_id > 0)
+    gavl_dictionary_set_string_nocopy(src, GAVL_META_MIMETYPE,
+                                      bg_sqlite_id_to_string(d->db,
+                                                             "mimetypes",
+                                                             "NAME",
+                                                             "ID",
+                                                             mimetype_id));
+  return 0;
+  }
 
 typedef struct
   {
   gavl_dictionary_t * dict;
   gavl_dictionary_t * m;
-  int64_t mimetype_id;
   } browse_station_t;
 
 static int
@@ -308,25 +374,15 @@ browse_station_callback(void * data, int argc, char **argv, char **azColName)
   {
   int i;
   browse_station_t * b = data;
-  b->mimetype_id = -1;
-  
   for(i = 0; i < argc; i++)
     {
     if(!strcmp(azColName[i], META_DB_ID))
       {
       
       }
-    else if(!strcmp(azColName[i], "MIMETYPE_ID"))
-      {
-      b->mimetype_id = strtoll(argv[i], NULL, 10);
-      }
     else if(!strcmp(azColName[i], GAVL_META_LABEL))
       {
       gavl_dictionary_set_string(b->m, GAVL_META_LABEL, argv[i]);
-      }
-    else if(!strcmp(azColName[i], GAVL_META_URI))
-      {
-      gavl_metadata_add_src(b->m, GAVL_META_SRC, NULL, argv[i]);
       }
     else if(!strcmp(azColName[i], GAVL_META_STATION_URL))
       {
@@ -387,6 +443,8 @@ static int browse_station(bg_mdb_backend_t * b,
   int result;
   char * sql;
   browse_station_t bs;
+  browse_url_t bu;
+
   streams_t * p = b->priv;
 
   bs.dict = ret;
@@ -400,6 +458,7 @@ static int browse_station(bg_mdb_backend_t * b,
   if(!result)
     return 0;
 
+#if 0  
   if(bs.mimetype_id >= 0)
     {
     gavl_dictionary_t * src =  gavl_dictionary_get_src_nc(bs.m, GAVL_META_SRC, 0);
@@ -410,43 +469,86 @@ static int browse_station(bg_mdb_backend_t * b,
                                                              "ID",
                                                              bs.mimetype_id));
     }
+#endif
   
   browse_array(b, bs.m, "tags", GAVL_META_TAG, id); 
   browse_array(b, bs.m, "countries", GAVL_META_COUNTRY, id); 
   browse_array(b, bs.m, "languages", GAVL_META_AUDIO_LANGUAGES, id); 
   browse_array(b, bs.m, "categories", GAVL_META_CATEGORY, id); 
 
+  bu.db = p->db;
+  bu.m = bs.m;
+  
+  sql = gavl_sprintf("select * from uris where STATION_ID = %"PRId64";", id);
+  bg_sqlite_exec(p->db, sql, browse_url_callback, &bu);
+  free(sql);
+  
   return 1;
 
   }
 
-static void add_array(bg_mdb_backend_t * b, int64_t station_id, int64_t source_id,
-                      const gavl_array_t * arr, const char * attr_table, const char * arr_table)
+static void add_string(bg_mdb_backend_t * b, int64_t station_id, int64_t source_id,
+                       const char * attr, const char * attr_table, const char * arr_table)
   {
-  int i;
   char * sql;
-  const char * attr;
   int64_t attr_id;
   int result;
-  
   streams_t * p = b->priv;
   
-  for(i = 0; i < arr->num_entries; i++)
+  attr_id = bg_sqlite_string_to_id_add(p->db, attr_table, "ID", "NAME", attr);
+
+  sql = sqlite3_mprintf("INSERT INTO %s (ATTR_ID, STATION_ID, "META_SOURCE_ID") "
+                        "VALUES"
+                        " (%"PRId64", %"PRId64", %"PRId64"); ",
+                        arr_table, attr_id, station_id, source_id);
+  
+  result = bg_sqlite_exec(p->db, sql, NULL, NULL);
+  sqlite3_free(sql);
+  if(!result)
+    return;
+  }
+
+static void add_array(bg_mdb_backend_t * b, int64_t station_id, int64_t source_id,
+                      const gavl_value_t * val, const char * attr_table, const char * arr_table)
+  {
+  int i;
+  //  char * sql;
+  const char * attr;
+  //  int64_t attr_id;
+  //  int result;
+
+  const gavl_array_t * arr;
+  
+  //  streams_t * p = b->priv;
+
+  if((arr = gavl_value_get_array(val)))
     {
-    attr = gavl_string_array_get(arr, i);
+    for(i = 0; i < arr->num_entries; i++)
+      {
+      attr = gavl_string_array_get(arr, i);
+      
+      add_string(b, station_id, source_id, attr, attr_table, arr_table);
+#if 0   
+      attr_id = bg_sqlite_string_to_id_add(p->db, attr_table, "ID", "NAME", attr);
 
-    attr_id = bg_sqlite_string_to_id_add(p->db, attr_table, "ID", "NAME", attr);
+      sql = sqlite3_mprintf("INSERT INTO %s (ATTR_ID, STATION_ID, "META_SOURCE_ID") "
+                            "VALUES"
+                            " (%"PRId64", %"PRId64", %"PRId64"); ",
+                            arr_table, attr_id, station_id, source_id);
 
-    sql = sqlite3_mprintf("INSERT INTO %s (ATTR_ID, STATION_ID, SOURCE_ID) "
-                          "VALUES"
-                          " (%"PRId64", %"PRId64", %"PRId64"); ",
-                          arr_table, attr_id, station_id, source_id);
-
-    result = bg_sqlite_exec(p->db, sql, NULL, NULL);
-    sqlite3_free(sql);
-    if(!result)
-      return;
+      result = bg_sqlite_exec(p->db, sql, NULL, NULL);
+      sqlite3_free(sql);
+      if(!result)
+        return;
+#endif
+      }
+    
     }
+  else if((attr = gavl_value_get_string(val)))
+    {
+    add_string(b, station_id, source_id, attr, attr_table, arr_table);
+    }
+  
   }
 
 static const char * search_string_skip_chars = "+-~_ .,;\"'[({*@#:";
@@ -464,53 +566,94 @@ static const char * get_search_name(const char * name)
     return name;
   }
 
-static void add_station(bg_mdb_backend_t * b, station_t * s)
+static void add_uri(bg_mdb_backend_t * b, int64_t station_id, const gavl_dictionary_t * src)
   {
+  const char * mimetype;
+  const char * uri;
   char * sql;
   int result;
+  int width = 0;
+  int height = 0;
+  int bitrate = 0;
   int64_t mimetype_id = -1;
-  char * name = gavl_strdup(s->name);
   streams_t * p = b->priv;
+  
+  if(!(uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
+    return;
+  
+  mimetype = gavl_dictionary_get_string(src, GAVL_META_MIMETYPE);
 
-  name = gavl_strip_space(name);
-  
-  s->id = ++p->next_id;
-  
-  if(!s->mimetype)
+  if(!mimetype)
     {
     char *pos;
-    char *uri = gavl_strdup(s->stream_uri);
-    if((pos = strrchr(uri, '?')))
+    char *uri1 = gavl_strdup(uri);
+    if((pos = strrchr(uri1, '?')))
       *pos = '\0';
 
-    if((pos = strchr(uri, '#')))
+    if((pos = strchr(uri1, '#')))
       *pos = '\0';
 
-    if((pos = strrchr(uri, '.')))
+    if((pos = strrchr(uri1, '.')))
       {
       pos++;
-      s->mimetype = bg_ext_to_mimetype(pos);
+      mimetype = bg_ext_to_mimetype(pos);
       }
-    free(uri);
+    free(uri1);
     }
   
-  if(s->mimetype)
-    {
+  if(mimetype)
     mimetype_id = bg_sqlite_string_to_id_add(p->db,
                                              "mimetypes",
                                              "ID",
                                              "NAME",
-                                             s->mimetype);
-    }
+                                             mimetype);
   
-  if(strchr(s->name, '\n'))
-    {
-    }
   
-  sql = sqlite3_mprintf("INSERT INTO stations ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_SEARCH_TITLE", "GAVL_META_URI", "GAVL_META_STATION_URL", "GAVL_META_LOGO_URL", TYPE, SOURCE_ID, MIMETYPE_ID) "
+  gavl_dictionary_get_int(src, GAVL_META_WIDTH,   &width);
+  gavl_dictionary_get_int(src, GAVL_META_HEIGHT,  &height);
+  gavl_dictionary_get_int(src, GAVL_META_BITRATE, &bitrate);
+  
+  sql = sqlite3_mprintf("INSERT INTO uris ("META_STATION_ID", "GAVL_META_URI", MIMETYPE_ID, "GAVL_META_WIDTH", "GAVL_META_HEIGHT", "GAVL_META_BITRATE") "
                         "VALUES"
-                        " (%"PRId64", %Q, %Q, %Q, %Q, %Q, %d, %"PRId64", %"PRId64"); ",
-                        s->id, name, get_search_name(name), s->stream_uri, s->station_uri, s->logo_uri, s->type, s->source_id, mimetype_id);
+                        " (%"PRId64", %Q, %"PRId64", %d, %d, %d); ",
+                        station_id, uri, mimetype_id, width, height, bitrate);
+  
+  result = bg_sqlite_exec(p->db, sql, NULL, NULL);
+  sqlite3_free(sql);
+  if(!result)
+    return;
+  
+  
+  }
+
+static void add_station(bg_mdb_backend_t * b, const gavl_dictionary_t * station, int64_t src_id)
+  {
+  char * sql;
+  int result;
+  int64_t id;
+  //  int64_t mimetype_id = -1;
+  char *pos;
+  int i;
+  int type = STREAM_TYPE_UNKOWN;
+  const gavl_value_t * val;
+  const gavl_dictionary_t * src;
+  streams_t * p = b->priv;
+  const gavl_dictionary_t * m = gavl_track_get_metadata(station);
+  char * name = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_LABEL));
+  
+  name = gavl_strip_space(name);
+  if((pos = strchr(name, '\n')))
+    *pos = '\0';
+
+  id = ++p->next_id;
+
+  sql = sqlite3_mprintf("INSERT INTO stations ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_SEARCH_TITLE", "GAVL_META_STATION_URL", "GAVL_META_LOGO_URL", TYPE, SOURCE_ID) "
+                        "VALUES"
+                        " (%"PRId64", %Q, %Q, %Q, %Q, %d, %"PRId64"); ",
+                        id, name, get_search_name(name),
+                        gavl_dictionary_get_string(m, GAVL_META_STATION_URL),
+                        gavl_dictionary_get_string(m, GAVL_META_LOGO_URL),
+                        type, src_id);
   
   free(name);
   
@@ -519,10 +662,34 @@ static void add_station(bg_mdb_backend_t * b, station_t * s)
   if(!result)
     return;
 
-  add_array(b, s->id, s->source_id, &s->categories, "categories", "station_categories");
-  add_array(b, s->id, s->source_id, &s->languages, "languages", "station_languages");
-  add_array(b, s->id, s->source_id, &s->countries, "countries", "station_countries");
-  add_array(b, s->id, s->source_id, &s->tags, "tags", "station_tags");
+  
+  //  browse_array(b, bs.m, "tags", GAVL_META_TAG, id); 
+  //  browse_array(b, bs.m, "countries", GAVL_META_COUNTRY, id); 
+  //  browse_array(b, bs.m, "languages", GAVL_META_AUDIO_LANGUAGES, id); 
+  //  browse_array(b, bs.m, "categories", GAVL_META_CATEGORY, id); 
+  
+  if((val = gavl_dictionary_get(m, GAVL_META_CATEGORY)))
+    add_array(b, id, src_id, val, "categories", "station_categories");
+  
+  if((val = gavl_dictionary_get(m, GAVL_META_AUDIO_LANGUAGES)))
+    add_array(b, id, src_id, val, "languages", "station_languages");
+
+  if((val = gavl_dictionary_get(m, GAVL_META_COUNTRY)))
+    add_array(b, id, src_id, val, "countries", "station_countries");
+  
+  if((val = gavl_dictionary_get(m, GAVL_META_TAG)))
+    add_array(b, id, src_id, val, "tags", "station_tags");
+
+  i = 0;
+
+  while(1)
+    {
+    if(!(src = gavl_dictionary_get_src(m, GAVL_META_SRC, i, NULL, NULL)))
+      break;
+    
+    add_uri(b, id, src);
+    i++;
+    }
   
   }
 
@@ -594,6 +761,8 @@ static void rescan(bg_mdb_backend_t * be)
   //  bg_sqlite_exec(p->db, "DELETE FROM sources", NULL, NULL);
   
   bg_sqlite_exec(p->db, "DELETE FROM stations", NULL, NULL);
+  bg_sqlite_exec(p->db, "DELETE FROM uris", NULL, NULL);
+
   bg_sqlite_exec(p->db, "DELETE FROM categories", NULL, NULL);
   bg_sqlite_exec(p->db, "DELETE FROM station_categories", NULL, NULL);
 
@@ -648,6 +817,10 @@ static int import_source(bg_mdb_backend_t * be, int64_t id, const char * uri)
     {
     return import_radiobrowser(be, id);
     }
+  else if(!strcmp(uri, "iptv-org://"))
+    {
+    return import_iptv_org(be, id);
+    }
   else if(gavl_string_starts_with_i(uri, "http://") ||
           gavl_string_starts_with_i(uri, "https://") ||
           gavl_string_starts_with(uri, "/"))
@@ -669,8 +842,13 @@ static void create_tables(bg_mdb_backend_t * be)
                      NULL, NULL) ||
      !bg_sqlite_exec(priv->db,
                      "CREATE TABLE IF NOT EXISTS stations("META_DB_ID" INTEGER PRIMARY KEY, "
-                     GAVL_META_LABEL" TEXT, "GAVL_META_SEARCH_TITLE" TEXT, MIMETYPE_ID INTEGER, "GAVL_META_URI" TEXT, "GAVL_META_STATION_URL" TEXT, "GAVL_META_LOGO_URL" TEXT,"
+                     GAVL_META_LABEL" TEXT, "GAVL_META_SEARCH_TITLE" TEXT, "GAVL_META_STATION_URL" TEXT, "GAVL_META_LOGO_URL" TEXT,"
                      "TYPE INTEGER, SOURCE_ID INTEGER);",
+                     NULL, NULL) ||
+     !bg_sqlite_exec(priv->db,
+                     "CREATE TABLE IF NOT EXISTS uris("META_DB_ID" INTEGER PRIMARY KEY, STATION_ID INTEGER,"
+                     GAVL_META_URI" TEXT, MIMETYPE_ID INTEGER, "GAVL_META_WIDTH" INTEGER, "GAVL_META_HEIGHT" INTEGER,"
+                     GAVL_META_BITRATE" INTEGER);",
                      NULL, NULL) ||
      !bg_sqlite_exec(priv->db,
                      "CREATE TABLE IF NOT EXISTS tags(ID INTEGER PRIMARY KEY, NAME TEXT);", NULL, NULL) ||
@@ -694,7 +872,6 @@ static void create_tables(bg_mdb_backend_t * be)
     return;
   
   }
-
 
 static int get_source_callback(void * data, int argc, char **argv, char **azColName)
   {
@@ -2456,18 +2633,18 @@ static int ping_streams(bg_mdb_backend_t * be)
   {
   streams_t * priv = be->priv;
   //  rescan(b);
-
+  
   bg_mdb_track_lock(be, 1, priv->root_container);
-
+  
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creating default database");
-
+  
   bg_sqlite_start_transaction(priv->db);
   
   add_source_str(be, "radio-browser.info", "radiobrowser://");
   add_source_str(be, "iptv-org",        "https://iptv-org.github.io/iptv/index.m3u");
   add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
   add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
-
+  
   bg_sqlite_end_transaction(priv->db);
 
   init_sources(be);
@@ -2529,6 +2706,330 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
 
   if(priv->new_file)
     b->ping_func = ping_streams;
+  }
+
+/* https://github.com/iptv-org/api */
+
+static int iptv_get_string_array(gavl_array_t * dst,
+                                 json_object * src,
+                                 const char * src_tag)
+  {
+  int i, num;
+  json_object * arr;
+  json_object * child;
+
+  if(!json_object_object_get_ex(src, src_tag, &arr) ||
+     !json_object_is_type(arr, json_type_array))
+    return 0;
+  
+  num = json_object_array_length(arr);
+  
+  for(i = 0; i < num; i++)
+    {
+    if((child = json_object_array_get_idx(arr, i)) &&
+       json_object_is_type(child, json_type_string))
+      gavl_string_array_add(dst, json_object_get_string(child));
+    }
+  return dst->num_entries;
+  }
+
+typedef struct
+  {
+  int64_t src_id;
+  bg_mdb_backend_t * b;
+  } iptv_org_add_t;
+
+static void iptv_foreach_func(void * priv, const char * name,
+                              const gavl_value_t * val)
+  {
+  const gavl_dictionary_t * dict;
+  const gavl_dictionary_t * m;
+
+  iptv_org_add_t * a = priv;
+  
+  if(!(dict = gavl_value_get_dictionary(val)) ||
+     !(m = gavl_track_get_metadata(dict)) ||
+     !gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, NULL))
+    return;
+
+  add_station(a->b, dict, a->src_id);
+  
+  }
+
+
+static int import_iptv_org(bg_mdb_backend_t * b, int64_t source_id)
+  {
+  json_object * obj = NULL;
+  json_object * child;
+
+  gavl_dictionary_t categories;
+  gavl_dictionary_t stations;
+
+  gavl_array_t arr;
+  gavl_array_t * arr1;
+  
+  int num;
+  int num_added;
+  int i, j;
+
+  iptv_org_add_t a;
+  
+  gavl_dictionary_init(&categories);
+  gavl_dictionary_init(&stations);
+
+  fprintf(stderr, "import_iptv_org\n");
+  
+  /* Load categories */
+  if(!(obj = bg_json_from_url("https://iptv-org.github.io/api/categories.json", NULL)) ||
+     !json_object_is_type(obj, json_type_array))
+    {
+    return 0;
+    }
+  num = json_object_array_length(obj);
+
+  //  station_init(&s);
+
+  num_added = 0;
+  for(i = 0; i < num; i++)
+    {
+    const char * id;
+    const char * name;
+    
+    if(!(child = json_object_array_get_idx(obj, i)))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Invalid array element");
+      continue;
+      }
+    
+    if(!(id = bg_json_dict_get_string(child, "id")))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Category has no ID");
+      continue;
+      }
+
+    if(!(name = bg_json_dict_get_string(child, "name")))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Category has no NAME");
+      continue;
+      }
+
+    gavl_dictionary_set_string(&categories, id, name);
+    num_added++;
+    }
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "iptv-org: Loaded %d categories", num_added);
+  
+  if(obj)
+    json_object_put(obj);
+
+  /* Import channels */
+  if(!(obj = bg_json_from_url("https://iptv-org.github.io/api/channels.json", NULL)) ||
+     !json_object_is_type(obj, json_type_array))
+    {
+    return 0;
+    }
+  num = json_object_array_length(obj);
+
+  //  station_init(&s);
+
+  num_added = 0;
+  for(i = 0; i < num; i++)
+    {
+    const char * id;
+    const char * var;
+    gavl_value_t child_val;
+    gavl_dictionary_t * child_dict;
+    gavl_dictionary_t * m;
+    
+    if(!(child = json_object_array_get_idx(obj, i)))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Invalid array element");
+      continue;
+      }
+
+    if(bg_json_dict_get_string(child, "closed") ||
+       bg_json_dict_get_string(child, "replaced_by"))
+      continue;
+    
+    if(!(id = bg_json_dict_get_string(child, "id")))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Child has no ID");
+      continue;
+      }
+
+    num_added++;
+    
+    gavl_value_init(&child_val);
+    child_dict = gavl_value_set_dictionary(&child_val);
+
+    m = gavl_dictionary_get_dictionary_create(child_dict, GAVL_META_METADATA);
+    
+    
+    if((var = bg_json_dict_get_string(child, "name")))
+      gavl_dictionary_set_string(m, GAVL_META_LABEL, var);
+
+    //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading station %s", var);
+
+    if((var = bg_json_dict_get_string(child, "country")) &&
+       (var = gavl_get_country_label(var)))
+      gavl_dictionary_set_string(m, GAVL_META_COUNTRY, var);
+    
+    if((var = bg_json_dict_get_string(child, "logo")))
+      gavl_dictionary_set_string(m, GAVL_META_LOGO_URL, var);
+    
+    if((var = bg_json_dict_get_string(child, "website")))
+      gavl_dictionary_set_string(m, GAVL_META_STATION_URL, var);
+
+    /* Languages */
+
+    gavl_array_init(&arr);
+
+    iptv_get_string_array(&arr, child, "languages");
+
+    if(arr.num_entries)
+      {
+      arr1 = gavl_dictionary_get_array_create(m, GAVL_META_AUDIO_LANGUAGES);
+      
+      for(j = 0; j < arr.num_entries; j++)
+        {
+        const char * str1;
+        const char * str2;
+        
+        if((str1 = gavl_value_get_string(&arr.entries[j])))
+          {
+          str2 = gavl_language_get_label_from_code(str1);
+
+          if(str2)
+            gavl_string_array_add(arr1, str2);
+          }
+        
+        }
+      }
+    
+    
+    gavl_array_free(&arr);
+
+    /* Categories */
+    
+    gavl_array_init(&arr);
+    
+    iptv_get_string_array(&arr, child, "categories");
+
+    if(arr.num_entries)
+      {
+      arr1 = gavl_dictionary_get_array_create(m, GAVL_META_CATEGORY);
+      
+      for(j = 0; j < arr.num_entries; j++)
+        {
+        const char * str1;
+        const char * str2;
+        
+        if((str1 = gavl_value_get_string(&arr.entries[j])))
+          {
+          str2 = gavl_dictionary_get_string(&categories, str1);
+        
+          if(str2)
+            gavl_string_array_add(arr1, str2);
+          }
+      
+        }
+      
+      }
+    
+    gavl_array_free(&arr);
+    
+    gavl_dictionary_set_nocopy(&stations, id, &child_val);
+    
+    
+    }
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "iptv-org: Loaded %d stations", num_added);
+  
+  /* Import streams */
+  if(!(obj = bg_json_from_url("https://iptv-org.github.io/api/streams.json", NULL)) ||
+     !json_object_is_type(obj, json_type_array))
+    {
+    return 0;
+    }
+  num = json_object_array_length(obj);
+  num_added = 0;
+  
+  for(i = 0; i < num; i++)
+    {
+    const char * id;
+    const char * var;
+    int var_i;
+    char * url;
+    gavl_dictionary_t * src;
+    gavl_dictionary_t http_vars;
+    gavl_dictionary_t * channel;
+    //    int geo_blocked;
+    
+    if(!(child = json_object_array_get_idx(obj, i)))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Invalid array element");
+      continue;
+      }
+
+    if(!(var = bg_json_dict_get_string(child, "status")))
+      {
+      if(!strcmp(var, "timeout") || !strcmp(var, "error"))
+        continue;
+      }
+    
+    if(!(id = bg_json_dict_get_string(child, "channel")))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Stream has no ID");
+      continue;
+      }
+    
+    if(!(channel = gavl_dictionary_get_dictionary_nc(&stations, id)) ||
+       !(channel = gavl_track_get_metadata_nc(channel)))
+      {
+      continue;
+      }
+    
+    if(!(var = bg_json_dict_get_string(child, "url")))
+      continue;
+
+    url = gavl_strdup(var);
+    
+    gavl_dictionary_init(&http_vars);
+    
+    if((var = bg_json_dict_get_string(child, "http_referrer")))
+      gavl_dictionary_set_string(&http_vars, "Referer", var);
+
+    if((var = bg_json_dict_get_string(child, "user_agent")))
+      gavl_dictionary_set_string(&http_vars, "User-Agent", var);
+    
+    url = gavl_url_append_http_vars(url, &http_vars);
+    gavl_dictionary_free(&http_vars);
+
+    if((src = gavl_metadata_add_src(channel, GAVL_META_SRC, NULL, url)))
+      {
+      if((var_i = bg_json_dict_get_int(child, "width")))
+        gavl_dictionary_set_int(src, GAVL_META_WIDTH, var_i);
+      if((var_i = bg_json_dict_get_int(child, "height")))
+        gavl_dictionary_set_int(src, GAVL_META_HEIGHT, var_i);
+      if((var_i = bg_json_dict_get_int(child, "bitrate")))
+        gavl_dictionary_set_int(src, GAVL_META_BITRATE, var_i);
+      }
+    
+    free(url);
+
+    }
+  
+  //  fprintf(stderr, "Imported stations:\n");
+  //  gavl_dictionary_dump(&stations, 2);
+
+  a.src_id = source_id;
+  a.b = b;
+  
+  gavl_dictionary_foreach(&stations, iptv_foreach_func, &a);
+
+  gavl_dictionary_free(&stations);
+  gavl_dictionary_free(&categories);
+  
+  return 1;
   }
 
 #if 0
@@ -2613,6 +3114,7 @@ static const char * rb_servers[] =
     NULL
   };
 
+/*
 static const char * rb_dict_get_string(json_object * obj, const char * tag)
   {
   json_object * child;
@@ -2624,14 +3126,15 @@ static const char * rb_dict_get_string(json_object * obj, const char * tag)
     return NULL;
   return ret;
   }
-
+*/
+  
 static void rb_set_array(json_object * child, gavl_array_t * ret, const char * name, int language, int country)
   {
   char ** arr;
   const char * var;
   int idx;
   
-  if((var = rb_dict_get_string(child, name)) &&
+  if((var = bg_json_dict_get_string(child, name)) &&
      (arr = gavl_strbreak(var, ',')))
     {
     idx = 0;
@@ -2661,7 +3164,7 @@ static void rb_set_array(json_object * child, gavl_array_t * ret, const char * n
 static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t source_id)
   {
   int ret = 0;
-  station_t s;
+  // station_t s;
   
   int uri_idx = 0;
   char * uri;
@@ -2671,6 +3174,10 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
   int num;
   int i;
   //  char ** arr;
+
+  gavl_dictionary_t dict;
+  gavl_dictionary_t * m;
+  gavl_array_t * arr;
   
   while(rb_servers[uri_idx])
     {
@@ -2702,7 +3209,9 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
 
   num = json_object_array_length(obj);
 
-  station_init(&s);
+  gavl_dictionary_init(&dict);
+  
+  // station_init(&s);
 
   for(i = 0; i < num; i++)
     {
@@ -2714,32 +3223,48 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
       continue;
       }
     
-    if(!(var = rb_dict_get_string(child, "stationuuid")))
+    if(!(var = bg_json_dict_get_string(child, "stationuuid")))
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Station has no ID");
       continue;
       }
-    uri = gavl_sprintf("%s/m3u/url/%s", rb_servers[uri_idx], var);
+
+    m = gavl_dictionary_get_dictionary_create(&dict, GAVL_META_METADATA);
+
+    gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_json_dict_get_string(child, "name"));
+    gavl_dictionary_set_string(m, GAVL_META_LOGO_URL, bg_json_dict_get_string(child, "favicon"));
+    gavl_dictionary_set_string(m, GAVL_META_STATION_URL, bg_json_dict_get_string(child, "homepage"));
     
-    s.name        = rb_dict_get_string(child, "name");
-    s.logo_uri    = rb_dict_get_string(child, "favicon");
-    s.station_uri = rb_dict_get_string(child, "homepage");
+    uri = gavl_sprintf("%s/m3u/url/%s", rb_servers[uri_idx], var);
+
+    gavl_metadata_add_src(m, GAVL_META_SRC, "application/mpegurl", uri);
+
+#if 0    
+    s.name        = bg_json_dict_get_string(child, "name");
+    s.logo_uri    = bg_json_dict_get_string(child, "favicon");
+    s.station_uri = bg_json_dict_get_string(child, "homepage");
     s.stream_uri  = uri;
     s.mimetype = "application/mpegurl";
     s.source_id   = source_id;
-    
-    rb_set_array(child, &s.tags, "tags", 0, 0);
-    rb_set_array(child, &s.languages, "languagecodes", 1, 0);
-    rb_set_array(child, &s.countries, "countrycode", 0, 1);
+#endif
 
-    add_station(b, &s);
-    station_reset(&s);
+    arr = gavl_dictionary_get_array_create(m, GAVL_META_TAG);
+    rb_set_array(child, arr, "tags", 0, 0);
+
+    arr = gavl_dictionary_get_array_create(m, GAVL_META_AUDIO_LANGUAGES);
+    rb_set_array(child, arr, "languagecodes", 1, 0);
+
+    arr = gavl_dictionary_get_array_create(m, GAVL_META_COUNTRY);
+    rb_set_array(child, arr, "countrycode", 0, 1);
+    
+    add_station(b, &dict, source_id);
+    gavl_dictionary_reset(&dict);
     free(uri);
     ret++;
     }
   
   fail:
-
+  
   if(obj)
     json_object_put(obj);
   
@@ -2764,6 +3289,7 @@ static int import_radiobrowser(bg_mdb_backend_t * b, int64_t source_id)
   return stations_added;
   }
 
+#if 0
 static void import_m3u_array(gavl_array_t * ret, const gavl_dictionary_t * m, const char * key)
   {
   int i = 0;
@@ -2776,13 +3302,14 @@ static void import_m3u_array(gavl_array_t * ret, const gavl_dictionary_t * m, co
     i++;
     }
   }
+#endif
 
 static int import_m3u(bg_mdb_backend_t * b, int64_t source_id, const char * uri)
   {
   int i, num;
-  station_t s;
+  //  station_t s;
   const gavl_dictionary_t * dict;
-  const gavl_dictionary_t * m;
+  //  const gavl_dictionary_t * m;
   
   int stations_added = 0;
   gavl_dictionary_t * mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0);
@@ -2818,9 +3345,11 @@ typedef struct
 
   for(i = 0; i < num; i++)
     {
-    station_init(&s);
+    //    station_init(&s);
 
     dict = gavl_get_track(mi, i);
+
+#if 0
     m = gavl_dictionary_get_dictionary(dict, GAVL_META_METADATA);
     
     s.name = gavl_dictionary_get_string(m, GAVL_META_LABEL);
@@ -2835,6 +3364,9 @@ typedef struct
     import_m3u_array(&s.countries, m, GAVL_META_COUNTRY);
     add_station(b, &s);
     station_reset(&s);
+#else
+    add_station(b, dict, source_id);
+#endif
     stations_added++;
     }
   

@@ -1003,7 +1003,7 @@ bg_player_tracklist_get_current_track(bg_player_tracklist_t * l)
   {
   gavl_array_t * list = gavl_get_tracks_nc(l->cnt);
 
-  fprintf(stderr, "bg_player_tracklist_get_current_track: %d %d\n", l->idx, l->idx_real);
+  //  fprintf(stderr, "bg_player_tracklist_get_current_track: %d %d\n", l->idx, l->idx_real);
   
   if(l->idx_real < 0)
     {

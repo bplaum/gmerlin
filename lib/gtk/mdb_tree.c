@@ -79,19 +79,20 @@ enum
   NUM_TREE_COLUMNS
 };
 
-static void set_pixbuf(void * data, GdkPixbuf * pb)
+static void set_pixbuf(void * data, const char * id, GdkPixbuf * pb)
   {
   GtkTreeIter iter;
-  load_image_t * d = data;
+  bg_gtk_mdb_tree_t * tree = data;
+  
   GtkTreeModel * model;
 
-  if(!d->id)
+  if(!id)
     goto fail;
   
-  if(!id_to_iter(GTK_TREE_VIEW(d->tree->treeview), d->id, &iter))
+  if(!id_to_iter(GTK_TREE_VIEW(tree->treeview), id, &iter))
     goto fail;
 
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(d->tree->treeview));
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(tree->treeview));
 
   gtk_tree_store_set(GTK_TREE_STORE(model), &iter, TREE_COLUMN_HAS_PIXBUF, TRUE,
                      TREE_COLUMN_HAS_ICON, FALSE,
@@ -103,29 +104,23 @@ static void set_pixbuf(void * data, GdkPixbuf * pb)
   }
 
 #if 1
-static void pixbuf_from_uri_callback_tree(void * data, GdkPixbuf * pb)
+static void pixbuf_from_uri_callback_tree(void * data, const char * id, GdkPixbuf * pb)
   {
-  load_image_t * d = data;
-
+  bg_gtk_mdb_tree_t * tree = data;
   if(pb)
-    set_pixbuf(data, pb);
-  if(d->id)
-    free(d->id);
-  d->tree->icons_loading--;
-  free(d);
+    set_pixbuf(data, id, pb);
+  
+  tree->icons_loading--;
   }
 #endif
 
-static void pixbuf_from_uri_callback_list(void * data, GdkPixbuf * pb)
+static void pixbuf_from_uri_callback_list(void * data, const char *id, GdkPixbuf * pb)
   {
-  load_image_t * d = data;
-  
-  bg_gtk_mdb_list_set_pixbuf(data, pb);
+  bg_gtk_mdb_tree_t * tree = data;
 
-  if(d->id)
-    free(d->id);
-  d->tree->icons_loading--;
-  free(d);
+  bg_gtk_mdb_list_set_pixbuf(tree, id, pb);
+
+  tree->icons_loading--;
   }
 
 
@@ -161,11 +156,7 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
     if(id_to_iter(GTK_TREE_VIEW(t->treeview), id, &iter) &&
        (dict = id_to_album(t, id)))
       {
-      load_image_t * d;
-      d = calloc(1, sizeof(*d));
-      d->id = gavl_strdup(id);
-      d->tree = t;
-      t->icons_loading += bg_gtk_load_track_image_async(pixbuf_from_uri_callback_tree, d, dict, 48, 72);
+      t->icons_loading += bg_gtk_load_track_image_async(pixbuf_from_uri_callback_tree, t, dict, 48, 72);
       }
     
     /* END REMOVE */
@@ -199,11 +190,7 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
        bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(l->listview), &iter, id))
       {
       const gavl_dictionary_t * dict;
-      load_image_t * d;
-      d = calloc(1, sizeof(*d));
-      d->id = gavl_strdup(id);
-      d->tree = t;
-
+      
       if(!a->a || !(dict = gavl_get_track_by_id(a->a, id)))
         {
         bg_gtk_mdb_array_set_flag_str(&t->list_icons_to_load, id, 0);
@@ -211,7 +198,7 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
         }
       
       t->icons_loading +=
-        bg_gtk_load_track_image_async(pixbuf_from_uri_callback_list, d, dict, LIST_ICON_WIDTH, LIST_ICON_WIDTH * 3 / 2);
+        bg_gtk_load_track_image_async(pixbuf_from_uri_callback_list, t, dict, LIST_ICON_WIDTH, LIST_ICON_WIDTH * 3 / 2);
       }
     
     /* END REMOVE */

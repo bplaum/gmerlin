@@ -71,10 +71,11 @@ GdkPixbuf * bg_gtk_pixbuf_from_buffer(const gavl_buffer_t * buf, int max_width, 
 
 GdkPixbuf * bg_gtk_pixbuf_from_uri(const char * url, int max_width, int max_height, int use_cache);
 
-typedef void (*bg_gtk_pixbuf_from_uri_callback)(void * data, GdkPixbuf * pb);
+typedef void (*bg_gtk_pixbuf_from_uri_callback)(void * data, const char * id, GdkPixbuf * pb);
 
 void bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   void * cb_data,
+                                  const char * id,
                                   const char * url, int max_width, int max_height);
 
 const char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height);

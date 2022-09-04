@@ -1736,6 +1736,30 @@ json_object * bg_json_from_url(const char * url, char ** mimetype_ptr)
   return ret;
   }
 
+const char * bg_json_dict_get_string(json_object * obj, const char * tag)
+  {
+  json_object * child;
+  const char * ret;
+
+  if(!json_object_object_get_ex(obj, tag, &child) ||
+     !json_object_is_type(child, json_type_string) ||
+     !(ret = json_object_get_string(child)))
+    return NULL;
+  return ret;
+  }
+
+int bg_json_dict_get_int(json_object * obj, const char * tag)
+  {
+  json_object * child;
+
+  if(!json_object_object_get_ex(obj, tag, &child) ||
+     !json_object_is_type(child, json_type_int))
+    return 0;
+  
+  return json_object_get_int(child);
+  }
+
+
 void bg_string_to_string_array(const char * str, gavl_array_t * arr)
   {
   int idx = 0;

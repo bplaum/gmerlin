@@ -42,7 +42,7 @@
 
 static void stop_cmd(bg_player_t * player, int new_state);
 static int play_source(bg_player_t * p, int flags);
-static void load_next_track(bg_player_t * player);
+static void load_next_track(bg_player_t * player, int advance);
 
 
 static void msg_gapless(gavl_msg_t * msg,
@@ -1511,12 +1511,22 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           {
           if(player->finish_mode == BG_PLAYER_FINISH_CHANGE)
             {
+            int advance = 1;
+            int restart = bg_player_get_restart(player);
+            
             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected EOF");
             bg_threads_join(player->threads, PLAYER_MAX_THREADS);
+
+            if(restart)
+              {
+              bg_player_source_cleanup(player->src_next);
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting playback");
+              advance = 0;
+              }
             
             if(!player->src_next->input_handle && !player->src_next->switch_track)
               {
-              load_next_track(player);
+              load_next_track(player, advance);
               }
             
             /* Initialize new source from the current one if we re-use the plugin */
@@ -1525,7 +1535,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               bg_plugin_ref(player->src->input_handle);
 
               gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switching plugin to track %d",
-                     player->src_next->track_idx);
+                       player->src_next->track_idx);
               
               bg_player_source_set_from_handle(player, player->src_next, player->src->input_handle,
                                                player->src_next->track_idx);
@@ -1596,12 +1606,17 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
   return 1;
   }
 
-static void load_next_track(bg_player_t * player)
+static void load_next_track(bg_player_t * player, int advance)
   {
   int next_idx = 0;
   gavl_dictionary_t * track;
-            
-  if((track = bg_player_tracklist_get_next(&player->tl)))
+
+  if(advance)
+    track = bg_player_tracklist_get_next(&player->tl);
+  else
+    track = bg_player_tracklist_get_current_track(&player->tl);
+  
+  if(track)
     {
     set_source_from_track(player, player->src_next, track);
     /* Open next location */
@@ -1707,7 +1722,7 @@ static void * player_thread(void * data)
           {
           if(!player->src_next->input_handle && !player->src_next->switch_track)
             {
-            load_next_track(player);
+            load_next_track(player, 1);
             }
           actions++;
           }
@@ -1768,6 +1783,9 @@ int bg_player_advance_gapless(bg_player_t * player)
   const gavl_audio_format_t * new_fmt;
   int ret = 0;
 
+  if(bg_player_get_restart(player))
+    return 0;
+  
   // gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Trying gapless transition");
   
   pthread_mutex_lock(&player->src_mutex);

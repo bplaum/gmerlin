@@ -38,12 +38,6 @@ enum
 };
 
 
-typedef struct
-  {
-  char * id;
-  bg_gtk_mdb_tree_t * tree;
-  } load_image_t;
-
 /* Menus for tree and list */
 
 typedef struct
@@ -207,7 +201,7 @@ struct bg_gtk_mdb_tree_s
 int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
                                const char * id);
 
-void bg_gtk_mdb_list_set_pixbuf(load_image_t * d, GdkPixbuf * pb);
+void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPixbuf * pb);
 
 int bg_gtk_mdb_array_get_flag_str(const gavl_array_t * arr, const char * id);
 void bg_gtk_mdb_array_set_flag_str(gavl_array_t * arr, const char * id, int flag);

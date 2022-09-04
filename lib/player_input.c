@@ -793,36 +793,9 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
     case GAVL_MSG_NS_SRC:
       switch(msg->ID)
         {
-#if 0
-        case GAVL_MSG_SRC_METADATA_CHANGED:
-          {
-          gavl_dictionary_t * m_dst;
-          const gavl_dictionary_t * m_new;
-          gavl_dictionary_t tmp;
-          
-          if(!p->src || !p->src->track_info)
-            return 1;
-          
-          // fprintf(stderr, "player metadata changed\n");
-          
-          m_dst = gavl_track_get_metadata_nc(p->src->track_info);
-          m_new = gavl_value_get_dictionary_nc(gavl_msg_get_arg_nc(msg, 0));
-          
-          gavl_dictionary_init(&tmp);
-          gavl_dictionary_merge(&tmp, m_new, m_dst);
-          
-          gavl_dictionary_free(m_dst);
-          gavl_dictionary_move(m_dst, &tmp);
-          
-          bg_player_set_current_track(p, p->src->track_info);
-          }
-          break;
-        case GAVL_MSG_SRC_SEEK_WINDOW:
-          {
-          gavl_time_t start = gavl_msg_get_arg_long(msg, 0);
-          gavl_time_t end = gavl_msg_get_arg_long(msg, 1);
-          fprintf(stderr, "Got seek window: %lld %lld\n", start, end);
-          }
+#if 1
+        case GAVL_MSG_SRC_RESTART:
+          bg_player_set_restart(p, gavl_msg_get_arg_int(msg, 0));
 #endif
         }
       break;

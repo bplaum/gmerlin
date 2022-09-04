@@ -139,8 +139,8 @@ static gavl_time_t get_start_time(bg_media_source_stream_t * s)
   gavl_stream_stats_t stats;
   const gavl_dictionary_t * m = NULL;
 
-  fprintf(stderr, "Get start time:\n");
-  gavl_dictionary_dump(s->s, 2);
+  //  fprintf(stderr, "Get start time:\n");
+  //  gavl_dictionary_dump(s->s, 2);
   
   gavl_stream_stats_init(&stats);
   if((gavl_stream_get_stats(s->s, &stats)) &&

@@ -435,6 +435,10 @@ struct bg_player_s
   //  pthread_mutex_t resync_mutex;
   
   int visualization_mode;
+
+  /* Restart mode */
+  int restart;
+  pthread_mutex_t restart_mutex;
   
   };
 
@@ -447,6 +451,10 @@ void bg_player_underrun(bg_msg_sink_t * sink);
 
 int  bg_player_get_status(bg_player_t * player);
 void bg_player_set_status(bg_player_t * player, int status);
+
+int  bg_player_get_restart(bg_player_t * player);
+void bg_player_set_restart(bg_player_t * player, int restart);
+
 
 int bg_player_handle_input_message(void * priv, gavl_msg_t * msg);
 

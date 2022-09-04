@@ -413,6 +413,8 @@ typedef struct
   bg_gtk_pixbuf_from_uri_callback cb;
   void * cb_data;
 
+  char * id;
+  
   int max_width;
   int max_height;
 
@@ -518,7 +520,6 @@ static bg_downloader_t * pixbuf_downloader = NULL;
 /* Callback called from downloader */
 
 static void image_downloader_callback(void * data,
-                                      int64_t id,
                                       const gavl_dictionary_t * dict,
                                       const gavl_buffer_t * buffer)
   {
@@ -533,12 +534,13 @@ static void image_downloader_callback(void * data,
 
   if(d->cb)
     {
-    d->cb(d->cb_data, pb);
+    d->cb(d->cb_data, d->id, pb);
     }
   
   if(pb)
     g_object_unref(pb);
   
+  free(d->id);
   free(d);
   }
 
@@ -551,6 +553,7 @@ static gboolean image_downloader_idle_callback(gpointer data)
 void
 bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
                              void * cb_data,
+                             const char * id,
                              const char * url, int max_width, int max_height)
   {
   load_gtk_image_t * d = calloc(1, sizeof(*d));
@@ -568,6 +571,7 @@ bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
 
   d->cb = cb;
   d->cb_data = cb_data;
+  d->id = gavl_strdup(id);
   
   bg_downloader_add(pixbuf_downloader, url, image_downloader_callback, d);
   }
@@ -686,25 +690,14 @@ int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   const gavl_dictionary_t * track, int max_width, int max_height)
   {
   const char * uri = NULL;
+  const char * id = gavl_track_get_id(track);
+
   if(!(uri = bg_gtk_get_track_image_uri(track, max_width, max_height)))
     {
-    cb(cb_data, NULL);
+    cb(cb_data, id, NULL);
     return 0;
     }
-  /* Don't load local files asynchronously */
-  if(*uri == '/') 
-    {
-    GdkPixbuf * pb = bg_gtk_pixbuf_from_uri(uri, max_width, max_height, 0);
-    if(!pb)
-      {
-      cb(cb_data, NULL);
-      return 0;
-      }
-    cb(cb_data, pb);
-    g_object_unref(pb);
-    }
-  else
-    bg_gtk_pixbuf_from_uri_async(cb, cb_data, uri, max_width, max_height);
+  bg_gtk_pixbuf_from_uri_async(cb, cb_data, id, uri, max_width, max_height);
   return 1;
   }
 

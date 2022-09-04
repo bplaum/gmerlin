@@ -599,7 +599,7 @@ int bg_load_cache_item(const char * cache_dir,
 void bg_save_cache_item(const char * cache_dir,
                         const char * md5,
                         const char * mimetype,
-                        gavl_buffer_t * buf);
+                        const gavl_buffer_t * buf);
 
 
 

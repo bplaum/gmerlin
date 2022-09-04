@@ -411,6 +411,8 @@ bg_player_t * bg_player_create()
   ret->threads[1] = ret->video_stream.th;
   
   pthread_mutex_init(&ret->state_mutex, NULL);
+  pthread_mutex_init(&ret->restart_mutex, NULL);
+
   pthread_mutex_init(&ret->config_mutex, NULL);
   pthread_mutex_init(&ret->src_mutex, NULL);
   pthread_mutex_init(&ret->time_offset_mutex, NULL);
@@ -524,6 +526,8 @@ void bg_player_destroy(bg_player_t * player)
     bg_msg_sink_destroy(player->src_msg_sink);
   
   pthread_mutex_destroy(&player->state_mutex);
+  pthread_mutex_destroy(&player->restart_mutex);
+
   pthread_mutex_destroy(&player->config_mutex);
   pthread_mutex_destroy(&player->src_mutex);
   pthread_mutex_destroy(&player->time_offset_mutex);
@@ -543,6 +547,23 @@ void bg_player_destroy(bg_player_t * player)
 bg_controllable_t * bg_player_get_controllable(bg_player_t * player)
   {
   return &player->ctrl;
+  }
+
+int bg_player_get_restart(bg_player_t * player)
+  {
+  int ret;
+  pthread_mutex_lock(&player->restart_mutex);
+  ret = player->restart;
+  pthread_mutex_unlock(&player->restart_mutex);
+  return ret;
+  }
+
+
+void bg_player_set_restart(bg_player_t * player, int restart)
+  {
+  pthread_mutex_lock(&player->restart_mutex);
+  player->restart = restart;
+  pthread_mutex_unlock(&player->restart_mutex);
   }
 
 int  bg_player_get_status(bg_player_t * player)

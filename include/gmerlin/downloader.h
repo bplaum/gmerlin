@@ -59,7 +59,6 @@ typedef struct bg_downloader_s bg_downloader_t;
 /* Buffer can be NULL in which case the download failed */
 
 typedef void (*bg_downloader_callback_t)(void * data,
-                                         int64_t id,
                                          const gavl_dictionary_t * dict,
                                          const gavl_buffer_t * buffer);
 
@@ -69,10 +68,8 @@ bg_downloader_t * bg_downloader_create(int max_downloads);
 
 void bg_downloader_destroy(bg_downloader_t * d);
 
-int64_t bg_downloader_add(bg_downloader_t * d, const char * uri,
-                          bg_downloader_callback_t cb, void * cb_data);
-
-void bg_downloader_delete(bg_downloader_t * d, int64_t id);
+void bg_downloader_add(bg_downloader_t * d, const char * uri,
+                       bg_downloader_callback_t cb, void * cb_data);
 
 #endif // G_DOWNLOADER_H_INCLUDED
 

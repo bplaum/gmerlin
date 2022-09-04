@@ -59,21 +59,7 @@ int bg_http_get(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict)
 /* Get a file with redirection and specific range*/
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size);
-
-/* retrieve HEAD a location with redirection */
-int bg_http_head(const char * url, gavl_dictionary_t * res);
-
-
-
-int bg_http_read_body_start(gavf_io_t * io, const gavl_dictionary_t * res,
-                            int * total_size,
-                            int * chunked);
-
-int bg_http_read_body_update(gavf_io_t * io,
-                             gavl_buffer_t * buf,
-                             int * total_size,
-                             int chunked);
-
+                             
 int bg_http_write_data(gavf_io_t * io, const uint8_t * data, int len, int chunked);
 void bg_http_flush(gavf_io_t * io, int chunked);
 

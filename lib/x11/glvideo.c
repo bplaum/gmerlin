@@ -926,7 +926,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     else
       priv->use_cmat = 1;
 
-    fprintf(stderr, "Use colormatrix %d\n", priv->use_cmat);
+    //    fprintf(stderr, "Use colormatrix %d\n", priv->use_cmat);
     }
   
   if(priv->use_cmat)
@@ -965,7 +965,7 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   
   glDisable(GL_DEPTH_TEST);
 
-  glClearColor (0.0, 0.0, 0.0, 0.0);
+  glClearColor(0.0, 0.0, 0.0, 0.0);
   
   glClear(GL_COLOR_BUFFER_BIT);
   
