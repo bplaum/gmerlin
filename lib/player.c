@@ -416,6 +416,7 @@ bg_player_t * bg_player_create()
   pthread_mutex_init(&ret->config_mutex, NULL);
   pthread_mutex_init(&ret->src_mutex, NULL);
   pthread_mutex_init(&ret->time_offset_mutex, NULL);
+  pthread_mutex_init(&ret->seek_window_mutex, NULL);
 
   /* Subtitles are off by default */
   ret->subtitle_stream_user = -1;
@@ -531,6 +532,7 @@ void bg_player_destroy(bg_player_t * player)
   pthread_mutex_destroy(&player->config_mutex);
   pthread_mutex_destroy(&player->src_mutex);
   pthread_mutex_destroy(&player->time_offset_mutex);
+  pthread_mutex_destroy(&player->seek_window_mutex);
   
   bg_thread_common_destroy(player->thread_common);
 

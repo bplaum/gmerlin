@@ -83,6 +83,8 @@ void bg_player_audio_destroy(bg_player_t * p)
 
 int bg_player_audio_init(bg_player_t * player, int audio_stream)
   {
+  int64_t start_time;
+  const gavl_dictionary_t * stream;
   bg_player_audio_stream_t * s;
   //  int do_filter;
 
@@ -98,8 +100,7 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
     return 0;
 
   pthread_mutex_lock(&s->config_mutex);
-  s->src = bg_audio_filter_chain_connect(s->fc,
-                                         s->in_src);
+  s->src = bg_audio_filter_chain_connect(s->fc, s->in_src);
   pthread_mutex_unlock(&s->config_mutex);
   
   gavl_audio_format_copy(&s->output_format,
@@ -115,7 +116,22 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
                                  &s->output_format);
   gavl_peak_detector_set_format(s->peak_detector,
                                 &s->output_format);
-  
+
+  /* Time offset */
+  stream = gavl_track_get_audio_stream(player->src->track_info, audio_stream);
+  start_time = gavl_stream_get_start_time(stream);
+
+  s->time_offset = start_time - player->display_time_offset;
+  fprintf(stderr, "Got time offset: %"PRId64"\n", s->time_offset);
+#if 0
+  if(s->time_offset < 0)
+    {
+    int64_t samples = gavl_time_scale(s->output_format.samplerate, -s->time_offset);
+    gavl_audio_source_skip(s->src, samples);
+    s->time_offset = 0;
+    fprintf(stderr, "Skipping %"PRId64" samples\n", samples);
+    }
+#endif  
   return 1;
   }
 

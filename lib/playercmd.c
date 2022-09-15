@@ -277,7 +277,9 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
   gavl_value_t val;
   gavl_dictionary_t * d;
   gavl_time_t duration;
-
+  const gavl_dictionary_t * m;
+  const gavl_value_t * vp;
+  
   //  fprintf(stderr, "bg_player_set_current_track\n");
   
   gavl_value_init(&val);
@@ -285,6 +287,9 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
   memcpy(d, dict, sizeof(*d));
   bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val);
 
+  if((m = gavl_track_get_metadata(dict)) && (vp = gavl_dictionary_get(m, GAVL_STATE_SRC_SEEK_WINDOW)))
+    bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, GAVL_STATE_SRC_SEEK_WINDOW, &val);
+  
   /* Set duration range */
   if((duration = gavl_track_get_duration(d)) != GAVL_TIME_UNDEFINED)
     bg_state_set_range_long(&player->state,

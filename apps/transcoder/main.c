@@ -94,10 +94,9 @@ int main(int argc, char ** argv)
 
   bg_cmdline_init(&app_data);
 
-  bg_cmdline_parse(args, &argc, &argv, win);
-
   bg_gtk_init(&argc, &argv, "transcoder_icon.png");
   win = transcoder_window_create();
+  bg_cmdline_parse(args, &argc, &argv, win);
   
   transcoder_window_run(win);
 

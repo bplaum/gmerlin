@@ -337,25 +337,6 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   bg_ov_handle_events(s->ov);
   }
 
-static int wait_or_skip(bg_player_t * p, gavl_time_t diff_time)
-  {
-  bg_player_video_stream_t * s;
-  s = &p->video_stream;
-  
-  if(diff_time > 0)
-    {
-    gavl_time_delay(&diff_time);
-    s->skip = 0;
-    }
-  /* Drop frame */
-  else if(diff_time < -GAVL_TIME_SCALE / 50) // 20 ms
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame");
-    s->skip++;
-    return 0;
-    }
-  return 1;
-  }
 
 void * bg_player_ov_thread(void * data)
   {
@@ -412,7 +393,7 @@ void * bg_player_ov_thread(void * data)
     pthread_mutex_unlock(&p->config_mutex);
 
     pthread_mutex_lock(&p->time_offset_mutex);
-    frame_time -= p->time_offset_src;
+    frame_time -= p->display_time_offset;
     pthread_mutex_unlock(&p->time_offset_mutex);
     
     if((s->frame_time == GAVL_TIME_UNDEFINED))
@@ -434,8 +415,9 @@ void * bg_player_ov_thread(void * data)
     /* Check for underruns */
     if(s->frame_time - gavl_timer_get(timer) < -GAVL_TIME_SCALE)
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
                "Detected underrun due to slow reading (e.g. slow network)");
+      gavl_timer_set(timer, s->frame_time);
       }
     
     bg_player_time_get(p, 1, NULL, &current_time);
@@ -450,17 +432,30 @@ void * bg_player_ov_thread(void * data)
     
 #ifdef DUMP_TIMESTAMPS
     bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
-             current_time, s->frame_time, diff_time);
+             current_time, s->frame_time, s->frame_time - current_time);
 #endif
     /* Wait until we can display the frame */
 
     if((s->last_time == GAVL_TIME_UNDEFINED) ||
        (current_time > s->last_time))
       {
-      //      diff_time = current_time - s->last_time;
-      //      fprintf(stderr, "Diff time: %"PRId64"\n", diff_time);
-      if(!wait_or_skip(p, diff_time))
+      
+      if(diff_time > 0)
+        {
+        if(diff_time >= GAVL_TIME_SCALE / 2)
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Waiting  %f sec. (cur: %f, frame: %f)",
+                   gavl_time_to_seconds(diff_time), gavl_time_to_seconds(current_time),
+                   gavl_time_to_seconds(frame_time));
+        gavl_time_delay(&diff_time);
+        s->skip = 0;
+        }
+      /* Drop frame */
+      else if(diff_time < -GAVL_TIME_SCALE / 20) // 50 ms
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
+        s->skip++;
         continue;
+        }
       }
     
     s->last_time = current_time;

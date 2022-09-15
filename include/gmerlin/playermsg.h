@@ -58,6 +58,10 @@
 #define BG_PLAYER_TIME_REM_ABS  "time_rem_abs"  // long
 #define BG_PLAYER_TIME_PERC     "time_perc"     // float
 
+/* These change when we have a sliding window */
+// #define BG_PLAYER_TIME_WINDOW_START "time_start" // long, default 0. GAVL_TIME_SCALE
+// #define BG_PLAYER_TIME_WINDOW_END   "time_end"   // long, default: track_duration, GAVL_TIME_SCALE
+
 #define BG_PLAYER_STATE_MODE          "mode"          // int
 #define BG_PLAYER_STATE_MUTE          "mute"          // int
 

@@ -27,6 +27,7 @@
 #include <gmerlin/utils.h>
 
 #include <gavl/metatags.h>
+#include <gavl/state.h>
 
 #include <gui_gtk/gtkutils.h>
 
@@ -622,8 +623,8 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
               gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration);
               
               gavl_dictionary_get_int(m, GAVL_META_CAN_SEEK, &can_seek);
-
-              if(duration < 0)
+              
+              if((duration < 0) && !gavl_dictionary_get(m, GAVL_STATE_SRC_SEEK_WINDOW))
                 {
                 gtk_range_set_range(GTK_RANGE(w->seek_slider), 0.0, 0.0);
                 }

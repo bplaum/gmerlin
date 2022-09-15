@@ -53,13 +53,54 @@ void bg_player_input_destroy(bg_player_t * player)
   bg_player_source_cleanup(&player->srcs[1]);
   }
 
+static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
+  {
+  const gavl_dictionary_t * d;
+
+  if(!val)
+    return;
+
+  if((d = gavl_value_get_dictionary(val)))
+    {
+    gavl_time_t start_absolute = 0;
+    gavl_time_t start = 0;
+    gavl_time_t end = 0;
+    char start_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
+    char end_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
+
+    gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
+    //       gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START_ABSOLUTE, &start_absolute);
+    gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
+
+    gavl_time_prettyprint(start, start_str);
+    gavl_time_prettyprint(end, end_str);
+    fprintf(stderr, "Got seek window %s -> %s ", start_str, end_str);
+    if(start_absolute > 0)
+      {
+      gavl_time_prettyprint_absolute(start + start_absolute, start_str, 1);
+      gavl_time_prettyprint_absolute(end + start_absolute, end_str, 1);
+      fprintf(stderr, "[%s -> %s]\n", start_str, end_str);
+      }
+    else
+      fprintf(stderr, "\n");
+
+    pthread_mutex_lock(&p->seek_window_mutex);
+    p->seek_window_start = start;
+    p->seek_window_end = end;
+    pthread_mutex_unlock(&p->seek_window_mutex);
+    }
+  
+  }
+
+
 int bg_player_input_start(bg_player_t * p)
   {
   int num_audio_streams;
   int num_video_streams;
   int num_text_streams;
   int num_overlay_streams;
-
+  const gavl_value_t * v;
+  
   bg_media_source_t * ms;
   bg_media_source_stream_t * s = NULL;
   
@@ -153,8 +194,6 @@ int bg_player_input_start(bg_player_t * p)
     if(video_format->framerate_mode == GAVL_FRAMERATE_STILL)
       p->flags |= PLAYER_DO_STILL;
     }
-  p->audio_stream.has_first_timestamp_i = 0;
-  
   if((ms = p->src->input_plugin->get_src(p->src->input_handle->priv)) &&
      (s = bg_media_source_get_stream_by_id(ms, GAVL_META_STREAM_ID_MSG_PROGRAM)) &&
      (s->msghub))
@@ -174,29 +213,35 @@ int bg_player_input_start(bg_player_t * p)
   
   /* From here on, we can send the messages about the input format */
   bg_player_set_current_track(p, p->src->track_info);
+
+  /* Set initial seek window */
+  if((v = gavl_dictionary_get(p->src->metadata, GAVL_STATE_SRC_SEEK_WINDOW)))
+    {
+    set_seek_window(p, v);
+    p->flags |= PLAYER_SEEK_WINDOW;
+    }
+  else 
+    {
+    pthread_mutex_lock(&p->seek_window_mutex);
+
+    if(p->tl.duration != GAVL_TIME_UNDEFINED)
+      {
+      p->seek_window_start = 0;
+      p->seek_window_end = p->tl.duration;
+      }
+    
+    pthread_mutex_unlock(&p->seek_window_mutex);
+    }
+
+  p->display_time_offset = gavl_track_get_display_time_offset(p->src->track_info);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->display_time_offset);
+  
   return 1;
   }
 
 void bg_player_input_cleanup(bg_player_t * p)
   {
-#ifdef DEBUG_COUNTER
-  char tmp_string[128];
-#endif
   bg_player_source_cleanup(p->src);
-#ifdef DEBUG_COUNTER
-  sprintf(tmp_string, "%" PRId64, p->audio_stream.samples_read);
-  
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Audio sample counter: %s",
-         tmp_string);
-
-  p->audio_stream.samples_read = 0;
-  
-  sprintf(tmp_string, "%" PRId64, p->video_stream.frames_read);
-  
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Video frame counter: %s",
-         tmp_string);
-  p->video_stream.frames_read = 0;
-#endif
   }
 
 static gavl_source_status_t
@@ -205,13 +250,11 @@ read_audio(void * priv, gavl_audio_frame_t ** frame)
   gavl_source_status_t st;
   bg_player_t * p = priv;
   gavl_audio_frame_t * f = NULL;
-  bg_player_audio_stream_t * as = &p->audio_stream;
 
   if((st = gavl_audio_source_read_frame(p->audio_stream.in_src_int, &f)) != GAVL_SOURCE_OK)
     {
     if(bg_player_advance_gapless(p))
       {
-      as->has_first_timestamp_i = 0;
       if((st = gavl_audio_source_read_frame(p->audio_stream.in_src_int, &f)) != GAVL_SOURCE_OK)
         {
         return st;
@@ -220,15 +263,7 @@ read_audio(void * priv, gavl_audio_frame_t ** frame)
     else
       return st;
     }
-  if(!as->has_first_timestamp_i)
-    {
-    as->samples_read = f->timestamp;
-    as->has_first_timestamp_i = 1;
-    }
-
-  //  fprintf(stderr, "Samples read: %"PRId64" Timestamp: %"PRId64"\n", as->samples_read, f->timestamp);
-
-  as->samples_read += f->valid_samples;
+  
   *frame = f;
   return GAVL_SOURCE_OK;
   }
@@ -306,28 +341,6 @@ read_video(void * priv, gavl_video_frame_t ** frame)
   bg_player_t * p = priv;
   bg_player_video_stream_t * vs = &p->video_stream;
   
-  /* Skip */
-#if 0 // Disabled for now because it was done the wrong way anyway
-  if((vs->skip > 1000000) && p->input_plugin->skip_video)
-    {
-    gavl_time_t skip_time = 
-      vs->frame_time + vs->skip;
-
-    pthread_mutex_lock(&vs->config_mutex);
-    
-    if(vs->do_skip)
-      {
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Skipping frame, delta: %f",
-             gavl_time_to_seconds(vs->skip));
-
-      bg_plugin_lock(p->input_handle);
-      p->input_plugin->skip_video(p->input_handle->priv, p->current_video_stream,
-                                  &skip_time, GAVL_TIME_SCALE, 0);
-      bg_plugin_unlock(p->input_handle);
-      }
-    pthread_mutex_unlock(&vs->config_mutex);
-    }
-#endif
   if((st = gavl_video_source_read_frame(vs->in_src_int, frame)) != GAVL_SOURCE_OK)
     return st;
 
@@ -422,11 +435,6 @@ void bg_player_input_seek(bg_player_t * p,
 
   //  fprintf(stderr, " %ld\n", *time);
   
-  as->samples_read =
-    gavl_time_to_samples(as->input_format.samplerate, *time);
-
-  // This wasn't set before if we switch streams or replug filters
-  as->has_first_timestamp_i = 1;
   
   if(DO_SUBTITLE_ONLY(p->flags))
     vs->frames_read =
@@ -711,6 +719,7 @@ void bg_player_source_close(bg_player_source_t * src)
   
   }
 
+
 int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
   {
   bg_player_t * p = priv;
@@ -758,30 +767,7 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
               }
             else if(!strcmp(var, GAVL_STATE_SRC_SEEK_WINDOW))
               {
-              const gavl_dictionary_t * d;
-
-              if((d = gavl_value_get_dictionary(&val)))
-                {
-                gavl_time_t start = 0;
-                gavl_time_t end = 0;
-                char start_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
-                char end_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
-
-                gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
-                gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
-
-                gavl_time_prettyprint_absolute(start, start_str, 1);
-                gavl_time_prettyprint_absolute(end, end_str, 1);
-                fprintf(stderr, "Got seek window %s -> %s\n", start_str, end_str);
-
-
-                }
-              bg_player_state_set_local(p, 1, ctx, var, &val);
-              }
-            else if(!strcmp(var, GAVL_STATE_SRC_START_TIME_ABSOLUTE))
-              {
-              fprintf(stderr, "Got absolute time\n");
-              bg_player_state_set_local(p, 1, ctx, var, &val);
+              set_seek_window(p, &val);
               }
             }
           

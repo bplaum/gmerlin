@@ -114,12 +114,9 @@ typedef struct
   pthread_mutex_t time_mutex;
   gavl_time_t     current_time;
   gavl_timer_t *  timer;
-
+  
+  
   int64_t samples_written;
-  int64_t samples_read;
-
-  int has_first_timestamp_o;
-  int has_first_timestamp_i;
 
   pthread_mutex_t eof_mutex;
   int eof;
@@ -131,6 +128,8 @@ typedef struct
   bg_parameter_info_t * plugin_params;
   bg_control_t * oa_ctrl;
 
+  gavl_time_t time_offset;
+  
   } bg_player_audio_stream_t;
 
 typedef struct
@@ -147,11 +146,11 @@ typedef struct
 
   bg_parameter_info_t * parameters;
   
-  int64_t time_offset;
+  int64_t time_offset_user;
 
   //  bg_overlay_info_t * oi;
   //  bg_text_info_t * ti;
-  
+
   } bg_player_subtitle_stream_t;
 
 typedef struct
@@ -223,7 +222,7 @@ typedef struct
   bg_msg_sink_t * ov_evt_sink;
   
   gavl_time_t last_time;
-  
+
   } bg_player_video_stream_t;
 
 
@@ -244,6 +243,7 @@ typedef struct
 #define PLAYER_DO_VISUALIZE        (1<<6)
 #define PLAYER_DO_STILL            (1<<7)
 #define PLAYER_SINGLE_AV_THREAD    (1<<9)
+#define PLAYER_SEEK_WINDOW         (1<<10)
 
 #define PLAYER_DO_REPORT_PEAK      (1<<16)
 #define PLAYER_FREEZE_FRAME        (1<<17)
@@ -399,9 +399,16 @@ struct bg_player_s
   
   pthread_mutex_t state_mutex;
   
-  gavl_time_t time_offset_src; // Time offset for the current source (e.g. live streams)
+  gavl_time_t display_time_offset; // Time offset for the current source (e.g. live streams)
   gavl_time_t time_offset;
   pthread_mutex_t time_offset_mutex;
+
+  /* Seek window */
+  gavl_time_t seek_window_start; // Time offset for the current source (e.g. live streams)
+  gavl_time_t seek_window_end;
+  gavl_time_t seek_window_start_absolute; // Absolute start time of seek window (if available)
+  pthread_mutex_t seek_window_mutex;
+    
   
   /* Stuff for synchronous stopping and starting of the playback */
   

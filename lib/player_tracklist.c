@@ -333,6 +333,7 @@ void bg_player_tracklist_get_times(bg_player_tracklist_t * l,
                                    gavl_time_t * t_rem_abs,
                                    double * percentage)
   {
+  
   if(l->duration_before == GAVL_TIME_UNDEFINED)
     *t_abs = GAVL_TIME_UNDEFINED;
   else

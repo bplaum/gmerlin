@@ -113,23 +113,6 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
   bg_player_audio_stream_t * s;
   //  char tmp_string[128];
   s = &p->audio_stream;
-#if 0
-  if(!s->has_first_timestamp_o)
-    {
-    if(frame->timestamp)
-      {
-      sprintf(tmp_string, "%" PRId64, frame->timestamp);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
-             "Got initial audio timestamp: %s",
-             tmp_string);
-      
-      pthread_mutex_lock(&s->time_mutex);
-      s->samples_written += frame->timestamp;
-      pthread_mutex_unlock(&s->time_mutex);
-      }
-    s->has_first_timestamp_o = 1;
-    }
-#endif
   if(frame->valid_samples)
     {
     pthread_mutex_lock(&s->mute_mutex);
@@ -253,12 +236,9 @@ int bg_player_oa_init(bg_player_audio_stream_t * ctx)
   else
     ctx->output_open = 0;
   
-  ctx->has_first_timestamp_o = 0;
-
   if(result)
     {
     ctx->sink = ctx->plugin->get_sink(ctx->priv);
-  
     gavl_audio_sink_set_lock_funcs(ctx->sink,
                                    bg_plugin_lock, bg_plugin_unlock,
                                    ctx->plugin_handle);

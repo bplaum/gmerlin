@@ -35,7 +35,6 @@
 
 void bg_player_time_init(bg_player_t * player)
   {
-  bg_media_source_t * src;
   bg_player_audio_stream_t * s = &player->audio_stream;
 
   if(s->plugin && (s->plugin->get_delay) &&
@@ -50,30 +49,6 @@ void bg_player_time_init(bg_player_t * player)
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with software timer");
     }
 
-  pthread_mutex_lock(&player->time_offset_mutex);
-  if((player->src->input_plugin && player->src->input_plugin->get_src &&
-      (src = player->src->input_plugin->get_src(player->src->input_handle->priv))))
-    {
-    player->time_offset_src = bg_media_source_get_start_time(src);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, player->time_offset_src);
-
-    if(player->time_offset_src)
-      {
-      if(s->sync_mode == SYNC_SOUNDCARD)
-        {
-        s->samples_written =
-          gavl_time_to_samples(s->output_format.samplerate,
-                               player->time_offset_src);
-        }
-      else if(s->sync_mode == SYNC_SOFTWARE)
-        {
-        s->current_time = player->time_offset_src;
-        }
-      }
-    }
-  else
-    player->time_offset_src = 0;
-  pthread_mutex_unlock(&player->time_offset_mutex);
   }
 
 void bg_player_time_start(bg_player_t * player)
@@ -152,7 +127,7 @@ void bg_player_time_get(bg_player_t * player, int exact,
             
       pthread_mutex_lock(&ctx->time_mutex);
       test_time = gavl_samples_to_time(ctx->output_format.samplerate,
-                                       ctx->samples_written-samples_in_soundcard);
+                                       ctx->samples_written-samples_in_soundcard) + ctx->time_offset;
       if(test_time > ctx->current_time)
         ctx->current_time = test_time;
       
@@ -167,7 +142,7 @@ void bg_player_time_get(bg_player_t * player, int exact,
   if(ret)
     {
     pthread_mutex_lock(&player->time_offset_mutex);
-    *ret = t - player->time_offset - player->time_offset_src;
+    *ret = t - player->time_offset;
     pthread_mutex_unlock(&player->time_offset_mutex);
     }
   }
@@ -185,7 +160,6 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time)
       gavl_time_to_samples(ctx->output_format.samplerate,
                            time);
     /* If time is set explicitely, we don't do that timestamp offset stuff */
-    ctx->has_first_timestamp_o = 1;
     }
   ctx->current_time = time;
   pthread_mutex_unlock(&ctx->time_mutex);

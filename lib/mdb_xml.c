@@ -1011,7 +1011,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           bg_mdb_get_browse_children_request(msg, &ctx_id, &start, &num, &one_answer);
 
-          fprintf(stderr, "XML Browse children %s %d %d %d\n", ctx_id, start, num, one_answer);
+          //   fprintf(stderr, "XML Browse children %s %d %d %d\n", ctx_id, start, num, one_answer);
           
           if(browse_children(b, ctx_id, &arr, start, num, &total))
             {

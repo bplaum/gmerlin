@@ -457,19 +457,6 @@ static int browse_station(bg_mdb_backend_t * b,
 
   if(!result)
     return 0;
-
-#if 0  
-  if(bs.mimetype_id >= 0)
-    {
-    gavl_dictionary_t * src =  gavl_dictionary_get_src_nc(bs.m, GAVL_META_SRC, 0);
-    gavl_dictionary_set_string_nocopy(src, GAVL_META_MIMETYPE,
-                                      bg_sqlite_id_to_string(p->db,
-                                                             "mimetypes",
-                                                             "NAME",
-                                                             "ID",
-                                                             bs.mimetype_id));
-    }
-#endif
   
   browse_array(b, bs.m, "tags", GAVL_META_TAG, id); 
   browse_array(b, bs.m, "countries", GAVL_META_COUNTRY, id); 
@@ -482,9 +469,8 @@ static int browse_station(bg_mdb_backend_t * b,
   sql = gavl_sprintf("select * from uris where STATION_ID = %"PRId64";", id);
   bg_sqlite_exec(p->db, sql, browse_url_callback, &bu);
   free(sql);
-  
+  gavl_track_set_multivariant(ret);
   return 1;
-
   }
 
 static void add_string(bg_mdb_backend_t * b, int64_t station_id, int64_t source_id,

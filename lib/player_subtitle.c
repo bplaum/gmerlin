@@ -193,7 +193,7 @@ void bg_player_set_subtitle_parameter(void * data, const char * name,
 
   if(!strcmp(name, "time_offset"))
     {
-    player->subtitle_stream.time_offset =
+    player->subtitle_stream.time_offset_user =
       (int64_t)(val->v.d * GAVL_TIME_SCALE + 0.5);
     }
   else
@@ -214,7 +214,7 @@ void bg_player_subtitle_unscale_time(bg_player_subtitle_stream_t * s, gavl_overl
   {
   ovl->timestamp =
     gavl_time_unscale(s->input_format.timescale, ovl->timestamp) +
-    s->time_offset;
+    s->time_offset_user;
   ovl->duration  =
     gavl_time_unscale(s->input_format.timescale, ovl->duration);
   }

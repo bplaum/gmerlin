@@ -172,8 +172,6 @@ int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id, bg_str
 
 int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type);
 
-gavl_time_t bg_media_source_get_start_time(bg_media_source_t * src);
-
 /* Sink */
 
 typedef struct

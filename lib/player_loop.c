@@ -252,6 +252,7 @@ static void cleanup_streams(bg_player_t * player)
 
 static void player_cleanup(bg_player_t * player)
   {
+  bg_player_set_restart(player, 0);
   cleanup_streams(player);
 
   // Input must be cleaned up at the end because it may contain hardware handles also used by the output.
@@ -810,9 +811,8 @@ static void chapter_cmd(bg_player_t * player, int chapter)
      !gavl_dictionary_get_long(dict, GAVL_CHAPTERLIST_TIME, &t))
     return;
   
-  seek_cmd(player, t,
-           gavl_chapter_list_get_timescale(player->src->chapterlist));
-
+  seek_cmd(player, t, gavl_chapter_list_get_timescale(player->src->chapterlist));
+  
   bg_osd_show_chapter_menu(player->video_stream.osd);
   
   }
@@ -864,8 +864,7 @@ static void play_cmd(bg_player_t * player)
       {
       const gavl_dictionary_t * m;
       int64_t duration = GAVL_TIME_UNDEFINED;
-
-              
+      
       m = gavl_track_get_metadata(player->src->track_info);
       if((gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration)) &&
          (duration > 0))
@@ -874,6 +873,8 @@ static void play_cmd(bg_player_t * player)
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Getting right duration");
         }
       }
+
+    
     }
   
   play_source(player, BG_PLAYER_STATUS_PLAYING);
@@ -1104,7 +1105,19 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                    (perc >= 0.0))
                   {
                   gavl_time_t t;
-                  t = gavl_seconds_to_time(gavl_time_to_seconds(player->src->duration)*perc);
+
+                  if(player->src->duration != GAVL_TIME_UNDEFINED)
+                    t = gavl_seconds_to_time(gavl_time_to_seconds(player->src->duration)*perc);
+                  else
+                    {
+                    pthread_mutex_lock(&player->seek_window_mutex);
+
+                    t = player->seek_window_start +
+                      gavl_seconds_to_time(perc * gavl_time_to_seconds(player->seek_window_end - player->seek_window_start));
+                    
+                    pthread_mutex_unlock(&player->seek_window_mutex);
+                    }
+                  
                   seek_cmd(player, t, GAVL_TIME_SCALE);
                   bg_osd_show_time(player->video_stream.osd);
                   }
@@ -1550,9 +1563,15 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               {
               bg_player_swap_sources(player);
               bg_player_source_cleanup(player->src_next);
+
+              if((advance && !bg_player_tracklist_advance(&player->tl, 0)))
+                {
+                bg_player_set_status(player, BG_PLAYER_STATUS_ERROR);
+                bg_player_ov_standby(&player->video_stream);
+                break;
+                }
               
-              if(!bg_player_tracklist_advance(&player->tl, 0) &&
-                 !bg_player_input_start(player))
+              if(!bg_player_input_start(player))
                 {
                 bg_player_set_status(player, BG_PLAYER_STATUS_ERROR);
                 bg_player_ov_standby(&player->video_stream);
@@ -1563,7 +1582,8 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                                  &player);
               
               play_source(player, BG_PLAYER_STATUS_PLAYING);
-              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switched to next track");
+              if(advance)
+                gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switched to next track");
               }
             else if(player->src_next->switch_track)
               {
@@ -1751,6 +1771,21 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t t)
   dict = gavl_value_set_dictionary(&val);
 
   bg_player_tracklist_get_times(&player->tl, t, &t_abs, &t_rem, &t_rem_abs, &percentage);
+
+  //  fprintf(stderr, "Got perc 1: %f\n", percentage);
+
+  if((percentage < 0.0) && (player->flags & PLAYER_SEEK_WINDOW))
+    {
+    pthread_mutex_lock(&player->seek_window_mutex);
+    
+    percentage = gavl_time_to_seconds(t - player->seek_window_start) /
+      gavl_time_to_seconds(player->seek_window_end - player->seek_window_start);
+
+    //    fprintf(stderr, "Got perc 2: %f %"PRId64" %"PRId64"\n", percentage, player->seek_window_start,
+    //            player->seek_window_end);
+    
+    pthread_mutex_unlock(&player->seek_window_mutex);
+    }
   
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME, t);
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_ABS, t_abs);
