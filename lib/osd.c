@@ -1031,7 +1031,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
               
               gavl_dictionary_reset(&osd->track);
               gavl_dictionary_copy(&osd->track, dict);
-              
+
               if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &osd->track_duration))
                 gavl_time_prettyprint(osd->track_duration, osd->track_duration_str);
               
@@ -1082,6 +1082,12 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                 menu_set(&osd->subtitle_menu, i + num_text_streams,
                          bg_get_stream_label(i + num_text_streams,
                                              gavl_track_get_overlay_metadata(&osd->track, i)));
+              
+              if(gavl_track_get_num_video_streams(&osd->track))
+                {
+                /* Display track info */
+                bg_osd_show_info(osd);
+                }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))          // dictionary
               {

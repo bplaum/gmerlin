@@ -28,6 +28,8 @@
 
 #include <gavl/metatags.h>
 #include <gavl/state.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "mainwindow"
 
 #include <gui_gtk/gtkutils.h>
 
@@ -618,6 +620,13 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
                 gtk_widget_show(w->track_image);
                 gtk_widget_hide(w->track_icon);
                 }
+              else
+                {
+                gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got no track image");
+                gavl_dictionary_dump(m, 2);
+                gtk_widget_hide(w->track_image);
+                }
+              
               /* TODO: Track icon */
               
               gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration);

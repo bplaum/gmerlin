@@ -647,6 +647,8 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
 
     gavl_dictionary_free(m2);
     gavl_dictionary_move(m2, &m);
+    gavl_dictionary_set(m2, GAVL_META_MEDIA_CLASS, NULL);
+    gavl_track_finalize(src->track_info);
     }
   
   src->metadata = gavl_track_get_metadata(src->track_info);

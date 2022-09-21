@@ -382,6 +382,7 @@ browse_station_callback(void * data, int argc, char **argv, char **azColName)
       }
     else if(!strcmp(azColName[i], GAVL_META_LABEL))
       {
+      gavl_dictionary_set_string(b->m, GAVL_META_STATION, argv[i]);
       gavl_dictionary_set_string(b->m, GAVL_META_LABEL, argv[i]);
       }
     else if(!strcmp(azColName[i], GAVL_META_STATION_URL))
@@ -2763,7 +2764,7 @@ static int import_iptv_org(bg_mdb_backend_t * b, int64_t source_id)
   gavl_dictionary_init(&categories);
   gavl_dictionary_init(&stations);
 
-  fprintf(stderr, "import_iptv_org\n");
+  //  fprintf(stderr, "import_iptv_org\n");
   
   /* Load categories */
   if(!(obj = bg_json_from_url("https://iptv-org.github.io/api/categories.json", NULL)) ||
@@ -2833,7 +2834,8 @@ static int import_iptv_org(bg_mdb_backend_t * b, int64_t source_id)
       }
 
     if(bg_json_dict_get_string(child, "closed") ||
-       bg_json_dict_get_string(child, "replaced_by"))
+       bg_json_dict_get_string(child, "replaced_by") ||
+       bg_json_dict_get_bool(child, "is_nsfw"))
       continue;
     
     if(!(id = bg_json_dict_get_string(child, "id")))

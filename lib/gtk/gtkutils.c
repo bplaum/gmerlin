@@ -635,6 +635,7 @@ const char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_
       }
     }
   else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
+          !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST) ||
           !strcmp(klass, GAVL_META_MEDIA_CLASS_PODCAST) ||
           !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) ||
           !strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_PODCAST_EPISODE) ||

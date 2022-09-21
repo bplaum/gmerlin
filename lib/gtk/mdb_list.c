@@ -2333,7 +2333,7 @@ static char * ask_string(GtkWidget * w, const char * title, const char * label)
   return str;
   }
 
-static void set_parameter_ask_stream_source(void * data, const char * name, const gavl_value_t * val)
+static void set_parameter_ask_container(void * data, const char * name, const gavl_value_t * val)
   {
   gavl_dictionary_t * d = data;
   if(!name)
@@ -2341,30 +2341,66 @@ static void set_parameter_ask_stream_source(void * data, const char * name, cons
   gavl_dictionary_set(d, name, val);
   }
 
+static bg_parameter_info_t stream_source_params[] =
+  {
+    {
+      .name = GAVL_META_LABEL,
+      .long_name = TRS("Label"),
+      .type = BG_PARAMETER_STRING,
+    },
+    {
+      .name = GAVL_META_URI,
+      .long_name = TRS("Location"),
+      .type = BG_PARAMETER_STRING,
+      .help_string = TRS("Location can be a local file, an http(s) URI in a suppored playlist format (e.g. m3u). Use the special URI radiobrowser:// for importing stations from radio-browser.info or iptv-org:// for iptv-org"),
+    },
+    { /* End */ }
+  };
+
+static bg_parameter_info_t container_params[] =
+  {
+    {
+      .name = GAVL_META_LABEL,
+      .long_name = TRS("Label"),
+      .type = BG_PARAMETER_STRING,
+    },
+    {
+      .name = GAVL_META_MEDIA_CLASS,
+      .long_name = TRS("Type"),
+      .type = BG_PARAMETER_STRINGLIST,
+      .multi_names = (char const *[]){ GAVL_META_MEDIA_CLASS_CONTAINER,
+                                       GAVL_META_MEDIA_CLASS_CONTAINER_TV,
+                                       GAVL_META_MEDIA_CLASS_CONTAINER_RADIO,
+                                       GAVL_META_MEDIA_CLASS_PLAYLIST, NULL },
+      .multi_labels = (char const *[]){ TRS("Generic container"),
+                                        TRS("TV Stations"),
+                                        TRS("Radio Stations"),
+                                        TRS("Playlist"), NULL },
+    },
+    { /* End */ }
+  };
+
 
 static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
   {
   bg_dialog_t * dlg;
-  bg_parameter_info_t info[3];
   
-  memset(&info[0], 0, sizeof(info));
+  dlg = bg_dialog_create(NULL, set_parameter_ask_container, ret, stream_source_params, TRS("Add stream source"));
+  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
+  bg_dialog_destroy(dlg);
+  }
 
-  info[0].name = GAVL_META_LABEL;
-  info[0].long_name = TRS("Label");
-  info[0].type = BG_PARAMETER_STRING;
-
-  info[1].name = GAVL_META_URI;
-  info[1].long_name = TRS("Location");
-  info[1].type = BG_PARAMETER_STRING;
-  info[1].help_string = TRS("Location can be a local file, an http(s) URI in a suppored playlist format (e.g. m3u). Use the special URI radiobrowser:// for importing stations from radio-browser.info");
+static void ask_container(GtkWidget * w, gavl_dictionary_t * ret)
+  {
+  bg_dialog_t * dlg;
   
-  dlg = bg_dialog_create(NULL, set_parameter_ask_stream_source, ret, info, TRS("Add stream source"));
+  dlg = bg_dialog_create(NULL, set_parameter_ask_container, ret, container_params, TRS("Add Folder"));
   bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
   bg_dialog_destroy(dlg);
   }
 
 static void create_container(bg_gtk_mdb_tree_t * tree,
-                             char * label,
+                             const char * label,
                              const char * klass)
   {
   gavl_msg_t * msg;
@@ -2375,7 +2411,7 @@ static void create_container(bg_gtk_mdb_tree_t * tree,
   m = gavl_dictionary_get_dictionary_create(c, GAVL_META_METADATA);
 
   gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
-  gavl_dictionary_set_string_nocopy(m, GAVL_META_TITLE, label);
+  gavl_dictionary_set_string(m, GAVL_META_TITLE, label);
   gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, klass);
   gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN, 0);
 
@@ -2462,6 +2498,8 @@ static void create_playlist(bg_gtk_mdb_tree_t * tree)
 
 static void create_folder(bg_gtk_mdb_tree_t * tree)
   {
+#if 0
+
   char * str;
   
   str = ask_string(tree->menu_ctx.widget, "Create folder", "Name");
@@ -2469,6 +2507,29 @@ static void create_folder(bg_gtk_mdb_tree_t * tree)
     return;
 
   create_container(tree, str, GAVL_META_MEDIA_CLASS_CONTAINER);
+#else
+
+  const char *label;
+  const char *klass;
+  
+  gavl_dictionary_t dict;
+
+  gavl_dictionary_init(&dict);
+
+  ask_container(tree->menu_ctx.widget, &dict);
+
+  klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS);
+  label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
+
+  if(klass)
+    {
+    if(!label)
+      label = "Unnamed";
+    create_container(tree, label, klass);
+    }
+  gavl_dictionary_free(&dict);
+#endif
+  
   }
 
 static void load_uri(bg_gtk_mdb_tree_t * tree)

@@ -123,13 +123,14 @@ void bg_player_time_get(bg_player_t * player, int exact,
         samples_in_soundcard = ctx->plugin->get_delay(ctx->priv);
       bg_plugin_unlock(ctx->plugin_handle);
 
-      // fprintf(stderr, "Got latency: %f\n", (double)samples_in_soundcard / ctx->output_format.samplerate);
+      // fprintf(stderr, "Samples: %s: Got latency: %f\n", (double)samples_in_soundcard / ctx->output_format.samplerate);
             
       pthread_mutex_lock(&ctx->time_mutex);
       test_time = gavl_samples_to_time(ctx->output_format.samplerate,
                                        ctx->samples_written-samples_in_soundcard) + ctx->time_offset;
-      if(test_time > ctx->current_time)
-        ctx->current_time = test_time;
+
+      //      if(test_time > ctx->current_time)
+      ctx->current_time = test_time;
       
       t = ctx->current_time;
       pthread_mutex_unlock(&ctx->time_mutex);

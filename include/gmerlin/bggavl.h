@@ -724,6 +724,7 @@ int bg_dictionary_from_json(gavl_dictionary_t * dict,
 
 const char * bg_json_dict_get_string(json_object * obj, const char * tag);
 int bg_json_dict_get_int(json_object * obj, const char * tag);
+int bg_json_dict_get_bool(json_object * obj, const char * tag);
 
 /* xml Interface */
 

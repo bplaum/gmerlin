@@ -1759,6 +1759,17 @@ int bg_json_dict_get_int(json_object * obj, const char * tag)
   return json_object_get_int(child);
   }
 
+int bg_json_dict_get_bool(json_object * obj, const char * tag)
+  {
+  json_object * child;
+
+  if(!json_object_object_get_ex(obj, tag, &child) ||
+     !json_object_is_type(child, json_type_boolean))
+    return 0;
+  
+  return json_object_get_boolean(child);
+  }
+
 
 void bg_string_to_string_array(const char * str, gavl_array_t * arr)
   {
