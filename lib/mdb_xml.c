@@ -73,12 +73,9 @@ typedef struct
   {
   gavl_dictionary_t * favorites;
   gavl_dictionary_t * library;
-  gavl_dictionary_t * playlists;
   
   const char * favorites_id;
-  const char * incoming_id;
   const char * library_id;
-  const char * playlists_id;
   } xml_t;
 
 static void save_dir_index(bg_mdb_backend_t * be, const char * dir, gavl_dictionary_t * d);
@@ -99,29 +96,15 @@ static void set_editable(const char * id, gavl_dictionary_t * dict)
      !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
      !gavl_string_starts_with(klass, "container"))
     return;
+
+  bg_mdb_set_editable(dict);
   
   if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
     {
-    bg_mdb_set_editable(dict);
     bg_mdb_add_can_add(dict, "item.audio*");
     bg_mdb_add_can_add(dict, "item.video*");
     bg_mdb_add_can_add(dict, "item.image*");
     bg_mdb_add_can_add(dict, "item.location");
-    }
-  else if(gavl_string_starts_with(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_LIBRARY)))
-    {
-    bg_mdb_set_editable(dict);
-    }
-  else if(gavl_string_starts_with(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS)))
-    {
-    bg_mdb_set_editable(dict);
-    if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS)))
-      bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_PLAYLIST);
-    else // Below /playlists
-      {
-      bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_SONG);
-      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
-      }
     }
   }
 
@@ -534,11 +517,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
 
   if((klass = bg_mdb_get_klass_from_id(ctx_id)))
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS))
-      {
-      root_dict = xml->playlists;
-      }
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY))
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY))
       {
       root_dict =  xml->library;
       }
@@ -1195,7 +1174,6 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
 
   priv->favorites = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES, &priv->favorites_id);
   priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
-  priv->playlists = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS, &priv->playlists_id);
   
   bg_controllable_init(&b->ctrl,
                        bg_msg_sink_create(handle_msg, b, 0),

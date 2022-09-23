@@ -629,8 +629,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
   if(bg_mdb_is_editable(dict))
     {
     gtk_drag_dest_set(l->listview,
-                      GTK_DEST_DEFAULT_HIGHLIGHT | 
-                      GTK_DEST_DEFAULT_MOTION,
+                      0,
                       list_dst_entries,
                       num_list_dst_entries,
                       GDK_ACTION_COPY);
@@ -698,7 +697,7 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
   {
   GtkWidget * ret;
   GtkWidget * image;
-  GtkCssProvider * provider = gtk_css_provider_new();
+  //  GtkCssProvider * provider = gtk_css_provider_new();
 
   //  gtk_css_provider_load_from_data(provider, close_button_css, -1, NULL);
   
@@ -715,10 +714,10 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
   g_signal_connect(G_OBJECT(ret), "clicked",
                    G_CALLBACK(close_button_callback), tree);
 
-  gtk_style_context_add_provider(gtk_widget_get_style_context(ret),
-                                 GTK_STYLE_PROVIDER (provider),
-                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  g_object_unref(provider);
+  //  gtk_style_context_add_provider(gtk_widget_get_style_context(ret),
+  //                                 GTK_STYLE_PROVIDER (provider),
+  //                                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  //  g_object_unref(provider);
   
   gtk_widget_show(ret);
   return ret;
@@ -1566,11 +1565,10 @@ static gboolean drag_motion_callback(GtkWidget *widget,
     else
       a->list->drag_pos = indices[0]+1;
     
+    //    fprintf(stderr, "drag_motion_callback %d\n", indices[0]);
+    
     gtk_tree_view_set_drag_dest_row(GTK_TREE_VIEW(a->list->listview),
                                     path, pos);
-
-    
-
     }
   
   if(path)
@@ -1716,6 +1714,17 @@ static void drag_get_callback(GtkWidget *widget,
 
   }
 
+#if 0
+static const char * tree_css =
+  "GtkTreeView row:nth-child(even), GtkTreeView row:nth-child(even) {"
+  " -GtkWidget-focus-padding: 1px;"
+  " -GtkWidget-focus-line-width: 1px;"
+  " border-width: 1px;"
+  " margin: 1px;"
+  " padding: 1px; }";
+#endif
+
+
 list_t * bg_gtk_mdb_list_create(album_t * a)
   {
   GtkWidget * scrolledwindow;
@@ -1725,6 +1734,10 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   GtkTreeViewColumn *column;
   char * tmp_string;
   list_t * l = calloc(1, sizeof(*l));
+
+  //  GtkCssProvider * provider = gtk_css_provider_new();
+  
+  //  gtk_css_provider_load_from_data(provider, tree_css, -1, NULL);
   
   l->a = a;
   l->drag_pos = -1;
@@ -1782,6 +1795,13 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
 
   l->listview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
 
+#if 0  
+  gtk_style_context_add_provider(gtk_widget_get_style_context(l->listview),
+                                 GTK_STYLE_PROVIDER (provider),
+                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(provider);
+#endif
+  
   gtk_widget_add_events(l->listview, GDK_KEY_PRESS_MASK |
                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON1_MOTION_MASK);
   
@@ -1858,9 +1878,6 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   
   gtk_tree_view_append_column (GTK_TREE_VIEW(l->listview), column);
 
-  
-  
-  
   /* Label */
   column = gtk_tree_view_column_new();
 
