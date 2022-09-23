@@ -1527,8 +1527,8 @@ static const struct
   }
 root_folders[] =
   {
-    { GAVL_META_MEDIA_CLASS_ROOT_INCOMING,           "Incoming",     BG_MDB_ID_INCOMING,     1 },
-    { GAVL_META_MEDIA_CLASS_ROOT_FAVORITES,          "Favorites",    BG_MDB_ID_FAVORITES,    2 },
+    { GAVL_META_MEDIA_CLASS_ROOT_FAVORITES,          "Favorites",    BG_MDB_ID_FAVORITES,    1 },
+    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,            "Library",      BG_MDB_ID_LIBRARY,      2 },
     { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,        "Music albums", BG_MDB_ID_MUSICALBUMS,  3 },
     { GAVL_META_MEDIA_CLASS_ROOT_SONGS,              "Songs",        BG_MDB_ID_SONGS,        4 },
     { GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,          "Playlists",    BG_MDB_ID_PLAYLISTS,    5 },
@@ -1537,8 +1537,7 @@ root_folders[] =
     { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,             "Movies",       BG_MDB_ID_MOVIES,       8 },
     { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,           "TV Shows",     BG_MDB_ID_TV_SHOWS,     9 },
     { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,             "Photos",       BG_MDB_ID_PHOTOS,      10 },
-    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,            "Library",      BG_MDB_ID_LIBRARY,     11 },
-    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,        "Directories",  BG_MDB_ID_DIRECTORIES, 12 },
+    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,        "Directories",  BG_MDB_ID_DIRECTORIES, 11 },
 
     { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE,          "Removable",    NULL,         20 },
     { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD,  "Audio CD",     NULL,         21 },

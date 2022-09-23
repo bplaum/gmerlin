@@ -596,75 +596,28 @@ static void cleanup_images()
 
 const char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height)
   {
-  const char * klass;
+  const char * uri;
   const gavl_dictionary_t * m;
   const gavl_dictionary_t * img;
 
   //  fprintf(stderr, "bg_gtk_get_track_image_uri: \n");
   //  gavl_dictionary_dump(dict, 2);
   //  fprintf(stderr, "\n");
-  
-    
-  if(!(m = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
-    return NULL;
 
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) ||
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_SONG) ||
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_MUSICALBUM) ||
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD))
-     
-    {
-    if((img = gavl_dictionary_get_image_max(m,
-                                            GAVL_META_COVER_URL, max_width, max_height, NULL)))
-      {
-      return  gavl_dictionary_get_string(img, GAVL_META_URI);
-      }
-    }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER))
-    {
-    if((img = gavl_dictionary_get_image_max(m,
-                                            GAVL_META_POSTER_URL, max_width, max_height, NULL)))
-      {
-      return  gavl_dictionary_get_string(img, GAVL_META_URI);
-      }
-    else if((img = gavl_dictionary_get_image_max(m,
-                                                 GAVL_META_COVER_URL, max_width, max_height, NULL)))
-      {
-      return  gavl_dictionary_get_string(img, GAVL_META_URI);
-      }
-    }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_PODCAST) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_PODCAST_EPISODE) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_PODCAST_EPISODE))
-    {
-    return  gavl_dictionary_get_string(m, GAVL_META_LOGO_URL);
-    }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_FILE) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_TV_SHOW) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_TV_SEASON) ||
-          !strcmp(klass, GAVL_META_MEDIA_CLASS_TV_EPISODE))
-    {
-    if((img = gavl_dictionary_get_image_max(m,
-                                            GAVL_META_POSTER_URL, max_width, max_height, NULL)))
-      return  gavl_dictionary_get_string(img, GAVL_META_URI);
-    }
-  else if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_IMAGE))
-    {
-    if((img = gavl_dictionary_get_image_max(m,
-                                            GAVL_META_SRC, max_width, max_height, NULL)))
-      return gavl_dictionary_get_string(img, GAVL_META_URI);
-    }
-  /* Icon is a fallback */ 
-  else if((img = gavl_dictionary_get_image_max(m, GAVL_META_ICON_URL, max_width, max_height, NULL)))
-    {
+  if(!(m = gavl_track_get_metadata(dict)))
+    return NULL;
+    
+  if((img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_COVER_URL, max_width, max_height, NULL)) ||
+     (img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_POSTER_URL, max_width, max_height, NULL)) ||
+     (img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_ICON_URL, max_width, max_height, NULL)))
     return  gavl_dictionary_get_string(img, GAVL_META_URI);
+  
+  if((uri = gavl_dictionary_get_string(m, GAVL_META_LOGO_URL)))
+    {
+    return uri;
     }
   return NULL;
   }

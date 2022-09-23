@@ -72,7 +72,6 @@
 typedef struct
   {
   gavl_dictionary_t * favorites;
-  gavl_dictionary_t * incoming;
   gavl_dictionary_t * library;
   gavl_dictionary_t * playlists;
   
@@ -101,15 +100,7 @@ static void set_editable(const char * id, gavl_dictionary_t * dict)
      !gavl_string_starts_with(klass, "container"))
     return;
   
-  if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_INCOMING)))
-    {
-    bg_mdb_set_editable(dict);
-    bg_mdb_add_can_add(dict, "item.audio*");
-    bg_mdb_add_can_add(dict, "item.video*");
-    bg_mdb_add_can_add(dict, "item.image*");
-    bg_mdb_add_can_add(dict, "item.location");
-    }
-  else if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
+  if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
     {
     bg_mdb_set_editable(dict);
     bg_mdb_add_can_add(dict, "item.audio*");
@@ -341,8 +332,7 @@ static int do_add(bg_mdb_backend_t * b,
   
   dir = id_to_path(b, parent_id);
 
-  if(!strcmp(parent_id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)) ||
-     !strcmp(parent_id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_INCOMING)))
+  if(!strcmp(parent_id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
     {
     const char * uri;
     const gavl_dictionary_t * m;
@@ -551,10 +541,6 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
     else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY))
       {
       root_dict =  xml->library;
-      }
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_INCOMING))
-      {
-      root_dict =  xml->incoming;
       }
     else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES))
       {
@@ -1208,7 +1194,6 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
   priv = calloc(1, sizeof(*priv));
 
   priv->favorites = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES, &priv->favorites_id);
-  priv->incoming  = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_INCOMING,  &priv->incoming_id);
   priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
   priv->playlists = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS, &priv->playlists_id);
   

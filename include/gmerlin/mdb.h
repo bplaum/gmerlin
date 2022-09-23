@@ -33,7 +33,6 @@
 
 /* IDs of the root elements */      
 
-#define BG_MDB_ID_INCOMING          "/incoming"
 #define BG_MDB_ID_FAVORITES         "/favorites"
 #define BG_MDB_ID_MUSICALBUMS       "/albums"
 #define BG_MDB_ID_SONGS             "/songs"
