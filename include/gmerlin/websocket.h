@@ -34,11 +34,6 @@
 
 #define BG_REMOTE_PORT_BASE 10100
 
-#define BG_WEBSOCKET_TYPE_TEXT   0
-#define BG_WEBSOCKET_TYPE_BINARY 1
-#define BG_WEBSOCKET_TYPE_PING   2
-#define BG_WEBSOCKET_TYPE_PONG   3
-
 
 typedef struct bg_websocket_context_s bg_websocket_context_t;
 typedef struct bg_websocket_connection_s bg_websocket_connection_t;
@@ -77,12 +72,21 @@ bg_websocket_connection_t *
 bg_websocket_connection_create(const char * url, int timeout,
                                const char * origin);
 
-void
-bg_websocket_connection_start(bg_websocket_connection_t * conn);
+// void
+// bg_websocket_connection_start(bg_websocket_connection_t * conn);
 
-void
-bg_websocket_connection_stop(bg_websocket_connection_t * conn);
+/*
+  Call this regularly. This fuction never waits for network aktivity.
+*/
 
+int
+bg_websocket_connection_iteration(bg_websocket_connection_t * conn);
+
+// void
+// bg_websocket_connection_stop(bg_websocket_connection_t * conn);
+
+int
+bg_websocket_connection_ping(bg_websocket_connection_t * conn);
 
 bg_controllable_t * 
 bg_websocket_connection_get_controllable(bg_websocket_connection_t *);

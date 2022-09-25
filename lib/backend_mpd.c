@@ -280,7 +280,7 @@ static void update_foreign_track(bg_backend_handle_t * dev)
     }
   
   bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-               &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   gavl_value_free(&val);
   
   }
@@ -396,7 +396,7 @@ static void set_time(bg_backend_handle_t * dev, gavl_time_t t)
     }
   
   bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-               &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
   gavl_value_free(&val);
   
@@ -438,7 +438,7 @@ static void update_mode(bg_backend_handle_t * dev)
   gavl_value_set_int(&val, gmerlin_mode);
   
   bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MODE,
-               &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
   gavl_value_free(&val);
 
@@ -473,7 +473,7 @@ static void update_current_track(bg_backend_handle_t * dev)
     gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
     
     bg_state_set(&m->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                 &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                 &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
     
     gavl_value_free(&val);
     return;
@@ -520,7 +520,7 @@ static void update_current_track(bg_backend_handle_t * dev)
           }
             
         bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                     &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                     &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
         }
       }
@@ -598,7 +598,7 @@ static void update_status_variable(bg_backend_handle_t * dev, const char * name,
       gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
 
       bg_state_set(&m->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                   &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                   &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
       
       gavl_value_reset(&val);
       }
@@ -606,7 +606,7 @@ static void update_status_variable(bg_backend_handle_t * dev, const char * name,
     gavl_value_set_int(&val, new_status);
 
     bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
-                 &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                 &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
     }
   else if(!strcmp(name, STATUS_VOLUME))
     {
@@ -616,7 +616,7 @@ static void update_status_variable(bg_backend_handle_t * dev, const char * name,
       {
       gavl_value_set_float(&val, (float)val_i / 100.0);
       bg_state_set(&m->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_VOLUME,
-                   &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                   &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
       }
     }
   else if(!strcmp(name, STATUS_TIME))
@@ -733,7 +733,7 @@ static void set_node_info(bg_backend_handle_t * dev, const gavl_dictionary_t * i
   
   bg_set_network_node_info(gavl_dictionary_get_string(&dev->dev, GAVL_META_LABEL),
                            gavl_dictionary_get_string(&dev->dev, GAVL_META_ICON_URL)
-                           &icons, NULL, dev->ctrl.evt_sink);
+                           &icons, NULL, dev->ctrl_int.evt_sink);
   }
 #endif
 
@@ -940,7 +940,7 @@ static int create_mpd(bg_backend_handle_t * dev, const char * uri, const char * 
   gavl_array_init(&mimetypes);
   gavl_array_init(&protocols);
 
-  bg_player_tracklist_init(&priv->tl, dev->ctrl.evt_sink);
+  bg_player_tracklist_init(&priv->tl, dev->ctrl_int.evt_sink);
 
   if(!bg_url_split(uri, NULL, NULL, NULL, &host, &port, NULL))
     goto fail;
@@ -995,13 +995,13 @@ static int create_mpd(bg_backend_handle_t * dev, const char * uri, const char * 
   init_mpd_status(dev);
   update_mode(dev);
   
-  bg_state_apply(&priv->gmerlin_state, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+  bg_state_apply(&priv->gmerlin_state, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
   add_logo(&dev->dev);
   
   bg_set_network_node_info(label,
                            gavl_dictionary_get_array(&dev->dev, GAVL_META_ICON_URL),
-                           NULL, dev->ctrl.evt_sink);
+                           NULL, dev->ctrl_int.evt_sink);
   
   ret = 1;
 
@@ -1310,7 +1310,7 @@ static int handle_msg_mpd(void * priv, // Must be bg_backend_handle_t
             }
           
           bg_state_set(&m->gmerlin_state, last, ctx, var,
-                       &val, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                       &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
           
           gavl_value_free(&val);
           

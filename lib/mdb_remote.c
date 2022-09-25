@@ -336,6 +336,9 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
   gavl_msg_t * msg1;
   const char * remote_id;
 
+  //  fprintf(stderr, "Handle remote message\n");
+  //  gavl_msg_dump(msg, 2);
+  
 #if 0  
   if((msg->NS == BG_MSG_NS_DB) &&
      ((msg->ID == BG_RESP_DB_BROWSE_OBJECT)))
@@ -596,7 +599,10 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const gavl_dictionary
   remote_server_t * ret;
   remote_priv_t * p = be->priv;
   bg_backend_handle_t * bh;
-  
+
+  fprintf(stderr, "Adding server\n");
+  gavl_dictionary_dump(dict, 2);
+    
   if(!(bh = bg_backend_handle_create(dict, http_root_uri)))
     return NULL;
   

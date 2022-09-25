@@ -134,6 +134,8 @@ void renderer_init(renderer_t * s)
 
   tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(s->srv));
   bg_array_add_application_icons(icons_arr, tmp_string, "renderer");
+  bg_app_add_application_icons(tmp_string, "renderer");
+
   free(tmp_string);
 
   bg_set_network_node_info(bg_app_get_label(), icons_arr, NULL, player_ctrl->evt_sink);

@@ -46,7 +46,7 @@
 
 #include <gmerlin/upnp/didl.h>
 
-#define LOG_DOMAIN "backend.upnp"
+#define LOG_DOMAIN "backend_upnp"
 
 
 /* ssdp */
@@ -116,12 +116,13 @@ static int handle_ssdp_msg(void * priv, gavl_msg_t * evt)
               break;
             
             gavl_dictionary_set_int(&dev, BG_BACKEND_TYPE, type);
-
+#if 1
             if(!bg_backend_get_node_info(&dev))
               {
               gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not obtain node info for %s", desc_url);
               break;
               }
+#endif
             gavl_dictionary_set_string(&dev, BG_BACKEND_PROTOCOL, "gmerlin");
 
             }
@@ -519,7 +520,7 @@ static void set_track_from_didl(bg_backend_handle_t * be, const char * str)
     gavl_dictionary_set_int(m, GAVL_META_CAN_SEEK, 1);
   
   bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-               &v, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   gavl_value_reset(&v);
   
   }
@@ -648,7 +649,7 @@ static void renderer_poll(bg_backend_handle_t * be)
         gavl_dictionary_set_int(m, GAVL_META_CAN_SEEK, 1);
     
       bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                   &val, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                   &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
       gavl_value_reset(&val);
       }
     else if(r->TrackURI && r->NextAVTransportURI_dev && r->NextAVTransportURIMetaData_dev &&
@@ -760,7 +761,7 @@ static void renderer_poll(bg_backend_handle_t * be)
     }
   
   bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-               &val, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   
   gavl_value_reset(&val);
   
@@ -829,7 +830,7 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
               gavl_value_init(&volume);
               gavl_value_set_float(&volume, range_int_to_float(&r->Volume_range, atoi(val)) );
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_VOLUME,
-                           &volume, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                           &volume, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
               }
             else if(!strcmp(var, "VolumeDB"))
               {
@@ -843,7 +844,7 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
               val_i = atoi(val);
               gavl_value_set_int(&mute, val_i);
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MUTE,
-                           &mute, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                           &mute, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
               }
             else
               gavl_msg_dump(msg, 2);
@@ -904,7 +905,7 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
                   }
                 
                 bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-                             &v, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                             &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
                 gavl_value_reset(&v);
                 
                 r->player_status = BG_PLAYER_STATUS_STOPPED;
@@ -924,7 +925,7 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
                 dict = gavl_value_set_dictionary(&v);
                 gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
                 bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                             &v, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                             &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
                 
                 r->flags &= ~(RENDERER_STOP_SENT|RENDERER_FINISHING);
                 }
@@ -944,7 +945,7 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
               gavl_value_set_int(&v, r->player_status);
 
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
-                           &v, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                           &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
               
               gavl_value_reset(&v);
               }
@@ -1285,7 +1286,7 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
   bg_upnp_device_description_get_icon_urls(dev_node, &icons, url_base);
 
   /* Tracklist */
-  bg_player_tracklist_init(&r->tl, dev->ctrl.evt_sink);
+  bg_player_tracklist_init(&r->tl, dev->ctrl_int.evt_sink);
   
 
   //  set_protocol_info
@@ -1294,9 +1295,9 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
   //  gavl_dictionary_dump(&r->gmerlin_state, 2);
   //  fprintf(stderr, "\n");
 
-  bg_state_apply(&r->gmerlin_state, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+  bg_state_apply(&r->gmerlin_state, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
-  bg_set_network_node_info(label, &icons, NULL, dev->ctrl.evt_sink);
+  bg_set_network_node_info(label, &icons, NULL, dev->ctrl_int.evt_sink);
   gavl_array_free(&icons);
   
   ret = 1;
@@ -1704,7 +1705,7 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
               bg_player_tracklist_set_mode(&r->tl, &val.v.i);
 
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MODE,
-                           &val, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                           &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
               if(r->NextAVTransportURI)
                 {

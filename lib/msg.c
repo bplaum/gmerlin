@@ -221,6 +221,21 @@ char * bg_msg_to_json_str(const gavl_msg_t * msg)
   return ret;
   }
 
+void bg_msg_to_json_buf(const gavl_msg_t * msg, gavl_buffer_t * buf)
+  {
+  int len;
+  const char * str;
+  json_object * obj = bg_msg_to_json(msg);
+
+  str = json_object_to_json_string_ext(obj, 0);
+  
+  len = strlen(str);
+  gavl_buffer_alloc(buf, buf->len + len);
+  
+  memcpy(buf->buf + buf->len, str, len);
+  buf->len += len;
+  }
+
 int bg_msg_from_json(gavl_msg_t * msg, json_object * obj)
   {
   int i, num_args;

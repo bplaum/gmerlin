@@ -297,58 +297,6 @@ int bg_msg_queue_peek(bg_msg_queue_t * mq, uint32_t * id, uint32_t * ns);
 /** \brief Opaque message queue list type. You don't want to know what's inside.
  */
 
-typedef struct bg_msg_queue_list_s bg_msg_queue_list_t;
-
-/** \brief Create a message queue list
- *  \returns A newly allocated message queue list
- */
-
-bg_msg_queue_list_t * bg_msg_queue_list_create();
-
-/** \brief Destroy a message queue list
- *  \param list A message queue list
- */
-
-void bg_msg_queue_list_destroy(bg_msg_queue_list_t * list);
-
-/** \brief Send a message to all queues in the list
- *  \param list A message queue list
- *  \param set_message Function to set ID and arguments of a message
- *  \param data Data to pass to set_message
- */
-
-void 
-bg_msg_queue_list_send(bg_msg_queue_list_t * list,
-                       void (*set_message)(gavl_msg_t * message,
-                                           const void * data),
-                       const void * data);
-
-/** \brief Send a message to all queues in the list
- *  \param list A message queue list
- *  \param src Message to send
- */
-
-void 
-bg_msg_queue_list_send_msg(bg_msg_queue_list_t * l,
-                           const gavl_msg_t * src);
-
-
-/** \brief Add a queue to the list
- *  \param list A message queue list
- *  \param queue A message queue
- */
-
-void bg_msg_queue_list_add(bg_msg_queue_list_t * list,
-                           bg_msg_queue_t * queue);
-
-/** \brief Remove a queue from the list
- *  \param list A message queue list
- *  \param queue A message queue
- */
-
-void bg_msg_queue_list_remove(bg_msg_queue_list_t * list,
-                              bg_msg_queue_t * queue);
-
 struct json_object *  bg_msg_to_json(const gavl_msg_t * msg);
 
 int bg_msg_from_json(gavl_msg_t * msg, json_object * obj);
@@ -358,6 +306,7 @@ bg_msg_from_json_str(gavl_msg_t * msg, const char * str);
 
 
 char * bg_msg_to_json_str(const gavl_msg_t * msg);
+void bg_msg_to_json_buf(const gavl_msg_t * msg, gavl_buffer_t * buf);
 
 void bg_msg_dump(gavl_msg_t * msg, int indent);
 

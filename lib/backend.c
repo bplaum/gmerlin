@@ -208,10 +208,12 @@ bg_backend_handle_create(const gavl_dictionary_t * dev, const char * root_url)
   /* Controls must exist before creation of the backend */
 
   if(ret->b->handle_msg)
-    bg_controllable_init(&ret->ctrl,
+    {
+    bg_controllable_init(&ret->ctrl_int,
                          bg_msg_sink_create(ret->b->handle_msg, ret, 0),
                          bg_msg_hub_create(1));
-  
+    ret->ctrl = &ret->ctrl_int;
+    }
   if(ret->b->create && !ret->b->create(ret, uri, root_url))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Creation failed");
@@ -240,34 +242,22 @@ int bg_backend_handle_ping(bg_backend_handle_t * d)
   {
   int ret = 0;
 
-  if(d->ctrl.cmd_sink)
+  if(d->ctrl && d->ctrl->cmd_sink)
     {
-    if(!bg_msg_sink_iteration(d->ctrl.cmd_sink))
+    if(!bg_msg_sink_iteration(d->ctrl->cmd_sink))
       {
       return -1;
       }
-    ret = bg_msg_sink_get_num(d->ctrl.cmd_sink);
+    ret = bg_msg_sink_get_num(d->ctrl->cmd_sink);
     }
-
-#if 0
-  
-  if(d->ctrl_ext && d->ctrl_ext->cmd_sink)
-    {
-    if(!bg_msg_sink_iteration(d->ctrl_ext->cmd_sink))
-      {
-      return -1;
-      }
-    ret += bg_msg_sink_get_num(d->ctrl_ext->cmd_sink);
-    }
-#endif
   
   if(d->b->ping)
     ret += d->b->ping(d);
-
-  if(d->ctrl.cmd_sink)
+  
+  if(d->ctrl && d->ctrl->cmd_sink)
     {
-    bg_msg_sink_iteration(d->ctrl.cmd_sink);
-    ret += bg_msg_sink_get_num(d->ctrl.cmd_sink);
+    bg_msg_sink_iteration(d->ctrl->cmd_sink);
+    ret += bg_msg_sink_get_num(d->ctrl->cmd_sink);
     }
   
   return ret;
@@ -279,7 +269,8 @@ static void * backend_thread(void * data)
   int res;
   bg_backend_handle_t * be = data;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 20; // 50 ms
-  
+
+  fprintf(stderr, "Backend thread started\n");
   
   while(1)
     {
@@ -295,6 +286,8 @@ static void * backend_thread(void * data)
       gavl_time_delay(&delay_time);
     }
 
+  fprintf(stderr, "Backend thread finished\n");
+
   return NULL;
   }
 
@@ -305,20 +298,12 @@ void bg_backend_handle_stop(bg_backend_handle_t * be)
   if(!be->thread_running)
     return;
   
-  if(be->ctrl_ext)
-    msg = bg_msg_sink_get(be->ctrl_ext->cmd_sink);
-  else if(be->ctrl.cmd_sink)
-    msg = bg_msg_sink_get(be->ctrl.cmd_sink);
-  
-  if(msg)
+  if(be->ctrl && be->ctrl->cmd_sink)
     {
+    msg = bg_msg_sink_get(be->ctrl->cmd_sink);
     gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-    if(be->ctrl_ext)
-      bg_msg_sink_put(be->ctrl_ext->cmd_sink, msg);
-    else if(be->ctrl.cmd_sink)
-      bg_msg_sink_put(be->ctrl.cmd_sink, msg);
+    bg_msg_sink_put(be->ctrl->cmd_sink, msg);
     }
-  
   pthread_join(be->th, NULL);
 
   // if(be->b->stop)
@@ -339,7 +324,7 @@ void bg_backend_handle_destroy(bg_backend_handle_t * be)
   if(be->root_url)
     free(be->root_url);
   
-  bg_controllable_cleanup(&be->ctrl);
+  bg_controllable_cleanup(&be->ctrl_int);
 
   gavl_timer_destroy(be->timer);
   
@@ -348,10 +333,7 @@ void bg_backend_handle_destroy(bg_backend_handle_t * be)
 
 bg_controllable_t * bg_backend_handle_get_controllable(bg_backend_handle_t * d)
   {
-  if(d->ctrl_ext)
-    return d->ctrl_ext;
-  else
-    return &d->ctrl;
+  return d->ctrl;
   }
 
 void bg_backend_handle_start(bg_backend_handle_t * be)

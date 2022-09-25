@@ -157,7 +157,7 @@ static void set_player_time(bg_backend_handle_t * dev, gavl_time_t cur)
   gavl_dictionary_set_float(t, BG_PLAYER_TIME_PERC, percentage);
   
   bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-               &val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   }
 
 static void poll_player_state(bg_backend_handle_t * dev)
@@ -457,7 +457,7 @@ static void set_player_status(bg_backend_handle_t * dev, const char * str)
   gavl_value_set_int(&v, gmerlin_status);
   
   bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
-               &v, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &v, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   
 
   
@@ -498,7 +498,7 @@ static void set_current_track(bg_backend_handle_t * dev, const gavl_dictionary_t
   gavl_dictionary_copy(gavl_value_set_dictionary(&v), track);
   
   bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-               &v, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+               &v, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   
   gavl_value_free(&v);
   }
@@ -629,7 +629,7 @@ static void mpris2_set_player_property(void * priv, const char * name, const gav
   else if(!strcmp(name, "Volume"))
     {
     bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_VOLUME,
-                 val, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                 val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
     }
   else if(!strcmp(name, "Position"))
     {
@@ -677,7 +677,7 @@ static void mpris2_set_player_property(void * priv, const char * name, const gav
       m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
       gavl_dictionary_set(m, GAVL_META_CAN_PAUSE, val);
       bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                   &v, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                   &v, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
       gavl_value_free(&v);
       }
 
@@ -706,7 +706,7 @@ static void mpris2_set_player_property(void * priv, const char * name, const gav
       m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
       gavl_dictionary_set(m, GAVL_META_CAN_SEEK, val);
       bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK,
-                   &v, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                   &v, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
       gavl_value_free(&v);
       }
     val_i = 0;
@@ -879,17 +879,17 @@ static int create_mpris2(bg_backend_handle_t * dev, const char * uri, const char
       }
     }
   
-  bg_set_network_node_info(gavl_dictionary_get_string(dict, "Identity"), NULL, icon, dev->ctrl.evt_sink);
+  bg_set_network_node_info(gavl_dictionary_get_string(dict, "Identity"), NULL, icon, dev->ctrl_int.evt_sink);
   
   dict = bg_dbus_get_properties(p->conn, p->addr, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player");
   
   gavl_dictionary_foreach(dict, mpris2_set_player_property, dev);
   
   /* Tracklist */
-  bg_player_tracklist_init(&p->tl, dev->ctrl.evt_sink);
+  bg_player_tracklist_init(&p->tl, dev->ctrl_int.evt_sink);
   
   
-  bg_state_apply(&p->gmerlin_state, dev->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+  bg_state_apply(&p->gmerlin_state, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
 
   gavl_dictionary_destroy(dict);
 
@@ -1122,7 +1122,7 @@ static int handle_msg_mpris2(void * priv, // Must be bg_backend_handle_t
               {
               bg_player_tracklist_set_mode(&r->tl, &val.v.i);
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MODE,
-                           &val, be->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+                           &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
               }
 #if 0
             else if(!strcmp(var, BG_PLAYER_STATE_MUTE))          // int

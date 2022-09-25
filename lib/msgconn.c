@@ -233,8 +233,9 @@ int bg_msg_sink_iteration(bg_msg_sink_t * sink)
 
   if(!sink->q)
     {
-    //    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "bg_msg_sink_iteration called for synchronous sink");
-    return 0;
+    // gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "bg_msg_sink_iteration called for synchronous sink");
+    /* Do nothing */
+    return 1;
     }
   
   while((m = bg_msg_queue_try_lock_read(sink->q)))

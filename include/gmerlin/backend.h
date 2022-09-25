@@ -117,6 +117,8 @@ void bg_backend_handle_start(bg_backend_handle_t * d);
 
 int bg_backend_handle_ping(bg_backend_handle_t * d);
 
+const gavl_dictionary_t * bg_backend_handle_get_info(bg_backend_handle_t * d);
+
 /* */
 typedef struct bg_backend_registry_s bg_backend_registry_t;
 

@@ -1718,7 +1718,7 @@ json_object * bg_json_from_url(const char * url, char ** mimetype_ptr)
     if(!(var = gavl_dictionary_get_string(&dict, GAVL_META_MIMETYPE)) ||
        strncasecmp(var, "application/json", 16))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid mimetype %s for xml parsing from %s",
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid mimetype %s for json parsing from %s",
              var, url);
       goto fail;
       }

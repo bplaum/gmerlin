@@ -25,6 +25,7 @@
 #include <gmerlin/msgqueue.h>
 #include <gmerlin/state.h>
 #include <gmerlin/application.h>
+#include <gmerlin/bggavl.h>
 
 #include <gmerlin/backend.h>
 #include <backend_priv.h>
@@ -47,7 +48,6 @@ static void destroy_gmerlin(bg_backend_handle_t * dev)
 
   if(g->conn)
     {
-    bg_websocket_connection_stop(g->conn);
     bg_websocket_connection_destroy(g->conn);
     }
 
@@ -76,7 +76,7 @@ static int create_gmerlin(bg_backend_handle_t * dev, const char * uri_1, const c
     }
 
   dev->ctrl_ext = bg_websocket_connection_get_controllable(g->conn);
-  bg_websocket_connection_start(g->conn);
+  dev->ctrl = dev->ctrl_ext;
   
   ret = 1;
   
@@ -85,8 +85,14 @@ static int create_gmerlin(bg_backend_handle_t * dev, const char * uri_1, const c
   if(uri)
     free(uri);
   
-  
   return ret;
+  }
+
+static int ping_gmerlin(bg_backend_handle_t * dev)
+  {
+  gmerlin_backend_t * g = dev->priv;
+  bg_websocket_connection_iteration(g->conn);
+  return 0;
   }
 
 const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_renderer =
@@ -95,7 +101,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_renderer =
     .uri_prefix = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://",
     .type = BG_BACKEND_RENDERER,
     
-    //    .ping    = ping_gmerlin,
+    .ping    = ping_gmerlin,
     .create    = create_gmerlin,
     .destroy   = destroy_gmerlin,
   };
@@ -107,7 +113,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_mediaserver =
 
     .type = BG_BACKEND_MEDIASERVER,
     
-    //    .ping    = ping_gmerlin,
+    .ping    = ping_gmerlin,
     .create    = create_gmerlin,
     .destroy   = destroy_gmerlin,
   };
@@ -124,7 +130,7 @@ typedef struct
 static int handle_msg_get_node_info(void * data, gavl_msg_t * msg)
   {
   get_node_info_t * ni = data;
-
+  
   
   if((msg->NS == BG_MSG_NS_STATE) &&
      (msg->ID == BG_MSG_STATE_CHANGED))
@@ -155,6 +161,44 @@ static int handle_msg_get_node_info(void * data, gavl_msg_t * msg)
 
 int bg_backend_get_node_info(gavl_dictionary_t * ret)
   {
+  char * uri = NULL;
+  const char * pos;
+  int result = 0;
+  json_object * obj = NULL;
+  gavl_dictionary_t dict;
+  const char * addr = gavl_dictionary_get_string(ret, GAVL_META_URI);
+  
+  gavl_dictionary_init(&dict);
+  
+  if(bg_backend_is_local(addr, ret))
+    return 1;
+  
+  pos = strstr(addr, "://");
+  uri = bg_sprintf("http%s/info", pos);
+
+  fprintf(stderr, "Getting node info for %s (info URI: %s)\n", addr, uri);
+
+  if(!(obj = bg_json_from_url(uri, NULL)))
+    goto fail;
+  
+  if(bg_dictionary_from_json(&dict, obj))
+    {
+    gavl_dictionary_merge2(ret, &dict);
+    result = 1;
+    }
+  
+  fail:
+
+  if(obj)
+    json_object_put(obj);
+  
+  gavl_dictionary_free(&dict);
+
+  if(uri)
+    free(uri);
+  return result;
+  
+#if 0
   bg_msg_sink_t * sink = NULL;
   bg_controllable_t * ctrl;
   get_node_info_t ni;
@@ -192,14 +236,13 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
     if(ni.done)
       break;
     
-    if(!result)
-      {
-      if(num > 100)
-        break;
+    if(result)
+      break;
     
-      gavl_time_delay(&delay_time);
-      num++;
-      }
+    gavl_time_delay(&delay_time);
+    num++;
+    if(num > 100)
+      break;
     }
 
   //  bg_backend_handle_stop(h);
@@ -216,4 +259,8 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
     bg_msg_sink_destroy(sink);
   
   return ni.done;
+#endif
+
+  
+
   }

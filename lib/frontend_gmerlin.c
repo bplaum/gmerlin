@@ -153,10 +153,13 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           //          bg_msg_get_state(msg, &last, &ctx, &var, NULL, &p->state);
           bg_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
           
-          gavl_value_free(&val);
-          
           if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
+            {
             p->have_node = 1;
+            //            fprintf(stderr, "Got network node:\n");
+            //            gavl_value_dump(&val, 2);
+            }
+          gavl_value_free(&val);
           
           }
           break;

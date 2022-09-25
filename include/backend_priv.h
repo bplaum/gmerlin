@@ -39,13 +39,16 @@ struct bg_backend_handle_s
   {
   void * priv;
   const bg_remote_dev_backend_t * b;
-  
+
+  /* Set by registry */
   gavl_dictionary_t dev;
   
-  bg_controllable_t ctrl;
+  bg_controllable_t ctrl_int;
   char * root_url;
 
   bg_controllable_t * ctrl_ext;
+
+  bg_controllable_t * ctrl;
   
   gavl_timer_t * timer;
 
