@@ -600,8 +600,8 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const gavl_dictionary
   remote_priv_t * p = be->priv;
   bg_backend_handle_t * bh;
 
-  fprintf(stderr, "Adding server\n");
-  gavl_dictionary_dump(dict, 2);
+  //  fprintf(stderr, "Adding server\n");
+  //  gavl_dictionary_dump(dict, 2);
     
   if(!(bh = bg_backend_handle_create(dict, http_root_uri)))
     return NULL;

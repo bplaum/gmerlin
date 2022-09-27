@@ -121,23 +121,6 @@ struct bg_websocket_connection_s
   
   };
 
-#if 0
-static int conn_get_state(bg_websocket_connection_t * conn)
-  {
-  return conn->state;
-  }
-
-static void conn_set_state(bg_websocket_connection_t * conn, int s)
-  {
-  conn->state = s;
-  }
-
-static void msg_free(bg_websocket_msg_t * m)
-  {
-  gavl_buffer_free(&m->b);
-  }
-#endif
-
 static void msg_write_reset(msg_write_t * msg)
   {
   gavl_buffer_reset(&msg->buf);
@@ -145,8 +128,8 @@ static void msg_write_reset(msg_write_t * msg)
   msg->head_written = 0;
   msg->mask = NULL;
   }
- 
-static void conn_reset_read_packet(bg_websocket_connection_t * conn)
+
+static void conn_reset_read_msg(bg_websocket_connection_t * conn)
   {
   gavl_buffer_reset(&conn->read_msg.buf);
   conn->read_msg.mask = NULL;
@@ -168,7 +151,7 @@ static void create_msg_header(bg_websocket_connection_t * conn, msg_write_t * ms
   ptr[1] = 0;
   
   if(conn->is_client)
-    ptr[1] = 0x80;
+    ptr[1] |= 0x80; // Mask bit
   
   if(len < 126) // 7 bit
     {
@@ -190,9 +173,7 @@ static void create_msg_header(bg_websocket_connection_t * conn, msg_write_t * ms
     ptr += 8;
     }
 
-  msg->mask = NULL;
-  
-  if(conn->is_client && (len > 0))
+  if(conn->is_client)
     {
     int32_t * ptr_i = (int32_t*)ptr;
     msg->mask = ptr;
@@ -214,46 +195,36 @@ static msg_write_t * get_msg_write(bg_websocket_connection_t * conn)
            sizeof(*conn->write_msg) * (conn->write_msg_alloc - conn->num_write_msg));
     }
   ret = conn->write_msg + conn->num_write_msg;
+  msg_write_reset(ret);
   conn->num_write_msg++;
   return ret;
   }
 
-static int
+static void
 msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int type)
   {
-  int result;
   msg_write_t * write_msg;
   
   write_msg = get_msg_write(conn);
   
   create_msg_header(conn, write_msg, len, type);
-
+  
   gavl_buffer_alloc(&write_msg->buf, len);
   memcpy(write_msg->buf.buf, msg, len);
   write_msg->buf.len = len;
   
-  /* No masking key (we are server) */
-
   if(write_msg->mask)
     {
     int i;
-    for(i = 0; i < len; i++)
-      write_msg->buf.buf[i] ^= conn->write_msg->mask[i % 4];
-    }
-  
-  result = 1;
-#if 0  
-  //  gavl_hexdump(head, ptr - &(head[0]), 16);
+#if 0    
+    fprintf(stderr, "Bytes: %"PRId64" encoding mask:\n", len);
+    gavl_hexdump(write_msg->mask, 4, 4);
 
-  if(gavf_io_write_data(conn->io, conn->write_msg->head, conn->write_msg->head_len) != conn->write_msg->head_len)
-    result = 0;
-  else if((len > 0) && (gavf_io_write_data(conn->io, msg, len) < len))
-    result = 0;
-
-  gavf_io_flush(conn->io);
+    gavl_hexdump(write_msg->buf.buf, len, 16);
 #endif
-  
-  return result;
+    for(i = 0; i < len; i++)
+      write_msg->buf.buf[i] ^= write_msg->mask[i % 4];
+    }
   }
 
 #define RETURN_RES \
@@ -263,7 +234,10 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
     return GAVL_SOURCE_EOF;                         \
     } \
   else if(!result) \
-    return GAVL_SOURCE_AGAIN
+    { \
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Other side disconnected"); \
+    return GAVL_SOURCE_EOF; \
+    }
 
 static gavl_source_status_t
 msg_read(bg_websocket_connection_t * conn)
@@ -273,6 +247,9 @@ msg_read(bg_websocket_connection_t * conn)
     {
     int buf_len;
 
+    if(!gavf_io_can_read(conn->io, 0))
+      return GAVL_SOURCE_AGAIN;
+    
     result = gavf_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
                                         2 - conn->read_msg.head_read);
     RETURN_RES;
@@ -316,6 +293,9 @@ msg_read(bg_websocket_connection_t * conn)
     {
     int buf_len;
     uint8_t * ptr;
+
+    if(!gavf_io_can_read(conn->io, 0))
+      return GAVL_SOURCE_AGAIN;
     
     result = gavf_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
                                         conn->read_msg.head_len - conn->read_msg.head_read);
@@ -369,6 +349,9 @@ msg_read(bg_websocket_connection_t * conn)
 
   if(conn->read_msg.payload_read < conn->read_msg.payload_len)
     {
+    if(!gavf_io_can_read(conn->io, 0))
+      return GAVL_SOURCE_AGAIN;
+    
     result = gavf_io_read_data_nonblock(conn->io,
                                         conn->read_msg.buf.buf + conn->read_msg.buf.len + conn->read_msg.payload_read,
                                         conn->read_msg.payload_len - conn->read_msg.payload_read);
@@ -410,14 +393,9 @@ msg_read(bg_websocket_connection_t * conn)
       case 0x9: // Ping
         /* Send pong */
         //      fprintf(stderr, "Sending pong\n");
-        result = msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0xA);
-        if(result)
-          {
-          conn_reset_read_packet(conn);
-          return GAVL_SOURCE_AGAIN;
-          }
-        else
-          return GAVL_SOURCE_EOF;
+        msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0xA);
+        conn_reset_read_msg(conn);
+        return GAVL_SOURCE_AGAIN;
         break;
       case 0xA: // Pong
         /* If we are a server, check if the pong belongs to the last ping */
@@ -431,7 +409,7 @@ msg_read(bg_websocket_connection_t * conn)
             conn->ping_sent = 0;
             }
           }
-        conn_reset_read_packet(conn);
+        conn_reset_read_msg(conn);
         return GAVL_SOURCE_AGAIN;
         break;
       default:
@@ -585,14 +563,12 @@ static int msg_write_cb(void * data, gavl_msg_t * msg)
   {
   char * str = NULL;
   uint64_t len = 0;
-  int ret;
   bg_websocket_connection_t * conn = data;
   
   str = bg_msg_to_json_str(msg);
   len = strlen(str);
   
-  if(!(ret = msg_write(conn, str, len, 0x1 /* text frame */ )))
-    shutdown(gavf_io_get_socket(conn->io), SHUT_RD);
+  msg_write(conn, str, len, 0x1 /* text frame */ );
   
   if(str)
     free(str);
@@ -605,21 +581,9 @@ static int msg_write_cb(void * data, gavl_msg_t * msg)
     return 0;
     }
   
-  if(!ret)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Writing message failed");
-    gavl_msg_dump(msg, 2);
-    }
-  
-  return ret;
+  return 1;
   }
 
-#if 0
-static int msg_write_cb(void * data, gavl_msg_t * msg)
-  {
-  return bg_websocket_msg_write(data, msg);
-  }
-#endif
 
 static void conn_init(bg_websocket_connection_t * conn, int is_client)
   {
@@ -650,7 +614,7 @@ static void conn_close(bg_websocket_connection_t * conn)
     conn->io = NULL;
     }
   conn->num_write_msg = 0;
-  conn_reset_read_packet(conn);
+  conn_reset_read_msg(conn);
 
   for(i = 0; i < conn->write_msg_alloc; i++)
     msg_write_reset(&conn->write_msg[i]);
@@ -990,7 +954,11 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
 
     if(!bg_msg_from_json_str(&msg, (const char*)conn->read_msg.buf.buf))
       {
-      fprintf(stderr, "bg_msg_from_json_str failed (got %d bytes)\n", conn->read_msg.buf.len);
+      fprintf(stderr, "bg_msg_from_json_str failed (got %d bytes), mask: %p\n",
+              conn->read_msg.buf.len, conn->read_msg.mask);
+
+      gavl_hexdump(conn->read_msg.mask, 4, 4);
+
       gavl_hexdump(conn->read_msg.buf.buf, conn->read_msg.buf.len, 16);
       return 0;
       }
@@ -1024,7 +992,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
     } read_msg;
     */
     
-    conn_reset_read_packet(conn);
+    conn_reset_read_msg(conn);
     gavl_msg_free(&msg);
     }
   

@@ -240,6 +240,7 @@ int bg_backend_handle_handle(bg_http_connection_t * conn,
 
 int bg_backend_handle_ping(bg_backend_handle_t * d)
   {
+  int result;
   int ret = 0;
 
   if(d->ctrl && d->ctrl->cmd_sink)
@@ -252,8 +253,12 @@ int bg_backend_handle_ping(bg_backend_handle_t * d)
     }
   
   if(d->b->ping)
-    ret += d->b->ping(d);
-  
+    {
+    result = d->b->ping(d);
+    if(result < 0)
+      return -1;
+    ret += result;
+    }
   if(d->ctrl && d->ctrl->cmd_sink)
     {
     bg_msg_sink_iteration(d->ctrl->cmd_sink);
@@ -270,7 +275,7 @@ static void * backend_thread(void * data)
   bg_backend_handle_t * be = data;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 20; // 50 ms
 
-  fprintf(stderr, "Backend thread started\n");
+  //  fprintf(stderr, "Backend thread started\n");
   
   while(1)
     {
@@ -288,7 +293,7 @@ static void * backend_thread(void * data)
       gavl_time_delay(&delay_time);
     }
 
-  fprintf(stderr, "Backend thread finished\n");
+  //  fprintf(stderr, "Backend thread finished\n");
 
   return NULL;
   }

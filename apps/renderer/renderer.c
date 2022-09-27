@@ -166,6 +166,10 @@ void renderer_init(renderer_t * s)
 
 void renderer_cleanup(renderer_t * s)
   {
+
+  if(s->player)
+    bg_player_quit(s->player);
+  
   if(s->state_file)
     {
     bg_dictionary_save_xml(&s->state, s->state_file, "state");
@@ -190,13 +194,9 @@ void renderer_cleanup(renderer_t * s)
 
   if(s->srv)
     bg_http_server_destroy(s->srv);
-
-  if(s->player)
-    {
-    bg_player_quit(s->player);
-    bg_player_destroy(s->player);
-    }
   
+  if(s->player)
+    bg_player_destroy(s->player);
   }
 
 int renderer_iteration(renderer_t * s)

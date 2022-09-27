@@ -92,9 +92,10 @@ static int ping_gmerlin(bg_backend_handle_t * dev)
   {
   gmerlin_backend_t * g = dev->priv;
   
-  bg_websocket_connection_iteration(g->conn);
-  
-  return 0;
+  if(!bg_websocket_connection_iteration(g->conn))
+    return -1;
+  else
+    return 0;
   }
 
 const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_renderer =
