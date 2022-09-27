@@ -91,7 +91,9 @@ static int create_gmerlin(bg_backend_handle_t * dev, const char * uri_1, const c
 static int ping_gmerlin(bg_backend_handle_t * dev)
   {
   gmerlin_backend_t * g = dev->priv;
+  
   bg_websocket_connection_iteration(g->conn);
+  
   return 0;
   }
 

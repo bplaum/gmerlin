@@ -277,6 +277,8 @@ static void * backend_thread(void * data)
     ops = 0;
     
     res = bg_backend_handle_ping(be);
+
+    //    fprintf(stderr, "bg_backend_handle_ping %d\n", res);
     
     if(res < 0)
       break;
