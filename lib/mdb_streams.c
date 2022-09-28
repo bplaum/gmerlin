@@ -871,7 +871,7 @@ static int get_source_callback(void * data, int argc, char **argv, char **azColN
   gavl_dictionary_t * mdb;
   //  gavl_array_t * browse_modes;
   
-  int64_t id;
+  int64_t id = 0;
   bg_mdb_backend_t * be = data;
   streams_t * p = be->priv;
   
@@ -1042,7 +1042,7 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   int num_containers = 0;
   const gavl_dictionary_t * mdb;
   const gavl_array_t * browse_modes;
-  char * sql;
+  char * sql = NULL;
   const char * group = NULL;
   
   gavl_array_init(&siblings);
@@ -1660,7 +1660,7 @@ browse_containers_callback(void * data, int argc, char **argv, char **azColName)
   gavl_dictionary_t * dict;
   gavl_dictionary_t * m;
   char * sql = NULL;
-  int64_t id;
+  int64_t id = 0;
   int num_children;
 
   if((b->start > 0) && (b->idx < b->start))
@@ -2519,7 +2519,9 @@ static void init_sources(bg_mdb_backend_t * b)
       mdb = gavl_dictionary_get_dictionary_nc(dict, BG_MDB_DICT);
       gavl_dictionary_get_long(mdb, META_DB_ID, &id);
       }
-      
+    else
+      continue;
+    
     /* Children */
 
     sql = sqlite3_mprintf("select count(distinct attr_id) from station_countries where SOURCE_ID = %"PRId64";", id);
@@ -2958,7 +2960,7 @@ static int import_iptv_org(bg_mdb_backend_t * b, int64_t source_id)
       continue;
       }
 
-    if(!(var = bg_json_dict_get_string(child, "status")))
+    if((var = bg_json_dict_get_string(child, "status")))
       {
       if(!strcmp(var, "timeout") || !strcmp(var, "error"))
         continue;

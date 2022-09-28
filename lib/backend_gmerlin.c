@@ -123,45 +123,6 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_mediaserver =
 
 
 /* Obtain label and icons */
-
-typedef struct
-  {
-  gavl_dictionary_t * dict;
-  int done;
-  } get_node_info_t;
-
-static int handle_msg_get_node_info(void * data, gavl_msg_t * msg)
-  {
-  get_node_info_t * ni = data;
-  
-  
-  if((msg->NS == BG_MSG_NS_STATE) &&
-     (msg->ID == BG_MSG_STATE_CHANGED))
-    {
-    int last;
-    const char * ctx = NULL;
-    const char * var = NULL;
-    gavl_value_t val;
-
-
-    gavl_value_init(&val);
-    
-    bg_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
-    
-    if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE))
-      {
-      if(var)
-        gavl_dictionary_set_nocopy(ni->dict, var, &val);
-
-      if(last)
-        ni->done = 1;
-      }
-    gavl_value_free(&val);
-    }
-  
-  return 1;
-  }
-
 int bg_backend_get_node_info(gavl_dictionary_t * ret)
   {
   char * uri = NULL;
