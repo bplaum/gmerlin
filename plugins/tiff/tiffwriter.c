@@ -138,10 +138,10 @@ static tsize_t read_function(thandle_t fd, tdata_t data, tsize_t length)
   //          tiff->p->data_len, tiff->packet_pos);
   
   bytes_read = length;
-  if(bytes_read > tiff->p->data_len - tiff->packet_pos)
-    bytes_read = tiff->p->data_len - tiff->packet_pos;
+  if(bytes_read > tiff->p->buf.len - tiff->packet_pos)
+    bytes_read = tiff->p->buf.len - tiff->packet_pos;
 
-  memcpy(data, tiff->p->data + tiff->packet_pos, bytes_read);
+  memcpy(data, tiff->p->buf.buf + tiff->packet_pos, bytes_read);
   tiff->packet_pos += bytes_read;
   return bytes_read;
   }
@@ -158,14 +158,14 @@ static toff_t seek_function(thandle_t fd, toff_t off, int whence)
   else if (whence == SEEK_CUR)
     tiff->packet_pos += off;
   else if (whence == SEEK_END)
-    tiff->packet_pos = tiff->p->data_len + off;
+    tiff->packet_pos = tiff->p->buf.len + off;
   
-  if(tiff->packet_pos > tiff->p->data_len)
+  if(tiff->packet_pos > tiff->p->buf.len)
     {
     /* Realloc */
     gavl_packet_alloc(tiff->p, tiff->packet_pos);
-    memset(tiff->p->data + tiff->p->data_len, 0, tiff->packet_pos - tiff->p->data_len);
-    tiff->p->data_len = tiff->packet_pos;
+    memset(tiff->p->buf.buf + tiff->p->buf.len, 0, tiff->packet_pos - tiff->p->buf.len);
+    tiff->p->buf.len = tiff->packet_pos;
     }
   return tiff->packet_pos;
   }
@@ -173,7 +173,7 @@ static toff_t seek_function(thandle_t fd, toff_t off, int whence)
 static toff_t size_function(thandle_t fd)
   {
   bg_tiff_writer_t * tiff = (bg_tiff_writer_t *)fd;
-  return tiff->p->data_len;
+  return tiff->p->buf.len;
   }
 
 static int close_function(thandle_t fd)
@@ -189,16 +189,16 @@ static tsize_t write_function(thandle_t fd, tdata_t data, tsize_t length)
   //          tiff->p->data_len, tiff->packet_pos);
   
   /* Realloc */
-  if(tiff->packet_pos + length > tiff->p->data_len)
+  if(tiff->packet_pos + length > tiff->p->buf.len)
     gavl_packet_alloc(tiff->p, tiff->packet_pos + length);
 
   /* Copy + advance */
-  memcpy(tiff->p->data + tiff->packet_pos, data, length);
+  memcpy(tiff->p->buf.buf + tiff->packet_pos, data, length);
   tiff->packet_pos += length;
 
   /* Adjust length */
-  if(tiff->p->data_len < tiff->packet_pos)
-    tiff->p->data_len = tiff->packet_pos;
+  if(tiff->p->buf.len < tiff->packet_pos)
+    tiff->p->buf.len = tiff->packet_pos;
   
   return length;
   }

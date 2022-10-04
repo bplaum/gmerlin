@@ -598,7 +598,7 @@ void bg_osd_update(bg_osd_t * osd)
   current_time = gavl_timer_get(osd->timer);
   /* Check if OSD changed */
 
-  if(osd->p.data)
+  if(osd->p.buf.buf)
     {
     if((osd->p.flags & PACKET_FLAG_UPDATE) && osd->ovl)
       {
@@ -656,9 +656,9 @@ static void osd_set_nolock(bg_osd_t * osd, char * str,
   gavl_packet_free(&osd->p);
   gavl_packet_init(&osd->p);
     
-  osd->p.data       = (uint8_t *)str;
-  osd->p.data_len   = strlen(str);
-  osd->p.data_alloc = osd->p.data_len;
+  osd->p.buf.buf       = (uint8_t *)str;
+  osd->p.buf.len   = strlen(str);
+  osd->p.buf.alloc = osd->p.buf.len;
   osd->p.flags = flags;
   osd->p.duration = osd->duration * dur_mult; 
 

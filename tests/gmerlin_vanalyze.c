@@ -284,7 +284,7 @@ int main(int argc, char ** argv)
 #endif
       
       packet_cache[packet_cache_size].pts = packet.pts;
-      packet_cache[packet_cache_size].frame_bytes = packet.data_len;
+      packet_cache[packet_cache_size].frame_bytes = packet.buf.len;
       packet_cache_size++;
       }
 

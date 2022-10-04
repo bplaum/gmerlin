@@ -1660,7 +1660,7 @@ static int subtitle_iteration(bg_transcoder_t * t)
           {
           ret =
             bg_encoder_write_text(t->enc,
-                                  (char*)(ts->com.com.packet.data),
+                                  (char*)(ts->com.com.packet.buf.buf),
                                   ts->com.com.packet.pts,
                                   ts->com.com.packet.duration,
                                   ts->com.com.out_index);

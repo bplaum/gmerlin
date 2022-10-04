@@ -961,8 +961,8 @@ int bg_encoder_write_text(bg_encoder_t * enc,
   text_stream_t * s = &enc->text_streams[stream];
 
   gavl_packet_init(&p);
-  p.data = (uint8_t*)text;
-  p.data_len = strlen(text);
+  p.buf.buf = (uint8_t*)text;
+  p.buf.len = strlen(text);
   p.pts = start;
   p.duration = duration;
   return (gavl_packet_sink_put_packet(s->com.psink, &p) == GAVL_SINK_OK);

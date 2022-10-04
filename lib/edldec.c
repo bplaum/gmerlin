@@ -1099,13 +1099,21 @@ static int start_edl(void * priv)
 
       src_dict = ed->streams[i].src->st;
       dst_dict = ed->streams[i].s;
+
+      gavl_dictionary_merge2(dst_dict, src_dict);
       
       //      fprintf(stderr, "Copy stats\n");
       //      gavl_dictionary_dump(src_dict, 2);
-      
+
       gavl_dictionary_set(dst_dict,
                           GAVL_META_STREAM_STATS,
                           gavl_dictionary_get(src_dict, GAVL_META_STREAM_STATS));
+
+      src_dict = gavl_track_get_metadata(src_dict);
+      dst_dict = gavl_track_get_metadata_nc(dst_dict);
+      
+      gavl_dictionary_merge2(dst_dict, src_dict);
+      
       }
     }
   

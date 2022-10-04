@@ -71,7 +71,7 @@ static void write_subtitle_srt(subtext_t * s, gavl_packet_t * p)
   int i;
   char ** lines;
 
-  if(!p->data_len)
+  if(!p->buf.len)
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Ignoring empty subtitle");
     return;
@@ -87,7 +87,7 @@ static void write_subtitle_srt(subtext_t * s, gavl_packet_t * p)
   write_time_srt(s->output, p->pts+p->duration);
   fprintf(s->output, "\r\n");
   
-  lines = gavl_strbreak((char*)p->data, '\n');
+  lines = gavl_strbreak((char*)p->buf.buf, '\n');
   i = 0;
   while(lines[i])
     {
@@ -136,7 +136,7 @@ static void write_subtitle_mpsub(subtext_t * s, gavl_packet_t * p)
             gavl_time_to_seconds(p->pts),
             gavl_time_to_seconds(p->duration));
   
-  fprintf(s->output, "%s\n\n", (char*)p->data);
+  fprintf(s->output, "%s\n\n", (char*)p->buf.buf);
   }
 
 static const struct

@@ -42,9 +42,9 @@ write_function(png_structp png_ptr, png_bytep data, png_size_t length)
   {
   bg_pngwriter_t * png = png_get_io_ptr(png_ptr);
 
-  gavl_packet_alloc(png->p, png->p->data_len + length);
-  memcpy(png->p->data + png->p->data_len, data, length);
-  png->p->data_len += length;
+  gavl_packet_alloc(png->p, png->p->buf.len + length);
+  memcpy(png->p->buf.buf + png->p->buf.len, data, length);
+  png->p->buf.len += length;
   }
 
 static void

@@ -541,11 +541,11 @@ static gavl_source_status_t read_video_packet_input(void * priv, gavl_packet_t *
 
   gavl_packet_alloc(*p, size);
 
-  (*p)->data_len = fread((*p)->data, 1, size, in);
+  (*p)->buf.len = fread((*p)->buf.buf, 1, size, in);
   
   fclose(in);
   
-  if((*p)->data_len < size)
+  if((*p)->buf.len < size)
     return 0;
 
   (*p)->pts = (inp->current_frame - inp->frame_start) * inp->frame_duration;
@@ -1134,7 +1134,7 @@ static gavl_sink_status_t write_packet_encoder(void * data, gavl_packet_t * pack
     return GAVL_SINK_ERROR;
     }
   
-  if(fwrite(packet->data, 1, packet->data_len, out) < packet->data_len)
+  if(fwrite(packet->buf.buf, 1, packet->buf.len, out) < packet->buf.len)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN_ENC, "Couldn't write data to %s: %s",
            e->filename_buffer, strerror(errno));

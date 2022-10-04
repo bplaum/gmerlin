@@ -734,7 +734,7 @@ static gavl_source_status_t read_video(void * priv, gavl_video_frame_t ** frame)
     return st;
 
   *frame =
-    bg_text_renderer_render(r, (char*)p->data); // Assume the text is properly zero padded);
+    bg_text_renderer_render(r, (char*)p->buf.buf); // Assume the text is properly zero padded);
                             
   (*frame)->timestamp = p->pts;
   (*frame)->duration = p->duration;

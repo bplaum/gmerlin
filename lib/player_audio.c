@@ -122,7 +122,7 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
   start_time = gavl_stream_get_start_time(stream);
 
   s->time_offset = start_time - player->display_time_offset;
-  fprintf(stderr, "Got time offset: %"PRId64"\n", s->time_offset);
+  //  fprintf(stderr, "Got time offset: %"PRId64"\n", s->time_offset);
 #if 0
   if(s->time_offset < 0)
     {

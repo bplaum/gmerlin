@@ -113,8 +113,8 @@ write_ovl2text(void * priv, gavl_overlay_t * ovl)
     {
     gavl_packet_t p;
     gavl_packet_init(&p);
-    p.data_len = strlen(str);
-    p.data = (uint8_t *)str;
+    p.buf.len = strlen(str);
+    p.buf.buf = (uint8_t *)str;
     p.pts = ovl->timestamp;
     p.duration = ovl->duration;
     return gavl_packet_sink_put_packet(e->sink_int, &p);
