@@ -1041,7 +1041,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                                        add_file_callback,
                                        filesel_close_callback,
                                        t, NULL /* parent */,
-                                       t->plugin_reg, BG_PLUGIN_INPUT,
+                                       BG_PLUGIN_INPUT,
                                        BG_PLUGIN_FILE);
 
     bg_gtk_filesel_set_directory(t->filesel, t->open_path);

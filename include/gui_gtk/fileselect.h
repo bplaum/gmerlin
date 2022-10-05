@@ -34,11 +34,12 @@ bg_gtk_filesel_create(const char * title,
                                            void * data),
                       void * user_data,
                       GtkWidget * parent_window,
-                      bg_plugin_registry_t * plugin_reg, int type_mask,
+                      int type_mask,
                       int flag_mask);
 
 /* Create directory selector (for addig directories to the tree) */
 
+#if 0
 bg_gtk_filesel_t *
 bg_gtk_dirsel_create(const char * title,
                      void (*add_dir)(char * dir, int recursive,
@@ -52,7 +53,7 @@ bg_gtk_dirsel_create(const char * title,
                      void * user_data,
                      GtkWidget * parent_window,
                      bg_plugin_registry_t * plugin_reg, int type_mask, int flag_mask);
-
+#endif
 
 /* Destroy fileselector */
 

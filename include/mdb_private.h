@@ -147,9 +147,9 @@ gavl_dictionary_t * bg_mdb_get_root_container(bg_mdb_t * db, const char * media_
 void bg_mdb_init_root_container(gavl_dictionary_t * dict, const char * media_class);
 
 gavl_dictionary_t * bg_mdb_add_dir_array(gavl_array_t * arr, const char * dir, const char * parent_id);
-void bg_mdb_del_dir_array(gavl_array_t * arr, const char * dir);
+// void bg_mdb_del_dir_array(gavl_array_t * arr, const char * dir);
 
-int bg_mdb_has_dir_array(gavl_array_t * arr, const char * dir);
+// int bg_mdb_has_dir_array(gavl_array_t * arr, const char * dir);
 const gavl_dictionary_t * bg_mdb_dir_array_get(const gavl_array_t * arr, int idx);
 const gavl_dictionary_t * bg_mdb_dir_array_get_by_id(const gavl_array_t * arr, const char * id);
 

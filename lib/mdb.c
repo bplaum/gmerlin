@@ -74,21 +74,6 @@ static int get_klass_idx(const char * klass);
 static void finalize(gavl_dictionary_t * dict, int idx, int total);
 
 
-#if 0
-static bg_mdb_backend_t * be_from_id(bg_mdb_t * db, const char * id)
-  {
-  int i;
-  for(i = 0; i < num_backends; i++)
-    {
-    if(!strncmp(id, db->backends[i].prefix, strlen(db->backends[i].prefix)))
-      {
-      return &db->backends[i];
-      break;
-      }
-    }
-  return NULL;
-  }
-#endif
 
 static bg_mdb_backend_t * be_from_name(bg_mdb_t * db, const char * name)
   {
@@ -1796,30 +1781,6 @@ gavl_dictionary_t * bg_mdb_add_dir_array(gavl_array_t * arr, const char * dir, c
   return gavl_value_get_dictionary_nc(&arr->entries[arr->num_entries-1]);
   }
 
-void bg_mdb_del_dir_array(gavl_array_t * arr, const char * dir)
-  {
-  int i;
-  const gavl_dictionary_t * d;
-  const char * str;
-
-  //  fprintf(stderr, "bg_mdb_del_dir_array: %s\n", dir);
-  //  gavl_array_dump(arr, 2);
-  
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if((d = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(d, GAVL_META_URI)) &&
-       !strcmp(dir, str))
-      {
-      gavl_array_splice_val(arr, i, 1, NULL);
-      return;
-      }
-    }
-
-  
-
-  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't delete %s", dir);
-  }
 
 const gavl_dictionary_t * bg_mdb_dir_array_get(const gavl_array_t * arr, int idx)
   {
@@ -1850,24 +1811,6 @@ const gavl_dictionary_t * bg_mdb_dir_array_get_by_id(const gavl_array_t * arr, c
   return NULL;
   }
 
-
-int bg_mdb_has_dir_array(gavl_array_t * arr, const char * dir)
-  {
-  int i;
-  const gavl_dictionary_t * d;
-  const char * str;
-  
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if((d = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(d, GAVL_META_URI)) &&
-       !strcmp(dir, str))
-      {
-      return 1;
-      }
-    }
-  return 0;
-  }
 
 bg_controllable_t * bg_mdb_get_controllable(bg_mdb_t * db)
   {

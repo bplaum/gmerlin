@@ -735,6 +735,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   gtk_widget_hide(t->menu.album_menu.new_playlist_item);
   gtk_widget_hide(t->menu.album_menu.new_container_item);
   gtk_widget_hide(t->menu.album_menu.new_stream_source_item);
+  gtk_widget_hide(t->menu.album_menu.add_folder_item);
 
   gtk_widget_hide(t->menu.album_menu.delete_item);
   
@@ -782,6 +783,9 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
 
       if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_STREAMS))
         gtk_widget_show(t->menu.album_menu.new_stream_source_item);
+      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES) ||
+              !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS))
+        gtk_widget_show(t->menu.album_menu.add_folder_item);
       else
         {
         if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_SONG))
@@ -1296,6 +1300,10 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     /* TODO: New stream source */
     create_stream_source(tree);
     }
+  else if(item == tree->menu.album_menu.add_folder_item)
+    {
+    /* TODO: Add folder */
+    }
   else if(item == tree->menu.album_menu.delete_item)
     {
     bg_gtk_mdb_tree_delete_selected_album(tree);
@@ -1381,6 +1389,7 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->album_menu.new_playlist_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_PLAYLIST, "New playlist...", 0, 0);
   m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New folder...", 0, 0);
   m->album_menu.new_stream_source_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_NETWORK, "New source...", 0, 0);
+  m->album_menu.add_folder_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "Add folder...", 0, 0);
 
   m->album_menu.delete_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_TRASH, "Delete", 0, 0);
   

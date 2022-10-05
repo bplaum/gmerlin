@@ -1385,7 +1385,8 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
     result = 1;
     goto end;
     }
-  else if(gavl_string_starts_with(id, fs->image_root_id) && (dict = bg_mdb_dir_array_get_by_id(&fs->image_dirs, id)))
+  else if(gavl_string_starts_with(id, fs->image_root_id) &&
+          (dict = bg_mdb_dir_array_get_by_id(&fs->image_dirs, id)))
     {
     obj = gavl_dictionary_get_dictionary(dict, "obj");
 
@@ -1797,6 +1798,7 @@ static const bg_parameter_info_t parameters[] =
       .long_name = TRS("Mount video disks"),
       .type = BG_PARAMETER_CHECKBUTTON,
     },
+#if 1
     {
       .name = "dirs",
       .long_name = TRS("Directories"),
@@ -1808,6 +1810,7 @@ static const bg_parameter_info_t parameters[] =
       .long_name = TRS("Folder containing photoalbums"),
       .type = BG_PARAMETER_DIRLIST,
     },
+#endif
     { /* End */ },
   };
 
@@ -1835,16 +1838,20 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   //  gavl_array_dump(priv->dirs, 2);
   
   priv->container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES);
-  
   bg_mdb_container_set_backend(priv->container, MDB_BACKEND_FILESYSTEM);
 
+  bg_mdb_add_can_add(priv->container, "item.location");
+  bg_mdb_set_editable(priv->container);
+  
   /* Add children */
   gavl_track_set_num_children(priv->container, priv->dirs.num_entries, 0);
   
   priv->image_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS);
   
   bg_mdb_container_set_backend(priv->image_container, MDB_BACKEND_FILESYSTEM);
-
+  bg_mdb_add_can_add(priv->image_container, "item.location");
+  bg_mdb_set_editable(priv->image_container);
+  
   /* Add children */
   gavl_track_set_num_children(priv->image_container, priv->image_dirs.num_entries, 0);
 
@@ -1852,5 +1859,12 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   tmp_string = bg_sprintf("%s/fs_cache", b->db->path);
   priv->cache = bg_object_cache_create(1024, 32, tmp_string);
   free(tmp_string);
-    
+
+  /* Load directories */
+  tmp_string = bg_sprintf("%s/fs_dirs", b->db->path);
+  free(tmp_string);
+  
+  tmp_string = bg_sprintf("%s/photo_dirs", b->db->path);
+  free(tmp_string);
+  
   }
