@@ -1550,6 +1550,13 @@ static void rescan(bg_mdb_backend_t * be)
     }
   }
 
+static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_value_t * add)
+  {
+  fprintf(stderr, "splice %s %d %d %d\n", ctx_id, last, idx, del);
+  gavl_value_dump(add, 2);
+  return 1;
+  }
+
 static int handle_msg(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
@@ -1599,6 +1606,20 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
           bg_msg_sink_put(be->ctrl.evt_sink, res);
 
+          }
+          break;
+        case BG_CMD_DB_SPLICE_CHILDREN:
+          {
+          int last = 0;
+          int idx = 0;
+          int del = 0;
+          gavl_value_t add;
+          gavl_value_init(&add);
+          
+          gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
+
+          splice(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add);
+          gavl_value_free(&add);
           }
           break;
         }
@@ -1840,7 +1861,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   priv->container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES);
   bg_mdb_container_set_backend(priv->container, MDB_BACKEND_FILESYSTEM);
 
-  bg_mdb_add_can_add(priv->container, "item.location");
+  bg_mdb_add_can_add(priv->container, GAVL_META_MEDIA_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->container);
   
   /* Add children */
@@ -1849,7 +1870,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   priv->image_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS);
   
   bg_mdb_container_set_backend(priv->image_container, MDB_BACKEND_FILESYSTEM);
-  bg_mdb_add_can_add(priv->image_container, "item.location");
+  bg_mdb_add_can_add(priv->image_container, GAVL_META_MEDIA_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->image_container);
   
   /* Add children */

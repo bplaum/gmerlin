@@ -129,14 +129,19 @@ static void msg_write_reset(msg_write_t * msg)
   msg->mask = NULL;
   }
 
-static void conn_reset_read_msg(bg_websocket_connection_t * conn)
+static void conn_reset_read_msg_segment(bg_websocket_connection_t * conn)
   {
-  gavl_buffer_reset(&conn->read_msg.buf);
   conn->read_msg.mask = NULL;
   conn->read_msg.head_len = 0;
   conn->read_msg.head_read = 0;
   conn->read_msg.payload_len = 0;
   conn->read_msg.payload_read = 0;
+  }
+
+static void conn_reset_read_msg(bg_websocket_connection_t * conn)
+  {
+  conn_reset_read_msg_segment(conn);
+  gavl_buffer_reset(&conn->read_msg.buf);
   }
 
 
@@ -243,6 +248,7 @@ static gavl_source_status_t
 msg_read(bg_websocket_connection_t * conn)
   {
   int result;
+  
   if(conn->read_msg.head_read < 2)
     {
     int buf_len;
@@ -383,7 +389,11 @@ msg_read(bg_websocket_connection_t * conn)
         if(conn->read_msg.head[0] & 0x80) // FIN
           return GAVL_SOURCE_OK;
         else
+          {
+          /* Read another segment */
+          conn_reset_read_msg_segment(conn);
           return GAVL_SOURCE_AGAIN;
+          }
         break;
       case 0x8: // Close
         msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0x8);
@@ -418,6 +428,11 @@ msg_read(bg_websocket_connection_t * conn)
         break;
       }
     }
+  else
+    {
+    fprintf(stderr, "Got payload %"PRId64" %"PRId64"\n", conn->read_msg.payload_read, conn->read_msg.payload_len);
+    }
+  
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Whoops %x", conn->read_msg.head[0] & 0x0f);
   return GAVL_SOURCE_EOF;
   
@@ -945,8 +960,6 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
     
     else if(st == GAVL_SOURCE_AGAIN)
       break;
-    
-    //  fprintf(stderr, "Got Websocket message: %s\n", conn->read_msg.buf.buf);
     
     gavl_msg_init(&msg);
     

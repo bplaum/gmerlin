@@ -182,7 +182,7 @@ const char * bg_gtk_file_entry_get_filename(bg_gtk_file_entry_t * f)
 
 void bg_gtk_file_entry_set_filename(bg_gtk_file_entry_t * f, const char * s)
   {
-  if(!s || (*s == '\0'))
+  if(!s)
     {
     gtk_entry_set_text(GTK_ENTRY(f->entry), "");
     return;

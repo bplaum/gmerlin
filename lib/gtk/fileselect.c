@@ -553,3 +553,57 @@ char * bg_gtk_get_filename_read(const char * title,
   
   return ret;
   }
+
+char * bg_gtk_get_directory(const char * title,
+                            GtkWidget * parent)
+  {
+  char * ret;
+  char * tmp_string;
+  filesel_write_struct f;
+
+  ret = NULL;
+
+  parent = bg_gtk_get_toplevel(parent);
+  
+  f.w =     
+    gtk_file_chooser_dialog_new(title,
+                                GTK_WINDOW(parent),
+                                GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                                TR("_Cancel"),
+                                GTK_RESPONSE_CANCEL,
+                                TR("_OK"), GTK_RESPONSE_OK,
+                                NULL);
+  
+  /* Set attributes */
+  
+  gtk_window_set_modal(GTK_WINDOW(f.w), 1);
+  f.answer = 0;
+  
+  /* Set callbacks */
+  
+  g_signal_connect(G_OBJECT(f.w), "delete_event",
+                   G_CALLBACK(write_delete_callback),
+                   (gpointer)(&f));
+  g_signal_connect(G_OBJECT(f.w), "response",
+                   G_CALLBACK(write_callback),
+                   (gpointer)(&f));
+  
+  /* Run the widget */
+  
+  gtk_widget_show(f.w);
+  gtk_main();
+  
+  /* Fetch the answer */
+  
+  if(!f.answer)
+    {
+    gtk_widget_destroy(f.w);
+    return NULL;
+    }
+  
+  tmp_string = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f.w));
+  ret = gavl_strdup(tmp_string);
+  g_free(tmp_string);
+  
+  return ret;
+  }

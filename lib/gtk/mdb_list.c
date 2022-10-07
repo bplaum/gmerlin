@@ -1,3 +1,4 @@
+
 /*****************************************************************
  * gmerlin - a general purpose multimedia framework and applications
  *
@@ -41,6 +42,7 @@
 
 #include <gui_gtk/mdb.h>
 #include <gui_gtk/gtkutils.h>
+#include <gui_gtk/fileselect.h>
 #include <gavl/metatags.h>
 
 #include <gmerlin/cfg_dialog.h>
@@ -56,8 +58,9 @@ static void save_selected(bg_gtk_mdb_tree_t * tree);
 
 static void load_files(bg_gtk_mdb_tree_t * tree);
 static void create_playlist(bg_gtk_mdb_tree_t * tree);
-static void create_folder(bg_gtk_mdb_tree_t * tree);  
+static void create_container(bg_gtk_mdb_tree_t * tree);  
 static void load_uri(bg_gtk_mdb_tree_t * tree);
+static void create_directory(bg_gtk_mdb_tree_t * tree);  
 
 static void create_stream_source(bg_gtk_mdb_tree_t * tree);
 
@@ -735,7 +738,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   gtk_widget_hide(t->menu.album_menu.new_playlist_item);
   gtk_widget_hide(t->menu.album_menu.new_container_item);
   gtk_widget_hide(t->menu.album_menu.new_stream_source_item);
-  gtk_widget_hide(t->menu.album_menu.add_folder_item);
+  gtk_widget_hide(t->menu.album_menu.add_directory_item);
 
   gtk_widget_hide(t->menu.album_menu.delete_item);
   
@@ -783,14 +786,14 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
 
       if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_STREAMS))
         gtk_widget_show(t->menu.album_menu.new_stream_source_item);
-      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES) ||
-              !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS))
-        gtk_widget_show(t->menu.album_menu.add_folder_item);
       else
         {
         if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_SONG))
           gtk_widget_show(t->menu.album_menu.load_files_item);
 
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_DIRECTORY))
+          gtk_widget_show(t->menu.album_menu.add_directory_item);
+        
         if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_CONTAINER))
           gtk_widget_show(t->menu.album_menu.new_container_item);
         else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_PLAYLIST))
@@ -1293,16 +1296,17 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     }
   else if(item == tree->menu.album_menu.new_container_item)
     {
-    create_folder(tree);
+    create_container(tree);
     }
   else if(item == tree->menu.album_menu.new_stream_source_item)
     {
     /* TODO: New stream source */
     create_stream_source(tree);
     }
-  else if(item == tree->menu.album_menu.add_folder_item)
+  else if(item == tree->menu.album_menu.add_directory_item)
     {
-    /* TODO: Add folder */
+    /* Add directory */
+    create_directory(tree);
     }
   else if(item == tree->menu.album_menu.delete_item)
     {
@@ -1387,9 +1391,9 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->album_menu.load_files_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER_OPEN, "Add file(s)", 0, 0);
   m->album_menu.load_url_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_GLOBE, "Add URL", 0, 0);
   m->album_menu.new_playlist_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_PLAYLIST, "New playlist...", 0, 0);
-  m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New folder...", 0, 0);
+  m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New container...", 0, 0);
   m->album_menu.new_stream_source_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_NETWORK, "New source...", 0, 0);
-  m->album_menu.add_folder_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "Add folder...", 0, 0);
+  m->album_menu.add_directory_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "Add folder...", 0, 0);
 
   m->album_menu.delete_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_TRASH, "Delete", 0, 0);
   
@@ -2416,18 +2420,21 @@ static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
   bg_dialog_destroy(dlg);
   }
 
+#if 0
 static void ask_container(GtkWidget * w, gavl_dictionary_t * ret)
   {
   bg_dialog_t * dlg;
-  
   dlg = bg_dialog_create(NULL, set_parameter_ask_container, ret, container_params, TRS("Add Folder"));
   bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
   bg_dialog_destroy(dlg);
   }
+#endif
 
-static void create_container(bg_gtk_mdb_tree_t * tree,
-                             const char * label,
-                             const char * klass)
+
+static void create_container_generic(bg_gtk_mdb_tree_t * tree,
+                                     const char * label,
+                                     const char * klass,
+                                     const char * uri)
   {
   gavl_msg_t * msg;
   gavl_dictionary_t * c;
@@ -2439,6 +2446,8 @@ static void create_container(bg_gtk_mdb_tree_t * tree,
   gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
   gavl_dictionary_set_string(m, GAVL_META_TITLE, label);
   gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, klass);
+  gavl_dictionary_set_string(m, GAVL_META_URI, uri);
+  
   gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN, 0);
 
   msg = bg_msg_sink_get(tree->ctrl.cmd_sink);
@@ -2454,6 +2463,7 @@ static void create_container(bg_gtk_mdb_tree_t * tree,
   
   bg_msg_sink_put(tree->ctrl.cmd_sink, msg);
   }
+
 
 static void add_stream_source(bg_gtk_mdb_tree_t * tree,
                               const char * label,
@@ -2519,30 +2529,22 @@ static void create_playlist(bg_gtk_mdb_tree_t * tree)
   if(!str)
     return;
 
-  create_container(tree, str, GAVL_META_MEDIA_CLASS_PLAYLIST);
+  create_container_generic(tree, str, GAVL_META_MEDIA_CLASS_PLAYLIST, NULL);
   }
 
-static void create_folder(bg_gtk_mdb_tree_t * tree)
+static void create_container(bg_gtk_mdb_tree_t * tree)
   {
-#if 0
-
-  char * str;
-  
-  str = ask_string(tree->menu_ctx.widget, "Create folder", "Name");
-  if(!str)
-    return;
-
-  create_container(tree, str, GAVL_META_MEDIA_CLASS_CONTAINER);
-#else
-
   const char *label;
   const char *klass;
-  
+  bg_dialog_t * dlg;
   gavl_dictionary_t dict;
 
   gavl_dictionary_init(&dict);
 
-  ask_container(tree->menu_ctx.widget, &dict);
+  dlg = bg_dialog_create(NULL, set_parameter_ask_container, &dict, container_params, TRS("Add Folder"));
+  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(tree->treeview)));
+  bg_dialog_destroy(dlg);
+  //  ask_container(tree->menu_ctx.widget, &dict);
 
   klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS);
   label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
@@ -2551,11 +2553,21 @@ static void create_folder(bg_gtk_mdb_tree_t * tree)
     {
     if(!label)
       label = "Unnamed";
-    create_container(tree, label, klass);
+    create_container_generic(tree, label, klass, NULL);
     }
   gavl_dictionary_free(&dict);
-#endif
+  }
+
+static void create_directory(bg_gtk_mdb_tree_t * tree)
+  {
+  char * uri = bg_gtk_get_directory("Add directory",
+                                    bg_gtk_get_toplevel(tree->treeview));
+
+  if(!uri)
+    return;
   
+  create_container_generic(tree, NULL, GAVL_META_MEDIA_CLASS_DIRECTORY, uri);
+  free(uri);
   }
 
 static void load_uri(bg_gtk_mdb_tree_t * tree)

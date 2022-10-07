@@ -86,5 +86,9 @@ char * bg_gtk_get_filename_write(const char * title,
 char * bg_gtk_get_filename_read(const char * title,
                                 char ** directory, GtkWidget * parent);
 
+char * bg_gtk_get_directory(const char * title,
+                            GtkWidget * parent);
+
+
 #endif // BG_GTK_FILESELECT_H_INCLUDED
 

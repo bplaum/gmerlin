@@ -60,7 +60,7 @@ typedef struct
   GtkWidget * new_playlist_item;
   GtkWidget * new_container_item;
   GtkWidget * new_stream_source_item;
-  GtkWidget * add_folder_item;
+  GtkWidget * add_directory_item;
   GtkWidget * delete_item;
   
   } album_menu_t;
