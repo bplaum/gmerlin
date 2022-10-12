@@ -180,9 +180,11 @@ static void create_msg_header(bg_websocket_connection_t * conn, msg_write_t * ms
 
   if(conn->is_client)
     {
-    int32_t * ptr_i = (int32_t*)ptr;
     msg->mask = ptr;
-    *ptr_i = rand();
+    msg->mask[0] = rand();
+    msg->mask[1] = rand();
+    msg->mask[2] = rand();
+    msg->mask[3] = rand();
     ptr += 4;
     }
   
@@ -211,9 +213,13 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
   msg_write_t * write_msg;
   
   write_msg = get_msg_write(conn);
+
+  if(len == 1439160)
+    fprintf(stderr, "Blupp1\n");
   
   create_msg_header(conn, write_msg, len, type);
-  
+
+     
   gavl_buffer_alloc(&write_msg->buf, len);
   memcpy(write_msg->buf.buf, msg, len);
   write_msg->buf.len = len;
@@ -221,12 +227,15 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
   if(write_msg->mask)
     {
     int i;
-#if 0    
-    fprintf(stderr, "Bytes: %"PRId64" encoding mask:\n", len);
+#if 1
+    fprintf(stderr, "\nmsg_write Bytes: %"PRId64" encoding mask:\n", len);
     gavl_hexdump(write_msg->mask, 4, 4);
-
-    gavl_hexdump(write_msg->buf.buf, len, 16);
+    fprintf(stderr, "header:\n");
+    gavl_hexdump(write_msg->head, write_msg->head_len, 16);
+    
 #endif
+
+    //    gavl_hexdump(write_msg->buf.buf, len, 16);
     for(i = 0; i < len; i++)
       write_msg->buf.buf[i] ^= write_msg->mask[i % 4];
     }
@@ -311,7 +320,7 @@ msg_read(bg_websocket_connection_t * conn)
 
     if(conn->read_msg.head_read < conn->read_msg.head_len)
       return GAVL_SOURCE_AGAIN;
-
+    
     /* Decode full header */
 
     ptr = conn->read_msg.head;
@@ -350,7 +359,15 @@ msg_read(bg_websocket_connection_t * conn)
       }
 
     gavl_buffer_alloc(&conn->read_msg.buf, conn->read_msg.buf.len + conn->read_msg.payload_len + 1);
-    
+
+    fprintf(stderr, "\nmsg_read Bytes: %"PRId64"\n", conn->read_msg.payload_len);
+    if(conn->read_msg.mask)
+      {
+      fprintf(stderr, "mask: ");
+      gavl_hexdump(conn->read_msg.mask, 4, 4);
+      }
+    fprintf(stderr, "header:\n");
+    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
     }
 
   if(conn->read_msg.payload_read < conn->read_msg.payload_len)
@@ -972,7 +989,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
 
       gavl_hexdump(conn->read_msg.mask, 4, 4);
 
-      gavl_hexdump(conn->read_msg.buf.buf, conn->read_msg.buf.len, 16);
+      //      gavl_hexdump(conn->read_msg.buf.buf, conn->read_msg.buf.len, 16);
       return 0;
       }
 

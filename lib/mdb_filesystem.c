@@ -54,6 +54,9 @@
 
 #define META_DIR "dir"
 
+#define FS_DIRS_NAME "fs_dirs"
+#define FS_PHOTO_NAME "photo_dirs"
+
 /*
  * Caching:
  * We keep an own object cache, where we store the
@@ -91,9 +94,9 @@ typedef struct
 
   /* Direct children of container and image container. Everything below is handled
      by the caching mechanism */
-  
-  gavl_array_t * container_children;
-  gavl_array_t * image_container_children;
+
+  //  gavl_array_t * container_children;
+  //  gavl_array_t * image_container_children;
   
   const char * root_id;
   const char * image_root_id;
@@ -107,6 +110,132 @@ typedef struct
   
   } fs_t;
 
+/* Dir array functions */
+#if 0
+static int has_id(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * str;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
+       !strcmp(str, id))
+      return 1;
+    }
+  return 0;
+  }
+#endif
+
+static int has_uri(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * str;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
+       !strcmp(str, id))
+      return 1;
+    }
+  return 0;
+  }
+
+static int has_label(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * str;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_LABEL)) &&
+       !strcmp(str, id))
+      return 1;
+    }
+  return 0;
+  }
+
+#if 0
+static gavl_dictionary_t * add_dir_array(gavl_array_t * arr, const char * dir, const char * parent_id, int idx)
+  {
+  int i;
+  gavl_value_t val;
+  gavl_dictionary_t * dict;
+  const char * pos;
+  char * id;
+  
+  gavl_value_init(&val);
+  dict = gavl_value_set_dictionary(&val);
+
+  gavl_dictionary_set_string(dict, GAVL_META_URI, dir);
+  
+  if((pos = strrchr(dir, '/')))
+    pos++;
+  else
+    pos = dir;
+
+  id = bg_sprintf("%s/%s", parent_id, pos);
+  
+  if(!has_id(arr, id))
+    {
+    gavl_dictionary_set_string_nocopy(dict, GAVL_META_ID, id);
+    }
+  else
+    {
+    free(id);
+    
+    for(i = 0; i < 1000; i++)
+      {
+      id = bg_sprintf("%s/%s-%d", parent_id, pos, i+1);
+
+      if(!has_id(arr, id))
+        {
+        gavl_dictionary_set_string_nocopy(dict, GAVL_META_ID, id);
+        break;
+        }
+      else
+        free(id);
+      }
+    }
+
+  gavl_array_splice_val_nocopy(arr, idx, 0, &val);
+  return gavl_value_get_dictionary_nc(&arr->entries[arr->num_entries-1]);
+  }
+
+static const gavl_dictionary_t * dir_array_get(const gavl_array_t * arr, int idx)
+  {
+  const gavl_dictionary_t * dir;
+
+  if((idx < 0) || (idx >= arr->num_entries) ||
+     !(dir = gavl_value_get_dictionary(&arr->entries[idx])))
+    return NULL;
+
+  return dir;
+  }
+#endif
+
+static const gavl_dictionary_t * bg_mdb_dir_array_get_by_id(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * d;
+  const char * str;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((d = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (str = gavl_dictionary_get_string(d, GAVL_META_ID)) &&
+       !strcmp(id, str))
+      {
+      return d;
+      }
+    }
+  return NULL;
+  }
+
+/* */
 
 static const gavl_value_t * cache_put(bg_mdb_backend_t * be, const char * id, gavl_value_t * val)
   {
@@ -386,7 +515,7 @@ static char * id_to_path(const bg_mdb_backend_t * be, const char * id)
   {
   int i;
   const gavl_dictionary_t * d;
-  
+    
   fs_t * p = be->priv;
 
   /* configured directories */
@@ -856,7 +985,7 @@ static int dirs_equal(const gavl_array_t * dir1,
     }
   return 1;
   }
-                      
+
 static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
                                              const char * path,
                                              const char * ctx_id)
@@ -1117,6 +1246,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
     }
   }
 
+#if 0
 static void set_directories(bg_mdb_backend_t * be,
                             gavl_array_t * dst, const gavl_array_t * arr,
                             gavl_dictionary_t * container, int photo_mode)
@@ -1191,7 +1321,7 @@ static void set_directories(bg_mdb_backend_t * be,
 
     num_added++;
     
-    entry = bg_mdb_add_dir_array(dst, dir, gavl_track_get_id(container));
+    entry = add_dir_array(dst, dir, gavl_track_get_id(container), -1);
     m = gavl_dictionary_get_dictionary_create(&cont, GAVL_META_METADATA);
 
     id = gavl_dictionary_get_string(entry, GAVL_META_ID);
@@ -1232,14 +1362,20 @@ static void set_directories(bg_mdb_backend_t * be,
   for(i = 0; i < dst->num_entries; i++)
     {
     const gavl_dictionary_t * d;
+    gavl_dictionary_t * m;
     
     gavl_value_init(&child_val_add);
     child_dict_add = gavl_value_set_dictionary(&child_val_add);
 
-    d = bg_mdb_dir_array_get(dst, i);
-    d = gavl_dictionary_get_dictionary(d, "obj");
+    d = dir_array_get(dst, i);
+    // d = gavl_dictionary_get_dictionary(d, "obj");
+
+    m = gavl_dictionary_get_dictionary_create(child_dict_add, GAVL_META_METADATA);
+
+    gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(d, GAVL_META_LABEL));
+    gavl_dictionary_set(m, GAVL_META_ID, gavl_dictionary_get(d, GAVL_META_ID));
     
-    gavl_dictionary_copy(child_dict_add, d);
+    //  gavl_dictionary_copy(child_dict_add, d);
 
     gavl_array_splice_val_nocopy(arr_add, -1, 0, &child_val_add);
     }
@@ -1259,6 +1395,7 @@ static void set_directories(bg_mdb_backend_t * be,
   gavl_msg_set_arg_dictionary(resp, 0, container);
   bg_msg_sink_put(be->ctrl.evt_sink, resp);
   }
+#endif
 
 static void browse_dir_list(bg_mdb_backend_t * be,
                             gavl_msg_t * msg,
@@ -1280,13 +1417,33 @@ static void browse_dir_list(bg_mdb_backend_t * be,
       {
       gavl_value_t val;
       gavl_dictionary_t * track;
-
+      gavl_dictionary_t * m;
+      const gavl_array_t * children;
+      
       gavl_value_init(&val);
       track = gavl_value_set_dictionary(&val);
-      gavl_dictionary_copy(track, gavl_dictionary_get_dictionary(dir, "obj"));
+
+      m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
+      
+      gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(dir, GAVL_META_LABEL));
+      gavl_dictionary_set(m, GAVL_META_ID, gavl_dictionary_get(dir, GAVL_META_ID));
+      gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_DIRECTORY);
+
+      children = ensure_directory(be, gavl_dictionary_get_string(dir, GAVL_META_URI),
+                                  gavl_dictionary_get_string(dir, GAVL_META_ID));
+
+      fprintf(stderr, "Got children:\n");
+      gavl_array_dump(children, 2);
+      
+      read_container_info(be, track, children, photo_mode);
+      
       gavl_array_splice_val_nocopy(&arr, i, 0, &val);
       }
     }
+
+  fprintf(stderr, "Browse dir list:\n");
+  gavl_array_dump(&arr, 2);
+  
   if(arr.num_entries)
     {
     gavl_msg_t * res;
@@ -1550,12 +1707,237 @@ static void rescan(bg_mdb_backend_t * be)
     }
   }
 
-static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_value_t * add)
+static void add_directory(bg_mdb_backend_t * b,
+                          const char * ctx_id,
+                          gavl_dictionary_t * ret,
+                          gavl_array_t * dirs,
+                          int idx,
+                          const gavl_dictionary_t * add)
   {
+  const gavl_array_t * dir_entries;
+  
+  gavl_value_t dir_val;
+  gavl_dictionary_t * dir_dict;
+  char url_md5[33];
+  const char * uri;
+  const char * pos;
+  char * label;
+  int photo_mode = 0;
+  fs_t * fs = b->priv;
+  const gavl_dictionary_t * m = gavl_track_get_metadata(add);
+
+  if(!(uri = gavl_dictionary_get_string(m, GAVL_META_URI)))
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No directory to add");
+    return;
+    }
+  if(has_uri(dirs, uri))
+    {
+    /* Directory already there */
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Directory already added");
+    return;
+    }
+
+  fprintf(stderr, "Adding directory: %s\n", uri);
+
+  gavl_value_init(&dir_val);
+  dir_dict = gavl_value_set_dictionary(&dir_val);
+
+  gavl_dictionary_set_string(dir_dict, GAVL_META_URI, uri);
+  
+  bg_get_filename_hash(uri, url_md5);
+  gavl_dictionary_set_string_nocopy(dir_dict, GAVL_META_ID, gavl_sprintf("%s/%s", ctx_id, url_md5));
+
+  pos = strrchr(uri, '/');
+  if(pos)
+    {
+    int idx = 1;
+    pos++;
+
+    label = gavl_strdup(pos);
+
+    while(has_label(dirs, label))
+      {
+      free(label);
+      label = gavl_sprintf("%s (%d)", pos, idx);
+      idx++;
+      }
+    gavl_dictionary_set_string_nocopy(dir_dict, GAVL_META_LABEL, label);
+    }
+
+  gavl_array_splice_val_nocopy(dirs, idx, 0, &dir_val);
+  
+  dir_entries = ensure_directory(b, uri, gavl_dictionary_get_string(dir_dict, GAVL_META_ID));
+  
+  if(!strcmp(ctx_id, fs->image_root_id))
+    photo_mode = 1;
+  
+  read_container_info(b, ret, dir_entries, photo_mode);
+  }
+
+static void load_dir_list(bg_mdb_backend_t * be, gavl_array_t * arr)
+  {
+  char * tmp_string;
+  int photo_mode = 0;
+  
+  fs_t * fs = be->priv;
+
+  if(arr == &fs->dirs)
+    tmp_string = bg_sprintf("%s/"FS_DIRS_NAME, be->db->path);
+  else
+    {
+    tmp_string = bg_sprintf("%s/"FS_PHOTO_NAME, be->db->path);
+    photo_mode = 1;
+    }
+  
+  bg_array_load_xml(arr, tmp_string, "dirs");
+  free(tmp_string);
+
+  if(photo_mode)
+    gavl_track_set_num_children(fs->image_container, fs->image_dirs.num_entries, 0);
+  else
+    gavl_track_set_num_children(fs->container, fs->dirs.num_entries, 0);
+  
+  }
+
+static void save_dir_list(bg_mdb_backend_t * be, gavl_array_t * arr)
+  {
+  char * tmp_string;
+  fs_t * fs = be->priv;
+
+  if(arr == &fs->dirs)
+    tmp_string = bg_sprintf("%s/"FS_DIRS_NAME, be->db->path);
+  else
+    tmp_string = bg_sprintf("%s/"FS_PHOTO_NAME, be->db->path);
+
+  bg_array_save_xml(arr, tmp_string, "dirs");
+  
+  free(tmp_string);
+  }
+
+
+static void splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_value_t * add, int sendmsg)
+  {
+  int num_added = 0;
+  gavl_array_t * dirs;
+  gavl_dictionary_t * container;
+  fs_t * fs = b->priv;
+  gavl_array_t children;
+  gavl_msg_t * resp;
+  gavl_value_t val_add;
+
+  gavl_value_t child_val;
+  gavl_dictionary_t * child;
+    
   fprintf(stderr, "splice %s %d %d %d\n", ctx_id, last, idx, del);
   gavl_value_dump(add, 2);
-  return 1;
+  gavl_array_init(&children);
+
+  gavl_value_init(&val_add);
+  
+  if(!strcmp(ctx_id, fs->root_id))
+    {
+    dirs = &fs->dirs;
+    container = fs->container;
+    }
+  else if(!strcmp(ctx_id, fs->image_root_id))
+    {
+    dirs = &fs->image_dirs;
+    container = fs->image_container;
+    }
+  else
+    {
+    /* Children are not editable */
+    goto end;
+    }
+
+  if(idx < 0)
+    idx = dirs->num_entries;
+  
+  if(del < 0)
+    del = dirs->num_entries - idx;
+  
+  if(del)
+    gavl_array_splice_val_nocopy(dirs, idx, del, NULL);
+  
+  if(!add)
+    goto end;
+
+  if(add->type == GAVL_TYPE_DICTIONARY)
+    {
+    gavl_dictionary_t * dict_add = gavl_value_set_dictionary(&val_add);
+    
+    add_directory(b,
+                  ctx_id,
+                  dict_add,
+                  dirs,
+                  idx,
+                  gavl_value_get_dictionary(add));
+    
+    num_added = 1;
+    }
+  else if(add->type == GAVL_TYPE_ARRAY)
+    {
+    int i;
+    const gavl_array_t * arr = gavl_value_get_array(add);
+    gavl_array_t * arr_add = gavl_value_set_array(&val_add);
+    
+    for(i = 0; i < arr->num_entries; i++)
+      {
+      gavl_value_init(&child_val);
+      child = gavl_value_set_dictionary(&child_val);
+
+      add_directory(b,
+                    ctx_id,
+                    child,
+                    dirs,
+                    idx + i,
+                    gavl_value_get_dictionary(&arr->entries[i]));
+      
+      gavl_array_splice_val_nocopy(arr_add, -1, 0, &child_val);
+      num_added++;
+      }
+    
+    }
+  
+  end:
+
+  fprintf(stderr, "Splice 1\n");
+  gavl_array_dump(dirs, 2);
+  
+  if((del || num_added))
+    {
+    gavl_track_set_num_children(container, dirs->num_entries, 0);
+
+    if(sendmsg)
+      {
+      /* Save dir array */
+      save_dir_list(b, dirs);
+
+      /* Send splice signal */
+      resp = bg_msg_sink_get(b->ctrl.evt_sink);
+
+      gavl_msg_set_splice_children_nocopy(resp, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
+                                          ctx_id,
+                                          1, idx, del, &val_add);
+      bg_msg_sink_put(b->ctrl.evt_sink, resp);
+      
+      }
+    /* Update parent */
+
+    
+    
+    resp = bg_msg_sink_get(b->ctrl.evt_sink);
+    gavl_msg_set_id_ns(resp, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+    gavl_dictionary_set_string(&resp->header, GAVL_MSG_CONTEXT_ID, ctx_id);
+    gavl_msg_set_arg_dictionary(resp, 0, container);
+    bg_msg_sink_put(b->ctrl.evt_sink, resp);
+    
+    }
+  
+  return;
   }
+
 
 static int handle_msg(void * priv, gavl_msg_t * msg)
   {
@@ -1618,7 +2000,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           
           gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
 
-          splice(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add);
+          splice(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add, 1);
           gavl_value_free(&add);
           }
           break;
@@ -1760,7 +2142,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             fs->have_params = 1;
             return 1;
             }
-          
+#if 0          
           if(!strcmp(name, "dirs"))
             {
             set_directories(be, &fs->dirs, gavl_value_get_array(&val), fs->container, 0);
@@ -1769,6 +2151,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             {
             set_directories(be, &fs->image_dirs, gavl_value_get_array(&val), fs->image_container, 1);
             }
+#endif
           else if(!strcmp(name, "mount_removable"))
             {
             fs->mount_removable = val.v.i;
@@ -1860,32 +2243,25 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   
   priv->container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES);
   bg_mdb_container_set_backend(priv->container, MDB_BACKEND_FILESYSTEM);
-
   bg_mdb_add_can_add(priv->container, GAVL_META_MEDIA_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->container);
   
   /* Add children */
-  gavl_track_set_num_children(priv->container, priv->dirs.num_entries, 0);
-  
+
   priv->image_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS);
   
   bg_mdb_container_set_backend(priv->image_container, MDB_BACKEND_FILESYSTEM);
   bg_mdb_add_can_add(priv->image_container, GAVL_META_MEDIA_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->image_container);
   
-  /* Add children */
-  gavl_track_set_num_children(priv->image_container, priv->image_dirs.num_entries, 0);
-
   /* Create cache */  
   tmp_string = bg_sprintf("%s/fs_cache", b->db->path);
   priv->cache = bg_object_cache_create(1024, 32, tmp_string);
   free(tmp_string);
 
   /* Load directories */
-  tmp_string = bg_sprintf("%s/fs_dirs", b->db->path);
-  free(tmp_string);
-  
-  tmp_string = bg_sprintf("%s/photo_dirs", b->db->path);
-  free(tmp_string);
+
+  load_dir_list(b, &priv->image_dirs);
+  load_dir_list(b, &priv->dirs);
   
   }
