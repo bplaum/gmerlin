@@ -47,11 +47,11 @@ typedef struct
   uint32_t Width;
   uint32_t Height;
   uint16_t BitsPerSample;
-  uint16 SamplesPerPixel;
-  uint16 SampleFormat;
-  uint16 Orientation;
-  uint16 Photometric;
-  uint16 Compression;
+  uint16_t SamplesPerPixel;
+  uint16_t SampleFormat;
+  uint16_t Orientation;
+  uint16_t Photometric;
+  uint16_t Compression;
   gavl_video_format_t format;
   TIFF * tiff;
 
@@ -809,7 +809,7 @@ static int read_image_tiff(void *priv, gavl_video_frame_t *frame)
     {
     raster = (uint32_t*)_TIFFmalloc(p->Height * p->Width * sizeof(uint32_t));
     
-    if(!TIFFReadRGBAImage(p->tiff, p->Width, p->Height, (uint32*)raster, 0))
+    if(!TIFFReadRGBAImage(p->tiff, p->Width, p->Height, (uint32_t*)raster, 0))
       return 0;
     
 #if 0

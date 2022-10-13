@@ -60,6 +60,13 @@
 // #define STATE_RUNNING   1
 // #define STATE_FINISHED  2
 
+//  #define DUMP_SERVER_READ
+// #define DUMP_SERVER_WRITE
+
+// #define DUMP_CLIENT_READ
+// #define DUMP_CLIENT_WRITE
+
+
 /**************************************************************
  * Common for server and client
  **************************************************************/
@@ -123,6 +130,7 @@ struct bg_websocket_connection_s
 
 static void msg_write_reset(msg_write_t * msg)
   {
+  //  fprintf(stderr, "msg_write_reset\n");
   gavl_buffer_reset(&msg->buf);
   msg->head_len = 0;
   msg->head_written = 0;
@@ -214,27 +222,38 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
   
   write_msg = get_msg_write(conn);
 
-  if(len == 1439160)
-    fprintf(stderr, "Blupp1\n");
   
   create_msg_header(conn, write_msg, len, type);
 
-     
+  
   gavl_buffer_alloc(&write_msg->buf, len);
   memcpy(write_msg->buf.buf, msg, len);
   write_msg->buf.len = len;
-  
-  if(write_msg->mask)
+
+#ifdef DUMP_SERVER_WRITE
+  if(!conn->is_client)
     {
-    int i;
-#if 1
+    fprintf(stderr, "\nmsg_write Bytes: %"PRId64"\n", len);
+    fprintf(stderr, "header:\n");
+    gavl_hexdump(write_msg->head, write_msg->head_len, 16);
+    }
+#endif
+
+#ifdef DUMP_CLIENT_WRITE
+  if(conn->is_client)
+    {
     fprintf(stderr, "\nmsg_write Bytes: %"PRId64" encoding mask:\n", len);
     gavl_hexdump(write_msg->mask, 4, 4);
     fprintf(stderr, "header:\n");
     gavl_hexdump(write_msg->head, write_msg->head_len, 16);
-    
+    }
 #endif
 
+  
+  if(write_msg->mask)
+    {
+    int i;
+    
     //    gavl_hexdump(write_msg->buf.buf, len, 16);
     for(i = 0; i < len; i++)
       write_msg->buf.buf[i] ^= write_msg->mask[i % 4];
@@ -252,6 +271,80 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Other side disconnected"); \
     return GAVL_SOURCE_EOF; \
     }
+
+static void decode_msg_header(bg_websocket_connection_t * conn)
+  {
+  int buf_len;
+  uint8_t * ptr;
+
+  /* Decode full header */
+
+  ptr = conn->read_msg.head;
+  ptr++;
+
+  buf_len = *ptr & 0x7f;
+
+  ptr++;
+    
+  if(buf_len == 126)
+    {
+    conn->read_msg.payload_len = GAVL_PTR_2_16BE(ptr);
+    ptr+=2;
+    }
+  else if(buf_len == 127)
+    {
+    conn->read_msg.payload_len = GAVL_PTR_2_64BE(ptr);
+    ptr+=8;
+    }
+  else
+    {
+    conn->read_msg.payload_len = buf_len;
+    }
+
+  /* Masking key */
+  conn->read_msg.mask = NULL;
+  if(conn->read_msg.head[1] & 0x80)
+    {
+    conn->read_msg.mask = ptr;
+    ptr += 4;
+    }
+  else if(!conn->is_client)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got unmasked data");
+    return GAVL_SOURCE_EOF;
+    }
+
+  gavl_buffer_alloc(&conn->read_msg.buf, conn->read_msg.buf.len + conn->read_msg.payload_len + 1);
+
+
+#ifdef DUMP_CLIENT_READ
+  if(conn->is_client)
+    {
+    fprintf(stderr, "\nmsg_read Bytes: %"PRId64"\n", conn->read_msg.payload_len);
+    if(conn->read_msg.mask)
+      {
+      fprintf(stderr, "mask: ");
+      gavl_hexdump(conn->read_msg.mask, 4, 4);
+      }
+    fprintf(stderr, "header:\n");
+    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
+    }
+#endif
+    
+#ifdef DUMP_SERVER_READ
+  if(!conn->is_client)
+    {
+    fprintf(stderr, "\nmsg_read Bytes: %"PRId64"\n", conn->read_msg.payload_len);
+    if(conn->read_msg.mask)
+      {
+      fprintf(stderr, "mask: ");
+      gavl_hexdump(conn->read_msg.mask, 4, 4);
+      }
+    fprintf(stderr, "header:\n");
+    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
+    }
+#endif
+  }
 
 static gavl_source_status_t
 msg_read(bg_websocket_connection_t * conn)
@@ -301,14 +394,15 @@ msg_read(bg_websocket_connection_t * conn)
       {
       conn->read_msg.head_len += 4;
       }
-    
+
+    if(conn->read_msg.head_len == 2)
+      decode_msg_header(conn);
     }
 
   if(conn->read_msg.head_read < conn->read_msg.head_len)
     {
     int buf_len;
     uint8_t * ptr;
-
     if(!gavf_io_can_read(conn->io, 0))
       return GAVL_SOURCE_AGAIN;
     
@@ -320,56 +414,12 @@ msg_read(bg_websocket_connection_t * conn)
 
     if(conn->read_msg.head_read < conn->read_msg.head_len)
       return GAVL_SOURCE_AGAIN;
+
+    decode_msg_header(conn);
     
-    /* Decode full header */
 
-    ptr = conn->read_msg.head;
-    ptr++;
-
-    buf_len = *ptr & 0x7f;
-
-    ptr++;
-    
-    if(buf_len == 126)
-      {
-      conn->read_msg.payload_len = GAVL_PTR_2_16BE(ptr);
-      ptr+=2;
-      }
-    else if(buf_len == 127)
-      {
-      conn->read_msg.payload_len = GAVL_PTR_2_64BE(ptr);
-      ptr+=8;
-      }
-    else
-      {
-      conn->read_msg.payload_len = buf_len;
-      }
-
-    /* Masking key */
-    conn->read_msg.mask = NULL;
-    if(conn->read_msg.head[1] & 0x80)
-      {
-      conn->read_msg.mask = ptr;
-      ptr += 4;
-      }
-    else if(!conn->is_client)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got unmasked data");
-      return GAVL_SOURCE_EOF;
-      }
-
-    gavl_buffer_alloc(&conn->read_msg.buf, conn->read_msg.buf.len + conn->read_msg.payload_len + 1);
-
-    fprintf(stderr, "\nmsg_read Bytes: %"PRId64"\n", conn->read_msg.payload_len);
-    if(conn->read_msg.mask)
-      {
-      fprintf(stderr, "mask: ");
-      gavl_hexdump(conn->read_msg.mask, 4, 4);
-      }
-    fprintf(stderr, "header:\n");
-    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
     }
-
+  
   if(conn->read_msg.payload_read < conn->read_msg.payload_len)
     {
     if(!gavf_io_can_read(conn->io, 0))
@@ -448,147 +498,12 @@ msg_read(bg_websocket_connection_t * conn)
   else
     {
     fprintf(stderr, "Got payload %"PRId64" %"PRId64"\n", conn->read_msg.payload_read, conn->read_msg.payload_len);
+    fprintf(stderr, "Header: %d\n", conn->read_msg.head_len);
+    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
     }
   
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Whoops %x", conn->read_msg.head[0] & 0x0f);
   return GAVL_SOURCE_EOF;
-  
-#if 0  
-  if((result = gavf_io_read_data(conn->io, head, 2)) < 2)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading first two bytes failed");
-    goto end;
-    }
-  
-  buf_len = head[1] & 0x7f;
-
-  //  fprintf(stderr, "buf_len: %"PRId64"\n", buf_len);
-  
-  if(buf_len == 126)
-    {
-    if(gavf_io_read_data(conn->io, len, 2) < 2)
-      return GAVL_SOURCE_EOF;
-    buf_len = GAVL_PTR_2_16BE(len);
-    }
-  else if(buf_len == 127)
-    {
-    if(gavf_io_read_data(conn->io, len, 8) < 8)
-      goto end;
-    buf_len = GAVL_PTR_2_64BE(len);
-    }
-
-  /* Masking key */
-  if(head[1] & 0x80)
-    {
-    if(gavf_io_read_data(conn->io, masking_key, 4) < 4)
-      goto end;
-    }
-  else if(!conn->is_client)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got unmasked data");
-    goto end;
-    }
-
-  //  fprintf(stderr, "head: %d fin: %d len: %"PRId64"\n", head[0] & 0x0f, head[0] & 0x80, buf_len);
-  
-  switch(head[0] & 0x0f)
-    {
-    case 0x0: // continuation frame
-      break;
-    case 0x1: // text frame
-      gavl_buffer_reset(&conn->msg.b);
-      conn->msg.type = BG_WEBSOCKET_TYPE_TEXT;
-      break;
-    case 0x2: // binary frame
-      gavl_buffer_reset(&conn->msg.b);
-      conn->msg.type = BG_WEBSOCKET_TYPE_BINARY;
-      break;
-    case 0x8: // Close
-      gavl_buffer_reset(&conn->msg.b);
-      break;
-    case 0x9: // Ping
-      gavl_buffer_reset(&conn->msg.b);
-      break;
-    case 0xA: // Pong
-      gavl_buffer_reset(&conn->msg.b);
-      break;
-    default:
-      break;
-    }
-
-  /* Payload */
-  if(buf_len)
-    {
-    uint64_t i;
-    gavl_buffer_alloc(&conn->msg.b, conn->msg.b.len + buf_len + 1);
-//    msg_alloc(&conn->msg, conn->msg.buf_len + buf_len + 1);
-    if(gavf_io_read_data(conn->io, conn->msg.b.buf + conn->msg.b.len, buf_len) < buf_len)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading payload failed: %s", strerror(errno));
-      goto end;
-      }
-    /* Unmask */
-    if(head[1] & 0x80)
-      {
-      i = 0;
-
-      while(i < buf_len)
-        {
-        conn->msg.b.buf[conn->msg.b.len + i] ^= masking_key[i % 4];
-        i++;
-        }
-      }
-    
-    conn->msg.b.len += buf_len;
-    conn->msg.b.buf[conn->msg.b.len] = '\0';
-    }
-  else
-    return GAVL_SOURCE_EOF;
-    
-  switch(head[0] & 0x0f)
-    {
-    case 0x0: // continuation frame
-    case 0x1: // text frame
-    case 0x2: // binary frame
-      if(head[0] & 0x80) // FIN
-        ret = GAVL_SOURCE_OK;
-      else
-        ret = GAVL_SOURCE_AGAIN;
-      break;
-    case 0x8: // Close
-      msg_write(conn, conn->msg.b.buf, conn->msg.b.len, 0x8);
-      break;
-    case 0x9: // Ping
-      /* Send pong */
-      //      fprintf(stderr, "Sending pong\n");
-      result = msg_write(conn, conn->msg.b.buf, conn->msg.b.len, 0xA);
-      if(result)
-        ret = GAVL_SOURCE_AGAIN;
-      else
-      break;
-    case 0xA: // Pong
-      /* If we are a server, check if the pong belongs to the last ping */
-
-      if(conn->ping_sent && (conn->msg.b.len == PING_PAYLOAD_LEN))
-        {
-        gavl_time_t payload = GAVL_PTR_2_64BE(conn->msg.b.buf);
-        if(payload == conn->last_ping_time)
-          {
-          //          gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got pong");
-          conn->ping_sent = 0;
-          }
-        }
-      ret = GAVL_SOURCE_AGAIN;
-      break;
-    default:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown opcode: %x", head[0] & 0x0f);
-      break;
-    }
-
-  end:
-  return ret;
-#endif
-  
   }
 
 static int msg_write_cb(void * data, gavl_msg_t * msg)
@@ -626,7 +541,7 @@ static void conn_init(bg_websocket_connection_t * conn, int is_client)
   if(is_client)
     {
     bg_controllable_init(&conn->ctrl_client,
-                         bg_msg_sink_create(msg_write_cb, conn, 1),
+                         bg_msg_sink_create(msg_write_cb, conn, 0),
                          bg_msg_hub_create(1));   // Owned
     }
   else
@@ -903,11 +818,14 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
       return 0;
       }
     }
+  else
+    {
+    bg_msg_sink_iteration(conn->ctrl_client.cmd_sink);
+    }
   
   /* Write messages */
   while(conn->num_write_msg > 0)
     {
-    msg_write_t swp;
     
     if(conn->write_msg[0].head_written < conn->write_msg[0].head_len)
       {
@@ -950,11 +868,13 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
       }
 
     /* Message finished */
+    //    fprintf(stderr, "Message finished\n");
     msg_write_reset(&conn->write_msg[0]);
     conn->num_write_msg--;
     
     if(conn->num_write_msg > 0)
       {
+      msg_write_t swp;
       memcpy(&swp, &conn->write_msg[0], sizeof(swp));
       memmove(conn->write_msg, conn->write_msg + 1, sizeof(conn->write_msg[0]) * conn->num_write_msg);
       memcpy(&conn->write_msg[conn->num_write_msg], &swp, sizeof(swp));

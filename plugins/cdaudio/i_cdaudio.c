@@ -33,6 +33,7 @@
 #include <gmerlin/log.h>
 
 #include <gavl/utils.h>
+#include <gavl/http.h>
 
 #define LOG_DOMAIN "i_cdaudio"
 
