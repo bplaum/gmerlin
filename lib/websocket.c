@@ -272,7 +272,7 @@ msg_write(bg_websocket_connection_t * conn, const void * msg, uint64_t len, int 
     return GAVL_SOURCE_EOF; \
     }
 
-static void decode_msg_header(bg_websocket_connection_t * conn)
+static int decode_msg_header(bg_websocket_connection_t * conn)
   {
   int buf_len;
   uint8_t * ptr;
@@ -311,7 +311,7 @@ static void decode_msg_header(bg_websocket_connection_t * conn)
   else if(!conn->is_client)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got unmasked data");
-    return GAVL_SOURCE_EOF;
+    return 0;
     }
 
   gavl_buffer_alloc(&conn->read_msg.buf, conn->read_msg.buf.len + conn->read_msg.payload_len + 1);
@@ -344,6 +344,7 @@ static void decode_msg_header(bg_websocket_connection_t * conn)
     gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
     }
 #endif
+  return 1;
   }
 
 static gavl_source_status_t
@@ -396,13 +397,14 @@ msg_read(bg_websocket_connection_t * conn)
       }
 
     if(conn->read_msg.head_len == 2)
-      decode_msg_header(conn);
+      {
+      if(!decode_msg_header(conn))
+        return GAVL_SOURCE_AGAIN;
+      }
     }
-
+  
   if(conn->read_msg.head_read < conn->read_msg.head_len)
     {
-    int buf_len;
-    uint8_t * ptr;
     if(!gavf_io_can_read(conn->io, 0))
       return GAVL_SOURCE_AGAIN;
     
@@ -415,9 +417,8 @@ msg_read(bg_websocket_connection_t * conn)
     if(conn->read_msg.head_read < conn->read_msg.head_len)
       return GAVL_SOURCE_AGAIN;
 
-    decode_msg_header(conn);
-    
-
+    if(!decode_msg_header(conn))
+      return GAVL_SOURCE_AGAIN;
     }
   
   if(conn->read_msg.payload_read < conn->read_msg.payload_len)
