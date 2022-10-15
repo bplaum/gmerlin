@@ -356,12 +356,13 @@ static void read_container_info(const bg_mdb_backend_t * be,
     const char * uri;
 
     if(!(dict = gavl_value_get_dictionary_nc(&arr->entries[i])) ||
+       !(dict = gavl_track_get_metadata(dict)) ||
        !(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
       {
       continue;
       }
-
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_DIRECTORY))
+    
+    if(gavl_string_starts_with(klass, "container"))
       num_containers++;
     else
       {
@@ -417,10 +418,12 @@ static void read_container_info(const bg_mdb_backend_t * be,
         }
       }
     }
-
+  
+  m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
   gavl_track_set_num_children(ret, num_containers, num_items);
 
-  m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
+  fprintf(stderr, "Read container info %d %d\n", num_containers, num_items);
+  
   if(photo_mode)
     {
     if(num_items && !num_containers)
