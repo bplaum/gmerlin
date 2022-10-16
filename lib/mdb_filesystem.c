@@ -492,22 +492,22 @@ static char * id_to_path_dirlist(const gavl_array_t * list, const char * id)
   const gavl_dictionary_t * d;
   for(i = 0; i < list->num_entries; i++)
     {
-    int label_len;
-    const char * label;
+    int len;
+    const char * test_id;
       
     if((d = gavl_value_get_dictionary(&list->entries[i])) &&
-       (label = gavl_dictionary_get_string(d, GAVL_META_URI)) &&
-       (label = strrchr(label, '/')) &&
-       (label++) && 
-       (label_len = strlen(label)) &&
-       !strncmp(label, id, label_len) &&
-       ((id[label_len] == '/') || (id[label_len] == '\0')))
+       (test_id = gavl_dictionary_get_string(d, GAVL_META_ID)) &&
+       (test_id = strrchr(test_id, '/')) &&
+       (test_id++) && 
+       (len = strlen(test_id)) &&
+       !strncmp(test_id, id, len) &&
+       ((id[len] == '/') || (id[len] == '\0')))
       {
-      if(id[label_len] == '/')
+      if(id[len] == '/')
         return bg_sprintf("%s/%s",
                           gavl_dictionary_get_string(d, GAVL_META_URI),
-                          id + label_len + 1);
-      else if(id[label_len] == '\0')
+                          id + len + 1);
+      else if(id[len] == '\0')
         return gavl_strdup(gavl_dictionary_get_string(d, GAVL_META_URI));
       }
     }
