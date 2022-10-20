@@ -623,7 +623,7 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
               else
                 {
                 gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got no track image");
-                gavl_dictionary_dump(m, 2);
+                //  gavl_dictionary_dump(m, 2);
                 gtk_widget_hide(w->track_image);
                 }
               
