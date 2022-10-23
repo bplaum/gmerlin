@@ -587,7 +587,7 @@ static int start_input(void * priv)
       gavl_packet_source_create_video(read_video_packet_input,
                                       inp, 0,
                                       &ci,
-                                      fmt);
+                                      fmt, GAVL_STREAM_VIDEO);
 
     s->psrc = s->psrc_priv;
     
