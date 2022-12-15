@@ -627,11 +627,16 @@ static void add_station(bg_mdb_backend_t * b, const gavl_dictionary_t * station,
   streams_t * p = b->priv;
   const gavl_dictionary_t * m = gavl_track_get_metadata(station);
   char * name = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_LABEL));
-  
-  name = gavl_strip_space(name);
-  if((pos = strchr(name, '\n')))
-    *pos = '\0';
 
+  if(!name)
+    name = gavl_strdup(TR("Unnamed station"));
+  else
+    {
+    name = gavl_strip_space(name);
+    if((pos = strchr(name, '\n')))
+      *pos = '\0';
+    }
+  
   id = ++p->next_id;
 
   sql = sqlite3_mprintf("INSERT INTO stations ("META_DB_ID", "GAVL_META_LABEL", "GAVL_META_SEARCH_TITLE", "GAVL_META_STATION_URL", "GAVL_META_LOGO_URL", TYPE, SOURCE_ID) "

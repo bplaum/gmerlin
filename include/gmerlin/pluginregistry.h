@@ -185,7 +185,6 @@ struct bg_plugin_handle_s
   void * dll_handle; //!< dll_handle (don't touch)
   pthread_mutex_t mutex; //!< dll_handle (don't touch, use \ref bg_plugin_lock and \ref bg_plugin_unlock)
   int refcount;          //!< Reference counter (don't touch, use \ref bg_plugin_ref and \ref bg_plugin_unref)
-  bg_plugin_registry_t * plugin_reg; //!< The plugin registry, from which the plugin was loaded
   
   /* These are for use by applications */
   
@@ -1062,6 +1061,7 @@ void bg_plugin_registry_get_input_protocols(bg_plugin_registry_t * reg,
 
 int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dictionary_t * next, int * next_idx);
 
+void bg_track_find_subtitles(gavl_dictionary_t * track);
 
 extern bg_plugin_registry_t * bg_plugin_reg;
 

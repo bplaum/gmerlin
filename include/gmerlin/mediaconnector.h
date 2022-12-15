@@ -106,10 +106,7 @@ void bg_media_source_drain(bg_media_source_t * src);
 /* Drop everything until EOF but don't use the locking mechanism of the sources */
 void bg_media_source_drain_nolock(bg_media_source_t * src);
 
-void bg_media_source_seek(bg_media_source_t * src, bg_msg_sink_t * cmd_sink, bg_msg_hub_t * evt_hub,
-                          int64_t * t, int scale);
-
-void bg_media_source_set_eof(bg_media_source_t * src, int eof);
+//void bg_media_source_set_eof(bg_media_source_t * src, int eof);
 
 void bg_media_source_init(bg_media_source_t * src);
 void bg_media_source_cleanup(bg_media_source_t * src);

@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glob.h>
 
 #include <config.h>
 
@@ -186,7 +187,7 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
 
           gavl_value_init(&val);
           bg_msg_get_state(msg, &last, &ctx_p, &var_p, &val,
-                           h->plugin_reg->state);
+                           bg_plugin_reg->state);
 
           
           // gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Storing plugin state %s %s", ctx_p, var_p);
@@ -1639,9 +1640,9 @@ static void unload_plugin(bg_plugin_handle_t * h)
   {
   bg_cfg_section_t * section;
  
-  if(h->plugin->get_parameter && h->plugin_reg)
+  if(h->plugin->get_parameter)
     {
-    section = bg_plugin_registry_get_section(h->plugin_reg, h->info->name);
+    section = bg_plugin_registry_get_section(bg_plugin_reg, h->info->name);
     bg_cfg_section_get(section,
                        h->plugin->get_parameters(h->priv),
                        h->plugin->get_parameter,
@@ -2179,7 +2180,6 @@ static bg_plugin_handle_t * load_plugin(bg_plugin_registry_t * reg,
     return NULL;
   
   ret = bg_plugin_handle_create();
-  ret->plugin_reg = reg;
   
   pthread_mutex_init(&ret->mutex, NULL);
 
@@ -2250,9 +2250,9 @@ static bg_plugin_handle_t * load_plugin(bg_plugin_registry_t * reg,
 
   bg_plugin_handle_connect_control(ret);
   
-  if(ret->ctrl_plugin && ret->plugin_reg->state)
+  if(ret->ctrl_plugin && bg_plugin_reg->state)
     {
-    bg_state_apply_ctx(ret->plugin_reg->state, ret->info->name, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+    bg_state_apply_ctx(bg_plugin_reg->state, ret->info->name, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
 
     /* Some plugin types have generic state variables also */
 
@@ -2261,7 +2261,7 @@ static bg_plugin_handle_t * load_plugin(bg_plugin_registry_t * reg,
       //      fprintf(stderr, "Apply ov state %p\n", ret->plugin_reg->state);
       //      gavl_dictionary_dump(ret->plugin_reg->state, 2);
       
-      bg_state_apply_ctx(ret->plugin_reg->state, BG_STATE_CTX_OV, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+      bg_state_apply_ctx(bg_plugin_reg->state, BG_STATE_CTX_OV, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
       }
     }
   else
@@ -3048,15 +3048,16 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
     if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) ||
        !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
       {
-      detect_movie_poster(h->plugin_reg, path, basename, m);
-      detect_movie_wallpaper(h->plugin_reg, path, basename, m);
+      detect_movie_poster(bg_plugin_reg, path, basename, m);
+      detect_movie_wallpaper(bg_plugin_reg, path, basename, m);
       detect_nfo(path, basename, m);
       create_language_arrays(ti);
+      bg_track_find_subtitles(ti);
       }
     else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SONG))
       {
       if(path)
-        detect_album_cover(h->plugin_reg, path, m);
+        detect_album_cover(bg_plugin_reg, path, m);
       }
     else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_TV_EPISODE))
       {
@@ -3074,10 +3075,11 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
       detect_nfo(path, gavl_dictionary_get_string(m, GAVL_META_SHOW), &show_m);
       gavl_dictionary_set(m, GAVL_META_SHOW, gavl_dictionary_get(&show_m, GAVL_META_TITLE));
       gavl_dictionary_free(&show_m);
+      bg_track_find_subtitles(ti);
       create_language_arrays(ti);
 
       
-      if(!detect_movie_poster(h->plugin_reg, path, basename, m))
+      if(!detect_movie_poster(bg_plugin_reg, path, basename, m))
         {
         int result;
         const char * pos;
@@ -3090,18 +3092,18 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
           pos++;
         
         parent_basename = gavl_strndup(basename, pos);
-        result = detect_movie_poster(h->plugin_reg, path, parent_basename, m);
+        result = detect_movie_poster(bg_plugin_reg, path, parent_basename, m);
         free(parent_basename);
 
         if(!result)
           {
           parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
-          result = detect_movie_poster(h->plugin_reg, path, parent_basename, m);
+          result = detect_movie_poster(bg_plugin_reg, path, parent_basename, m);
           free(parent_basename);
           }
         }
       
-      if(!detect_movie_wallpaper(h->plugin_reg, path, basename, m))
+      if(!detect_movie_wallpaper(bg_plugin_reg, path, basename, m))
         {
         int result;
         const char * pos;
@@ -3114,13 +3116,13 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
           pos++;
         
         parent_basename = gavl_strndup(basename, pos);
-        result = detect_movie_wallpaper(h->plugin_reg, path, parent_basename, m);
+        result = detect_movie_wallpaper(bg_plugin_reg, path, parent_basename, m);
         free(parent_basename);
 
         if(!result)
           {
           parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
-          result = detect_movie_wallpaper(h->plugin_reg, path, parent_basename, m);
+          result = detect_movie_wallpaper(bg_plugin_reg, path, parent_basename, m);
           free(parent_basename);
           }
         
@@ -3590,6 +3592,7 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
     else
       src = gavl_dictionary_get_src(tm, GAVL_META_SRC, 0, NULL, &url);
 
+    /* TODO: Load multi input */
     if((edl = gavl_dictionary_get_dictionary(src, GAVL_META_EDL)))
       {
       if(!bg_input_plugin_load_edl(reg, edl, ret, ctrl))
@@ -4590,8 +4593,6 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
   return 1;
   }
 
-
-
 #if 0
 typedef struct
   {
@@ -4619,10 +4620,18 @@ static int handle_msg_seek(void * data, gavl_msg_t * msg)
 
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t * time, int scale)
   {
-  bg_media_source_seek(h->src, h->control.cmd_sink, h->ctrl_ext.evt_hub,
-                       time, scale);
-  }
+  gavl_msg_t * cmd;
 
+  //  fprintf(stderr, "bg_input_plugin_seek\n");
+  
+  cmd = bg_msg_sink_get(h->control.cmd_sink);
+  gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SEEK, GAVL_MSG_NS_SRC);
+  gavl_msg_set_arg_long(cmd, 0, *time);
+  gavl_msg_set_arg_int(cmd, 1, scale);
+  
+  bg_msg_sink_put(h->control.cmd_sink, cmd);
+  //  fprintf(stderr, "bg_input_plugin_seek done\n");
+  }
 
 void bg_input_plugin_start(bg_plugin_handle_t * h)
   {
@@ -5784,6 +5793,69 @@ const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_ty
     }
   return ret;
   }
+
+void bg_track_find_subtitles(gavl_dictionary_t * track)
+  {
+  int i;
+  char * pattern;
+  const char * location;
+  const char * pos;
+  glob_t g;
+  gavl_dictionary_t * s;
+  gavl_dictionary_t * sm;
+  const gavl_dictionary_t * m = gavl_track_get_metadata(track);
+  
+  if(!m)
+    return;
+  
+  if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    return;
+
+  if(!(pos = strrchr(location, '.')))
+    return;
+
+  pattern = gavl_strndup(location, pos);
+  pattern = gavl_strcat(pattern, ".*");
+  pattern = gavl_escape_string(pattern, "[]?");
+  
+  glob(pattern, 0, NULL /* errfunc */, &g);
+
+  for(i = 0; i < g.gl_pathc; i++)
+    {
+    if(gavl_string_ends_with_i(g.gl_pathv[i], ".srt"))
+      {
+      const char * start;
+      const char * end;
+
+      s = gavl_track_append_external_stream(track,
+                                            GAVL_STREAM_TEXT,
+                                            g.gl_pathv[i]);
+      sm = gavl_stream_get_metadata_nc(s);
+      
+      start = g.gl_pathv[i] + (int)(pos - location);
+      start++;
+      end = strrchr(g.gl_pathv[i], '.');
+      if(start < end)
+        {
+        const char * label;
+        char * str = gavl_strndup(start, end);
+        if((label = gavl_language_get_label_from_code(str)))
+          {
+          gavl_dictionary_set_string(sm, GAVL_META_LABEL, label);
+          gavl_dictionary_set_string(sm, GAVL_META_LANGUAGE, gavl_language_get_iso639_2_b_from_code(str));
+          free(str);
+          }
+        else
+          gavl_dictionary_set_string_nocopy(sm, GAVL_META_LABEL, str);
+        }
+      }
+    }
+  globfree(&g);
+
+  
+  //  char * 
+  }
+
 
 #if defined(__GNUC__)
 

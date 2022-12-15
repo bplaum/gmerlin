@@ -210,7 +210,7 @@ bg_mediaconnector_append_audio_stream(bg_mediaconnector_t * conn,
   
   if(psrc)
     {
-    ci = gavl_packet_source_get_ci(psrc);
+    //    ci = gavl_packet_source_get_ci(psrc);
     afmt = gavl_packet_source_get_audio_format(psrc);
     }
   else if(asrc)
@@ -245,7 +245,7 @@ bg_mediaconnector_append_video_stream(bg_mediaconnector_t * conn,
 
   if(psrc)
     {
-    ci = gavl_packet_source_get_ci(psrc);
+    //    ci = gavl_packet_source_get_ci(psrc);
     vfmt = gavl_packet_source_get_video_format(psrc);
     }
   else if(vsrc)
@@ -282,7 +282,7 @@ bg_mediaconnector_append_overlay_stream(bg_mediaconnector_t * conn,
   
   if(psrc)
     {
-    ci = gavl_packet_source_get_ci(psrc);
+    //    ci = gavl_packet_source_get_ci(psrc);
     vfmt = gavl_packet_source_get_video_format(psrc);
     }
   else if(vsrc)

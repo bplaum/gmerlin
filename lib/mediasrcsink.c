@@ -106,6 +106,7 @@ void bg_media_source_drain_nolock(bg_media_source_t * src)
     }
   }
 
+#if 0
 void bg_media_source_set_eof(bg_media_source_t * src, int eof)
   {
   int i;
@@ -119,6 +120,7 @@ void bg_media_source_set_eof(bg_media_source_t * src, int eof)
       gavl_packet_source_set_eof(src->streams[i]->psrc, eof);
     }
   }
+#endif
 
 int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type)
   {
@@ -438,67 +440,6 @@ int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id,
   
   s->action = action;
   return 1;
-  }
-
-/* Synchronous seeking */
-
-#if 0
-typedef struct
-  {
-  int scale;
-  int64_t * time;
-  } seek_t;
-
-static int handle_msg_seek(void * data, gavl_msg_t * msg)
-  {
-  seek_t * s = data;
-
-  if((msg->NS == GAVL_MSG_NS_SRC) && 
-     (msg->ID == GAVL_MSG_SRC_RESYNC))
-    {
-    int64_t msg_time = 0;
-    int msg_scale    = 0;
-
-    gavl_msg_get_src_resync(msg, &msg_time, &msg_scale, NULL, NULL);
-    
-    //    int flush = gavl_msg_get_arg_int(msg, 1);
-    
-    fprintf(stderr, "mediasrc: Got seek resync\n");
-    
-    *s->time = gavl_time_rescale(msg_scale, s->scale, msg_time);
-    }
-  return 1;
-  }
-#endif
-
-void bg_media_source_seek(bg_media_source_t * src, bg_msg_sink_t * cmd_sink, bg_msg_hub_t * evt_hub,
-                          int64_t * t, int scale)
-  {
-  //  seek_t s;
-
-  gavl_msg_t * cmd;
-  //  bg_msg_sink_t * sink;
-
-  //  s.time = t;
-  //  s.scale = scale;
-  
-  //  sink = bg_msg_sink_create(handle_msg_seek, &s, 1);
-
-  //  bg_msg_hub_connect_sink(evt_hub, sink);
-  
-  /* Here we emulate synchronous seeking for asynchronous sources */
-  /* Currently the only asynchronous source is the plug over pipes or sockets */
-  
-  //  src_async = gavl_track_is_async(src->track);
-  
-  cmd = bg_msg_sink_get(cmd_sink);
-  gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SEEK, GAVL_MSG_NS_SRC);
-  gavl_msg_set_arg_long(cmd, 0, *t);
-  gavl_msg_set_arg_int(cmd, 1, scale);
-  
-  bg_msg_sink_put(cmd_sink, cmd);
-  
-  //  bg_msg_hub_disconnect_sink(evt_hub, sink);
   }
 
 /*

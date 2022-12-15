@@ -166,6 +166,7 @@ metadata.c \
 msg.c \
 msgconn.c \
 msgqueue.c \
+multiinput.c \
 npt.c \
 objectcache.c \
 ocr.c \

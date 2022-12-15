@@ -398,15 +398,12 @@ int bg_player_input_get_video_format(bg_player_t * p)
     p->video_stream.in_src = gavl_video_source_create(read_video_subtitle_only, p, 0,
                                                       &p->video_stream.input_format);
     }
-
-  
   else
     {
     gavl_video_source_set_dst(p->video_stream.in_src_int, 0, &p->video_stream.input_format);
     p->video_stream.in_src = gavl_video_source_create(read_video, p, GAVL_SOURCE_SRC_ALLOC,
                                                       &p->video_stream.input_format);
     }
-
   
   return 1;
   }
@@ -426,7 +423,7 @@ void bg_player_input_seek(bg_player_t * p,
   vs = &p->video_stream;
   ss = &p->subtitle_stream;
 
-  //  fprintf(stderr, "Seek: %ld (%d)", *time, scale);
+  fprintf(stderr, "bg_player_input_seek: %"PRId64" (%d)\n", *time, scale);
   
   //  bg_plugin_lock(p->input_handle);
 

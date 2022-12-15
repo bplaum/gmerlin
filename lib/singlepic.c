@@ -584,11 +584,10 @@ static int start_input(void * priv)
     gavl_stream_get_compression_info(gavl_track_get_video_stream(inp->track_info, 0), &ci);
     
     s->psrc_priv =
-      gavl_packet_source_create_video(read_video_packet_input,
-                                      inp, 0,
-                                      &ci,
-                                      fmt, GAVL_STREAM_VIDEO);
-
+      gavl_packet_source_create(read_video_packet_input,
+                                inp, 0,
+                                gavl_track_get_video_stream(inp->track_info, 0));
+    
     s->psrc = s->psrc_priv;
     
     gavl_compression_info_free(&ci);

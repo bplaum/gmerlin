@@ -931,14 +931,13 @@ static int start_text_stream(edldec_t * ed, int idx_rel)
   if(!(s->psrc_int = get_text_source(ed, s->seg, &s->src, src_time)))
     return 0;
 
-  /* Create external source */
-  s->src_s->psrc_priv = gavl_packet_source_create_text(read_text, s, 0,
-                                                       s->timescale);
-  
-  s->src_s->psrc = s->src_s->psrc_priv;
-  
   dict = gavl_track_get_text_metadata_nc(ed->ti_cur, idx_rel);
   gavl_dictionary_set_int(dict, GAVL_META_STREAM_SAMPLE_TIMESCALE, s->timescale);
+  
+  /* Create external source */
+  s->src_s->psrc_priv = gavl_packet_source_create(read_text, s, 0, dict);
+  s->src_s->psrc = s->src_s->psrc_priv;
+  
   return 1;
   }
 
@@ -1303,7 +1302,6 @@ int bg_input_plugin_load_edl(bg_plugin_registry_t * reg,
     
   ret->plugin = (bg_plugin_common_t*)&edl_plugin;
   ret->info = bg_plugin_find_by_name(reg, "i_edldec");
-  ret->plugin_reg = reg;
   
   //  fprintf(stderr, "bg_input_plugin_load_edl\n");
   //  gavl_dictionary_dump(edl, 2);

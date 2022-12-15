@@ -413,11 +413,20 @@ int main(int argc, char ** argv)
             bg_cfg_section_destroy(s);
           }
         else
+          {
+          gavl_compression_info_t ci;
+          const gavl_dictionary_t * si = gavl_packet_source_get_stream(cs->psrc);
+
+          gavl_compression_info_init(&ci);
+          gavl_stream_get_compression_info(si, &ci);
+          
           cs->dst_index =
             bg_encoder_add_audio_stream_compressed(enc, cs->m,
                                                    gavl_packet_source_get_audio_format(cs->psrc),
-                                                   gavl_packet_source_get_ci(cs->psrc),
+                                                   &ci,
                                                    cs->src_index);
+          gavl_compression_info_free(&ci);
+          }
         break;
       case GAVL_STREAM_VIDEO:
         if(cs->vsrc)
@@ -431,11 +440,21 @@ int main(int argc, char ** argv)
             bg_cfg_section_destroy(s);
           }
         else
+          {
+          gavl_compression_info_t ci;
+          const gavl_dictionary_t * si = gavl_packet_source_get_stream(cs->psrc);
+
+          gavl_compression_info_init(&ci);
+          gavl_stream_get_compression_info(si, &ci);
+          
           cs->dst_index =
             bg_encoder_add_video_stream_compressed(enc, cs->m,
                                                    gavl_packet_source_get_video_format(cs->psrc),
-                                                   gavl_packet_source_get_ci(cs->psrc),
+                                                   &ci,
                                                    cs->src_index);
+          
+          gavl_compression_info_free(&ci);
+          }
         break;
       case GAVL_STREAM_TEXT:
         {
@@ -460,11 +479,21 @@ int main(int argc, char ** argv)
             bg_cfg_section_destroy(s);
           }
         else
+          {
+          gavl_compression_info_t ci;
+          const gavl_dictionary_t * si = gavl_packet_source_get_stream(cs->psrc);
+
+          gavl_compression_info_init(&ci);
+          gavl_stream_get_compression_info(si, &ci);
+          
+
           bg_encoder_add_overlay_stream_compressed(enc,
                                                    cs->m,
                                                    gavl_packet_source_get_video_format(cs->psrc),
-                                                   gavl_packet_source_get_ci(cs->psrc),
+                                                   &ci,
                                                    cs->src_index);
+          gavl_compression_info_free(&ci);
+          }
         break;
       case GAVL_STREAM_NONE:
       case GAVL_STREAM_MSG:

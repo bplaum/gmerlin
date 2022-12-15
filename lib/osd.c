@@ -317,9 +317,13 @@ bg_osd_t * bg_osd_create(bg_controllable_t * c)
   ret->timer = gavl_timer_create();
   gavl_timer_start(ret->timer);
 
-  ret->psrc = gavl_packet_source_create_text(read_packet,
-                                             ret, GAVL_SOURCE_SRC_ALLOC, GAVL_TIME_SCALE);
+  //  ret->psrc = gavl_packet_source_create_text(read_packet,
+  //                                             ret, GAVL_SOURCE_SRC_ALLOC, GAVL_TIME_SCALE);
 
+  ret->psrc = gavl_packet_source_create(read_packet,
+                                        ret, GAVL_SOURCE_SRC_ALLOC, NULL);
+  
+  
   pthread_mutex_init(&ret->mutex, NULL);
 
   ret->player_volume = -1.0;

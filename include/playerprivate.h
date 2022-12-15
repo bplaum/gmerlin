@@ -161,8 +161,6 @@ typedef struct
   bg_gavl_video_options_t options;
   
   float still_framerate;
-  int64_t still_pts;
-  int still_pts_inc;
     
   gavl_video_format_t input_format;
   gavl_video_format_t output_format;

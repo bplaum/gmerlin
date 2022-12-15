@@ -42,13 +42,14 @@ void bg_player_time_init(bg_player_t * player)
     {
     s->sync_mode = SYNC_SOUNDCARD;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with soundcard");
+    
     }
   else
     {
     s->sync_mode = SYNC_SOFTWARE;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with software timer");
     }
-
+  
   }
 
 void bg_player_time_start(bg_player_t * player)
@@ -174,40 +175,4 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time)
   pthread_mutex_unlock(&player->time_offset_mutex);
   
   }
-#if 0
-void bg_player_set_resync(bg_player_t * player, int64_t time, int scale)
-  {
-  if(scale > 0)
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got resync %"PRId64" %d %f", time, scale, (double)time / scale);
-  else
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got resync %"PRId64" %d", time, scale);
-  
-  pthread_mutex_lock(&player->resync_mutex);
 
-  player->resync_time = time;
-  player->resync_scale = scale;
-  
-  pthread_mutex_unlock(&player->resync_mutex);
-  }
-
-int bg_player_get_resync(bg_player_t * player, int64_t * time, int * scale)
-  {
-  int ret = 0;
-  
-  pthread_mutex_lock(&player->resync_mutex);
-
-  if(time)
-    *time = player->resync_time;
-
-  if(*scale)
-    *scale = player->resync_scale;
-
-  if(player->resync_scale > 0)
-    ret = 1;
-  
-  pthread_mutex_unlock(&player->resync_mutex);
-  
-  return ret;
-  }
-
-#endif

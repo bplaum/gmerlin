@@ -925,6 +925,7 @@ bg_mimetype_t bg_mimetypes[] =
     { "ogg",  "audio/ogg; codecs=flac",   "Flac"          },
     { "gavf",  "audio/gavf",              "GAVF"          },
     { "wav",   "audio/wav",               "WAV"           },
+    { "wv",    "audio/x-wavpack",         "WV"           },
 
     /* Image */
     { "png",  "image/png",              "PNG"            },
