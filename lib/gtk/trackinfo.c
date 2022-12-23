@@ -338,7 +338,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   free(markup);
   markup = NULL;
   
-  while(gavl_dictionary_get_src(dict, GAVL_META_SRC, idx++,
+  while(gavl_metadata_get_src(dict, GAVL_META_SRC, idx++,
                                 &mimetype, &location))
     {
     //    fprintf(stderr, "Append link %s %s\n", mimetype, location);

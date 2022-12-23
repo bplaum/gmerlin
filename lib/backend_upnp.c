@@ -1369,7 +1369,7 @@ static const char * track_to_uri(bg_backend_handle_t * be, const gavl_dictionary
      !(mimetypes = gavl_value_get_array(mimetypes_val)))
     return NULL;
   
-  while(gavl_dictionary_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
+  while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
     {
     if((gavl_string_array_indexof(mimetypes, mimetype) >= 0) &&
        gavl_string_starts_with(uri, "http://"))
@@ -1402,7 +1402,7 @@ static char * track_to_metadata(const gavl_dictionary_t * track_p, const char * 
 
   m = gavl_track_get_metadata_nc(&track);
   
-  while(gavl_dictionary_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
+  while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
     {
     if(!idx && !strcmp(uri, current_uri))
       idx++;

@@ -486,7 +486,6 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
               }
             else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TRACK))
               {
-              int srcidx = 0;
               const gavl_dictionary_t * dict;
               gavl_time_t duration;
               char time_str[GAVL_TIME_STRING_LEN_MS];
@@ -512,17 +511,16 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
                 
                 bg_upnp_event_context_server_set_value(&p->avt_evt, "CurrentTrackDuration", time_str, EVT_INTERVAL);
 
-                gavl_dictionary_get_int(dict, GAVL_META_SRCIDX, &srcidx);
+                // gavl_dictionary_get_int(dict, GAVL_META_SRCIDX, &srcidx);
 
-                if(gavl_dictionary_get_src(dict, GAVL_META_SRC, srcidx, NULL, &uri))
+                if((uri = bg_track_get_current_location(dict)))
                   {
+                  fprintf(stderr, "upnp: Got uri %s\n", uri);
+
                   bg_upnp_event_context_server_set_value(&p->avt_evt, "CurrentTrackURI", uri, EVT_INTERVAL);
-                  
                   }
                 else
-                  {
                   bg_upnp_event_context_server_set_value(&p->avt_evt, "CurrentTrackURI", BG_SOAP_ARG_EMPTY, EVT_INTERVAL);
-                  }
                 
                 // CurrentTrackURI
                 

@@ -601,7 +601,7 @@ bg_transcoder_track_create(const gavl_dictionary_t * m,
 
   /* Load the plugin */
 
-  gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &url);
+  gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &url);
 
   if((media_info = bg_plugin_registry_load_media_info(plugin_reg, url, 0)) &&
      (num_tracks = gavl_get_num_tracks(media_info)))

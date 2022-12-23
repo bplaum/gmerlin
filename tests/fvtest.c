@@ -219,10 +219,7 @@ int main(int argc, char ** argv)
     }
   
   /* Load input plugin */
-  if(!bg_input_plugin_load(bg_plugin_reg,
-                           gmls[0],
-                           &input_handle,
-                           NULL))
+  if(!(input_handle = bg_input_plugin_load(gmls[0])))
     {
     fprintf(stderr, "Cannot open %s\n", gmls[0]);
     return -1;

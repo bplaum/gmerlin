@@ -213,7 +213,7 @@ void bg_plug_handler_add_uris(bg_plug_handler_t * h, gavl_dictionary_t * track)
 
   //  fprintf(stderr, "bg_plug_handler_add_uris: class: %s\n", klass);
   
-  if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0,
+  if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0,
                               NULL, &location) ||
      !location)
     return;

@@ -208,8 +208,8 @@ int bg_player_input_start(bg_player_t * p)
   
   /* */
   
-  p->can_seek = p->src->can_seek;
-  p->can_pause = p->src->can_pause;
+  p->can_seek  = !!(p->src->flags & SRC_CAN_SEEK);
+  p->can_pause = !!(p->src->flags & SRC_CAN_PAUSE);
   
   /* From here on, we can send the messages about the input format */
   bg_player_set_current_track(p, p->src->track_info);
@@ -610,19 +610,23 @@ void bg_player_source_select_streams(bg_player_t * player,
   }
 
 int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * src,
-                                     bg_plugin_handle_t * h, int track_index)
+                                     bg_plugin_handle_t * h)
   {
   const char * var;
   
   gavl_dictionary_t * m1;
   gavl_dictionary_t * m2;
-
   int ret = 0;
+  //  int track_index = bg_input_plugin_get_track(h);
 
+  src->flags = 0;
+  src->next_track = -1;
   src->input_handle = h;
   src->input_plugin = (bg_input_plugin_t*)src->input_handle->plugin;
 
-  src->track_info = bg_input_plugin_get_track_info(src->input_handle, track_index);
+  src->track_info = bg_input_plugin_get_track_info(src->input_handle, -1);
+  if(!src->track_info)
+    return 0;
   
   /* From DB (has priority) */
   m1 = gavl_track_get_metadata_nc(&src->track);
@@ -651,8 +655,8 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
   src->metadata = gavl_track_get_metadata(src->track_info);
   src->chapterlist = gavl_dictionary_get_chapter_list(src->metadata);
   
-  if((track_index >= 0) && !bg_input_plugin_set_track(src->input_handle, track_index))
-    goto fail;
+  //  if((track_index >= 0) && !bg_input_plugin_set_track(src->input_handle, track_index))
+  //    goto fail;
 
 
   if(src->input_plugin->common.get_controllable)
@@ -670,14 +674,10 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
   
   if(gavl_track_can_seek(src->track_info) &&
      (src->duration != GAVL_TIME_UNDEFINED))
-    src->can_seek = 1;
-  else
-    src->can_seek = 0;
+    src->flags |= SRC_CAN_SEEK;
   
   if(gavl_track_can_pause(src->track_info))
-    src->can_pause = 1;
-  else
-    src->can_pause = 0;
+    src->flags |= SRC_CAN_PAUSE;
   
   if(!gavl_track_get_num_audio_streams(src->track_info) &&
      !gavl_track_get_num_video_streams(src->track_info))
@@ -796,12 +796,10 @@ void bg_player_source_cleanup(bg_player_source_t * src)
   
   bg_player_source_close(src);
 
-  if(src->location)
-    free(src->location);
   
   gavl_dictionary_free(&src->track);
-  gavl_dictionary_free(&src->url_vars);
   memset(src, 0, sizeof(*src));
+  src->next_track = -1;
   }
 
 void bg_player_source_stop(bg_player_t * player, bg_player_source_t * p)

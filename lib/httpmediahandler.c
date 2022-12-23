@@ -357,7 +357,7 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     /* Add a temporary http uri so we can obtain the content features. */
     http_uri = gavl_metadata_add_src(metadata, GAVL_META_SRC, NULL, NULL); 
     
-    gavl_dictionary_copy(http_uri, gavl_dictionary_get_src(metadata, GAVL_META_SRC, 0, NULL, NULL));
+    gavl_dictionary_copy(http_uri, gavl_metadata_get_src(metadata, GAVL_META_SRC, 0, NULL, NULL));
     gavl_dictionary_set_string_nocopy(http_uri, GAVL_META_URI, bg_sprintf("%s%s", s->root_url, conn->path));
     
     if((content_features = bg_get_dlna_content_features(track, http_uri, 1, 0)))
@@ -611,7 +611,7 @@ static header_t * header_get(bg_http_server_t * srv, const gavl_dictionary_t * m
 
   /* Load header from file */
   
-  if((dict = gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, NULL)) &&
+  if((dict = gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, NULL)) &&
      (format = gavl_dictionary_get_string(dict, GAVL_META_FORMAT)))
     {
     if(!strcmp(format, GAVL_META_FORMAT_MP3))

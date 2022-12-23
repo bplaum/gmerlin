@@ -245,7 +245,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
   /* Open Object */
   handle = NULL;
   
-  if(!bg_input_plugin_load_full(bg_plugin_reg, location, &handle, NULL))
+  if(!(handle = bg_input_plugin_load_full(location)))
     {
     gavl_http_response_init(&conn->res, conn->protocol, 500, "Internal Server Error");
     goto fail;
@@ -660,7 +660,7 @@ static void add_uri_wav(gavl_dictionary_t * metadata, bg_http_server_t * srv, co
 
   gavl_dictionary_t * src;
   
-  if(gavl_dictionary_get_src(metadata, GAVL_META_SRC, 0, NULL, &location) &&
+  if(gavl_metadata_get_src(metadata, GAVL_META_SRC, 0, NULL, &location) &&
      location &&
      (pos1 = strrchr(location, '/')) &&
      (pos2 = strrchr(pos1, '.')))
@@ -705,7 +705,7 @@ void bg_lpcm_handler_add_uris(bg_lpcm_handler_t * h, gavl_dictionary_t * track)
      strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST))
     return;
   
-  if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0, &mimetype, &uri) ||
+  if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, &mimetype, &uri) ||
      !mimetype)
     return;
   

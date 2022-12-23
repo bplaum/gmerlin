@@ -34,11 +34,7 @@ static int load_file(bg_plugin_registry_t * plugin_reg,
                      const char * file)
   {
   gavl_dictionary_t * ti;
-  *input_handle = NULL;
-  if(!bg_input_plugin_load(plugin_reg,
-                           file,
-                           input_handle,
-                           NULL))
+  if(!(*input_handle = bg_input_plugin_load(file)))
     {
     fprintf(stderr, "Cannot open %s\n", file);
     return 0;
@@ -78,11 +74,7 @@ static int load_file_compressed(bg_plugin_registry_t * plugin_reg,
                                 gavl_compression_info_t * ci, gavl_packet_source_t ** src)
   {
   gavl_dictionary_t * ti;
-  *input_handle = NULL;
-  if(!bg_input_plugin_load(plugin_reg,
-                           file,
-                           input_handle,
-                           NULL))
+  if(!(*input_handle = bg_input_plugin_load(file)))
     {
     fprintf(stderr, "Cannot open %s\n", file);
     return 0;

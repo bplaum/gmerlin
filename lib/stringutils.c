@@ -911,6 +911,7 @@ bg_mimetype_t bg_mimetypes[] =
     { "html", "text/html",              "HTML", (const char*[]){ "htm", NULL }    },
     { "js",   "text/javascript",        "Javascript"     },
     { "css",  "text/css",               "CSS Stylesheet" },
+    { "srt",  "application/x-subrip",   "SubRip subtitle" },
     /* audio */
     { "pls",  "audio/x-scpls",           "PLS", NULL, BG_MIME_SUPPORTS_MULTITRACK  },
     { "m3u",  "audio/x-mpegurl",         "M3U", NULL, BG_MIME_SUPPORTS_MULTITRACK  },

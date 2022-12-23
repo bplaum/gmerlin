@@ -340,7 +340,7 @@ static void do_play(bg_backend_handle_t * dev)
     return;
 
   /* TODO: Supported locations might be just higher ones */
-  gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location);
+  gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location);
   
   if(!location)
     return;

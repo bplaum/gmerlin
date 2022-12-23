@@ -112,7 +112,7 @@ xmlNodePtr bg_xspf_add_track(xmlDocPtr xspf, const gavl_dictionary_t * m)
     {
     i = 0;
     
-    if(gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    if(gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
       bg_xml_append_child_node(ret, "location", location);
     
     while(xml_tags[i].gavl_name)

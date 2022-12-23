@@ -2025,10 +2025,7 @@ static int open_input(bg_transcoder_t * ret)
   {
   int track_index;
   
-  if(!bg_input_plugin_load_full(ret->plugin_reg,
-                                ret->location,
-                                &ret->in_handle,
-                                NULL))
+  if(!(ret->in_handle = bg_input_plugin_load_full(ret->location)))
     goto fail;
   
   ret->in_plugin = (bg_input_plugin_t*)ret->in_handle->plugin;
@@ -2931,7 +2928,7 @@ int bg_transcoder_init(bg_transcoder_t * ret,
   
   ret->name = gavl_strrep(ret->name, bg_transcoder_track_get_name(track));
 
-  gavl_dictionary_get_src(&ret->metadata, GAVL_META_SRC, 0, NULL, &ret->location);
+  gavl_metadata_get_src(&ret->metadata, GAVL_META_SRC, 0, NULL, &ret->location);
   
   /* Postprocess only: Send messages and return */
   if(ret->pp_only)

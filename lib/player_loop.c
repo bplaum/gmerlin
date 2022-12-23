@@ -384,14 +384,24 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
   {
   int ret = 0;
   bg_plugin_handle_t * h = NULL;
-  int track_index = 0;
-  char * real_location = NULL;
+  //  int track_index = 0;
+  //  char * real_location = NULL;
   
   if(primary)
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening location: %s", src->location);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening location");
   else
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening next location: %s", src->location);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening next location");
+
+  if(!(h = bg_load_track(&src->track)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading failed (primary: %d)", primary);
+    // fprintf(stderr, "Loading %s failed (primary: %d)\n", src->location, primary);
+    //    free(real_location);
+    
+    goto fail;
+    }
   
+#if 0 
   if(src->location)
     {
     gavl_dictionary_t vars;
@@ -408,7 +418,7 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     
     gavl_dictionary_free(&vars);
     
-    if(!bg_input_plugin_load_full(bg_plugin_reg, real_location, &h, NULL))
+    if(!(h = bg_input_plugin_load_full(real_location)))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed (primary: %d)", src->location, primary);
       // fprintf(stderr, "Loading %s failed (primary: %d)\n", src->location, primary);
@@ -419,29 +429,19 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     free(real_location);
     track_index = -1;
     }
-  else if(src->edl)
-    {
-    if(!bg_input_plugin_load_edl(bg_plugin_reg, src->edl, &h, NULL))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading multipart EDL failed");
-      goto fail;
-      }
-    
-    track_index = 0;
-    if(gavl_dictionary_get_int(&src->url_vars, BG_URL_VAR_TRACK, &track_index))
-      track_index--;
-    }
   else
     {
     goto fail;
     }
+#endif
+
   /* Shut down from last playback if necessary */
   if((src == p->src) && src->input_handle)
     player_cleanup(p);
   
   // src->input_handle = h;
   
-  if(!bg_player_source_set_from_handle(p, src, h, track_index))
+  if(!bg_player_source_set_from_handle(p, src, h))
     goto fail;
 
   ret = 1;
@@ -466,45 +466,10 @@ static int set_source_from_track(bg_player_t * p,
                                  bg_player_source_t * src,
                                  const gavl_dictionary_t * track)
   {
-  const gavl_dictionary_t * uri;
-  int ret = 0;
-  int uri_idx = 0;
-  
   bg_player_source_cleanup(src);
-  
   if(track)
     gavl_dictionary_copy(&src->track, track);
-  
-  if(bg_plugin_registry_set_multipart_edl(bg_plugin_reg, &src->track))
-    {
-    src->edl = gavl_dictionary_get_dictionary(&src->track, GAVL_META_EDL);
-    
-    //    fprintf(stderr, "Got multipart EDL:\n");
-    //    gavl_dictionary_dump(src->mp_edl, 2);
-    //    fprintf(stderr, "\n");
-    }
-  else if(!(uri = bg_plugin_registry_get_src(bg_plugin_reg, &src->track, &uri_idx)) ||
-          (!(src->edl = gavl_dictionary_get_dictionary(uri, GAVL_META_EDL)) &&
-           !(src->location = gavl_strdup(gavl_dictionary_get_string(uri, GAVL_META_URI)))))
-    return 0;
-  
-  if(src->location)
-    {
-    if(!strncasecmp(src->location, "file://", 7))
-      memmove(src->location, src->location + 7, strlen(src->location + 7) + 1);
-    gavl_url_get_vars_c(src->location, &src->url_vars);
-    }
-
-  //  fprintf(stderr, "Got url vars %s:\n", src->location);
-  //  gavl_dictionary_dump(&src->url_vars, 2);
-  
-  if(gavl_dictionary_get_int(&src->url_vars, BG_URL_VAR_TRACK, &src->track_idx))
-    src->track_idx--;
-  
-  gavl_dictionary_set_int(gavl_track_get_metadata_nc(&src->track), GAVL_META_SRCIDX, uri_idx);
-  ret = 1;
-    
-  return ret;
+  return 1;
   }
 
 
@@ -634,10 +599,11 @@ int bg_player_stream_change_done(bg_player_t * player)
   if((player->saved_state.state == BG_PLAYER_STATUS_PLAYING) ||
      (player->saved_state.state == BG_PLAYER_STATUS_PAUSED))
     {
-    if(!bg_input_plugin_set_track(player->src->input_handle, player->src->track_idx))
+    int track_idx = bg_input_plugin_get_track(player->src->input_handle);
+    if(!bg_input_plugin_set_track(player->src->input_handle, track_idx))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot select track %d after stream change",
-               player->src->track_idx);
+               track_idx);
       goto fail;
       }
 
@@ -820,7 +786,8 @@ static void chapter_cmd(bg_player_t * player, int chapter)
 static void play_cmd(bg_player_t * player)
   {
   stop_cmd(player, BG_PLAYER_STATUS_CHANGING);
-  if(!player->src->location)
+  
+  if(!(player->src->flags & SRC_HAS_TRACK))
     {
     gavl_dictionary_t * track;
 
@@ -1385,7 +1352,9 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             
             if(switch_track)
               {
-              if(!bg_player_source_set_from_handle(player, player->src_next, last_handle, idx))
+              bg_input_plugin_set_track(last_handle, idx);
+              
+              if(!bg_player_source_set_from_handle(player, player->src_next, last_handle))
                 {
                 bg_player_set_status(player, BG_PLAYER_STATUS_ERROR);
                 bg_player_ov_standby(&player->video_stream);
@@ -1536,22 +1505,21 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting playback");
               advance = 0;
               }
-            
-            if(!player->src_next->input_handle && !player->src_next->switch_track)
+
+            /* Initialize new source from the current one if we re-use the plugin */
+            if(player->src->next_track >= 0)
+              {
+              bg_input_plugin_set_track(player->src->input_handle, player->src->next_track);
+              bg_plugin_ref(player->src->input_handle);
+              
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switching plugin to track %d",
+                       player->src->next_track);
+              
+              bg_player_source_set_from_handle(player, player->src_next, player->src->input_handle);
+              }
+            else if(!player->src_next->input_handle)
               {
               load_next_track(player, advance);
-              }
-            
-            /* Initialize new source from the current one if we re-use the plugin */
-            if(player->src_next->switch_track)
-              {
-              bg_plugin_ref(player->src->input_handle);
-
-              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switching plugin to track %d",
-                       player->src_next->track_idx);
-              
-              bg_player_source_set_from_handle(player, player->src_next, player->src->input_handle,
-                                               player->src_next->track_idx);
               }
             
             player_cleanup(player);
@@ -1585,7 +1553,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               if(advance)
                 gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Switched to next track");
               }
-            else if(player->src_next->switch_track)
+            else if(player->src->next_track >= 0)
               {
               bg_player_swap_sources(player);
               bg_player_input_start(player);
@@ -1628,7 +1596,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
 
 static void load_next_track(bg_player_t * player, int advance)
   {
-  int next_idx = 0;
   gavl_dictionary_t * track;
 
   if(advance)
@@ -1642,14 +1609,9 @@ static void load_next_track(bg_player_t * player, int advance)
     /* Open next location */
               
     if(bg_track_is_multitrack_sibling(&player->src->track,
-                                      track, &next_idx))
+                                      track, &player->src->next_track))
       {
-      //                fprintf(stderr, "Next track is from same disk\n");
-      player->src_next->switch_track = 1;
-      player->src_next->track_idx = next_idx;
-
       gavl_dictionary_copy(&player->src_next->track, track);
-      
       }
     else
       {
@@ -1740,7 +1702,7 @@ static void * player_thread(void * data)
         
         if(time >= (duration = player->src->duration) - 5 * GAVL_TIME_SCALE)
           {
-          if(!player->src_next->input_handle && !player->src_next->switch_track)
+          if(!player->src_next->input_handle && (player->src->next_track < 0))
             {
             load_next_track(player, 1);
             }
@@ -1839,12 +1801,12 @@ int bg_player_advance_gapless(bg_player_t * player)
   memset(&old_fmt, 0, sizeof(old_fmt));
   gavl_audio_format_copy(&old_fmt, gavl_audio_source_get_src_format(player->src->audio_src));
   
-  if(player->src->input_handle && player->src_next->switch_track)
+  if(player->src->input_handle && (player->src->next_track >= 0))
     {
     // fprintf(stderr, "SWITCH TRACK %d\n", player->src_next->track_idx);
     bg_plugin_ref(player->src->input_handle);
-    bg_player_source_set_from_handle(player, player->src_next, player->src->input_handle,
-                                     player->src_next->track_idx);
+    bg_input_plugin_set_track(player->src->input_handle, player->src->next_track);
+    bg_player_source_set_from_handle(player, player->src_next, player->src->input_handle);
     }
 
   if(!player->src_next->track_info)
@@ -1912,8 +1874,8 @@ int bg_player_advance_gapless(bg_player_t * player)
   
   /* */
   
-  player->can_seek = player->src->can_seek;
-  player->can_pause = player->src->can_pause;
+  player->can_seek = !!(player->src->flags & SRC_CAN_SEEK);
+  player->can_pause = !!(player->src->flags & SRC_CAN_PAUSE);
   
   /* From here on, we can send the messages about the input format */
   bg_msg_hub_send_cb(player->ctrl.evt_hub, msg_gapless, &player);

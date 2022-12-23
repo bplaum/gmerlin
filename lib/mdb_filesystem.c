@@ -437,7 +437,7 @@ static void read_container_info(const bg_mdb_backend_t * be,
         const gavl_dictionary_t * m1;
 
         if((m1 = gavl_track_get_metadata(first_image)) &&
-           (gavl_dictionary_get_src(m1, GAVL_META_SRC, 0,  NULL, &str)) &&
+           (gavl_metadata_get_src(m1, GAVL_META_SRC, 0,  NULL, &str)) &&
            str)
           {
           bg_mdb_make_thumbnails(be->db, str);
@@ -1676,7 +1676,7 @@ static void rescan_directory(bg_mdb_backend_t * be, const char * id)
          rescan_directory(be, sub_id);
          }
        else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_IMAGE) &&
-               gavl_dictionary_get_src(dict, GAVL_META_SRC, 0,
+               gavl_metadata_get_src(dict, GAVL_META_SRC, 0,
                                        NULL, &uri))
          {
          bg_mdb_make_thumbnails(be->db, uri);

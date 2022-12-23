@@ -376,7 +376,7 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
        the same file is added just once */
     const char * location;
 
-    if(gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    if(gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
       {
       char md5[MD5STRING_LEN];
       if(!location)
@@ -821,7 +821,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
           idx = gavl_msg_get_arg_int(msg, 0);
           arg = gavl_msg_get_arg_c(msg, 1);
           
-          bg_plugin_registry_load_locations(bg_plugin_reg, arg, 0, arr);
+          bg_plugin_registry_tracks_from_locations(bg_plugin_reg, arg, 0, arr);
           
           if(arr->num_entries)
             {

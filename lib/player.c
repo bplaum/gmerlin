@@ -249,7 +249,7 @@ const char * bg_player_track_get_uri(gavl_dictionary_t * state, const gavl_dicti
   if((val = bg_state_get(state, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_PROTOCOLS)))
     protocols = gavl_value_get_array(val);
   
-  while(gavl_dictionary_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
+  while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
     {
     const char * ret = NULL;
     char * protocol;

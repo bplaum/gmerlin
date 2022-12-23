@@ -85,10 +85,7 @@ int main(int argc, char ** argv)
   
   /* Load input plugin */
   input_handle = NULL;
-  if(!bg_input_plugin_load(bg_plugin_reg,
-                           argv[1],
-                           &input_handle,
-                           NULL))
+  if(!(input_handle = bg_input_plugin_load(argv[1])))
     {
     fprintf(stderr, "Cannot open %s\n", argv[1]);
     return -1;

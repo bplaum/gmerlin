@@ -280,11 +280,13 @@ typedef struct
 
 #define PLAYER_MAX_THREADS 2
 
-#define PLAYER_USE_SRC
+#define SRC_HAS_TRACK    (1<<0)
+#define SRC_CAN_SEEK     (1<<1)
+#define SRC_CAN_PAUSE    (1<<2)
 
 typedef struct
   {
-  char * location;
+  //  char * location;
   
   gavl_dictionary_t * track_info;
   const gavl_dictionary_t * metadata;
@@ -305,19 +307,21 @@ typedef struct
 
   gavl_dictionary_t track; // External metadata
 
-  const gavl_dictionary_t * edl; // EDL
-  
-  gavl_dictionary_t url_vars; // URL variables
+  //  gavl_dictionary_t url_vars; // URL variables
   
   const bg_plugin_info_t * plugin_info;
-
-  int track_idx;
   
-  int can_pause;
-  int can_seek;
+  int next_track; // if > 0, we just switch to that index (Shortcut e.g. for audio CDs)
+  
+  // int track_idx;
+  
+  //  int can_pause;
+  //  int can_seek;
 
   /* Take plugin from last track and just switch the track */
-  int switch_track;
+  //  int switch_track;
+
+  int flags;
   
   gavl_time_t duration;
   bg_controllable_t * input_ctrl;
@@ -519,7 +523,7 @@ void bg_player_input_seek(bg_player_t * ctx,
 
 void bg_player_source_select_streams(bg_player_t * player, bg_player_source_t * src);
 int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * src,
-                                     bg_plugin_handle_t * h, int track_index);
+                                     bg_plugin_handle_t * h);
 
 int bg_player_source_open(bg_player_t * player, bg_player_source_t * src, int primary);
 void bg_player_source_close(bg_player_source_t * src);

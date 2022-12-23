@@ -58,11 +58,7 @@ int main(int argc, char ** argv)
   
   /* Load input plugin */
 
-  if(!bg_input_plugin_load(bg_plugin_reg,
-                           argv[1],
-                           &input_handle, // bg_plugin_handle_t ** ret,
-                           NULL // bg_input_callbacks_t * callbacks,
-                           ))
+  if(!(input_handle = bg_input_plugin_load(argv[1])))
     return -1;
   
   input_plugin = (bg_input_plugin_t*)(input_handle->plugin);

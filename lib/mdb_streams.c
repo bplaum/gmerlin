@@ -308,58 +308,70 @@ static void station_reset(station_t * s)
 typedef struct
   {
   sqlite3 * db;
-  gavl_dictionary_t * m;
+  gavl_dictionary_t * track;
   } browse_url_t;
 
 static int
 browse_url_callback(void * data, int argc, char **argv, char **azColName)
   {
   int i;
-  int val_i;
   int64_t mimetype_id = -1;
-  gavl_dictionary_t * src;
   browse_url_t * d = data;
-  gavl_dictionary_t * m = d->m;
+  int width = 0, height = 0, bitrate = 0;
   
-  src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, NULL);
-
+  const char * location = NULL;
+  char * mimetype = NULL;
+  
+  gavl_dictionary_t * variant;
+  gavl_dictionary_t * m;
+  
   for(i = 0; i < argc; i++)
     {
     if(!strcmp(azColName[i], "MIMETYPE_ID"))
       {
       mimetype_id = strtoll(argv[i], NULL, 10);
+
+      if(mimetype_id > 0)
+        mimetype = bg_sqlite_id_to_string(d->db,
+                                          "mimetypes",
+                                          "NAME",
+                                          "ID",
+                                          mimetype_id);
       }
     else if(!strcmp(azColName[i], GAVL_META_URI))
       {
-      gavl_dictionary_set_string(src, GAVL_META_URI, argv[i]);
+      location = argv[i];
       }
     else if(!strcmp(azColName[i], GAVL_META_WIDTH))
       {
-      val_i = atoi(argv[i]);
-      if(val_i > 0)
-        gavl_dictionary_set_int(src, GAVL_META_WIDTH, val_i);
+      width = atoi(argv[i]);
       }
     else if(!strcmp(azColName[i], GAVL_META_HEIGHT))
       {
-      val_i = atoi(argv[i]);
-      if(val_i > 0)
-        gavl_dictionary_set_int(src, GAVL_META_HEIGHT, val_i);
+      height = atoi(argv[i]);
       }
     else if(!strcmp(azColName[i], GAVL_META_BITRATE))
       {
-      val_i = atoi(argv[i]);
-      if(val_i > 0)
-        gavl_dictionary_set_int(src, GAVL_META_BITRATE, val_i);
+      bitrate = atoi(argv[i]);
       }
     }
 
-  if(mimetype_id > 0)
-    gavl_dictionary_set_string_nocopy(src, GAVL_META_MIMETYPE,
-                                      bg_sqlite_id_to_string(d->db,
-                                                             "mimetypes",
-                                                             "NAME",
-                                                             "ID",
-                                                             mimetype_id));
+  if(!location)
+    return 0;
+
+  variant = gavl_track_append_variant(d->track, mimetype, location);
+  m = gavl_track_get_metadata_nc(variant);
+  
+  if(bitrate > 0)
+    gavl_dictionary_set_int(m, GAVL_META_BITRATE, bitrate);
+  if(width > 0)
+    gavl_dictionary_set_int(m, GAVL_META_WIDTH, width);
+  if(height > 0)
+    gavl_dictionary_set_int(m, GAVL_META_HEIGHT, height);
+
+  if(mimetype)
+    free(mimetype);
+  
   return 0;
   }
 
@@ -464,13 +476,12 @@ static int browse_station(bg_mdb_backend_t * b,
   browse_array(b, bs.m, "languages", GAVL_META_AUDIO_LANGUAGES, id); 
   browse_array(b, bs.m, "categories", GAVL_META_CATEGORY, id); 
 
-  bu.db = p->db;
-  bu.m = bs.m;
+  bu.db   = p->db;
+  bu.track = ret;
   
   sql = gavl_sprintf("select * from uris where STATION_ID = %"PRId64";", id);
   bg_sqlite_exec(p->db, sql, browse_url_callback, &bu);
   free(sql);
-  gavl_track_set_multivariant(ret);
   return 1;
   }
 
@@ -676,7 +687,7 @@ static void add_station(bg_mdb_backend_t * b, const gavl_dictionary_t * station,
 
   while(1)
     {
-    if(!(src = gavl_dictionary_get_src(m, GAVL_META_SRC, i, NULL, NULL)))
+    if(!(src = gavl_metadata_get_src(m, GAVL_META_SRC, i, NULL, NULL)))
       break;
     
     add_uri(b, id, src);
@@ -2273,7 +2284,7 @@ static int add_source_dict(bg_mdb_backend_t * be, const gavl_dictionary_t * dict
   streams_t * s = be->priv;
 
   if(!(dict = gavl_track_get_metadata(dict)) ||
-     !gavl_dictionary_get_src(dict, GAVL_META_SRC, 0,
+     !gavl_metadata_get_src(dict, GAVL_META_SRC, 0,
                               NULL, &uri) ||
      !(label = gavl_dictionary_get_string(dict, GAVL_META_LABEL)))
     return 0;
@@ -2737,13 +2748,11 @@ static void iptv_foreach_func(void * priv, const char * name,
                               const gavl_value_t * val)
   {
   const gavl_dictionary_t * dict;
-  const gavl_dictionary_t * m;
 
   iptv_org_add_t * a = priv;
   
   if(!(dict = gavl_value_get_dictionary(val)) ||
-     !(m = gavl_track_get_metadata(dict)) ||
-     !gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, NULL))
+     !gavl_track_get_src(dict, GAVL_META_SRC, 0, NULL, NULL))
     return;
 
   add_station(a->b, dict, a->src_id);
@@ -3352,7 +3361,7 @@ typedef struct
     s.station_uri = gavl_dictionary_get_string(m, GAVL_META_STATION_URL);
     s.source_id = source_id;
     
-    gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &s.stream_uri);
+    gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &s.stream_uri);
 
     import_m3u_array(&s.categories, m, GAVL_META_CATEGORY);
     import_m3u_array(&s.languages, m, GAVL_META_AUDIO_LANGUAGES);

@@ -139,7 +139,6 @@ type_ids[] =
     { GAVL_META_MEDIA_CLASS_TV_EPISODE,      TYPE_TV_EPISODE },
     { GAVL_META_MEDIA_CLASS_IMAGE,           TYPE_IMAGE      },
     { GAVL_META_MEDIA_CLASS_MOVIE,           TYPE_MOVIE      },
-    { GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART, TYPE_MOVIE      },
     { GAVL_META_MEDIA_CLASS_MOVIE_PART,      TYPE_MOVIE_PART },
     { "nfo",                                 TYPE_NFO        },
     {  /* End */                                             }
@@ -1074,8 +1073,7 @@ static void set_image_url(gavl_dictionary_t * m,
   gavl_dictionary_t * src;
   src = gavl_metadata_add_src(m, key, NULL, NULL);
   
-  image_obj = gavl_track_get_metadata(image_obj);
-  image_obj = gavl_dictionary_get_src(image_obj, GAVL_META_SRC, 0, NULL, NULL);
+  image_obj = gavl_track_get_src(image_obj, GAVL_META_SRC, 0, NULL, NULL);
   
   gavl_dictionary_copy(src, image_obj);
   }
@@ -1101,16 +1099,16 @@ typedef struct
 static int query_part_callback(void * data, int argc, char **argv, char **azColName)
   {
   
-  gavl_array_t * parts;
+  gavl_dictionary_t * part;
   
-  gavl_dictionary_t * m;
+  //  gavl_dictionary_t * m;
   char * mimetype;
   query_part_t * q = data;
   int64_t mimetype_id;
   int64_t duration;
   int64_t mtime;
   const char * uri;
-  const gavl_dictionary_t * src;
+  gavl_dictionary_t * src;
   
   duration    = strtoll(argv[0], NULL, 10);
   uri         = argv[1];
@@ -1119,81 +1117,16 @@ static int query_part_callback(void * data, int argc, char **argv, char **azColN
   
   mimetype = bg_sqlite_id_to_string(q->db, "movie_mimetypes", "NAME", "ID", mimetype_id);
   
-  m = gavl_track_get_metadata_nc(q->obj);
+  //  m = gavl_track_get_metadata_nc(q->obj);
   
-  src = gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, NULL);
-  parts = gavl_dictionary_get_array_nc(m, GAVL_META_PARTS);
+  //  src = gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, NULL);
+  //  parts = gavl_dictionary_get_array_nc(m, GAVL_META_PARTS);
+
+  part = gavl_track_append_part(q->obj, mimetype, uri);
+  src = gavl_track_get_src_nc(part, GAVL_META_SRC, 0);
+  gavl_dictionary_set_long(src, GAVL_META_MTIME, mtime);
+  gavl_dictionary_set_long(src, GAVL_META_APPROX_DURATION, duration);
   
-  if(!src && !parts)
-    {
-    gavl_dictionary_t * new_src;
-    
-    /* First part: set src */
-    new_src = gavl_metadata_add_src(m, GAVL_META_SRC, mimetype, uri);
-    gavl_dictionary_set_long(new_src, GAVL_META_MTIME, mtime);
-    gavl_dictionary_set_long(new_src, GAVL_META_APPROX_DURATION, duration);
-    }
-  else if(src && !parts)
-    {
-    gavl_value_t val_parts;
-    gavl_array_t * parts;
-    gavl_dictionary_t * part_src;
-    
-    gavl_value_t val_part;
-    gavl_value_t val_src;
-
-    gavl_dictionary_t * part_m;
-    gavl_dictionary_t * part;
-    
-    /* Second part: Create parts array */
-    gavl_value_init(&val_part);
-    gavl_value_init(&val_parts);
-    gavl_value_init(&val_src);
-    
-    parts = gavl_value_set_array(&val_parts);
-    
-    /* 1st part */
-    part = gavl_value_set_dictionary(&val_part);
-    part_m = gavl_dictionary_get_dictionary_create(part, GAVL_META_METADATA);
-    
-    part_src = gavl_metadata_add_src(part_m, GAVL_META_SRC, NULL, NULL);
-    gavl_dictionary_copy(part_src, src);
-    gavl_array_splice_val_nocopy(parts, -1, 0, &val_part);
-
-    /* 2nd part */
-    gavl_value_init(&val_part);
-    part = gavl_value_set_dictionary(&val_part);
-    part_m = gavl_dictionary_get_dictionary_create(part, GAVL_META_METADATA);
-    
-    part_src = gavl_metadata_add_src(part_m, GAVL_META_SRC, mimetype, uri);
-    gavl_dictionary_set_long(part_src, GAVL_META_MTIME, mtime);
-    gavl_array_splice_val_nocopy(parts, -1, 0, &val_part);
-    
-    gavl_dictionary_set_nocopy(m, GAVL_META_PARTS, &val_parts);
-    gavl_dictionary_set(m, GAVL_META_SRC, NULL);
-    }
-  else if(parts)
-    {
-    gavl_value_t val_part;
-    gavl_dictionary_t * part_m;
-    gavl_dictionary_t * part;
-    gavl_dictionary_t * part_src;
-    
-    /* From 3rd part: Append to parts array */
-
-    gavl_value_init(&val_part);
-    part = gavl_value_set_dictionary(&val_part);
-    part_m = gavl_dictionary_get_dictionary_create(part, GAVL_META_METADATA);
-    
-    part_src = gavl_metadata_add_src(part_m, GAVL_META_SRC, mimetype, uri);
-    gavl_dictionary_set_long(part_src, GAVL_META_MTIME, mtime);
-    gavl_array_splice_val_nocopy(parts, -1, 0, &val_part);
-    }
-  else if(src && parts)
-    {
-    /* BUG */
-    }
-
   if(mimetype)
     free(mimetype);
   
@@ -1344,63 +1277,12 @@ static gavl_dictionary_t * query_sqlite_object(bg_mdb_backend_t * b, int64_t id,
   /* Image URIs */
 
   query_images(b, m);
-#if 0
-  /* Cover */
-  if(gavl_dictionary_get_long(m, META_COVER_ID, &sub_id) && (sub_id > 0))
-    {
-    q1.obj = NULL;
-    q1.table = get_obj_table(TYPE_IMAGE);
-    
-    sql = sqlite3_mprintf("SELECT * FROM images WHERE "META_DB_ID" = %"PRId64";", sub_id);
-    bg_sqlite_exec(p->db, sql, query_object_callback_full, &q1);
-    sqlite3_free(sql);
-
-    if(q1.obj)
-      {
-      set_image_url(m, q1.obj, GAVL_META_COVER_URL);
-      gavl_dictionary_destroy(q1.obj);
-      q1.obj = NULL;
-      }
-    }
-  /* Poster */
-  if(gavl_dictionary_get_long(m, META_POSTER_ID, &sub_id) && (sub_id > 0))
-    {
-    q1.obj = NULL;
-    q1.table = get_obj_table(TYPE_IMAGE);
-    
-    sql = sqlite3_mprintf("SELECT * FROM images WHERE "META_DB_ID" = %"PRId64";", sub_id);
-    bg_sqlite_exec(p->db, sql, query_object_callback_full, &q1);
-    sqlite3_free(sql);
-    if(q1.obj)
-      {
-      set_image_url(m, q1.obj, GAVL_META_POSTER_URL);
-      gavl_dictionary_destroy(q1.obj);
-      q1.obj = NULL;
-      }
-    }
-  /* Wallapaper */
-  if(gavl_dictionary_get_long(m, META_WALLPAPER_ID, &sub_id) && (sub_id > 0))
-    {
-    q1.obj = NULL;
-    q1.table = get_obj_table(TYPE_IMAGE);
-
-    sql = sqlite3_mprintf("SELECT * FROM images WHERE "META_DB_ID" = %"PRId64";", sub_id);
-    bg_sqlite_exec(p->db, sql, query_object_callback_full, &q1);
-    sqlite3_free(sql);
-    if(q1.obj)
-      {
-      set_image_url(m, q1.obj, GAVL_META_WALLPAPER_URL);
-      gavl_dictionary_destroy(q1.obj);
-      q1.obj = NULL;
-      }
-    }
-#endif
   /* NFO */
   if(gavl_dictionary_get_long(m, META_NFO_ID, &sub_id) && (sub_id > 0))
     {
     
     }
-
+  
   if(gavl_dictionary_get_long(m, META_PARENT_ID, &sub_id) && (sub_id > 0))
     {
     gavl_dictionary_set_string_nocopy(m, GAVL_META_ALBUM,
@@ -1431,12 +1313,11 @@ static gavl_dictionary_t * query_sqlite_object(bg_mdb_backend_t * b, int64_t id,
       bg_sqlite_exec(p->db, sql, query_part_callback, &qp);
       sqlite3_free(sql);
       
-      if(gavl_dictionary_get_array(m, GAVL_META_PARTS))
-        gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj), GAVL_META_MEDIA_CLASS,
-                                   GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART);
-      else
-        gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj), GAVL_META_MEDIA_CLASS,
-                                   GAVL_META_MEDIA_CLASS_MOVIE);
+      gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj), GAVL_META_MEDIA_CLASS,
+                                 GAVL_META_MEDIA_CLASS_MOVIE);
+
+      //      fprintf(stderr, "Got movie:\n");
+      //      gavl_dictionary_dump(q.obj, 2);
       }
     else
       gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj),
@@ -1880,7 +1761,7 @@ static int64_t add_movie_part(bg_mdb_backend_t * b, const gavl_dictionary_t * pa
   movie_m = gavl_track_get_metadata_nc(&movie_dict);
   gavl_dictionary_set(movie_m, GAVL_META_SRC, NULL);
 
-  gavl_dictionary_set_string(movie_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART);
+  gavl_dictionary_set_string(movie_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
   
   movie_id = create_object(p, TYPE_MOVIE);
   add_object(b, &movie_dict, -1, movie_id);
@@ -2406,7 +2287,7 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
 
     if(tab->src_cols)
       {
-      const gavl_dictionary_t * src = gavl_dictionary_get_src(m, GAVL_META_SRC, 0,
+      const gavl_dictionary_t * src = gavl_metadata_get_src(m, GAVL_META_SRC, 0,
                                                               NULL, NULL);
       append_cols(p, src, tab->src_cols, &sql, &sql2, 0);
       }
@@ -2588,7 +2469,7 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
 
       mi = NULL;
       
-      if(!bg_file_is_blacklisted(bg_plugin_reg, location))
+      if(!bg_file_is_blacklisted(location))
         {
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", location);
       
@@ -2625,7 +2506,7 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
       {
       mi = NULL;
 
-      if(!bg_file_is_blacklisted(bg_plugin_reg, location))
+      if(!bg_file_is_blacklisted(location))
         {
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", location);
         mi = bg_plugin_registry_load_media_info(bg_plugin_reg,
@@ -4408,7 +4289,10 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
             gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
 
             finalize_metadata_movie(m);
-
+            /* Copy parts */
+            gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
+            
+            
             gavl_dictionary_destroy(obj);
             return 1;
             }
@@ -4444,7 +4328,9 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
         gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
         finalize_metadata_movie(m);
-        
+        /* Copy parts */
+        gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
+
         gavl_dictionary_destroy(obj);
         return 1;
         }
@@ -4504,6 +4390,9 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
           gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
           finalize_metadata_movie(m);
+          /* Copy parts */
+          gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
+
           gavl_dictionary_destroy(obj);
           return 1;
           }
@@ -4570,6 +4459,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
           gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
           finalize_metadata_movie(m);
+          /* Copy parts */
+          gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
           
           gavl_dictionary_destroy(obj);
           return 1;
@@ -4674,6 +4565,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
               gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
               gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
               finalize_metadata_movie(m);
+              /* Copy parts */
+              gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
               
               gavl_dictionary_destroy(obj);
               return 1;
@@ -4737,6 +4630,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
           gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
           finalize_metadata_movie(m);
+          /* Copy parts */
+          gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
           
           gavl_dictionary_destroy(obj);
           return 1;
@@ -4797,6 +4692,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_merge2(m, gavl_track_get_metadata(obj));
           gavl_dictionary_set(m, GAVL_META_LABEL, gavl_dictionary_get(m, GAVL_META_TITLE));
           finalize_metadata_movie(m);
+          /* Copy parts */
+          gavl_dictionary_set(ret, GAVL_META_PARTS, gavl_dictionary_get(obj, GAVL_META_PARTS));
           
           gavl_dictionary_destroy(obj);
           return 1;
@@ -4936,7 +4833,7 @@ static int browse_object(bg_mdb_backend_t * b, const char * id_p, gavl_dictionar
     gavl_array_free(&arr);
     free(parent_id);
     }
-  
+  //  bg_track_find_subtitles(ret);
   bg_mdb_add_http_uris(b->db, ret);
   return 1;
   }

@@ -2257,27 +2257,31 @@ const char * bg_mdb_get_child_class(const gavl_dictionary_t * dict)
   return NULL;
   }
 
-static void finalize(gavl_dictionary_t * dict, int idx, int total)
+static void finalize(gavl_dictionary_t * track, int idx, int total)
   {
   const char * klass;
   int i = 0;
+  gavl_dictionary_t * m;
 
-  gavl_dictionary_set(dict, GAVL_META_CHILDREN, NULL);
-  gavl_track_finalize(dict);
+  //  fprintf(stderr, "Finalize track\n");
+  //  gavl_dictionary_dump(track, 2);
   
-  if(!(dict = gavl_track_get_metadata_nc(dict)))
+  gavl_dictionary_set(track, GAVL_META_CHILDREN, NULL);
+  gavl_track_finalize(track);
+  
+  if(!(m = gavl_track_get_metadata_nc(track)))
     return;
 
-  if(!gavl_dictionary_get_string(dict, GAVL_META_CHILD_CLASS))
+  if(!gavl_dictionary_get_string(m, GAVL_META_CHILD_CLASS))
     {
-    if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+    if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
       return;
   
     while(child_classes[i].klass)
       {
       if(!strcmp(child_classes[i].klass, klass))
         {
-        gavl_dictionary_set_string(dict, GAVL_META_CHILD_CLASS, child_classes[i].child_class);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_classes[i].child_class);
         break;
         }
       i++;
@@ -2285,12 +2289,13 @@ static void finalize(gavl_dictionary_t * dict, int idx, int total)
     }
   
   if(idx >= 0)
-    gavl_dictionary_set_int(dict, GAVL_META_IDX, idx);
+    gavl_dictionary_set_int(m, GAVL_META_IDX, idx);
   
   if(total > 0)
-    gavl_dictionary_set_int(dict, GAVL_META_TOTAL, total);
+    gavl_dictionary_set_int(m, GAVL_META_TOTAL, total);
   
-  
+  //  fprintf(stderr, "Finalized track\n");
+  //  gavl_dictionary_dump(track, 2);
   
   }
 

@@ -70,9 +70,12 @@
 #include <bglv.h>
 #endif
 
+#define MAX_REDIRECTIONS 5
+
+
 /* TODO Make this configurable */
 static const char * load_blacklist_ext   =
-  "sh log rar zip gz bz2 7z tar txt html htm pdf doc docx ppt pptx xls xlsx srt sub idx db nfo sqlite part "
+  "sh log rar zip gz bz2 7z tar txt html htm pdf doc docx ppt pptx xls xlsx sub idx db nfo sqlite part "
   "lib so o a exe dll ocx bmk pl py ps eps tex dvi";
 
 
@@ -81,6 +84,13 @@ static const char * load_blacklist_names  = "README lock";
 #define LOG_DOMAIN "pluginregistry"
 
 #define TO_VIDEO "$to_video"
+
+static int
+get_multipart_edl(const gavl_dictionary_t * track, gavl_dictionary_t * edl);
+
+static void
+set_multitrack_locations(gavl_dictionary_t * dict, const char * location);
+
 
 static int probe_image(bg_plugin_registry_t * r,
                        const char * filename,
@@ -127,14 +137,6 @@ meta_plugins[] =
       bg_recorder_input_get,
       bg_recorder_input_create,
     },
-#if 0
-    {
-      bg_gavfenc_name,
-      bg_gavfenc_info,
-      bg_gavfenc_get,
-      bg_gavfenc_create,
-    },
-#endif
     { /* End */ }
   };
 
@@ -501,51 +503,52 @@ const bg_plugin_info_t * bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
   return ret;
   }
 
-// const char * check_location(bg_plugin_registry_t * reg,
-
-int
-bg_plugin_registry_set_multipart_edl(bg_plugin_registry_t * reg,
-                                     gavl_dictionary_t * track)
+static int
+get_multipart_edl(const gavl_dictionary_t * track, gavl_dictionary_t * edl)
   {
   int i;
   
   const gavl_dictionary_t * m;
   gavl_dictionary_t * mi;
   const gavl_dictionary_t * part_track;
-  gavl_dictionary_t * edl;
-  const gavl_array_t * parts;
   const gavl_dictionary_t * part;
   const gavl_dictionary_t * src;
   
   const char * location;
   const char * klass;
+
+  int num_parts;
   
   /* Build an edl description from a multipart movie so we can play them
      as if they were one file */
   
   if(!(m = gavl_track_get_metadata(track)) ||
      !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
-     !(parts = gavl_dictionary_get_array(m, GAVL_META_PARTS)) ||
-     !parts->num_entries)
+     !(num_parts = gavl_track_get_num_parts(track)))
     return 0;
   
-  edl = gavl_edl_create(track);
   edl = gavl_append_track(edl, NULL);
   
-  for(i = 0; i < parts->num_entries; i++)
+  for(i = 0; i < num_parts; i++)
     {
-    if((part = gavl_value_get_dictionary(&parts->entries[i])) &&
-       (src = bg_plugin_registry_get_src(reg, part, NULL)) &&
+    if((part = gavl_track_get_part(track, i)) &&
+       (src = bg_plugin_registry_get_src(bg_plugin_reg, part, NULL)) &&
        (location = gavl_dictionary_get_string(src, GAVL_META_URI)))
       {
-      mi = bg_plugin_registry_load_media_info(reg, location, BG_INPUT_FLAG_GET_FORMAT);
+      mi = bg_plugin_registry_load_media_info(bg_plugin_reg, location, BG_INPUT_FLAG_GET_FORMAT);
       
       /* Assume single track files */
       part_track = gavl_get_track(mi, 0);
+      //      fprintf(stderr, "Got movie part:\n");
+      //      gavl_dictionary_dump(part_track, 2);
       gavl_edl_append_track_to_timeline(edl, part_track, !i ? 1 : 0 /* init */);
       gavl_dictionary_destroy(mi);
       }
     }
+
+  fprintf(stderr, "Got multipart EDL:\n");
+  gavl_dictionary_dump(edl, 2);
+  
   return 1;
   }
 
@@ -567,7 +570,7 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
   if(!m)
     return NULL;
   
-  while((ret = gavl_dictionary_get_src(m, GAVL_META_SRC, idx, &mimetype, &location)))
+  while((ret = gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &location)))
     {
     const char * pos;
     //    fprintf(stderr, "Trying 1: %s\n", location);
@@ -1387,6 +1390,10 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
 
+  tmp_info = bg_multi_input_get_info();
+  if(tmp_info)
+    ret->entries = append_to_list(ret->entries, tmp_info);
+
   tmp_info = bg_plug_input_get_info();
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
@@ -1770,7 +1777,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
 
       if(gavl_dictionary_get_long(img, GAVL_META_COVER_OFFSET, &offset) &&
          gavl_dictionary_get_long(img, GAVL_META_COVER_SIZE, &size) &&
-         gavl_dictionary_get_src(metadata, GAVL_META_SRC, 0, NULL, &uri))
+         gavl_metadata_get_src(metadata, GAVL_META_SRC, 0, NULL, &uri))
         {
         gavl_dictionary_t url_vars;
         gavl_dictionary_init(&url_vars);
@@ -2611,6 +2618,9 @@ static int detect_movie_poster(bg_plugin_registry_t * plugin_reg,
   {
   char * file = NULL;
   int result;
+
+  if(!path || !basename)
+    return 0;
   
   file = bg_sprintf("%s/%s.jpg", path, basename);
   result = check_image(plugin_reg, file, GAVL_META_POSTER_URL, dict);
@@ -2625,6 +2635,9 @@ static int detect_movie_wallpaper(bg_plugin_registry_t * plugin_reg,
   {
   char * file = NULL;
   int result;
+
+  if(!path || !basename)
+    return 0;
   
   file = bg_sprintf("%s/%s.fanart.jpg", path, basename);
   result = check_image(plugin_reg, file, GAVL_META_WALLPAPER_URL, dict);
@@ -2660,6 +2673,9 @@ static void detect_nfo(const char * path, const char * basename, gavl_dictionary
   int num_countries = 0;
   int num_actors    = 0;
   int num_directors = 0;
+
+  if(!path || !basename)
+    return;
   
   file = bg_sprintf("%s/%s.nfo", path, basename);
   
@@ -2838,7 +2854,7 @@ void bg_plugin_registry_get_container_data(bg_plugin_registry_t * plugin_reg,
   container_m = gavl_track_get_metadata_nc(container);
   container_klass = gavl_dictionary_get_string(container_m, GAVL_META_MEDIA_CLASS);
 
-  if(gavl_dictionary_get_src(child_m, GAVL_META_SRC, 0,
+  if(gavl_metadata_get_src(child_m, GAVL_META_SRC, 0,
                              NULL, &location) &&
      (location[0] == '/'))
     {
@@ -3012,7 +3028,9 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
   if(!(ti = bg_input_plugin_get_track_info(h, track)))
     return 0;
 
-  if(*location == '/')
+  gavl_track_finalize(ti);
+  
+  if(location && (*location == '/'))
     {
     char * pos;
 
@@ -3143,8 +3161,9 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
     gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_FILE);
   
   gavl_track_set_countries(ti);
-  
-  bg_set_track_name_default(ti, location);
+
+  if(location)
+    bg_set_track_name_default(ti, location);
   
   if(path)
     free(path);
@@ -3156,24 +3175,28 @@ static int input_plugin_finalize(bg_plugin_handle_t * h, const char * location)
   {
   int i;
   int num;
+  gavl_dictionary_t * edl;
+  gavl_dictionary_t * mi = bg_input_plugin_get_media_info(h);
+  num = gavl_get_num_tracks(mi);
   
-  num = bg_input_plugin_get_num_tracks(h);
-
   for(i = 0; i < num; i++)
     {
     if(!input_plugin_finalize_track(h, location, i))
       return 0;
     }
+  
+  set_multitrack_locations(mi, location);
 
+  if((edl = gavl_dictionary_get_dictionary_nc(mi, GAVL_META_EDL)))
+    set_multitrack_locations(edl, location);
+  
   return 1;
   }
 
-static int input_plugin_load(bg_plugin_registry_t * reg,
-                             const char * location,
+static int input_plugin_load(const char * location,
                              const bg_plugin_info_t * info,
                              const gavl_dictionary_t * options,
-                             bg_plugin_handle_t ** ret,
-                             bg_control_t * ctrl)
+                             bg_plugin_handle_t ** ret)
   {
   const char * real_location;
   char * protocol = NULL, * path = NULL;
@@ -3183,8 +3206,6 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
   bg_input_plugin_t * plugin;
   int try_and_error = 1;
   const bg_plugin_info_t * first_plugin = NULL;
-
-  bg_controllable_t * c;
   
   if(!location)
     return 0;
@@ -3196,8 +3217,9 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
 
   if(!strstr(real_location, "://") && access(real_location, R_OK))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Cannot access file \"%s\": %s"), real_location,
-                                         strerror(errno));
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+             TRS("Cannot access file \"%s\": %s"), real_location,
+             strerror(errno));
     return 0;
     }
   
@@ -3213,7 +3235,7 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
                       NULL,   //  port,
                       &path))
         {
-        info = bg_plugin_find_by_protocol(reg, protocol);
+        info = bg_plugin_find_by_protocol(bg_plugin_reg, protocol);
         if(info)
           {
           if(info->flags & BG_PLUGIN_REMOVABLE)
@@ -3223,11 +3245,11 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
       }
     else if(!strcmp(location, "-"))
       {
-      info = bg_plugin_find_by_protocol(reg, "stdin");
+      info = bg_plugin_find_by_protocol(bg_plugin_reg, "stdin");
       }
     else
       {
-      info = bg_plugin_find_by_filename(reg, real_location,
+      info = bg_plugin_find_by_filename(bg_plugin_reg, real_location,
                                         (BG_PLUGIN_INPUT));
       }
     first_plugin = info;
@@ -3239,10 +3261,10 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
     {
     /* Try to load this */
 
-    load_input_plugin(reg, info, options, ret);
+    load_input_plugin(bg_plugin_reg, info, options, ret);
 
     if(!info)
-      info = bg_plugin_find_by_name(reg, gavl_dictionary_get_string(options, BG_CFG_TAG_NAME));
+      info = bg_plugin_find_by_name(bg_plugin_reg, gavl_dictionary_get_string(options, BG_CFG_TAG_NAME));
     
     if(!(*ret))
       {
@@ -3253,12 +3275,6 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
     
     plugin = (bg_input_plugin_t*)((*ret)->plugin);
 
-    if(ctrl && plugin->common.get_controllable &&
-       (c = plugin->common.get_controllable((*ret)->priv)))
-      {
-      bg_controllable_connect(c, ctrl);
-      //      fprintf(stderr, "Connecting control %p %p\n", c, ctrl);
-      }
     if(!plugin->open((*ret)->priv, real_location))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Opening %s with \"%s\" failed"),
@@ -3284,16 +3300,16 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
   
   flags = bg_string_is_url(real_location) ? BG_PLUGIN_URL : BG_PLUGIN_FILE;
   
-  num_plugins = bg_plugin_registry_get_num_plugins(reg,
+  num_plugins = bg_plugin_registry_get_num_plugins(bg_plugin_reg,
                                                    BG_PLUGIN_INPUT, flags);
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i, BG_PLUGIN_INPUT, flags);
+    info = bg_plugin_find_by_index(bg_plugin_reg, i, BG_PLUGIN_INPUT, flags);
 
     if(info == first_plugin)
       continue;
         
-    load_input_plugin(reg, info, NULL, ret);
+    load_input_plugin(bg_plugin_reg, info, NULL, ret);
 
     if(!*ret)
       continue;
@@ -3313,7 +3329,7 @@ static int input_plugin_load(bg_plugin_registry_t * reg,
   return 0;
   }
 
-int bg_file_is_blacklisted(bg_plugin_registry_t * reg, const char * url)
+int bg_file_is_blacklisted(const char * url)
   {
   const char * pos;
 
@@ -3354,26 +3370,60 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
   }
 
-int bg_input_plugin_load(bg_plugin_registry_t * reg,
-                         const char * location_c,
-                         bg_plugin_handle_t ** ret,
-                         bg_control_t * ctrl)
+static void set_multitrack_locations(gavl_dictionary_t * dict, const char * location)
+  {
+  int num, i;
+
+  num = gavl_get_num_tracks(dict);
+
+  if(num < 2)
+    return;
+  
+  for(i = 0; i < num; i++)
+    {
+    char * new_location;
+    gavl_dictionary_t vars;
+    gavl_dictionary_t * src;
+    gavl_dictionary_t * track;
+    gavl_dictionary_t * m;
+    
+    gavl_dictionary_init(&vars);
+
+    track = gavl_get_track_nc(dict, i);
+
+    if(!(src = gavl_track_get_src_nc(track, GAVL_META_SRC, 0)))
+      src = gavl_track_add_src(track, GAVL_META_SRC, NULL, NULL);
+    
+    m = gavl_track_get_metadata_nc(track);
+    gavl_dictionary_set_int(m, GAVL_META_TRACKNUMBER, i+1);
+    gavl_dictionary_set_int(m, GAVL_META_TOTAL_TRACKS, num);
+    
+    new_location = gavl_strdup(location);
+    gavl_url_get_vars(new_location, &vars);
+    gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
+    
+    new_location = bg_url_append_vars(new_location, &vars);
+    
+    gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
+    gavl_dictionary_reset(&vars);
+    
+    }
+  
+  }
+
+bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
   {
   int i;
-  int prefer_edl = 0;
-  int num_tracks = 1;
   char * location = NULL;
   //  char * tmp_string = NULL;
   
   gavl_dictionary_t vars;
-  int result = 0;
   const char * plugin_name;
   const bg_plugin_info_t * info = NULL;
   
-  gavl_dictionary_t * edl;
-
   const gavl_value_t * options_val;
   const gavl_dictionary_t * options = NULL;
+  bg_plugin_handle_t * ret = NULL;
   
   gavl_dictionary_init(&vars);
   location = gavl_strdup(location_c);
@@ -3381,17 +3431,15 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
   gavl_url_get_vars(location, &vars);
 
   /* Check for a forbidden extension */
-
-  if(bg_file_is_blacklisted(reg, location))
+  
+  if(bg_file_is_blacklisted(location))
     {
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Not loading %s: blacklisted name", location);
     goto end;
     }
   
-  gavl_dictionary_get_int(&vars, BG_URL_VAR_EDL, &prefer_edl);
-
   if((plugin_name = gavl_dictionary_get_string(&vars, BG_URL_VAR_PLUGIN)))
-    info = bg_plugin_find_by_name(reg, plugin_name);
+    info = bg_plugin_find_by_name(bg_plugin_reg, plugin_name);
 
   /* Apply -ip option */
   i = 0;
@@ -3405,129 +3453,21 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
   remove_gmerlin_url_vars(&vars);
   location = bg_url_append_vars(location, &vars);
   
-  if(!input_plugin_load(reg, location, info, options, ret, ctrl))
+  if(!input_plugin_load(location, info, options, &ret))
     goto end;
   
-  num_tracks = bg_input_plugin_get_num_tracks(*ret);
-
-  edl = bg_input_plugin_get_edl(*ret);
-  
-  if(num_tracks && (!edl || !prefer_edl))
-    {
-    result = 1;
-    goto end;
-    }
-
-  /* Force EDL decoding for EDL-only sources (e.g. audio .cue files) */
-  if(edl && !num_tracks && !prefer_edl)
-    {
-    prefer_edl = 1;
-    }
-  
-  if(!edl)
-    {
-    result = 1;
-    goto end;
-    }
-  
-  /* Debug */
-  //  gavl_edl_dump(edl_c);
-    
-  /* Load EDL instead */
-
-  if(!bg_input_plugin_load_edl(reg, edl, ret, ctrl))
-    {
-    goto end;
-    }
-  
-  num_tracks = bg_input_plugin_get_num_tracks(*ret);
-  
-  result = 1;
-
   end:
-
-  if(result && !edl && (num_tracks > 1))
-    {
-    gavl_dictionary_reset(&vars);
-
-    for(i = 0; i < num_tracks; i++)
-      {
-      const char * track_uri;
-      gavl_dictionary_t * m;
-      gavl_dictionary_t * ti;
-      gavl_dictionary_t * src;
-        
-      ti = bg_input_plugin_get_track_info(*ret, i);
-      m = gavl_track_get_metadata_nc(ti);
-      gavl_dictionary_set_int(m, GAVL_META_TRACKNUMBER, i+1);
-      gavl_dictionary_set_int(m, GAVL_META_TOTAL_TRACKS, num_tracks);
-      
-      if(!(src = gavl_dictionary_get_src_nc(m, GAVL_META_SRC, 0)))
-        {
-        fprintf(stderr, "pluginregistry: Adding src: %s\n", location_c);
-        src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location_c);
-        }
-
-      if((track_uri = gavl_dictionary_get_string(src, GAVL_META_URI)) &&
-         !strcmp(track_uri, location_c))
-        {
-        char * new_location;
-        
-        new_location = gavl_strdup(gavl_dictionary_get_string(src, GAVL_META_URI));
-      
-        gavl_url_get_vars(new_location, &vars);
-        gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
-      
-        new_location = bg_url_append_vars(new_location, &vars);
-      
-        gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
-        gavl_dictionary_reset(&vars);
-        }
-      }
-    }
-
-  /* Set the src for the EDL so it can get reopened */
-  if(result && edl)
-    {
-    num_tracks = bg_input_plugin_get_num_tracks(*ret);
-    
-    for(i = 0; i < num_tracks; i++)
-      {
-      gavl_dictionary_t * src;
-
-      gavl_dictionary_t * m;
-      gavl_dictionary_t * ti;
-      char * new_location;
-      
-      if((ti = bg_input_plugin_get_track_info(*ret, i)) &&
-         (m = gavl_track_get_metadata_nc(ti)))
-        {
-        new_location = gavl_strdup(location_c);
-        gavl_url_get_vars(new_location, &vars);
-        gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
-        gavl_dictionary_set_int(&vars, BG_URL_VAR_EDL, 1);
-        new_location = bg_url_append_vars(new_location, &vars);
-
-        if((src = gavl_dictionary_get_src_nc(m, GAVL_META_SRC, 0)))
-          gavl_dictionary_set_string(src, GAVL_META_URI, new_location);
-        else
-          gavl_metadata_add_src(m, GAVL_META_SRC, NULL, new_location);
-        free(new_location);
-        gavl_dictionary_reset(&vars);
-        }
-      }
-    }
   
   if(location)
     free(location);
-
-  return result;
+  
+  return ret;
   }
 
+#if 0
 static int input_plugin_load_full(bg_plugin_registry_t * reg,
                                   const char * location,
                                   bg_plugin_handle_t ** ret,
-                                  bg_control_t * ctrl,
                                   char ** redirect_url)
   {
   const char * url;
@@ -3538,10 +3478,8 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   int result = 0;
   gavl_dictionary_t * tm;
   int variant = 0;
-  int val_i;
   
   gavl_dictionary_init(&vars);
-  
   gavl_url_get_vars_c(location, &vars);
 
   if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
@@ -3551,10 +3489,7 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   
   gavl_dictionary_free(&vars);
   
-  if(!bg_input_plugin_load(reg,
-                           location,
-                           ret,
-                           ctrl))
+  if(!(*ret = bg_input_plugin_load(location)))
     goto end;
   
   track_info = bg_input_plugin_get_track_info(*ret, track_index);
@@ -3572,9 +3507,9 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   if((klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)) &&
      !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
     {
-    const gavl_dictionary_t * src;
-    const gavl_dictionary_t * edl;
+    //    const gavl_dictionary_t * src;
 
+#if 0 // TODO: Handle multivariant    
     val_i = 0;
     gavl_dictionary_get_int(tm, GAVL_META_MULTIVARIANT, &val_i);
     if(val_i)
@@ -3587,19 +3522,13 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
         }
       
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Choosing variant %d", variant);
-      src = gavl_dictionary_get_src(tm, GAVL_META_SRC, variant, NULL, &url);
+      src = gavl_metadata_get_src(tm, GAVL_META_SRC, variant, NULL, &url);
       }
     else
-      src = gavl_dictionary_get_src(tm, GAVL_META_SRC, 0, NULL, &url);
+#endif
+      
 
-    /* TODO: Load multi input */
-    if((edl = gavl_dictionary_get_dictionary(src, GAVL_META_EDL)))
-      {
-      if(!bg_input_plugin_load_edl(reg, edl, ret, ctrl))
-        goto end;
-      result = 1;
-      }
-    else if(url)
+    if(gavl_metadata_get_src(tm, GAVL_META_SRC, 0, NULL, &url) && url)
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
       *redirect_url = gavl_strdup(url);
@@ -3614,7 +3543,19 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   
   /* Select track */
   bg_input_plugin_set_track(*ret, track_index);
+  //  fprintf(stderr, "Select track:\n");
+  //  gavl_dictionary_dump(track_info, 2);
 
+  /* Check for external subtitles */
+  if(gavl_track_get_num_video_streams(track_info) > 0)
+    bg_track_find_subtitles(track_info);
+
+  /* Check for external streams */
+  if(gavl_track_get_num_external_streams(track_info))
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, " %s", url);
+    }
+  
   end:
 
   if(!result)
@@ -3628,13 +3569,21 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   
   return result;
   }
+#endif
 
-#define MAX_REDIRECTIONS 5
+bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
+  {
+  bg_plugin_handle_t * ret;
+  gavl_dictionary_t track;
+  gavl_dictionary_init(&track);
+  gavl_track_from_location(&track, location);
+  ret = bg_load_track(&track);
+  gavl_dictionary_free(&track);
+  return ret;
+  }
 
-int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
-                              const char * location1,
-                              bg_plugin_handle_t ** ret,
-                              bg_control_t * ctrl)
+#if 0
+bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
   {
   int i;
   char * redirect_url = NULL;
@@ -3645,7 +3594,6 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
     if(!input_plugin_load_full(reg,
                                location,
                                ret,
-                               ctrl,
                                &redirect_url))
       {
       free(location);
@@ -3668,7 +3616,7 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections");
   return 0;
   }
-
+#endif
 
 static const bg_parameter_info_t encoder_section_general[] =
   {
@@ -4568,6 +4516,7 @@ bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
 int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
   {
   gavl_dictionary_t * mi;
+  gavl_dictionary_t * ti;
   bg_input_plugin_t * p = (bg_input_plugin_t *)h->plugin;
 
   /* Try GAVL_CMD_SRC_SELECT_TRACK */
@@ -4583,6 +4532,9 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
     return 0;
   
   gavl_set_current_track(mi, track);
+  ti = gavl_get_track_nc(mi, track);
+  
+  input_plugin_finalize_track(h, bg_track_get_current_location(ti), track);
 
   if(p->get_src)
     {
@@ -4591,6 +4543,14 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
                                          BG_STREAM_ACTION_DECODE);
     }
   return 1;
+  }
+
+int bg_input_plugin_get_track(bg_plugin_handle_t * h)
+  {
+  gavl_dictionary_t * mi;
+  if(!(mi = bg_input_plugin_get_media_info(h)))
+    return -1;
+  return gavl_get_current_track(mi);
   }
 
 #if 0
@@ -4760,16 +4720,15 @@ int bg_input_plugin_get_num_tracks(bg_plugin_handle_t * h)
   return gavl_get_num_tracks(mi);
   }
 
-gavl_dictionary_t * bg_input_plugin_get_edl(bg_plugin_handle_t * h)
+const gavl_dictionary_t * bg_input_plugin_get_edl(bg_plugin_handle_t * h)
   {
-  gavl_dictionary_t * mi;
-  gavl_dictionary_t * m;
+  const gavl_dictionary_t * dict;
 
-  if(!(mi = bg_input_plugin_get_media_info(h)) ||
-     !(m = gavl_dictionary_get_dictionary_nc(mi, GAVL_META_EDL)))
-    return 0;
-
-  return m;
+  if(!(dict = bg_input_plugin_get_media_info(h)) ||
+     !(dict = gavl_dictionary_get_dictionary(dict, GAVL_META_EDL)))
+    return NULL;
+  
+  return dict;
   }
 
 gavl_dictionary_t * bg_input_plugin_get_track_info(bg_plugin_handle_t * h, int idx)
@@ -4845,10 +4804,10 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
   
   if(flags & BG_INPUT_FLAG_SELECT_TRACK)
     {
-    if(!bg_input_plugin_load_full(reg, location, &h, NULL))
+    if(!(h = bg_input_plugin_load_full(location)))
       goto fail;
     }
-  else if(!bg_input_plugin_load(reg, location, &h, NULL))
+  else if(!(h = bg_input_plugin_load(location)))
     goto fail;
   
   if(!(flags & BG_INPUT_FLAG_SELECT_TRACK))
@@ -4863,9 +4822,9 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
       if(flags & BG_INPUT_FLAG_GET_FORMAT)
         {
         set_track_info(h);
-        /* Need to do this again as it might override things */
-        input_plugin_finalize_track(h, location, i);
         }
+      /* Need to do this again as it might override things */
+      input_plugin_finalize_track(h, location, i);
       }
     }
   else
@@ -4924,53 +4883,33 @@ static void load_location(bg_plugin_registry_t * reg,
                           const char * str, int flags,
                           gavl_array_t * ret)
   {
+  const gavl_dictionary_t * edl;
+
   const gavl_array_t * tracks;
   gavl_dictionary_t * mi = bg_plugin_registry_load_media_info(reg, str, flags);
 
   if(!mi)
     return;
 
-  if((tracks = gavl_get_tracks(mi)) &&
+  /* Take EDL instead */
+  if((edl = gavl_dictionary_get_dictionary(mi, GAVL_META_EDL)))
+    tracks = gavl_get_tracks(edl);
+  else
+    tracks = gavl_get_tracks(mi);
+  
+  if(tracks &&
      (tracks->num_entries > 0))
     gavl_array_splice_array(ret, -1, 0, tracks);
-
+  
   gavl_dictionary_destroy(mi);
   }
 
-#if 0
-static void load_location_plug(const char * uri, gavl_array_t * ret)
-  {
-  gavl_value_t track_val;
-  
-  gavl_dictionary_t * dict;
-  gavl_dictionary_t * m;
-  
-  gavl_value_init(&track_val);
-  dict = gavl_value_set_dictionary(&track_val);
-  m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
-  
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
-  gavl_dictionary_set_string(m, GAVL_META_LABEL, "stdin");
-  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
-  
-  gavl_array_splice_val_nocopy(ret, -1, 0, &track_val);
-  }
-
-static int uri_is_bgplug(const char * uri)
-  {
-  if(gavl_string_starts_with(uri, BG_PLUG_SCHEMA)) // gavf*://
-    {
-    return 1;
-    }
-  return 0;
-  }
-#endif
 
 /* Value can be either a single string or a string array */
-void bg_plugin_registry_load_locations(bg_plugin_registry_t * reg,
-                                       const gavl_value_t * val,
-                                       int flags,
-                                       gavl_array_t * ret)
+void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
+                                              const gavl_value_t * val,
+                                              int flags,
+                                              gavl_array_t * ret)
   {
   const char * uri;
   
@@ -5061,8 +5000,8 @@ int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dic
   
   if(!(cur = gavl_track_get_metadata(cur)) ||
      !(next = gavl_track_get_metadata(next)) ||
-     !gavl_dictionary_get_src(cur, GAVL_META_SRC, 0, NULL, &cur_url) ||
-     !gavl_dictionary_get_src(next, GAVL_META_SRC, 0, NULL, &next_url))
+     !gavl_metadata_get_src(cur, GAVL_META_SRC, 0, NULL, &cur_url) ||
+     !gavl_metadata_get_src(next, GAVL_META_SRC, 0, NULL, &next_url))
     {
     return 0;
     }
@@ -5808,7 +5747,7 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
   if(!m)
     return;
   
-  if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+  if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
     return;
 
   if(!(pos = strrchr(location, '.')))
@@ -5829,7 +5768,11 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
 
       s = gavl_track_append_external_stream(track,
                                             GAVL_STREAM_TEXT,
-                                            g.gl_pathv[i]);
+                                            "application/x-subrip", g.gl_pathv[i]);
+
+      if(!s) // Stream already added
+        continue;
+      
       sm = gavl_stream_get_metadata_nc(s);
       
       start = g.gl_pathv[i] + (int)(pos - location);
@@ -5847,14 +5790,309 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
           }
         else
           gavl_dictionary_set_string_nocopy(sm, GAVL_META_LABEL, str);
+        
+        gavl_dictionary_set_int(sm, GAVL_META_STREAM_PACKET_TIMESCALE, 1000);
+        gavl_dictionary_set_int(sm, GAVL_META_STREAM_SAMPLE_TIMESCALE, 1000);
         }
       }
     }
   globfree(&g);
-
-  
-  //  char * 
   }
+
+#if 0
+
+  const char * url;
+  const char * klass;
+  gavl_dictionary_t * track_info;
+  int track_index = 0;
+  gavl_dictionary_t vars;
+  int result = 0;
+  gavl_dictionary_t * tm;
+  int variant = 0;
+  
+  
+  gavl_url_get_vars_c(location, &vars);
+
+  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
+    track_index--;
+  
+  gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
+  
+  gavl_dictionary_free(&vars);
+  
+  if(!bg_input_plugin_load(reg,
+                           location,
+                           ret,
+                           ctrl))
+    goto end;
+  
+  track_info = bg_input_plugin_get_track_info(*ret, track_index);
+  
+  if(!track_info)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No track %d in %s", track_index + 1, location);
+    bg_plugin_unref(*ret);
+    return 0;
+    }
+  
+  tm = gavl_track_get_metadata_nc(track_info);
+
+  /* Do redirection */
+
+  const char * klass;
+  if((klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)) &&
+     !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+    {
+    const gavl_dictionary_t * src;
+
+    src = gavl_metadata_get_src(tm, GAVL_META_SRC, 0, NULL, &url);
+
+    if(url)
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
+      *redirect_url = gavl_strdup(url);
+      return 1;
+      }
+    }
+  else
+    result = 1;
+  
+  if(!result)
+    goto end;
+  
+  /* Select track */
+  bg_input_plugin_set_track(*ret, track_index);
+  //  fprintf(stderr, "Select track:\n");
+  //  gavl_dictionary_dump(track_info, 2);
+
+  /* Check for external subtitles */
+  if(gavl_track_get_num_video_streams(track_info) > 0)
+    bg_track_find_subtitles(track_info);
+
+  /* Check for external streams */
+  if(gavl_track_get_num_external_streams(track_info))
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, " %s", url);
+    }
+  
+  end:
+
+  if(!result)
+    {
+    if(*ret)
+      {
+      bg_plugin_unref(*ret);
+      *ret = NULL;
+      }
+    }
+
+
+#endif
+
+bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
+  {
+  int i;
+  
+  gavl_dictionary_t dict;
+
+  const gavl_dictionary_t * src_track = track; // Track (or subtrack) containing the location
+  int num_variants;
+  const gavl_dictionary_t * edl = NULL;
+  bg_plugin_handle_t * ret = NULL;
+
+  int src_idx;
+  int track_index = 0;
+  gavl_dictionary_t vars;
+  int variant;
+  
+  gavl_dictionary_init(&vars);
+  gavl_dictionary_init(&dict);
+
+  /* Multipart movie */
+  if(get_multipart_edl(track, &dict))
+    edl = &dict;
+  
+  variant = bg_track_get_variant(track);
+  
+  /* Loop until we get real media */
+  for(i = 0; i < MAX_REDIRECTIONS; i++)
+    {
+    gavl_dictionary_t * ti;
+    gavl_dictionary_t * tm;
+    const char * klass;
+    const char * location = NULL;
+    
+    if(edl)
+      {
+      ret = bg_input_plugin_load_edl(edl);
+      bg_input_plugin_set_track(ret, track_index);
+      goto end;
+      }
+    
+    if(gavl_track_get_num_external_streams(track))
+      {
+      /* Load multi plugin */
+      ret = bg_input_plugin_load_multi(track, NULL);
+      bg_input_plugin_set_track(ret, 0);
+      goto end;
+      }
+    
+    if((num_variants = gavl_track_get_num_variants(track)))
+      {
+      src_track = gavl_track_get_variant(track, variant);
+      if(!src_track)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No variants left");
+        goto end;
+        }
+      }
+
+    /* Open location */
+    src_idx = 0;
+    while(gavl_track_get_src(src_track, GAVL_META_SRC, src_idx, NULL, &location))
+      {
+      /* Get url vars */
+      gavl_dictionary_t vars;
+      track_index = 0;
+      gavl_dictionary_init(&vars);
+      gavl_url_get_vars_c(location, &vars);
+      
+      if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
+        track_index--;
+      // gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
+      gavl_dictionary_free(&vars);
+      
+      if(!(ret = bg_input_plugin_load(location)))
+        {
+        src_idx++;
+        continue;
+        }
+      break;
+      }
+
+    if(!ret)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No playable location found");
+      goto end;
+      }
+    if((edl = bg_input_plugin_get_edl(ret)))
+      {
+      /* TODO: Add option which allows forcing the raw file instead of the EDL */
+      gavl_dictionary_reset(&dict);
+      gavl_dictionary_copy(&dict, edl);
+      edl = &dict;
+      /* EDL will be loaded next iteration */
+      continue;
+      }
+
+    ti = bg_input_plugin_get_track_info(ret, track_index);
+    
+    if(!ti)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No track %d in %s", track_index + 1, location);
+      bg_plugin_unref(ret);
+      ret = NULL;
+      goto end;
+      }
+
+    bg_track_set_current_location(ti, location);
+    
+    tm = gavl_track_get_metadata_nc(ti);
+    
+    if(!(klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)) ||
+       strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+      {
+      bg_input_plugin_set_track(ret, track_index);
+      
+      if(gavl_track_get_num_external_streams(ti))
+        {
+        ret = bg_input_plugin_load_multi(NULL, ret);
+        bg_input_plugin_set_track(ret, 0);
+        }
+      break;
+      }
+    
+    } // Redirector loop
+  
+  end:
+
+  gavl_dictionary_free(&dict);
+  gavl_dictionary_free(&vars);
+  
+  return ret;
+  }
+
+/* Track items set by or for the plugin registry */
+
+/*
+ *  Values in the track dictionary for configuring
+ */
+#define BG_TRACK_DICT_PLUGINREG   "$plugin_reg"
+
+#define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
+#define BG_TRACK_CURRENT_LOCATION "location"
+#define BG_TRACK_CURRENT_TRACK    "track"
+
+/*
+ *  Values in the track dictionary for configuring
+ */
+#define BG_TRACK_DICT_PLUGINREG   "$plugin_reg"
+
+#define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
+#define BG_TRACK_CURRENT_LOCATION "location"
+#define BG_TRACK_VARIANT          "variant"
+
+void
+bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw)
+  {
+  dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
+  gavl_dictionary_set_int(dict, BG_TRACK_FORCE_RAW, force_raw);
+  }
+
+void
+bg_track_set_variant(gavl_dictionary_t * dict, int variant)
+  {
+  dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
+  gavl_dictionary_set_int(dict, BG_TRACK_VARIANT, variant);
+  }
+
+void
+bg_track_set_current_location(gavl_dictionary_t * dict, const char * location)
+  {
+  dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
+  gavl_dictionary_set_string(dict, BG_TRACK_CURRENT_LOCATION, location);
+  }
+
+
+int
+bg_track_get_force_raw(const gavl_dictionary_t * dict)
+  {
+  int ret = 0;
+  if(!(dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
+    return 0;
+  gavl_dictionary_get_int(dict, BG_TRACK_FORCE_RAW, &ret);
+  return ret;
+  }
+
+int
+bg_track_get_variant(const gavl_dictionary_t * dict)
+  {
+  int ret = 0;
+  if(!(dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
+    return 0;
+  gavl_dictionary_get_int(dict, BG_TRACK_VARIANT, &ret);
+  return ret;
+  }
+
+const char *
+bg_track_get_current_location(const gavl_dictionary_t * dict)
+  {
+  if(!(dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
+    return NULL;
+  
+  return gavl_dictionary_get_string(dict, BG_TRACK_CURRENT_LOCATION);
+  }
+
 
 
 #if defined(__GNUC__)

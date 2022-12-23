@@ -62,9 +62,9 @@ int main(int argc, char ** argv)
   {
   int num_tracks, i;
   int ret = EXIT_FAILURE;
-  bg_media_source_t * src;
+  //  bg_media_source_t * src;
   const gavl_dictionary_t * mi;
-  const gavl_dictionary_t * cur;
+  //  const gavl_dictionary_t * cur;
 
   bg_app_init("gavf-info", "Print gavf stream info");
     
@@ -90,7 +90,7 @@ int main(int argc, char ** argv)
     {
     bg_plug_select_track(gavftools_in_plug, i);
 
-    cur = bg_plug_get_current_track(gavftools_in_plug);
+    //    cur = bg_plug_get_current_track(gavftools_in_plug);
 
     gavl_dprintf("TRACK %d\n", i+1);
     

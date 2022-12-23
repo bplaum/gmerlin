@@ -420,7 +420,7 @@ int main(int argc, char ** argv)
 
   /* Open input file */
 
-  if(!bg_input_plugin_load(bg_plugin_reg, input_file, &h, &open_ctrl))
+  if(!(h = bg_input_plugin_load(input_file)))
     return ret;
 
   gavftools_ctrl_in = &h->ctrl_ext;

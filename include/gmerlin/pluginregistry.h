@@ -62,6 +62,28 @@
 /* For sections, which have a single plugin as parameter */
 #define BG_PARAMETER_NAME_PLUGIN "p"
 
+
+void
+bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
+
+void
+bg_track_set_variant(gavl_dictionary_t * dict, int variant);
+
+void
+bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
+
+
+int
+bg_track_get_force_raw(const gavl_dictionary_t * dict);
+
+int
+bg_track_get_variant(const gavl_dictionary_t * dict);
+
+const char *
+bg_track_get_current_location(const gavl_dictionary_t * dict);
+
+
+
 /** \ingroup plugin_registry
  *  \brief Identifiers for plugin APIs
  */
@@ -413,10 +435,7 @@ void bg_plugin_registry_free_plugins(char ** plugins);
  *
  */
 
-int bg_input_plugin_load(bg_plugin_registry_t * reg,
-                         const char * location,
-                         bg_plugin_handle_t ** ret,
-                         bg_control_t * ctrl);
+bg_plugin_handle_t * bg_input_plugin_load(const char * location);
 
 /** \ingroup plugin_registry
  *  \brief Load and open an input plugin with URL redirection
@@ -435,10 +454,7 @@ int bg_input_plugin_load(bg_plugin_registry_t * reg,
  *
  */
 
-int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
-                              const char * location,
-                              bg_plugin_handle_t ** ret,
-                              bg_control_t * ctrl);
+bg_plugin_handle_t * bg_input_plugin_load_full(const char * location);
 
 /** \ingroup plugin_registry
  *  \brief Load and open an edl decoder
@@ -454,10 +470,25 @@ int bg_input_plugin_load_full(bg_plugin_registry_t * reg,
  *  If ret is non-null before the call, the old plugin will be unrefed.
  */
 
-int bg_input_plugin_load_edl(bg_plugin_registry_t * reg,
-                             const gavl_dictionary_t * edl,
-                             bg_plugin_handle_t ** ret,
-                             bg_control_t * ctrl);
+bg_plugin_handle_t * bg_input_plugin_load_edl(const gavl_dictionary_t * edl);
+bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track, bg_plugin_handle_t * h);
+
+/*
+ *  Load a track with the global plugin registry
+ *  Handles:
+ *
+ *  - Multipart movies (GAVL_META_PARTS)
+ *  - Multivariant streams (GAVL_META_VARIANTS)
+ *  - Redirectors (GAVL_MEDIA_CLASS_LOCATION)
+ *  - Devices
+ *  ...
+ *  variant is the index of the multivariat (multi bitrate-) streams.
+ *  0 means first, with highest quality. Increase value after playback
+ *  failed
+ *  due to slow system or network.
+ */
+
+bg_plugin_handle_t *  bg_load_track(const gavl_dictionary_t * track);
 
 /* Set the supported extensions and mimetypes for a plugin */
 
@@ -986,6 +1017,8 @@ int bg_plugin_registry_changed(bg_plugin_registry_t * reg);
  */
 
 int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track);
+int bg_input_plugin_get_track(bg_plugin_handle_t * h);
+
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t * time, int scale);
 void bg_input_plugin_start(bg_plugin_handle_t * h);
 
@@ -1008,7 +1041,7 @@ bg_msg_hub_t * bg_input_plugin_get_msg_hub_by_id(bg_plugin_handle_t * h, int id)
 
 
 
-gavl_dictionary_t * bg_input_plugin_get_edl(bg_plugin_handle_t * h);
+const gavl_dictionary_t * bg_input_plugin_get_edl(bg_plugin_handle_t * h);
 
 gavl_dictionary_t * bg_input_plugin_get_media_info(bg_plugin_handle_t * h);
 
@@ -1028,10 +1061,10 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
                                                        const char * location,
                                                        int flags);
 
-void bg_plugin_registry_load_locations(bg_plugin_registry_t * reg,
-                                       const gavl_value_t * val,
-                                       int flags,
-                                       gavl_array_t * ret);
+void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
+                                              const gavl_value_t * val,
+                                              int flags,
+                                              gavl_array_t * ret);
 
 
 int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const char * name, const gavl_value_t * val);
@@ -1039,7 +1072,7 @@ int bg_plugin_handle_get_state(bg_plugin_handle_t * h, const char * ctx, const c
 
 void bg_plugin_handle_connect_control(bg_plugin_handle_t * ret);
 
-int bg_file_is_blacklisted(bg_plugin_registry_t * reg, const char * url);
+int bg_file_is_blacklisted(const char * url);
 
 
 
@@ -1049,9 +1082,6 @@ void bg_ov_plugin_set_fullscreen(bg_plugin_handle_t * h, int fs);
 void bg_ov_plugin_set_visible(bg_plugin_handle_t * h, int visible);
 void bg_ov_plugin_set_window_title(bg_plugin_handle_t * h, const char * window_title);
 
-int
-bg_plugin_registry_set_multipart_edl(bg_plugin_registry_t * reg,
-                                     gavl_dictionary_t * track);
 
 void bg_plugin_registry_get_input_mimetypes(bg_plugin_registry_t * reg,
                                             gavl_array_t * ret);
@@ -1268,7 +1298,7 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
   .arg =         "-fv", \
   .help_arg    = "plugin[?param1=val1[&param2=val2...]]", \
   .help_string = TRS("Add a video filter with options to the chain. This option can be "\
-                     "given multiple times. Use -list-fv to list available plugins " \
+                     "given multibple times. Use -list-fv to list available plugins " \
                      "and -list-plugin-parameters <plugin> to list all supported options"), \
   .callback =    bg_plugin_registry_opt_fv, \
   }

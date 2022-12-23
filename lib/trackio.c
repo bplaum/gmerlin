@@ -48,7 +48,7 @@ static const char * get_uri(const gavl_dictionary_t * m, int local)
   const char * location = NULL;
   if(local)
     {
-    if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
       return NULL;
     return location;
     }
@@ -56,7 +56,7 @@ static const char * get_uri(const gavl_dictionary_t * m, int local)
     {
     int idx = 0;
     
-    while(gavl_dictionary_get_src(m, GAVL_META_SRC, idx, NULL, &location))
+    while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, NULL, &location))
       {
       if(gavl_string_starts_with(location, "http://"))
         {

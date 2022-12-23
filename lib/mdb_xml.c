@@ -322,7 +322,7 @@ static int do_add(bg_mdb_backend_t * b,
     no_duplicates = 1;
 
     if((m = gavl_track_get_metadata(add)) &&
-       gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &uri))
+       gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &uri))
       {
       bg_get_filename_hash(uri, uuid_str);
       }
@@ -442,7 +442,7 @@ static void add_uri(bg_mdb_backend_t * b,
         
         if((dict = gavl_value_get_dictionary_nc(&tracks->entries[j])) &&
            (m = gavl_track_get_metadata(dict)) &&
-           gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &next_uri) &&
+           gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &next_uri) &&
            next_uri)
           add_uri(b, dir_idx, idx, next_uri, parent_id, add_array_real, depth + 1);
         }
@@ -1032,7 +1032,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           idx = gavl_msg_get_arg_int(msg, 0);
           loc = gavl_msg_get_arg_c(msg, 1);
           
-          bg_plugin_registry_load_locations(bg_plugin_reg, loc, BG_INPUT_FLAG_GET_FORMAT, add_arr);
+          bg_plugin_registry_tracks_from_locations(bg_plugin_reg, loc, BG_INPUT_FLAG_GET_FORMAT, add_arr);
 
           splice(b, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), 1, idx, 0, &add_val);
           gavl_value_free(&add_val);

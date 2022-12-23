@@ -753,8 +753,8 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
     
     while(1)
       {
-      if(!(img = gavl_dictionary_get_src(m, GAVL_META_SRC, idx,
-                                         &mimetype, NULL)))
+      if(!(img = gavl_metadata_get_src(m, GAVL_META_SRC, idx,
+                                       &mimetype, NULL)))
         break;
 
       if(gavl_string_starts_with(mimetype, "image/"))
@@ -1009,7 +1009,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
 
   
   
-  while((src = gavl_dictionary_get_src(m, GAVL_META_SRC, i, &mimetype, &location)))
+  while((src = gavl_metadata_get_src(m, GAVL_META_SRC, i, &mimetype, &location)))
     {
     int can_seek_http = 0;
     gavl_time_t dur;

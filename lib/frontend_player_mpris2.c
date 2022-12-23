@@ -574,18 +574,18 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
 
 static void track_to_metadata(const gavl_dictionary_t * src, gavl_dictionary_t * dst)
   {
-  int srcidx = 0;
   const char * var = NULL;
   const gavl_value_t * val = NULL;
+
+  
+  if((var = bg_track_get_current_location(src)))
+    gavl_dictionary_set_string_nocopy(dst, "xesam:url", bg_string_to_uri(var, -1));
+
+  fprintf(stderr, "mpris2: Got uri %s\n", var);
   
   if(!(src = gavl_track_get_metadata(src)))
     return;
   
-  gavl_dictionary_get_int(src, GAVL_META_SRCIDX, &srcidx);
-
-  if(gavl_dictionary_get_src(src, GAVL_META_SRC, srcidx, NULL, &var))
-    gavl_dictionary_set_string_nocopy(dst, "xesam:url", bg_string_to_uri(var, -1));
-                
   if((var = gavl_dictionary_get_string(src, GAVL_META_TITLE)))
     gavl_dictionary_set_string(dst, "xesam:title", var);
 
@@ -604,7 +604,7 @@ static void track_to_metadata(const gavl_dictionary_t * src, gavl_dictionary_t *
   if((var = gavl_dictionary_get_string(src, GAVL_META_ALBUM)))
     gavl_dictionary_set_string(dst, "xesam:album", var);
 
-  if(gavl_dictionary_get_src(src, GAVL_META_COVER_URL, 0, NULL, &var))
+  if(gavl_metadata_get_src(src, GAVL_META_COVER_URL, 0, NULL, &var))
     gavl_dictionary_set_string_nocopy(dst, "mpris:artUrl", bg_string_to_uri(var, -1));
   }
 

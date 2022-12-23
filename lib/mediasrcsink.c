@@ -201,6 +201,7 @@ bg_media_source_append_msg_stream_by_id(bg_media_source_t * src, int id)
   return ret;
   }
 
+
 void bg_media_source_set_from_source(bg_media_source_t * dst,
                                      bg_media_source_t * src)
   {
