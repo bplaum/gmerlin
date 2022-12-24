@@ -30,6 +30,24 @@ typedef struct
 
 static int set_track_multi(void * priv, int track);
 
+static void forward_command(multi_t * m, gavl_msg_t * msg)
+  {
+  int i;
+  
+  if(m->h)
+    bg_msg_sink_put(m->h->control.cmd_sink, msg);
+  
+  for(i = 0; i < m->src.num_streams; i++)
+    {
+    if(m->src.streams[i]->user_data)
+      {
+      bg_plugin_handle_t * h = m->src.streams[i]->user_data;
+      bg_msg_sink_put(h->control.cmd_sink, msg);
+      }
+    }
+  }
+
+#if 0
 static void seek_multi(void * priv, int64_t * time, int scale)
   {
   int i;
@@ -45,12 +63,16 @@ static void seek_multi(void * priv, int64_t * time, int scale)
     }
   
   }
+#endif
 
 static void start_multi(void * priv)
   {
   int i;
   multi_t * m = priv;
   const char * uri;
+  int can_seek = 0, can_pause = 0;
+  const gavl_dictionary_t * track;
+  gavl_dictionary_t * metadata = NULL;
   
   for(i = 0; i < m->src.num_streams; i++)
     {
@@ -63,10 +85,19 @@ static void start_multi(void * priv)
     }
 
   if(m->h)
+    {
     bg_input_plugin_start(m->h);
-
-  /* Set up pipelines */
-
+    
+    track = bg_input_plugin_get_track_info(m->h, -1);
+    can_seek = gavl_track_can_seek(track);
+    can_pause = gavl_track_can_pause(track);
+    }
+  else
+    {
+    can_seek = 1;
+    can_pause = 1;
+    }
+  
   for(i = 0; i < m->src.num_streams; i++)
     {
     if(m->src.streams[i]->action == BG_STREAM_ACTION_OFF)
@@ -95,8 +126,14 @@ static void start_multi(void * priv)
       m->src.streams[i]->psrc = h->src->streams[0]->psrc;
       m->src.streams[i]->vsrc = h->src->streams[0]->vsrc;
       m->src.streams[i]->asrc = h->src->streams[0]->asrc;
-      }
 
+      track = bg_input_plugin_get_track_info(h, -1);
+      if(can_seek && !gavl_track_can_seek(track))
+        can_seek = 0;
+      if(can_pause && !gavl_track_can_pause(track))
+        can_pause = 0;
+      }
+    
     /* Set stream formats */
     if(m->src.streams[i]->asrc)
       {
@@ -110,7 +147,13 @@ static void start_multi(void * priv)
       }
     
     }
-  
+
+  metadata = gavl_track_get_metadata_nc(m->ti);
+
+  if(can_seek)
+    gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
+  if(can_pause)
+    gavl_dictionary_set_int(metadata, GAVL_META_CAN_PAUSE, 1);
   
   }
 
@@ -136,14 +179,11 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           start_multi(data);
           break;
         case GAVL_CMD_SRC_SEEK:
+        case GAVL_CMD_SRC_PAUSE:
+        case GAVL_CMD_SRC_RESUME:
           {
-          int64_t time = gavl_msg_get_arg_long(msg, 0);
-          int scale = gavl_msg_get_arg_int(msg, 1);
-
-          /* Seek */
-          seek_multi(priv, &time, scale);
+          forward_command(priv, msg);
           }
-          break;
         }
       break;
     }

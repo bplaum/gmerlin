@@ -1042,7 +1042,12 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               {
               /* Seek */
 
-              int state = bg_player_get_status(player);
+              int state;
+              
+              if(!player->can_seek)
+                break;
+              
+              state = bg_player_get_status(player);
               if((state != BG_PLAYER_STATUS_PLAYING) &&
                  (state != BG_PLAYER_STATUS_PAUSED))
                 break;           
