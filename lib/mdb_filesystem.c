@@ -1822,8 +1822,8 @@ static void save_dir_list(bg_mdb_backend_t * be, gavl_array_t * arr)
 static void splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_value_t * add, int sendmsg)
   {
   int num_added = 0;
-  gavl_array_t * dirs;
-  gavl_dictionary_t * container;
+  gavl_array_t * dirs = NULL;
+  gavl_dictionary_t * container = NULL;
   fs_t * fs = b->priv;
   gavl_array_t children;
   gavl_msg_t * resp;
