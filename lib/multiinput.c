@@ -47,24 +47,6 @@ static void forward_command(multi_t * m, gavl_msg_t * msg)
     }
   }
 
-#if 0
-static void seek_multi(void * priv, int64_t * time, int scale)
-  {
-  int i;
-  multi_t * m = priv;
-
-  if(m->h)
-    bg_input_plugin_seek(m->h, time, scale);
-
-  for(i = 0; i < m->src.num_streams; i++)
-    {
-    if(m->src.streams[i]->user_data)
-      bg_input_plugin_seek(m->src.streams[i]->user_data, time, scale);
-    }
-  
-  }
-#endif
-
 static void start_multi(void * priv)
   {
   int i;

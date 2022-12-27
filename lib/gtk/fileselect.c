@@ -43,8 +43,8 @@ struct bg_gtk_filesel_s
   GtkWidget * plugin_menu;
   void (*add_files)(char ** files, void * data);
 
-  void (*add_dir)(char * dir, int recursive, int subdirs_as_subalbums,
-                  int watch, const char * plugin, int prefer_edl,
+  void (*add_dir)(char * dir,
+                  const char * plugin,
                   void * data);
   
   void (*close_notify)(bg_gtk_filesel_t * f, void * data);
@@ -53,13 +53,8 @@ struct bg_gtk_filesel_s
 
   char * cwd;
   int is_modal;
-
+  
   int unsensitive;
-
-  GtkWidget * recursive;
-  GtkWidget * subdirs_as_subalbums;
-  GtkWidget * watch;
-  GtkWidget * prefer_edl;
   };
 
 static void add_files(bg_gtk_filesel_t * f)
@@ -72,10 +67,6 @@ static void add_files(bg_gtk_filesel_t * f)
   int num, i;
 
   gavl_dictionary_init(&vars);
-
-
-  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->prefer_edl)))
-    gavl_dictionary_set_int(&vars, BG_URL_VAR_EDL, 1);
   
   file_list =
     gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(f->filesel));
@@ -118,11 +109,7 @@ static void add_dir(bg_gtk_filesel_t * f)
   f->unsensitive = 1;
   gtk_widget_set_sensitive(f->filesel, 0);
   f->add_dir(tmp,
-             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->recursive)),
-             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->subdirs_as_subalbums)),
-             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->watch)),
              plugin,
-             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(f->prefer_edl)),
              f->callback_data);
   gtk_widget_set_sensitive(f->filesel, 1);
   f->unsensitive = 0;
@@ -177,12 +164,6 @@ static gboolean destroy_callback(GtkWidget * w, GdkEvent * event,
 static bg_gtk_filesel_t *
 filesel_create(const char * title,
                void (*add_files)(char ** files, void * data),
-               void (*add_dir)(char * dir, int recursive,
-                               int subdirs_as_subalbums,
-                               int watch,
-                               const char * plugin,
-                               int prefer_edl,
-                               void * data),
                void (*close_notify)(bg_gtk_filesel_t *,
                                     void * data),
                void * user_data,
@@ -191,86 +172,24 @@ filesel_create(const char * title,
   {
   bg_gtk_filesel_t * ret;
   
-  GtkWidget * extra = NULL;
-  
   ret = calloc(1, sizeof(*ret));
   
   parent_window = bg_gtk_get_toplevel(parent_window);
   
   /* Create fileselection */
   
-  if(add_files)
-    {
-    ret->filesel =
-      gtk_file_chooser_dialog_new(title,
-                                  GTK_WINDOW(parent_window),
-                                  GTK_FILE_CHOOSER_ACTION_OPEN,
-                                  TR("_Cancel"),
-                                  GTK_RESPONSE_CANCEL,
-                                  TR("_OK"), GTK_RESPONSE_OK,
-                                  NULL);
-    gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(ret->filesel),
-                                         TRUE);
-    }
-  else if(add_dir)
-    {
-    ret->filesel =
-      gtk_file_chooser_dialog_new(title,
-                                  GTK_WINDOW(parent_window),
-                                  GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-                                  TR("_Cancel"),
-                                  GTK_RESPONSE_CANCEL,
-                                  TR("_OK"), GTK_RESPONSE_OK,
-                                  NULL);
-    
-    extra = bg_gtk_vbox_new(5);
-    
-    ret->recursive =
-      gtk_check_button_new_with_label(TR("Recursive"));
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ret->recursive), 1);
-
-    gtk_widget_show(ret->recursive);
-    bg_gtk_box_pack_start(extra,
-                          ret->recursive, 1);
-    
-    ret->subdirs_as_subalbums =
-      gtk_check_button_new_with_label(TR("Add subdirectories as subalbums"));
-    gtk_widget_show(ret->subdirs_as_subalbums);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ret->subdirs_as_subalbums), 1);
-    
-    ret->watch =
-      gtk_check_button_new_with_label(TR("Watch directories"));
-    gtk_widget_show(ret->watch);
-    
-    bg_gtk_box_pack_start(extra,
-                          ret->subdirs_as_subalbums, 1);
-    bg_gtk_box_pack_start(extra,
-                          ret->watch, 1);
-    }
-
-  gtk_window_set_default_size(GTK_WINDOW(ret->filesel), 400, 400);
+  ret->filesel =
+    gtk_file_chooser_dialog_new(title,
+                                GTK_WINDOW(parent_window),
+                                GTK_FILE_CHOOSER_ACTION_OPEN,
+                                TR("_Cancel"),
+                                GTK_RESPONSE_CANCEL,
+                                TR("_OK"), GTK_RESPONSE_OK,
+                                NULL);
+  gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(ret->filesel),
+                                       TRUE);
   
-  /* Create plugin menu */
-    
-  if(plugin_reg)
-    {
-    if(!extra)
-      extra = bg_gtk_vbox_new(5);
-    
-    ret->prefer_edl =
-      gtk_check_button_new_with_label(TR("Prefer EDL"));
-    gtk_widget_show(ret->prefer_edl);
-    
-    bg_gtk_box_pack_start(extra,
-                          ret->prefer_edl, 1);
-    
-    }
-
-  if(extra)
-    {
-    gtk_widget_show(extra);
-    gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(ret->filesel), extra);
-    }
+  gtk_window_set_default_size(GTK_WINDOW(ret->filesel), 400, 400);
   
   /* Set callbacks */
   g_signal_connect(ret->filesel, "response",
@@ -278,7 +197,6 @@ filesel_create(const char * title,
                    (gpointer)ret);
   
   ret->add_files     = add_files;
-  ret->add_dir       = add_dir;
   ret->close_notify  = close_notify;
   ret->callback_data = user_data;
 
@@ -296,37 +214,11 @@ bg_gtk_filesel_create(const char * title,
   {
   return filesel_create(title,
                         add_file,
-                        NULL,
                         close_notify,
                         user_data,
                         parent_window, bg_plugin_reg, type_mask, flag_mask);
   }
 
-#if 0
-bg_gtk_filesel_t *
-bg_gtk_dirsel_create(const char * title,
-                     void (*add_dir)(char * dir, int recursive,
-                                     int subdirs_as_subalbums,
-                                     int watch,
-                                     const char * plugin,
-                                     int prefer_edl,
-                                     void * data),
-                     void (*close_notify)(bg_gtk_filesel_t *,
-                                          void * data),
-                     void * user_data,
-                     GtkWidget * parent_window,
-                     bg_plugin_registry_t * plugin_reg,
-                     int type_mask, int flag_mask)
-  {
-  return filesel_create(title,
-                        NULL,
-                        add_dir,
-                        close_notify,
-                        user_data,
-                        parent_window, plugin_reg,
-                        type_mask, flag_mask);
-  }
-#endif
 
 /* Destroy fileselector */
 

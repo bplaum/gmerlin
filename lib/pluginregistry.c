@@ -2603,6 +2603,9 @@ static void detect_album_cover(bg_plugin_registry_t * plugin_reg,
   {
   char * file = NULL;
   int result;
+
+  if(!path)
+    return;
   
   file = bg_sprintf("%s/cover.jpg", path);
   result = check_image(plugin_reg, file, GAVL_META_COVER_URL, dict);
@@ -3053,7 +3056,7 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
   
   if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
+    if(basename && !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
       {
       char * pos = strrchr(basename, ')'); // Closing parenthesis of the year
       if(pos)
@@ -3062,9 +3065,9 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
         *pos = '\0';
         }
       }
-      
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) ||
-       !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
+    
+    if((!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) ||
+        !strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART)))
       {
       detect_movie_poster(bg_plugin_reg, path, basename, m);
       detect_movie_wallpaper(bg_plugin_reg, path, basename, m);
@@ -3364,7 +3367,6 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   {
   gavl_dictionary_set(vars, BG_URL_VAR_TRACK,   NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_VARIANT, NULL);
-  gavl_dictionary_set(vars, BG_URL_VAR_EDL,     NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_SEEK,    NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_PLUGIN,  NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
@@ -4799,7 +4801,6 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
       location = gavl_strcat(location, "?");
     else
       location = gavl_strcat(location, "&");
-    location = gavl_strcat(location, "edl=1");
     }
   
   if(flags & BG_INPUT_FLAG_SELECT_TRACK)
@@ -4816,6 +4817,9 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
 
     for(i = 0; i < num_tracks; i++)
       {
+      bg_track_set_current_location(bg_input_plugin_get_track_info(h, i),
+                                    location);
+      
       if(!bg_input_plugin_set_track(h, i))
         goto fail;
 

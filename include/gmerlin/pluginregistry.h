@@ -49,7 +49,6 @@
 #define BG_URL_VAR_TRACK    "track"      // Select track (see \ref bg_input_plugin_load_full)
 #define BG_URL_VAR_VARIANT  "variant"    // Variant for multirate streams
 
-#define BG_URL_VAR_EDL     "edl"        // Prefer EDL (if available) over raw media
 #define BG_URL_VAR_SEEK    "seek"       // Seek to a spefific time in seconds
 #define BG_URL_VAR_PLUGIN  "plugin"     // Force usage of a plugin
 #define BG_URL_VAR_CMDLINE "cmdlineopt" // Respect the -i option

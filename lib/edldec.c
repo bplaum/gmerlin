@@ -77,10 +77,11 @@ typedef struct
   gavl_packet_source_t * psrc_int;
   
   gavl_dictionary_t * s;
-  const edl_segment_t * seg;
-
+  //  const edl_segment_t * seg;
+  
   edl_segment_t * segs;
   int num_segs;
+  int seg_idx;
   
   source_t * src;
   
@@ -129,6 +130,14 @@ static void free_segments(edl_segment_t * s, int len)
   free(s);
   }
 
+static int stream_eof(const stream_t * st)
+  {
+  if((st->seg_idx >= st->num_segs) &&
+     (st->mute_time <= 0))
+    return 1;
+  else
+    return 0;
+  }
 
 static int64_t edl_src_time_to_dst(const stream_t * st,
                                    const edl_segment_t * seg,
@@ -276,9 +285,7 @@ static void stream_cleanup(stream_t * s)
   }
 
 
-
-
-static const edl_segment_t *
+static int
 edl_dst_time_to_src(edldec_t * dec,
                     const stream_t * st,
                     int64_t dst_time,
@@ -286,26 +293,18 @@ edl_dst_time_to_src(edldec_t * dec,
                     int64_t * mute_time)
   {
   int i;
-  const edl_segment_t * ret = NULL;
-
-  /* Streaming case */
-  if((st->num_segs == 1) && (st->segs[0].dst_duration < 0))
-    {
-    *src_time = 0;
-    *mute_time = 0;
-    return &st->segs[0];
-    }
+  const edl_segment_t * seg = NULL;
   
   for(i = 0; i < st->num_segs; i++)
     {
     if(st->segs[i].dst_time + st->segs[i].dst_duration > dst_time)
       {
-      ret = &st->segs[i];
+      seg = &st->segs[i];
       break;
       }
     }
 
-  if(!ret) // After the last segment
+  if(!seg) // After the last segment
     {
     gavl_time_t duration = gavl_track_get_duration(dec->ti_cur);
 
@@ -313,23 +312,21 @@ edl_dst_time_to_src(edldec_t * dec,
     if(*mute_time < 0)
       *mute_time = 0;
 
-    return NULL;
+    return st->num_segs;
     }
-
-  /* Get the next segment */
-
-  *src_time = ret->src_time;
+    
+  *src_time = seg->src_time;
   
-  if(ret->dst_time > dst_time)
-    *mute_time = ret->dst_time - dst_time;
+  if(seg->dst_time > dst_time)
+    *mute_time = seg->dst_time - dst_time;
 
-  if(dst_time > ret->dst_time)
+  if(dst_time > seg->dst_time)
     {
     *src_time += gavl_time_rescale(st->timescale,
-                                   ret->timescale,
-                                   dst_time - ret->dst_time);
+                                   seg->timescale,
+                                   dst_time - seg->dst_time);
     }
-  return ret;
+  return i;
   }
 
 
@@ -502,97 +499,120 @@ static void destroy_edl(void * priv)
   }
 
   
-static gavl_audio_source_t * get_audio_source(edldec_t * ed,
-                                              const edl_segment_t * seg,
-                                              source_t ** src,
+static gavl_audio_source_t * get_audio_source(stream_t * s,
                                               int64_t src_time)
   {
-  if(*src)
-    source_unref(*src);
-  if(!(*src = get_source(ed, GAVL_STREAM_AUDIO, seg, src_time)))
+  const edl_segment_t * seg = &s->segs[s->seg_idx];
+    
+  if(s->src)
+    source_unref(s->src);
+  if(!(s->src = get_source(s->dec, GAVL_STREAM_AUDIO, seg, src_time)))
     return NULL;
-  source_ref(*src);
-  return bg_media_source_get_audio_source((*src)->h->src, seg->stream);
+  source_ref(s->src);
+  return bg_media_source_get_audio_source((s->src)->h->src, seg->stream);
   }
 
-static gavl_video_source_t * get_video_source(edldec_t * ed,
-                                              const edl_segment_t * seg,
-                                              source_t ** src,
+static gavl_video_source_t * get_video_source(stream_t * s,
                                               int64_t src_time)
   {
-  if(*src)
-    source_unref(*src);
-  if(!(*src = get_source(ed, GAVL_STREAM_VIDEO, seg, src_time)))
+  const edl_segment_t * seg = &s->segs[s->seg_idx];
+  if(s->src)
+    source_unref(s->src);
+  if(!(s->src = get_source(s->dec, GAVL_STREAM_VIDEO, seg, src_time)))
     return NULL;
-  source_ref(*src);
-
-  return bg_media_source_get_video_source((*src)->h->src, seg->stream);
+  source_ref(s->src);
+  
+  return bg_media_source_get_video_source((s->src)->h->src, seg->stream);
   }
 
-static gavl_packet_source_t * get_text_source(edldec_t * ed,
-                                              const edl_segment_t * seg,
-                                              source_t ** src,
+static gavl_packet_source_t * get_text_source(stream_t * s,
                                               int64_t src_time)
   {
-  if(*src)
-    source_unref(*src);
-  if(!(*src = get_source(ed, GAVL_STREAM_TEXT, seg, src_time)))
+  const edl_segment_t * seg = &s->segs[s->seg_idx];
+  if(s->src)
+    source_unref(s->src);
+  if(!(s->src = get_source(s->dec, GAVL_STREAM_TEXT, seg, src_time)))
     return NULL;
-  source_ref(*src);
-
-  return bg_media_source_get_text_source((*src)->h->src, seg->stream);
+  source_ref(s->src);
+  return bg_media_source_get_text_source((s->src)->h->src, seg->stream);
   }
 
-static gavl_video_source_t * get_overlay_source(edldec_t * ed,
-                                                const edl_segment_t * seg,
-                                                source_t ** src,
+static gavl_video_source_t * get_overlay_source(stream_t * s,
                                                 int64_t src_time)
   {
-  if(*src)
-    source_unref(*src);
+  const edl_segment_t * seg = &s->segs[s->seg_idx];
+  if(s->src)
+    source_unref(s->src);
 
-  if(!(*src = get_source(ed, GAVL_STREAM_OVERLAY, seg, src_time)))
+  if(!(s->src = get_source(s->dec, GAVL_STREAM_OVERLAY, seg, src_time)))
     return NULL;
-  source_ref(*src);
-  return bg_media_source_get_overlay_source((*src)->h->src, seg->stream);
+  source_ref(s->src);
+  return bg_media_source_get_overlay_source((s->src)->h->src, seg->stream);
+  }
+
+/* Check if pts is inside the segment. */
+
+// -1: pts is before segment
+//  0: pts is inside of segment
+//  1: pts is after segment
+
+static int check_segment(stream_t * s, int64_t pts)
+  {
+  if(s->seg_idx >= s->num_segs)
+    return -1;
+
+  if(s->seg_idx < 0)
+    return 1;
+
+  if(s->segs[s->seg_idx].dst_time > pts)
+    return -1;
+
+  if(s->segs[s->seg_idx].dst_time + s->segs[s->seg_idx].dst_duration < pts)
+    return 1;
+
+  return 0; // Inside
+  }
+
+static void advance_segment(stream_t * s, int64_t * src_time)
+  {
+  /* Set pts of the mute frames */
+  s->pts = s->segs[s->seg_idx].dst_time + s->segs[s->seg_idx].dst_duration;
+  s->seg_idx = edl_dst_time_to_src(s->dec, s, s->pts,
+                                   src_time, &s->mute_time);
+  }
+
+static int64_t truncate_duration(stream_t * s, int64_t pts, int64_t duration)
+  {
+  if(duration <= 0)
+    return duration;
+
+  if((s->seg_idx >= 0) && 
+     (s->seg_idx < s->num_segs) &&
+     (duration > 0) &&
+     (pts + duration > 
+      s->segs[s->seg_idx].dst_time + s->segs[s->seg_idx].dst_duration))
+    {
+    duration = s->segs[s->seg_idx].dst_time + s->segs[s->seg_idx].dst_duration - pts;
+    if(duration < 0)
+      duration = 0;
+    }
+  return duration;
   }
 
 static gavl_source_status_t read_audio(void * priv,
                                        gavl_audio_frame_t ** frame)
   {
+  int i;
   gavl_source_status_t st;
   stream_t * s = priv;
 
   /* Early return */
-  if(!s->seg && !s->mute_time)
+  if(stream_eof(s))
     return GAVL_SOURCE_EOF;
-  
-  /* Check for segment end */
-  if((s->pts != GAVL_TIME_UNDEFINED) && s->seg && (s->pts >= s->seg->dst_time + s->seg->dst_duration))
-    {
-    int64_t src_time;
 
-    s->seg = edl_dst_time_to_src(s->dec, s, s->pts,
-                                 &src_time, &s->mute_time);
-
-    if(!s->seg && !s->mute_time)
-      return GAVL_SOURCE_EOF;
-
-    if(s->seg)
-      {
-      if(!(s->asrc_int = get_audio_source(s->dec, s->seg, &s->src, src_time)))
-        return GAVL_SOURCE_EOF;
-      gavl_audio_source_set_dst(s->asrc_int, 0, s->afmt);
-      }
-    else
-      s->asrc_int = NULL;
-    }
-  
   /* Check for mute */
   if(s->mute_time)
     {
-    if(s->pts == GAVL_TIME_UNDEFINED)
-      s->pts = 0;
     gavl_audio_frame_mute(*frame, s->afmt);
     if((*frame)->valid_samples > s->mute_time)
       (*frame)->valid_samples = s->mute_time;
@@ -601,36 +621,35 @@ static gavl_source_status_t read_audio(void * priv,
     s->pts += (*frame)->valid_samples;
     return GAVL_SOURCE_OK;
     }
+
+  i = check_segment(s, s->pts);
+
+  if(i > 0) // PTS is after segment
+    {
+    int64_t src_time;
+    advance_segment(s, &src_time);
+
+    if(s->seg_idx < s->num_segs)
+      {
+      if(!(s->asrc_int = get_audio_source(s, src_time)))
+        return GAVL_SOURCE_EOF;
+      gavl_audio_source_set_dst(s->asrc_int, 0, s->afmt);
+      }
+    else
+      s->asrc_int = NULL;
+    
+    /* Call ourselves again */
+    return read_audio(priv, frame);
+    }
+  
   
   /* Read audio */
   st = gavl_audio_source_read_frame(s->asrc_int, frame);
   if(st != GAVL_SOURCE_OK)
-    {
     gavl_audio_frame_mute(*frame, s->afmt);
-    (*frame)->valid_samples =
-      s->seg->dst_time + s->seg->dst_duration - s->pts;
-    if((*frame)->valid_samples > s->afmt->samples_per_frame)
-      (*frame)->valid_samples = s->afmt->samples_per_frame;
-    }
-  else
-    {
-    if(s->pts == GAVL_TIME_UNDEFINED)
-      s->pts = (*frame)->timestamp;
-    
-    /* Limit duration */ 
-    if(s->seg->dst_duration > 0 && (s->pts + (*frame)->valid_samples >
-                                    s->seg->dst_time + s->seg->dst_duration))
-      {
-      (*frame)->valid_samples =
-        s->seg->dst_time + s->seg->dst_duration - s->pts;
-      }
-    }
   
-  /* Set PTS */
   (*frame)->timestamp = s->pts;
-
-  //  fprintf(stderr, "Read audio %"PRId64" %d\n",
-  //          s->pts, (*frame)->valid_samples);
+  (*frame)->valid_samples = truncate_duration(s, (*frame)->timestamp, (*frame)->valid_samples);
   
   s->pts += (*frame)->valid_samples;
   return GAVL_SOURCE_OK;
@@ -651,13 +670,16 @@ static int start_audio_stream(edldec_t * ed, int idx_rel)
   
   if(s->src_s->action == BG_STREAM_ACTION_OFF)
     return 1;
-  if(!(s->seg = edl_dst_time_to_src(ed, s, 0,
-                                    &src_time, &s->mute_time)))
+
+  if(!s->num_segs)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no audio segment");
     return 0;
     }
-  if(!(s->asrc_int = get_audio_source(ed, s->seg, &s->src, src_time)))
+  
+  s->seg_idx = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
+
+  if(!(s->asrc_int = get_audio_source(s, src_time)))
     return 0;
 
   /* Get format */
@@ -690,6 +712,7 @@ static int start_audio_stream(edldec_t * ed, int idx_rel)
     gavl_audio_source_create(read_audio, s, GAVL_SOURCE_SRC_FRAMESIZE_MAX, s->afmt);
   
   s->src_s->asrc = s->src_s->asrc_priv;
+  s->pts = 0;
   
   return 1;
   }
@@ -701,82 +724,42 @@ static gavl_source_status_t read_video(void * priv,
   stream_t * s = priv;
 
   /* Early return */
-  if(!s->seg && !s->mute_time)
+  if(stream_eof(s))
     return GAVL_SOURCE_EOF;
 
-  // fprintf(stderr, "read_video %"PRId64" %"PRId64"\n", s->pts, s->seg->dst_time + s->seg->dst_duration);
+  if(s->mute_time > 0)
+    {
+    gavl_video_frame_clear(*frame, s->vfmt);
+    (*frame)->timestamp = s->pts;
+    (*frame)->duration = s->mute_time;
+    return GAVL_SOURCE_EOF;
+    }
+
+  st = gavl_video_source_read_frame(s->vsrc_int, frame);
+
+  if(st == GAVL_SOURCE_OK)
+    (*frame)->timestamp = edl_src_time_to_dst(s, s->segs + s->seg_idx, (*frame)->timestamp);
   
-  /* Check for segment end */
-  if((s->pts != GAVL_TIME_UNDEFINED) && s->seg && (s->pts >= s->seg->dst_time + s->seg->dst_duration))
+  //  fprintf(stderr, "Read video done");
+  if((st != GAVL_SOURCE_OK) || (check_segment(s, (*frame)->timestamp) > 0))
     {
     int64_t src_time;
-
-    s->seg = edl_dst_time_to_src(s->dec, s, s->pts,
-                                 &src_time, &s->mute_time);
-
-    if(!s->seg && !s->mute_time)
-      return GAVL_SOURCE_EOF;
+    advance_segment(s, &src_time);
     
-    if(s->seg)
+    if(s->seg_idx < s->num_segs)
       {
-      if(!(s->vsrc_int = get_video_source(s->dec, s->seg, &s->src, src_time)))
+      if(!(s->vsrc_int = get_video_source(s, src_time)))
         return GAVL_SOURCE_EOF;
       gavl_video_source_set_dst(s->vsrc_int, 0, s->vfmt);
       }
     else
       s->vsrc_int = NULL;
-    }
-
-  /* Check for mute */
-
-  if(s->mute_time > 0)
-    {
-    if(s->pts == GAVL_TIME_UNDEFINED)
-      s->pts = 0;
     
-    gavl_video_frame_clear(*frame, s->vfmt);
-    (*frame)->timestamp = s->pts;
-    (*frame)->duration = s->mute_time;
-
-    /* TODO: Limit frame duration */
-    (*frame)->timestamp = s->pts;
-    s->pts += (*frame)->duration;
-    s->mute_time -= (*frame)->duration;
-    return GAVL_SOURCE_OK;
+    /* Call ourselves again */
+    return read_video(priv, frame);
     }
   
-  /* Read video */
-  //  fprintf(stderr, "Read video...");
-  st = gavl_video_source_read_frame(s->vsrc_int, frame);
-  //  fprintf(stderr, "Read video done");
-  if(st != GAVL_SOURCE_OK)
-    {
-    /* Can happen due to some inaccuracies */
-    gavl_video_frame_clear(*frame, s->vfmt);
-    (*frame)->duration =
-      s->seg->dst_time + s->seg->dst_duration - s->pts;
-    }
-  else
-    {
-    if(s->pts == GAVL_TIME_UNDEFINED)
-      s->pts = (*frame)->timestamp;
-    
-    /* Limit duration */ 
-    if((s->seg->dst_duration > 0) &&
-       ((s->pts + (*frame)->duration) >
-        s->seg->dst_time + s->seg->dst_duration))
-      {
-      (*frame)->duration =
-        s->seg->dst_time + s->seg->dst_duration - s->pts;
-      }
-    }
-  
-  /* Set PTS */
-  (*frame)->timestamp = s->pts;
-  s->pts += (*frame)->duration;
-
-  //  fprintf(stderr, "read_video frame %"PRId64" %"PRId64"\n", (*frame)->timestamp, (*frame)->duration);
-  
+  (*frame)->duration = truncate_duration(s, (*frame)->timestamp, (*frame)->duration);
   return GAVL_SOURCE_OK;
   }
 
@@ -795,11 +778,15 @@ static int start_video_stream(edldec_t * ed, int idx_rel)
   if(s->src_s->action == BG_STREAM_ACTION_OFF)
     return 1;
 
-  if(!(s->seg = edl_dst_time_to_src(ed, s, 0,
-                                         &src_time, &s->mute_time)))
+  if(!s->num_segs)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no video segment");
     return 0;
+    }
   
-  if(!(s->vsrc_int = get_video_source(ed, s->seg, &s->src, src_time)))
+  s->seg_idx = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
+  
+  if(!(s->vsrc_int = get_video_source(s, src_time)))
     return 0;
 
   /* Get format */
@@ -827,53 +814,50 @@ static int start_video_stream(edldec_t * ed, int idx_rel)
   /* Create external source */
   s->src_s->vsrc_priv = gavl_video_source_create(read_video, s, 0, s->vfmt);
   s->src_s->vsrc = s->src_s->vsrc_priv;
+  s->pts = 0;
   return 1;
   }
 
 static gavl_source_status_t read_text(void * priv,
                                       gavl_packet_t ** p)
   {
-  int64_t src_time;
   gavl_source_status_t st;
   stream_t * s = priv;
 
   /* Early return */
-  if(!s->seg)
+
+  if(stream_eof(s))
     return GAVL_SOURCE_EOF;
 
-  while(1)
-    {
-    /* Read text */
-    st = gavl_packet_source_read_packet(s->psrc_int, p);
-    
-    if(st == GAVL_SOURCE_OK)
-      {
-      (*p)->pts = edl_src_time_to_dst(s, s->seg, (*p)->pts);
-      (*p)->duration = gavl_time_rescale(s->seg->timescale, s->timescale, (*p)->duration);
-      
-      /* Check for segment end */
-      if((*p)->pts < s->seg->dst_time + s->seg->dst_duration)
-        {
-        /* Adjust duration to the segment end */
-        if((*p)->pts + (*p)->duration > s->seg->dst_time + s->seg->dst_duration)
-          (*p)->duration = s->seg->dst_time + s->seg->dst_duration - (*p)->pts;
-        return GAVL_SOURCE_OK;
-        }
-      }
-    
-    /* Get next segment */
-    
-    s->seg = edl_dst_time_to_src(s->dec, s, s->seg->dst_time + s->seg->dst_duration,
-                                 &src_time, &s->mute_time);
-    
-    if(!s->seg)
-      break;
-    
-    if(!(s->psrc_int = get_text_source(s->dec, s->seg, &s->src, src_time)))
-      return GAVL_SOURCE_EOF;
-    }
+  st = gavl_packet_source_read_packet(s->psrc_int, p);
   
-  return GAVL_SOURCE_EOF;
+  if(st == GAVL_SOURCE_OK)
+    {
+    (*p)->pts = edl_src_time_to_dst(s, s->segs + s->seg_idx, (*p)->pts);
+    (*p)->duration = gavl_time_rescale(s->segs[s->seg_idx].timescale, s->timescale, (*p)->duration);
+    }
+
+  if((st != GAVL_SOURCE_OK) ||
+     (check_segment(s, (*p)->pts) > 0))
+    {
+    int64_t src_time;
+    advance_segment(s, &src_time);
+    
+    if(s->seg_idx < s->num_segs)
+      {
+      if(!(s->psrc_int = get_text_source(s, src_time)))
+        return GAVL_SOURCE_EOF;
+      }
+    else
+      return GAVL_SOURCE_EOF;
+    
+    /* Call ourselves again */
+    return read_text(priv, p);
+    }
+
+  (*p)->duration = truncate_duration(s, (*p)->pts, (*p)->duration);
+
+  return GAVL_SOURCE_OK;
   }
 
 static int start_text_stream(edldec_t * ed, int idx_rel)
@@ -889,13 +873,18 @@ static int start_text_stream(edldec_t * ed, int idx_rel)
   
   if(s->src_s->action == BG_STREAM_ACTION_OFF)
     return 1;
-  s->seg = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
-  if(!s->seg)
+
+  if(!s->num_segs)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no text segment");
+    return 0;
+    }
+  
+  s->seg_idx = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
+  
+  if(!(s->psrc_int = get_text_source(s, src_time)))
     return 0;
   
-  if(!(s->psrc_int = get_text_source(ed, s->seg, &s->src, src_time)))
-    return 0;
-
   dict = gavl_track_get_text_metadata_nc(ed->ti_cur, idx_rel);
   gavl_dictionary_set_int(dict, GAVL_META_STREAM_SAMPLE_TIMESCALE, s->timescale);
   
@@ -909,15 +898,51 @@ static int start_text_stream(edldec_t * ed, int idx_rel)
 static gavl_source_status_t read_overlay(void * priv,
                                          gavl_video_frame_t ** f)
   {
-  int64_t src_time;
   gavl_source_status_t st;
-  gavl_video_format_t fmt;
   stream_t * s = priv;
 
   /* Early return */
-  if(!s->seg)
+
+  if(stream_eof(s))
     return GAVL_SOURCE_EOF;
 
+  st = gavl_video_source_read_frame(s->psrc_int, f);
+  
+  if(st == GAVL_SOURCE_OK)
+    {
+    (*f)->timestamp = edl_src_time_to_dst(s, s->segs + s->seg_idx, (*f)->timestamp);
+    (*f)->duration = gavl_time_rescale(s->segs[s->seg_idx].timescale, s->timescale, (*f)->duration);
+    }
+
+  if((st != GAVL_SOURCE_OK) ||
+     (check_segment(s, (*f)->timestamp) > 0))
+    {
+    gavl_video_format_t fmt;
+    int64_t src_time;
+    advance_segment(s, &src_time);
+    
+    if(s->seg_idx < s->num_segs)
+      {
+      if(!(s->vsrc_int = get_overlay_source(s, src_time)))
+        return GAVL_SOURCE_EOF;
+
+      gavl_video_format_copy(&fmt, s->vfmt);
+      fmt.timescale = s->segs[s->seg_idx].timescale;
+      
+      /* Set destination format */
+      gavl_video_source_set_dst(s->vsrc_int, 0, &fmt);
+      
+      }
+    else
+      return GAVL_SOURCE_EOF;
+    
+    /* Call ourselves again */
+    return read_overlay(priv, f);
+    }
+
+  (*f)->duration = truncate_duration(s, (*f)->timestamp, (*f)->duration);
+  
+#if 0  
   while(1)
     {
     /* Read text */
@@ -955,10 +980,8 @@ static gavl_source_status_t read_overlay(void * priv,
     /* Set destination format */
     gavl_video_source_set_dst(s->vsrc_int, 0, &fmt);
     }
-  
+#endif
   return GAVL_SOURCE_EOF;
-
-  
   }
 
 static int start_overlay_stream(edldec_t * ed, int idx_rel)
@@ -974,13 +997,18 @@ static int start_overlay_stream(edldec_t * ed, int idx_rel)
   
   if(s->src_s->action == BG_STREAM_ACTION_OFF)
     return 1;
-  s->seg = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
-  if(!s->seg)
+
+  if(!s->num_segs)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no overlay segment");
+    return 0;
+    }
+  
+  s->seg_idx = edl_dst_time_to_src(ed, s, 0, &src_time, &s->mute_time);
+  
+  if(!(s->vsrc_int = get_overlay_source(s, src_time)))
     return 0;
   
-  if(!(s->vsrc_int = get_overlay_source(ed, s->seg, &s->src, src_time)))
-    return 0;
-
   /* Get format */
   s->vfmt = gavl_track_get_overlay_format_nc(ed->ti_cur, idx_rel);
 
@@ -992,8 +1020,8 @@ static int start_overlay_stream(edldec_t * ed, int idx_rel)
   s->vfmt->framerate_mode = GAVL_FRAMERATE_VARIABLE;
 
   gavl_video_format_copy(&fmt, s->vfmt);
-  fmt.timescale = s->seg->timescale;
-
+  fmt.timescale = s->segs[s->seg_idx].timescale;
+  
   /* Set destination format */
   gavl_video_source_set_dst(s->vsrc_int, 0, &fmt);
   
@@ -1073,40 +1101,39 @@ static void seek_edl(void * priv, int64_t * time, int scale)
     
     time_scaled = gavl_time_rescale(scale, s->timescale, *time);
 
-    s->seg = edl_dst_time_to_src(ed, s, time_scaled,
-                                 &src_time, &s->mute_time);
+    s->seg_idx = edl_dst_time_to_src(ed, s, time_scaled,
+                                     &src_time, &s->mute_time);
     
-
     switch(s->src_s->type)
       {
       case GAVL_STREAM_AUDIO:
-        if(s->seg)
+        if(s->seg_idx < s->num_segs)
           {
-          if((s->asrc_int = get_audio_source(s->dec, s->seg, &s->src, src_time)))
+          if((s->asrc_int = get_audio_source(s, src_time)))
             gavl_audio_source_set_dst(s->asrc_int, 0, s->afmt);
           }
         else
           s->asrc_int = NULL;
         break;
       case GAVL_STREAM_VIDEO:
-        if(s->seg)
+        if(s->seg_idx < s->num_segs)
           {
-          if((s->vsrc_int = get_video_source(s->dec, s->seg, &s->src, src_time)))
+          if((s->vsrc_int = get_video_source(s, src_time)))
             gavl_video_source_set_dst(s->vsrc_int, 0, s->vfmt);
           }
         else
           s->vsrc_int = NULL;
         break;
       case GAVL_STREAM_TEXT:
-        if(s->seg)
-          s->psrc_int = get_text_source(s->dec, s->seg, &s->src, src_time);
+        if(s->seg_idx < s->num_segs)
+          s->psrc_int = get_text_source(s, src_time);
         else
           s->psrc_int = NULL;
         break;
       case GAVL_STREAM_OVERLAY:
-        if(s->seg)
+        if(s->seg_idx < s->num_segs)
           {
-          if((s->vsrc_int = get_overlay_source(s->dec, s->seg, &s->src, src_time)))
+          if((s->vsrc_int = get_overlay_source(s, src_time)))
             gavl_video_source_set_dst(s->vsrc_int, 0, s->vfmt);
           }
         else
@@ -1118,9 +1145,7 @@ static void seek_edl(void * priv, int64_t * time, int scale)
       }
     s->pts = time_scaled;
     }
-
   
-
   }
 
 static void close_edl(void * priv)
