@@ -581,7 +581,7 @@ static void track_to_metadata(const gavl_dictionary_t * src, gavl_dictionary_t *
   if((var = bg_track_get_current_location(src)))
     gavl_dictionary_set_string_nocopy(dst, "xesam:url", bg_string_to_uri(var, -1));
 
-  fprintf(stderr, "mpris2: Got uri %s\n", var);
+  //  fprintf(stderr, "mpris2: Got uri %s\n", var);
   
   if(!(src = gavl_track_get_metadata(src)))
     return;

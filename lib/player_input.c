@@ -202,7 +202,7 @@ int bg_player_input_start(bg_player_t * p)
     }
   else
     {
-    fprintf(stderr, "Cannot connect input messages %p %p\n", s, s->msghub);
+    fprintf(stderr, "Cannot connect input messages %p\n", s);
     }
   
   

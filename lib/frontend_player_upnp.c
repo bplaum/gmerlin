@@ -515,7 +515,7 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
 
                 if((uri = bg_track_get_current_location(dict)))
                   {
-                  fprintf(stderr, "upnp: Got uri %s\n", uri);
+                  //                  fprintf(stderr, "upnp: Got uri %s\n", uri);
 
                   bg_upnp_event_context_server_set_value(&p->avt_evt, "CurrentTrackURI", uri, EVT_INTERVAL);
                   }

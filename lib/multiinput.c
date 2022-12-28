@@ -55,6 +55,7 @@ static void start_multi(void * priv)
   int can_seek = 0, can_pause = 0;
   const gavl_dictionary_t * track;
   gavl_dictionary_t * metadata = NULL;
+  bg_media_source_stream_t * stream;
   
   for(i = 0; i < m->src.num_streams; i++)
     {
@@ -89,9 +90,7 @@ static void start_multi(void * priv)
     if(!gavl_track_get_src(m->src.streams[i]->s, GAVL_META_SRC, 0, NULL, &uri))
       {
       /* Stream belongs to main handle */
-      m->src.streams[i]->psrc = m->h->src->streams[i]->psrc;
-      m->src.streams[i]->vsrc = m->h->src->streams[i]->vsrc;
-      m->src.streams[i]->asrc = m->h->src->streams[i]->asrc;
+      stream = m->h->src->streams[i];
       }
     else
       {
@@ -105,28 +104,30 @@ static void start_multi(void * priv)
       /* For now, we assume that from exteral uris, we always load stream 0 */
       h->src->streams[0]->action = m->src.streams[i]->action;
       bg_input_plugin_start(h);
-      m->src.streams[i]->psrc = h->src->streams[0]->psrc;
-      m->src.streams[i]->vsrc = h->src->streams[0]->vsrc;
-      m->src.streams[i]->asrc = h->src->streams[0]->asrc;
 
+      stream = h->src->streams[0];
+      
       track = bg_input_plugin_get_track_info(h, -1);
       if(can_seek && !gavl_track_can_seek(track))
         can_seek = 0;
       if(can_pause && !gavl_track_can_pause(track))
         can_pause = 0;
       }
-    
-    /* Set stream formats */
-    if(m->src.streams[i]->asrc)
-      {
-      gavl_audio_format_copy(gavl_stream_get_audio_format_nc(m->src.streams[i]->s),
-                             gavl_audio_source_get_src_format(m->src.streams[i]->asrc));
-      }
-    if(m->src.streams[i]->vsrc)
-      {
-      gavl_video_format_copy(gavl_stream_get_video_format_nc(m->src.streams[i]->s),
-                             gavl_video_source_get_src_format(m->src.streams[i]->vsrc));
-      }
+
+    m->src.streams[i]->psrc = stream->psrc;
+    m->src.streams[i]->vsrc = stream->vsrc;
+    m->src.streams[i]->asrc = stream->asrc;
+
+    /* Copy stream infos */
+    //    gavl_dictionary_reset(m->src.streams[i]->s);
+    //    gavl_dictionary_copy(m->src.streams[i]->s, stream->s);
+
+    gavl_dictionary_copy_value(m->src.streams[i]->s, stream->s, GAVL_META_STREAM_STATS);
+    gavl_dictionary_copy_value(m->src.streams[i]->s, stream->s, GAVL_META_STREAM_COMPRESSION_INFO);
+    gavl_dictionary_copy_value(m->src.streams[i]->s, stream->s, GAVL_META_STREAM_FORMAT);
+
+    gavl_dictionary_merge2(gavl_stream_get_metadata_nc(m->src.streams[i]->s),
+                           gavl_stream_get_metadata(stream->s));
     
     }
 
@@ -203,11 +204,16 @@ static int set_track_multi(void * priv, int track)
   /* Close all external plugins */
   for(i = 0; i < m->src.num_streams; i++)
     {
+    m->src.streams[i]->action = BG_STREAM_ACTION_OFF;
+    
     if(m->src.streams[i]->user_data)
       {
       bg_plugin_unref(m->src.streams[i]->user_data);
       m->src.streams[i]->user_data = NULL;
       }
+    m->src.streams[i]->asrc = NULL;
+    m->src.streams[i]->vsrc = NULL;
+    m->src.streams[i]->psrc = NULL;
     }
   
   return 1;
@@ -280,7 +286,6 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   gavl_stream_type_t type;
   
   /* Main URI */
-  const gavl_dictionary_t * m;
   const gavl_dictionary_t * s;
   
   bg_plugin_handle_t * ret;
@@ -311,8 +316,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
 
   if(!h)
     {
-    if((m = gavl_track_get_metadata(priv->ti)) &&
-       (gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &uri)))
+    if(gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading primary uri: %s", uri);
       h = bg_input_plugin_load(uri);
@@ -362,7 +366,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   
   bg_plugin_handle_connect_control(ret);
 
-  //  fprintf(stderr, "Loaded multi plugin\n");
-  //  gavl_dictionary_dump(priv->ti, 2);
+  fprintf(stderr, "Loaded multi plugin\n");
+  gavl_dictionary_dump(priv->ti, 2);
   return ret;
   }

@@ -5933,14 +5933,6 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       goto end;
       }
     
-    if(gavl_track_get_num_external_streams(track))
-      {
-      /* Load multi plugin */
-      ret = bg_input_plugin_load_multi(track, NULL);
-      bg_input_plugin_set_track(ret, 0);
-      goto end;
-      }
-    
     if((num_variants = gavl_track_get_num_variants(track)))
       {
       src_track = gavl_track_get_variant(track, variant);
@@ -5951,6 +5943,14 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
         }
       }
 
+    if(gavl_track_get_num_external_streams(src_track))
+      {
+      /* Load multi plugin */
+      ret = bg_input_plugin_load_multi(src_track, NULL);
+      bg_input_plugin_set_track(ret, 0);
+      goto end;
+      }
+    
     /* Open location */
     src_idx = 0;
     while(gavl_track_get_src(src_track, GAVL_META_SRC, src_idx, NULL, &location))
@@ -6014,6 +6014,12 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
         bg_input_plugin_set_track(ret, 0);
         }
       break;
+      }
+    else // Redirector -> Prepare for next iteration
+      {
+      gavl_dictionary_copy(&dict, ti);
+      track = &dict;
+      src_track = &dict;
       }
     
     } // Redirector loop
