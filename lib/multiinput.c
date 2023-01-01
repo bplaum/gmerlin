@@ -386,7 +386,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   
   bg_plugin_handle_connect_control(ret);
 
-  fprintf(stderr, "Loaded multi plugin\n");
-  gavl_dictionary_dump(priv->ti, 2);
+  //  fprintf(stderr, "Loaded multi plugin\n");
+  //  gavl_dictionary_dump(priv->ti, 2);
   return ret;
   }
