@@ -200,8 +200,12 @@ int bg_read_location(const char * location_orig,
   const char * var;
   gavl_dictionary_t vars;
   char * location;
-  location = gavl_strdup(location_orig);
 
+  if(gavl_string_starts_with(location_orig, "appicon:"))
+    location = bg_search_application_icon(location_orig + 8, 48);
+  else
+    location = gavl_strdup(location_orig);
+  
   // fprintf(stderr, "bg_read_location %s\n", location_orig);
   
   gavl_dictionary_init(&vars);

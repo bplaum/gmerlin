@@ -560,9 +560,9 @@ bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
   
   if(!pixbuf_downloader)
     {
-    pixbuf_downloader = bg_downloader_create(10);
+    pixbuf_downloader = bg_downloader_create(5);
 //    g_idle_add(image_downloader_idle_callback, NULL);
-    g_timeout_add(20, image_downloader_idle_callback, NULL);
+    g_timeout_add(100, image_downloader_idle_callback, NULL);
     }
   
   

@@ -188,6 +188,8 @@ void bg_downloader_update(bg_downloader_t * d)
   {
   int i, j;
   gavl_time_t cur = gavl_timer_get(d->timer);
+
+  //  fprintf(stderr, "bg_downloader_update\n");
   
   /* Check running downloads */
   if(d->num_downloads)
@@ -360,8 +362,15 @@ void bg_downloader_add(bg_downloader_t * d, const char * uri,
                        bg_downloader_callback_t cb, void * cb_data)
   {
   queue_item_t * item;
-
+  char * real_uri = NULL;
+  
   //  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Adding download %s", uri);
+
+  if(gavl_string_starts_with(uri, "appicon:"))
+    {
+    real_uri = bg_search_application_icon(uri + 8, 48);
+    uri = real_uri;
+    }
   
   if(d->queue_len == d->queue_alloc)
     {
@@ -379,5 +388,8 @@ void bg_downloader_add(bg_downloader_t * d, const char * uri,
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Added download %s slot: %d", uri, item->slot);
 
   d->queue_len++;
+
+  if(real_uri)
+    free(real_uri);
   
   }
