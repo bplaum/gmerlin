@@ -74,6 +74,9 @@ static void start_multi(void * priv)
     track = bg_input_plugin_get_track_info(m->h, -1);
     can_seek = gavl_track_can_seek(track);
     can_pause = gavl_track_can_pause(track);
+
+    gavl_dictionary_merge2(gavl_track_get_metadata_nc(m->ti),
+                           gavl_track_get_metadata(track));
     }
   else
     {
@@ -117,6 +120,7 @@ static void start_multi(void * priv)
     m->src.streams[i]->psrc = stream->psrc;
     m->src.streams[i]->vsrc = stream->vsrc;
     m->src.streams[i]->asrc = stream->asrc;
+    m->src.streams[i]->msghub = stream->msghub;
 
     /* Copy stream infos */
     //    gavl_dictionary_reset(m->src.streams[i]->s);
