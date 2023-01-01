@@ -30,6 +30,11 @@ typedef struct
 
 static int set_track_multi(void * priv, int track);
 
+static void free_stream(void * priv)
+  {
+  bg_plugin_unref(priv);
+  }
+
 static void forward_command(multi_t * m, gavl_msg_t * msg)
   {
   int i;
@@ -102,6 +107,8 @@ static void start_multi(void * priv)
       h = bg_input_plugin_load(uri);
       /* Stream is external */
       m->src.streams[i]->user_data = h;
+      m->src.streams[i]->free_user_data = free_stream;
+      
       bg_input_plugin_set_track(h, 0);
 
       /* For now, we assume that from exteral uris, we always load stream 0 */
@@ -223,15 +230,24 @@ static int set_track_multi(void * priv, int track)
   return 1;
   }
 
-static void destroy_multi(void * priv)
-  {
-  
-  }
-
 static void close_multi(void * priv)
   {
-  
+  multi_t * m = priv;
+  bg_media_source_cleanup(&m->src);
+  if(m->h)
+    bg_plugin_unref(m->h);
+  gavl_dictionary_free(&m->mi);
+  memset(m, 0, sizeof(*m));
   }
+
+static void destroy_multi(void * priv)
+  {
+  multi_t * m = priv;
+  bg_controllable_cleanup(&m->controllable);
+  close_multi(priv);
+  free(priv);
+  }
+
 
 
 /*
