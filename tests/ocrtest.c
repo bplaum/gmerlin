@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
 
 
   /* Create ocr */
-  ocr = bg_ocr_create(bg_plugin_reg);
+  ocr = bg_ocr_create();
 
   gavl_value_set_string(&val, ".");
   bg_ocr_set_parameter(ocr, "tmpdir", &val);

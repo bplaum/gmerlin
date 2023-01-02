@@ -32,8 +32,7 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "player.video"
 
-void bg_player_video_create(bg_player_t * p,
-                            bg_plugin_registry_t * plugin_reg)
+void bg_player_video_create(bg_player_t * p)
   {
   bg_player_video_stream_t * s = &p->video_stream;
   
@@ -41,8 +40,7 @@ void bg_player_video_create(bg_player_t * p,
   
   bg_gavl_video_options_init(&s->options);
 
-  s->fc = bg_video_filter_chain_create(&s->options,
-                                       plugin_reg);
+  s->fc = bg_video_filter_chain_create(&s->options);
   
   pthread_mutex_init(&s->config_mutex,NULL);
   pthread_mutex_init(&s->eof_mutex,NULL);

@@ -1460,7 +1460,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           if(state != BG_PLAYER_STATUS_PLAYING)
             break;
 
-          max_visualization = bg_plugin_registry_get_num_plugins(bg_plugin_reg,  BG_PLUGIN_VISUALIZATION, 0);
+          max_visualization = bg_get_num_plugins(BG_PLUGIN_VISUALIZATION, 0);
 
           player->visualization_mode++;
           if(player->visualization_mode == max_visualization)

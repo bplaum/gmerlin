@@ -239,15 +239,13 @@ static int open_recorder(void * priv, const char * filename)
 
     if((cfg_val = bg_plugin_config_get(BG_PLUGIN_RECORDER_AUDIO)))
       {
-      r->as.handle = bg_plugin_load_with_options(bg_plugin_reg,
-                                                 gavl_value_get_dictionary(cfg_val));
+      r->as.handle = bg_plugin_load_with_options(gavl_value_get_dictionary(cfg_val));
       }
-    else if((plugin_info = bg_plugin_find_by_index(bg_plugin_reg,
-                                                   0,
+    else if((plugin_info = bg_plugin_find_by_index(0,
                                                    BG_PLUGIN_RECORDER_AUDIO, 0)))
       {
       // Use registry default
-      r->as.handle = bg_plugin_load(bg_plugin_reg, plugin_info);
+      r->as.handle = bg_plugin_load(plugin_info);
       }
   
     if(r->as.handle)
@@ -265,14 +263,13 @@ static int open_recorder(void * priv, const char * filename)
     {
     if((cfg_val = bg_plugin_config_get(BG_PLUGIN_RECORDER_VIDEO)))
       {
-      r->vs.handle = bg_plugin_load_with_options(bg_plugin_reg,
-                                                 gavl_value_get_dictionary(cfg_val));
+      r->vs.handle = bg_plugin_load_with_options(gavl_value_get_dictionary(cfg_val));
     
       }
-    else if((plugin_info = bg_plugin_find_by_index(bg_plugin_reg, 0,
+    else if((plugin_info = bg_plugin_find_by_index(0,
                                                    BG_PLUGIN_RECORDER_VIDEO, 0)))
       {
-      r->vs.handle = bg_plugin_load(bg_plugin_reg, plugin_info);
+      r->vs.handle = bg_plugin_load(plugin_info);
       }
 
     if(r->vs.handle)
@@ -493,8 +490,8 @@ bg_plugin_info_t *        bg_recorder_input_info(void)
   {
   bg_plugin_info_t * ret;
   
-  if(!bg_plugin_registry_get_num_plugins(bg_plugin_reg, BG_PLUGIN_RECORDER_AUDIO, 0) &&
-     !bg_plugin_registry_get_num_plugins(bg_plugin_reg, BG_PLUGIN_RECORDER_VIDEO, 0))
+  if(!bg_get_num_plugins(BG_PLUGIN_RECORDER_AUDIO, 0) &&
+     !bg_get_num_plugins(BG_PLUGIN_RECORDER_VIDEO, 0))
     return NULL;
   
   ret = bg_plugin_info_create(&recorder_input.common);

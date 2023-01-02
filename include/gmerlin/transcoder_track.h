@@ -81,20 +81,17 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
 
 gavl_array_t *
 bg_transcoder_track_create(const gavl_dictionary_t * track,
-                           bg_plugin_registry_t * plugin_reg,
                            bg_cfg_section_t * section,
                            bg_cfg_section_t * encoder_section);
 
 gavl_array_t *
 bg_transcoder_track_create_from_urilist(const char * list,
                                         int len,
-                                        bg_plugin_registry_t * plugin_reg,
                                         bg_cfg_section_t * section,
                                         bg_cfg_section_t * encoder_section);
 
 gavl_array_t *
 bg_transcoder_track_create_from_albumentries(const char * xml_string,
-                                             bg_plugin_registry_t * plugin_reg,
                                              bg_cfg_section_t * section,
                                              bg_cfg_section_t * encoder_section);
 

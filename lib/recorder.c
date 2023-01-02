@@ -224,8 +224,7 @@ static void init_encoding(bg_recorder_t * rec)
   rec->as.flags |= STREAM_ENCODE;
   rec->vs.flags |= STREAM_ENCODE;
   
-  rec->enc = bg_encoder_create(rec->plugin_reg,
-                               rec->encoder_section,
+  rec->enc = bg_encoder_create(rec->encoder_section,
                                NULL,
                                bg_recorder_stream_mask,
                                bg_recorder_plugin_mask);

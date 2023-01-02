@@ -290,8 +290,8 @@ void bg_plugin_registry_destroy_1(bg_plugin_registry_t * reg);
  *  \returns Number of available plugins matching type_mask and flag_mask
  */
 
-int bg_plugin_registry_get_num_plugins(bg_plugin_registry_t * reg,
-                                       uint32_t type_mask, uint32_t flag_mask);
+int bg_get_num_plugins(uint32_t type_mask, uint32_t flag_mask);
+
 /** \ingroup plugin_registry
  *  \brief Find a plugin by index
  *  \param reg A plugin registry
@@ -305,7 +305,7 @@ int bg_plugin_registry_get_num_plugins(bg_plugin_registry_t * reg,
  */
 
 const bg_plugin_info_t *
-bg_plugin_find_by_index(bg_plugin_registry_t * reg, int index,
+bg_plugin_find_by_index(int index,
                         uint32_t type_mask, uint32_t flag_mask);
 
 /** \ingroup plugin_registry
@@ -316,7 +316,7 @@ bg_plugin_find_by_index(bg_plugin_registry_t * reg, int index,
  */
 
 const bg_plugin_info_t *
-bg_plugin_find_by_name(bg_plugin_registry_t * reg, const char * name);
+bg_plugin_find_by_name(const char * name);
 
 /** \ingroup plugin_registry
  *  \brief Find a plugin by the file extension
@@ -329,8 +329,7 @@ bg_plugin_find_by_name(bg_plugin_registry_t * reg, const char * name);
  *  whose extensions match filename.
  */
 const bg_plugin_info_t *
-bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
-                           const char * filename, int type_mask);
+bg_plugin_find_by_filename(const char * filename, int type_mask);
 
 /** \ingroup plugin_registry
  *  \brief Find a plugin by the mime type
@@ -343,8 +342,7 @@ bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
  *  whose extensions match filename.
  */
 const bg_plugin_info_t *
-bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
-                           const char * mimetype, int type_mask);
+bg_plugin_find_by_mimetype(const char * mimetype, int type_mask);
 
 
 
@@ -357,8 +355,7 @@ bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
  */
 
 const bg_plugin_info_t *
-bg_plugin_find_by_compression(bg_plugin_registry_t * reg,
-                              gavl_codec_id_t id,
+bg_plugin_find_by_compression(gavl_codec_id_t id,
                               int typemask);
 
 
@@ -369,8 +366,7 @@ bg_plugin_find_by_compression(bg_plugin_registry_t * reg,
  *  \returns A plugin info or NULL
  */
 const bg_plugin_info_t *
-bg_plugin_find_by_protocol(bg_plugin_registry_t * reg,
-                           const char * protocol);
+bg_plugin_find_by_protocol(const char * protocol);
 
 
 /* Another method: Return long names as strings (NULL terminated) */
@@ -389,8 +385,7 @@ bg_plugin_find_by_protocol(bg_plugin_registry_t * reg,
  *  Use \ref bg_plugin_registry_free_plugins to free the returned list.
  */
 
-char ** bg_plugin_registry_get_plugins(bg_plugin_registry_t*reg,
-                                       uint32_t type_mask,
+char ** bg_plugin_registry_get_plugins(uint32_t type_mask,
                                        uint32_t flag_mask);
 
 /** \ingroup plugin_registry
@@ -882,8 +877,7 @@ int bg_get_thumbnail(const char * gml,
  *  \returns The filename of the generated thumbnail (to be freed by the caller) or NULL
  */
 
-char * bg_make_thumbnail(bg_plugin_registry_t * plugin_reg,
-                         gavl_video_frame_t * in_frame,
+char * bg_make_thumbnail(gavl_video_frame_t * in_frame,
                          const gavl_video_format_t * input_format,
                          int * max_width, int * max_height,
                          const char * out_file_base,
@@ -900,15 +894,13 @@ char * bg_make_thumbnail(bg_plugin_registry_t * plugin_reg,
 
 /** \ingroup plugin_registry
  *  \brief Load a plugin
- *  \param reg A plugin registry
  *  \param info The plugin info
  *  \returns The handle
  *
  *  Load a plugin and return handle with reference count of 1
  */
 
-bg_plugin_handle_t * bg_plugin_load(bg_plugin_registry_t * reg,
-                                    const bg_plugin_info_t * info);
+bg_plugin_handle_t * bg_plugin_load(const bg_plugin_info_t * info);
 
 /** \ingroup plugin_registry
  *  \brief Load a plugin and apply custom options
@@ -919,8 +911,7 @@ bg_plugin_handle_t * bg_plugin_load(bg_plugin_registry_t * reg,
  *  Load a plugin and return handle with reference count of 1
  */
 
-bg_plugin_handle_t * bg_plugin_load_with_options(bg_plugin_registry_t * reg,
-                                                 const gavl_dictionary_t * dict);
+bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict);
 
 
 /** \ingroup plugin_registry
@@ -933,8 +924,7 @@ bg_plugin_handle_t * bg_plugin_load_with_options(bg_plugin_registry_t * reg,
  *  and return handle with reference count of 1
  */
 
-bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
-                                       const gavl_dictionary_t * options,
+bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options,
                                        const char * window_id);
 
 /** \ingroup plugin_registry

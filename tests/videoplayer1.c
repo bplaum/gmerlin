@@ -95,8 +95,7 @@ int main(int argc, char ** argv)
   /* Load output plugin */
 
   plugin_info =
-    bg_plugin_find_by_index(bg_plugin_reg,
-                            BG_PLUGIN_OUTPUT_VIDEO,
+    bg_plugin_find_by_index(BG_PLUGIN_OUTPUT_VIDEO,
                             BG_PLUGIN_PLAYBACK, 0);
   
   if(!plugin_info)
@@ -104,7 +103,7 @@ int main(int argc, char ** argv)
     fprintf(stderr, "Output plugin not found\n");
     return -1;
     }
-  output_handle = bg_plugin_load(bg_plugin_reg, plugin_info);
+  output_handle = bg_plugin_load(plugin_info);
   output_plugin = (bg_ov_plugin_t*)(output_handle->plugin);
 
   info = bg_input_plugin_get_track_info(input_handle, 0);

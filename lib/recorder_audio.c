@@ -40,7 +40,7 @@ void bg_recorder_create_audio(bg_recorder_t * rec)
   
   bg_gavl_audio_options_init(&as->opt);
   
-  as->fc = bg_audio_filter_chain_create(&as->opt, rec->plugin_reg);
+  as->fc = bg_audio_filter_chain_create(&as->opt);
   as->th = bg_thread_create(rec->tc);
   as->pd = gavl_peak_detector_create();
   
@@ -157,8 +157,7 @@ bg_recorder_set_audio_parameter(void * data,
       if(as->input_handle)
         bg_plugin_unref(as->input_handle);
     
-      if((as->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                         bg_multi_menu_get_selected(val))))
+      if((as->input_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val))))
         as->input_plugin = (bg_recorder_plugin_t*)(as->input_handle->plugin);
       }
     }

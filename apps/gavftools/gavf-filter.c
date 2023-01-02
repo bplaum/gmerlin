@@ -104,7 +104,7 @@ static bg_parameter_info_t * create_af_parameters()
   {
   bg_parameter_info_t * ret;
   bg_audio_filter_chain_t * ch =
-    bg_audio_filter_chain_create(&gavltools_aopt, bg_plugin_reg);
+    bg_audio_filter_chain_create(&gavltools_aopt);
 
   ret =
     bg_parameter_info_copy_array(bg_audio_filter_chain_get_parameters(ch));
@@ -117,7 +117,7 @@ static bg_parameter_info_t * create_vf_parameters()
   {
   bg_parameter_info_t * ret;
   bg_video_filter_chain_t * ch =
-    bg_video_filter_chain_create(&gavltools_vopt, bg_plugin_reg);
+    bg_video_filter_chain_create(&gavltools_vopt);
 
   ret =
     bg_parameter_info_copy_array(bg_video_filter_chain_get_parameters(ch));
@@ -273,7 +273,7 @@ int main(int argc, char ** argv)
     if(!filter_options)
       continue;
 
-    dst_stream->user_data = bg_audio_filter_chain_create(&gavltools_aopt, bg_plugin_reg);
+    dst_stream->user_data = bg_audio_filter_chain_create(&gavltools_aopt);
     dst_stream->free_user_data = bg_audio_filter_chain_destroy;
     
     sec = bg_cfg_section_create_from_parameters("af", af_parameters);
@@ -301,7 +301,7 @@ int main(int argc, char ** argv)
     src_stream = bg_media_source_get_audio_stream(in_src, i);
     dst_stream = bg_media_source_get_audio_stream(&src, i);
 
-    dst_stream->user_data = bg_video_filter_chain_create(&gavltools_vopt, bg_plugin_reg);
+    dst_stream->user_data = bg_video_filter_chain_create(&gavltools_vopt);
     dst_stream->free_user_data = bg_video_filter_chain_destroy;
     
     sec = bg_cfg_section_create_from_parameters("vf", vf_parameters);

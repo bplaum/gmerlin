@@ -46,8 +46,7 @@
 #define LOG_DOMAIN_ENC "singlepicture-encoder"
 #define LOG_DOMAIN_DEC "singlepicture-decoder"
 
-static char * get_extensions(bg_plugin_registry_t * reg,
-                             uint32_t type_mask, uint32_t flag_mask)
+static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
   {
   int num, i;
   char * ret = NULL;
@@ -55,13 +54,13 @@ static char * get_extensions(bg_plugin_registry_t * reg,
   gavl_array_t  arr;
   gavl_array_init(&arr);
   
-  num = bg_plugin_registry_get_num_plugins(reg, type_mask, flag_mask);
+  num = bg_get_num_plugins(type_mask, flag_mask);
   if(!num)
     return NULL;
 
   for(i = 0; i < num; i++)
     {
-    info = bg_plugin_find_by_index(reg, i,
+    info = bg_plugin_find_by_index(i,
                                    type_mask, flag_mask);
 
     gavl_array_splice_array(&arr, -1, 0, info->extensions);
@@ -224,13 +223,12 @@ static int open_input(void * priv, const char * filename)
   
   /* Load plugin */
 
-  info = bg_plugin_find_by_filename(bg_plugin_reg,
-                                    filename,
+  info = bg_plugin_find_by_filename(filename,
                                     BG_PLUGIN_IMAGE_READER);
   if(!info)
     return 0;
   
-  inp->handle = bg_plugin_load(bg_plugin_reg, info);
+  inp->handle = bg_plugin_load(info);
   inp->image_reader = (bg_image_reader_plugin_t*)inp->handle->plugin;
   
   /* Create template */
@@ -371,13 +369,12 @@ static int open_stills_input(void * priv, const char * filename)
   
   /* First of all, check if there is a plugin for this format */
 
-  info = bg_plugin_find_by_filename(bg_plugin_reg,
-                                    filename,
+  info = bg_plugin_find_by_filename(filename,
                                     BG_PLUGIN_IMAGE_READER);
   if(!info)
     return 0;
   
-  inp->handle = bg_plugin_load(bg_plugin_reg, info);
+  inp->handle = bg_plugin_load(info);
 
   if(!inp->handle)
     {
@@ -780,19 +777,18 @@ const bg_plugin_common_t * bg_singlepic_stills_input_get()
   return (const bg_plugin_common_t*)&input_plugin_stills;
   }
 
-static bg_plugin_info_t * get_input_info(bg_plugin_registry_t * reg,
-                                         const bg_input_plugin_t * plugin)
+static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin)
   {
   char * str;
   bg_plugin_info_t * ret;
   
-  if(!bg_plugin_registry_get_num_plugins(reg, BG_PLUGIN_IMAGE_READER,
-                                         BG_PLUGIN_FILE))
+  if(!bg_get_num_plugins(BG_PLUGIN_IMAGE_READER,
+                         BG_PLUGIN_FILE))
     return NULL;
 
   ret = bg_plugin_info_create(&plugin->common);
 
-  str = get_extensions(reg, BG_PLUGIN_IMAGE_READER,
+  str = get_extensions(BG_PLUGIN_IMAGE_READER,
                        BG_PLUGIN_FILE);
 
   ret->extensions = gavl_value_set_array(&ret->extensions_val);
@@ -805,7 +801,7 @@ static bg_plugin_info_t * get_input_info(bg_plugin_registry_t * reg,
 bg_plugin_info_t * bg_singlepic_input_info(void)
   {
   bg_plugin_info_t * ret;
-  ret = get_input_info(bg_plugin_reg, &input_plugin);
+  ret = get_input_info(&input_plugin);
   if(ret)
     ret->parameters = bg_parameter_info_copy_array(parameters_input);
   return ret;
@@ -814,7 +810,7 @@ bg_plugin_info_t * bg_singlepic_input_info(void)
 bg_plugin_info_t * bg_singlepic_stills_input_info(void)
   {
   bg_plugin_info_t * ret;
-  ret = get_input_info(bg_plugin_reg, &input_plugin_stills);
+  ret = get_input_info(&input_plugin_stills);
   if(ret)
     ret->parameters = bg_parameter_info_copy_array(parameters_input_still);
   return ret;
@@ -951,8 +947,6 @@ typedef struct
   gavl_dictionary_t metadata;
   
   bg_parameter_info_t * parameters;
-
-  bg_plugin_registry_t * plugin_reg;
   
   int frame_digits, frame_offset;
   int64_t frame_counter;
@@ -982,10 +976,10 @@ static int iw_callbacks_create_output_file(void * priv, const char * filename)
   }
 
 static bg_parameter_info_t *
-create_encoder_parameters(bg_plugin_registry_t * plugin_reg)
+create_encoder_parameters(void)
   {
   bg_parameter_info_t * ret = bg_parameter_info_copy_array(parameters_encoder);
-  bg_plugin_registry_set_parameter_info(plugin_reg,
+  bg_plugin_registry_set_parameter_info(bg_plugin_reg,
                                         BG_PLUGIN_IMAGE_WRITER,
                                         BG_PLUGIN_FILE, &ret[0]);
   return ret;
@@ -996,7 +990,7 @@ static const bg_parameter_info_t * get_parameters_encoder(void * priv)
   encoder_t * enc = priv;
   
   if(!enc->parameters)
-    enc->parameters = create_encoder_parameters(enc->plugin_reg);
+    enc->parameters = create_encoder_parameters();
   return enc->parameters;
   }
 
@@ -1022,7 +1016,7 @@ static void set_parameter_encoder(void * priv, const char * name,
         e->plugin_handle = NULL;
         }
 
-      e->plugin_handle = bg_plugin_load_with_options(e->plugin_reg, bg_multi_menu_get_selected(val));
+      e->plugin_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val));
       e->image_writer = (bg_image_writer_plugin_t*)(e->plugin_handle->plugin);
       
       if(e->image_writer->set_callbacks)
@@ -1325,11 +1319,10 @@ bg_plugin_info_t * bg_singlepic_encoder_info()
   {
   bg_plugin_info_t * ret;
   
-  if(!bg_plugin_registry_get_num_plugins(bg_plugin_reg, BG_PLUGIN_IMAGE_WRITER,
-                                         BG_PLUGIN_FILE))
+  if(!bg_get_num_plugins(BG_PLUGIN_IMAGE_WRITER, BG_PLUGIN_FILE))
     return NULL;
   ret = bg_plugin_info_create(&encoder_plugin.common);
-  ret->parameters = create_encoder_parameters(bg_plugin_reg);
+  ret->parameters = create_encoder_parameters();
   return ret;
   }
 

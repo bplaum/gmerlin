@@ -84,11 +84,11 @@ static void dump_plugins(bg_plugin_registry_t * plugin_reg,
   int i, num;
   const bg_plugin_info_t * info;
   
-  num = bg_plugin_registry_get_num_plugins(plugin_reg, type, BG_PLUGIN_ALL);
+  num = bg_get_num_plugins(type, BG_PLUGIN_ALL);
 
   for(i = 0; i < num; i++)
     {
-    info = bg_plugin_find_by_index(plugin_reg, i, type, BG_PLUGIN_ALL);
+    info = bg_plugin_find_by_index(i, type, BG_PLUGIN_ALL);
     if(info->api != BG_PLUGIN_API_GMERLIN)
       continue;
     

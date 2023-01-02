@@ -84,8 +84,7 @@ static void set_metadata_parameter(void * priv, const char * name, const gavl_va
 
 track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
                                      void (*update_callback)(void * priv),
-                                     void * update_priv, int show_tooltips,
-                                     bg_plugin_registry_t * plugin_reg)
+                                     void * update_priv, int show_tooltips)
   {
   int i, num;
   int num_text_streams;
@@ -125,8 +124,8 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
   ret->cfg_dialog = bg_dialog_create_multi(TR("Track options"));
 
   /* Filter parameter */
-  afc = bg_audio_filter_chain_create(&ao, plugin_reg);
-  vfc = bg_video_filter_chain_create(&vo, plugin_reg);
+  afc = bg_audio_filter_chain_create(&ao);
+  vfc = bg_video_filter_chain_create(&vo);
 
   ret->audio_filter_parameters =
     bg_parameter_info_copy_array(bg_audio_filter_chain_get_parameters(afc));
@@ -172,7 +171,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     {
     if((dict = gavl_dictionary_get_dictionary_create(sec, "audio_encoder")) && 
        (plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
-       (plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name)) &&
+       (plugin_info = bg_plugin_find_by_name(plugin_name)) &&
        plugin_info->parameters)
       {
       label = TRD(plugin_info->long_name, plugin_info->gettext_domain);
@@ -191,7 +190,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     {
     if((dict = gavl_dictionary_get_dictionary_create(sec, "video_encoder")) &&
        (plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
-       (plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name)) &&
+       (plugin_info = bg_plugin_find_by_name(plugin_name)) &&
        plugin_info->parameters)
       {
       label = TRD(plugin_info->long_name, plugin_info->gettext_domain);
@@ -209,7 +208,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     {
     if((dict = gavl_dictionary_get_dictionary_create(sec, "text_encoder")) &&
        (plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
-       (plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name)) &&
+       (plugin_info = bg_plugin_find_by_name(plugin_name)) &&
        plugin_info->parameters)
       {
       label = TRD(plugin_info->long_name, plugin_info->gettext_domain);
@@ -229,7 +228,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     {
     if((dict = gavl_dictionary_get_dictionary_create(sec, "overlay_encoder")) &&
        (plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
-       (plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name)) &&
+       (plugin_info = bg_plugin_find_by_name(plugin_name)) &&
        plugin_info->parameters)
       {
       label = TRD(plugin_info->long_name, plugin_info->gettext_domain);
@@ -251,7 +250,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     plugin_name = bg_transcoder_track_get_video_encoder(t);
 
   if(plugin_name)
-    plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name);
+    plugin_info = bg_plugin_find_by_name(plugin_name);
   else
     plugin_info = NULL;
 
@@ -326,7 +325,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
   if(num)
     {
     plugin_name = bg_transcoder_track_get_video_encoder(t);
-    plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name);
+    plugin_info = bg_plugin_find_by_name(plugin_name);
   
     for(i = 0; i < num; i++)
       {
@@ -403,7 +402,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     plugin_name = bg_transcoder_track_get_video_encoder(t);
   
   if(plugin_name)
-    plugin_info = bg_plugin_find_by_name(plugin_reg, plugin_name);
+    plugin_info = bg_plugin_find_by_name(plugin_name);
   else
     plugin_info = NULL;
 
@@ -412,7 +411,7 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     plugin_name1 = bg_transcoder_track_get_video_encoder(t);
   
   if(plugin_name1)
-    plugin_info1 = bg_plugin_find_by_name(plugin_reg, plugin_name1);
+    plugin_info1 = bg_plugin_find_by_name(plugin_name1);
   else
     plugin_info1 = NULL;
 

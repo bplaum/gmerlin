@@ -62,7 +62,6 @@ struct bg_audio_filter_chain_s
   
   audio_filter_t * filters;
   const bg_gavl_audio_options_t * opt;
-  bg_plugin_registry_t * plugin_reg;
   
   bg_parameter_info_t * parameters;
 
@@ -89,7 +88,7 @@ static int audio_filter_create(audio_filter_t * f,
                                bg_audio_filter_chain_t * ch,
                                const gavl_dictionary_t * dict)
   {
-  if(!(f->handle = bg_plugin_load_with_options(ch->plugin_reg, dict)))
+  if(!(f->handle = bg_plugin_load_with_options(dict)))
     return 0;
   f->plugin = (bg_fa_plugin_t*)f->handle->plugin;
   return 1;
@@ -181,13 +180,11 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
   }
 
 bg_audio_filter_chain_t *
-bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt,
-                             bg_plugin_registry_t * plugin_reg)
+bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt)
   {
   bg_audio_filter_chain_t * ret;
   ret = calloc(1, sizeof(*ret));
   ret->opt = opt;
-  ret->plugin_reg = plugin_reg;
   ret->cmd_sink = bg_msg_sink_create(handle_cmd, ret, 1);
   pthread_mutex_init(&ret->mutex, NULL);
   return ret;
@@ -210,7 +207,7 @@ static const bg_parameter_info_t params[] =
 static void create_audio_parameters(bg_audio_filter_chain_t * ch)
   {
   ch->parameters = bg_parameter_info_copy_array(params);
-  bg_plugin_registry_set_parameter_info(ch->plugin_reg,
+  bg_plugin_registry_set_parameter_info(bg_plugin_reg,
                                         BG_PLUGIN_FILTER_AUDIO,
                                         BG_PLUGIN_FILTER_1,
                                         ch->parameters);

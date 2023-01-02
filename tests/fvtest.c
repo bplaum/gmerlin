@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
   /* Create filter chain */
   memset(&opt, 0, sizeof(opt));
   bg_gavl_video_options_init(&opt);
-  fc = bg_video_filter_chain_create(&opt, bg_plugin_reg);
+  fc = bg_video_filter_chain_create(&opt);
   fv_parameters = bg_video_filter_chain_get_parameters(fc);
   fv_section =
     bg_cfg_section_create_from_parameters("fv", fv_parameters);

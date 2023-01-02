@@ -570,7 +570,7 @@ void bg_player_ov_sync(bg_player_t * p);
 
 int bg_player_video_init(bg_player_t * p, int video_stream);
 void bg_player_video_cleanup(bg_player_t * p);
-void bg_player_video_create(bg_player_t * p, bg_plugin_registry_t * plugin_reg);
+void bg_player_video_create(bg_player_t * p);
 void bg_player_video_destroy(bg_player_t * p);
 
 int bg_player_read_video(bg_player_t * p,
@@ -612,7 +612,7 @@ int  bg_player_oa_get_latency(bg_player_audio_stream_t * ctx);
 int  bg_player_audio_init(bg_player_t * p, int audio_stream);
 void bg_player_audio_cleanup(bg_player_t * p);
 
-void bg_player_audio_create(bg_player_t * p, bg_plugin_registry_t * plugin_reg);
+void bg_player_audio_create(bg_player_t * p);
 void bg_player_audio_destroy(bg_player_t * p);
 
 // int bg_player_read_audio(bg_player_t * p, gavl_audio_frame_t * frame);

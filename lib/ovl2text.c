@@ -54,7 +54,7 @@ void * bg_ovl2text_create()
   {
   ovl2text_t * ret = calloc(1, sizeof(*ret));
 
-  ret->ocr = bg_ocr_create(bg_plugin_reg);
+  ret->ocr = bg_ocr_create();
   return ret;
   }
 
@@ -228,7 +228,7 @@ static void set_parameter_ovl2text(void * priv, const char * name,
       bg_plugin_unref(e->enc_handle);
       e->enc_handle = NULL;
       }
-    e->enc_handle = bg_plugin_load_with_options(bg_plugin_reg, bg_multi_menu_get_selected(val));
+    e->enc_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val));
     e->enc_plugin = (bg_encoder_plugin_t*)(e->enc_handle->plugin);
     
     if(e->enc_plugin->set_callbacks && e->cb)

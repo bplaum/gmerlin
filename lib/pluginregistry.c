@@ -404,16 +404,14 @@ find_by_name(bg_plugin_info_t * info, const char * name)
   return NULL;
   }
 
-const bg_plugin_info_t * bg_plugin_find_by_name(bg_plugin_registry_t * reg,
-                                                const char * name)
+const bg_plugin_info_t * bg_plugin_find_by_name(const char * name)
   {
-  return find_by_name(reg->entries, name);
+  return find_by_name(bg_plugin_reg->entries, name);
   }
 
-const bg_plugin_info_t * bg_plugin_find_by_protocol(bg_plugin_registry_t * reg,
-                                                    const char * protocol)
+const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol)
   {
-  const bg_plugin_info_t * info = reg->entries;
+  const bg_plugin_info_t * info = bg_plugin_reg->entries;
   
   while(info)
     {
@@ -424,8 +422,7 @@ const bg_plugin_info_t * bg_plugin_find_by_protocol(bg_plugin_registry_t * reg,
   return NULL;
   }
 
-const bg_plugin_info_t * bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
-                                                    const char * filename,
+const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
                                                     int typemask)
   {
   char * extension;
@@ -436,7 +433,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
     return NULL;
   
   
-  info = reg->entries;
+  info = bg_plugin_reg->entries;
   extension = strrchr(filename, '.');
 
   if(!extension)
@@ -470,8 +467,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(bg_plugin_registry_t * reg,
   return ret;
   }
 
-const bg_plugin_info_t * bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
-                                                    const char * mimetype,
+const bg_plugin_info_t * bg_plugin_find_by_mimetype(const char * mimetype,
                                                     int typemask)
   {
   bg_plugin_info_t * info, *ret = NULL;
@@ -480,7 +476,7 @@ const bg_plugin_info_t * bg_plugin_find_by_mimetype(bg_plugin_registry_t * reg,
   if(!mimetype)
     return NULL;
   
-  info = reg->entries;
+  info = bg_plugin_reg->entries;
   
   while(info)
     {
@@ -603,7 +599,7 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
       {
       char * protocol = gavl_strndup(location, pos);
 
-      if(bg_plugin_find_by_protocol(reg, protocol))
+      if(bg_plugin_find_by_protocol(protocol))
         {
         if(idx_p)
           *idx_p = idx;
@@ -621,7 +617,7 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
         *idx_p = idx;
       return ret;
       }
-    else if(bg_plugin_find_by_mimetype(reg, mimetype, BG_PLUGIN_INPUT))
+    else if(bg_plugin_find_by_mimetype(mimetype, BG_PLUGIN_INPUT))
       {
       if(idx_p)
         *idx_p = idx;
@@ -638,15 +634,14 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
   }
 
 const bg_plugin_info_t *
-bg_plugin_find_by_compression(bg_plugin_registry_t * reg,
-                              gavl_codec_id_t id,
+bg_plugin_find_by_compression(gavl_codec_id_t id,
                               int typemask)
   {
   int i;
   bg_plugin_info_t * info, *ret = NULL;
   int max_priority = BG_PLUGIN_PRIORITY_MIN - 1;
 
-  info = reg->entries;
+  info = bg_plugin_reg->entries;
   
   while(info)
     {
@@ -1515,20 +1510,19 @@ static bg_plugin_info_t * find_by_priority(bg_plugin_info_t * info,
 #endif
 
 const bg_plugin_info_t *
-bg_plugin_find_by_index(bg_plugin_registry_t * reg, int index,
+bg_plugin_find_by_index(int index,
                         uint32_t type_mask, uint32_t flag_mask)
   {
-  return find_by_index(reg->entries, index,
+  return find_by_index(bg_plugin_reg->entries, index,
                        type_mask, flag_mask);
   }
 
-int bg_plugin_registry_get_num_plugins(bg_plugin_registry_t * reg,
-                                       uint32_t type_mask, uint32_t flag_mask)
+int bg_get_num_plugins(uint32_t type_mask, uint32_t flag_mask)
   {
   bg_plugin_info_t * info;
   int ret = 0;
   
-  info = reg->entries;
+  info = bg_plugin_reg->entries;
 
   while(info)
     {
@@ -1550,7 +1544,7 @@ void bg_plugin_registry_scan_devices(bg_plugin_registry_t * plugin_reg,
   void * priv;
   void * module;
   const bg_parameter_info_t * parameters;
-  int num = bg_plugin_registry_get_num_plugins(plugin_reg, type_mask, flag_mask);
+  int num = bg_get_num_plugins(type_mask, flag_mask);
   
   for(i = 0; i < num; i++)
     {
@@ -1865,13 +1859,13 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
   if(!mimetype)
     goto fail;
      
-  if(!(info = bg_plugin_find_by_mimetype(r, mimetype, BG_PLUGIN_IMAGE_READER)))
+  if(!(info = bg_plugin_find_by_mimetype(mimetype, BG_PLUGIN_IMAGE_READER)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No plugin found for mime type %s", mimetype);
     goto fail;
     }
   
-  if(!(h = bg_plugin_load(r, info)))
+  if(!(h = bg_plugin_load(info)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", info->name);
     goto fail;
@@ -2002,7 +1996,7 @@ static int probe_image(bg_plugin_registry_t * r,
   const gavl_dictionary_t * m_ret;
 
   const bg_plugin_info_t * info;
-  info = bg_plugin_find_by_filename(r, filename, BG_PLUGIN_IMAGE_READER);
+  info = bg_plugin_find_by_filename(filename, BG_PLUGIN_IMAGE_READER);
 
   if(!info)
     {
@@ -2010,7 +2004,7 @@ static int probe_image(bg_plugin_registry_t * r,
     return 0;
     }
 
-  handle = bg_plugin_load(r, info);
+  handle = bg_plugin_load(info);
   if(!handle)
     return 0;
 
@@ -2113,7 +2107,7 @@ bg_plugin_registry_save_image(bg_plugin_registry_t * r,
   bg_plugin_handle_t * handle = NULL;
   gavl_video_frame_t * tmp_frame = NULL;
   
-  info = bg_plugin_find_by_filename(r, filename, BG_PLUGIN_IMAGE_WRITER);
+  info = bg_plugin_find_by_filename(filename, BG_PLUGIN_IMAGE_WRITER);
 
   cnv = gavl_video_converter_create();
   
@@ -2123,7 +2117,7 @@ bg_plugin_registry_save_image(bg_plugin_registry_t * r,
     goto fail;
     }
   
-  handle = bg_plugin_load(r, info);
+  handle = bg_plugin_load(info);
   if(!handle)
     goto fail;
   
@@ -2178,8 +2172,7 @@ void bg_plugin_handle_connect_control(bg_plugin_handle_t * ret)
   }
 
   
-static bg_plugin_handle_t * load_plugin(bg_plugin_registry_t * reg,
-                                        const bg_plugin_info_t * info)
+static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
   {
   bg_plugin_handle_t * ret;
   
@@ -2287,8 +2280,7 @@ fail:
   return NULL;
   }
 
-static void apply_parameters(bg_plugin_registry_t * reg,
-                             bg_plugin_handle_t * ret, const gavl_dictionary_t * user_params)
+static void apply_parameters(bg_plugin_handle_t * ret, const gavl_dictionary_t * user_params)
   {
   const bg_parameter_info_t * parameters;
   bg_cfg_section_t * section;
@@ -2304,7 +2296,7 @@ static void apply_parameters(bg_plugin_registry_t * reg,
 
   parameters = ret->plugin->get_parameters(ret->priv);
   
-  section = bg_plugin_registry_get_section(reg, ret->info->name);
+  section = bg_plugin_registry_get_section(bg_plugin_reg, ret->info->name);
   
   if(user_params)
     {
@@ -2320,19 +2312,17 @@ static void apply_parameters(bg_plugin_registry_t * reg,
   gavl_dictionary_free(&tmp_section);
   }
 
-bg_plugin_handle_t * bg_plugin_load(bg_plugin_registry_t * reg,
-                                    const bg_plugin_info_t * info)
+bg_plugin_handle_t * bg_plugin_load(const bg_plugin_info_t * info)
   {
   bg_plugin_handle_t * ret;
-  ret = load_plugin(reg, info);
+  ret = load_plugin(info);
 
   if(ret)
-    apply_parameters(reg, ret, NULL);
+    apply_parameters(ret, NULL);
   return ret;
   }
 
-bg_plugin_handle_t * bg_plugin_load_with_options(bg_plugin_registry_t * reg,
-                                                 const gavl_dictionary_t * dict)
+bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict)
   {
   const char * plugin_name;
   const bg_plugin_info_t * info;
@@ -2341,20 +2331,19 @@ bg_plugin_handle_t * bg_plugin_load_with_options(bg_plugin_registry_t * reg,
   if(!dict || !(plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)))
     return NULL;
   
-  if(!(info = bg_plugin_find_by_name(reg, plugin_name)))
+  if(!(info = bg_plugin_find_by_name(plugin_name)))
     return NULL;
 
-  ret = load_plugin(reg, info);
+  ret = load_plugin(info);
 
   if(ret && ret->plugin->set_parameter)
-    apply_parameters(reg, ret, dict);
+    apply_parameters(ret, dict);
   
   return ret;
   
   }
 
-bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
-                                       const gavl_dictionary_t * options,
+bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options,
                                        const char * window_id)
   {
   bg_plugin_handle_t * ret;
@@ -2373,7 +2362,7 @@ bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
     return NULL;
     }
 
-  if(!(info = bg_plugin_find_by_name(reg, name)))
+  if(!(info = bg_plugin_find_by_name(name)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No such plugin: %s", name);
     return NULL;
@@ -2385,7 +2374,7 @@ bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
     return NULL;
     }
   
-  ret = load_plugin(reg, info);
+  ret = load_plugin(info);
   
   if(window_id)
     {
@@ -2398,7 +2387,7 @@ bg_plugin_handle_t * bg_ov_plugin_load(bg_plugin_registry_t * reg,
     }
   
   if(ret)
-    apply_parameters(reg, ret, options);
+    apply_parameters(ret, options);
   return ret;
   }
 
@@ -2508,7 +2497,7 @@ void bg_plugin_registry_find_devices(bg_plugin_registry_t * reg,
   if(!info)
     return;
 
-  handle = bg_plugin_load(reg, info);
+  handle = bg_plugin_load(info);
     
   bg_device_info_destroy(info->devices);
   info->devices = NULL;
@@ -2521,19 +2510,18 @@ void bg_plugin_registry_find_devices(bg_plugin_registry_t * reg,
   bg_plugin_unref(handle);
   }
 
-char ** bg_plugin_registry_get_plugins(bg_plugin_registry_t*reg,
-                                       uint32_t type_mask,
+char ** bg_plugin_registry_get_plugins(uint32_t type_mask,
                                        uint32_t flag_mask)
   {
   int num_plugins, i;
   char ** ret;
   const bg_plugin_info_t * info;
   
-  num_plugins = bg_plugin_registry_get_num_plugins(reg, type_mask, flag_mask);
+  num_plugins = bg_get_num_plugins(type_mask, flag_mask);
   ret = calloc(num_plugins + 1, sizeof(char*));
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i, type_mask, flag_mask);
+    info = bg_plugin_find_by_index(i, type_mask, flag_mask);
     ret[i] = gavl_strdup(info->name);
     }
   return ret;
@@ -2568,11 +2556,11 @@ static void load_input_plugin(bg_plugin_registry_t * reg,
       }
 
     if(options)
-      bg_plugin_load_with_options(reg, options);
+      bg_plugin_load_with_options(options);
     else if(!strcmp(info->name, "i_bgplug"))
       *ret = bg_input_plugin_create_plug();
     else
-      *ret = bg_plugin_load(reg, info);
+      *ret = bg_plugin_load(info);
     }
   }
 
@@ -3238,7 +3226,7 @@ static int input_plugin_load(const char * location,
                       NULL,   //  port,
                       &path))
         {
-        info = bg_plugin_find_by_protocol(bg_plugin_reg, protocol);
+        info = bg_plugin_find_by_protocol(protocol);
         if(info)
           {
           if(info->flags & BG_PLUGIN_REMOVABLE)
@@ -3248,11 +3236,11 @@ static int input_plugin_load(const char * location,
       }
     else if(!strcmp(location, "-"))
       {
-      info = bg_plugin_find_by_protocol(bg_plugin_reg, "stdin");
+      info = bg_plugin_find_by_protocol("stdin");
       }
     else
       {
-      info = bg_plugin_find_by_filename(bg_plugin_reg, real_location,
+      info = bg_plugin_find_by_filename(real_location,
                                         (BG_PLUGIN_INPUT));
       }
     first_plugin = info;
@@ -3267,7 +3255,7 @@ static int input_plugin_load(const char * location,
     load_input_plugin(bg_plugin_reg, info, options, ret);
 
     if(!info)
-      info = bg_plugin_find_by_name(bg_plugin_reg, gavl_dictionary_get_string(options, BG_CFG_TAG_NAME));
+      info = bg_plugin_find_by_name(gavl_dictionary_get_string(options, BG_CFG_TAG_NAME));
     
     if(!(*ret))
       {
@@ -3303,11 +3291,10 @@ static int input_plugin_load(const char * location,
   
   flags = bg_string_is_url(real_location) ? BG_PLUGIN_URL : BG_PLUGIN_FILE;
   
-  num_plugins = bg_plugin_registry_get_num_plugins(bg_plugin_reg,
-                                                   BG_PLUGIN_INPUT, flags);
+  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, flags);
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(bg_plugin_reg, i, BG_PLUGIN_INPUT, flags);
+    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, flags);
 
     if(info == first_plugin)
       continue;
@@ -3441,7 +3428,7 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
     }
   
   if((plugin_name = gavl_dictionary_get_string(&vars, BG_URL_VAR_PLUGIN)))
-    info = bg_plugin_find_by_name(bg_plugin_reg, plugin_name);
+    info = bg_plugin_find_by_name(plugin_name);
 
   /* Apply -ip option */
   i = 0;
@@ -3766,7 +3753,7 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
   const bg_plugin_info_t * info;
   
   num_plugins =
-    bg_plugin_registry_get_num_plugins(reg, type_mask, flag_mask);
+    bg_get_num_plugins(type_mask, flag_mask);
 
   start_entries = 0;
   if(ret->multi_names_nc)
@@ -3791,7 +3778,7 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
   
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i,
+    info = bg_plugin_find_by_index(i,
                                    type_mask, flag_mask);
     ret->multi_names_nc[start_entries+i] = gavl_strdup(info->name);
 
@@ -3880,7 +3867,7 @@ void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
   int index, index1, num_parameters;
   
   num_plugins =
-    bg_plugin_registry_get_num_plugins(reg, type_mask, flag_mask);
+    bg_get_num_plugins(type_mask, flag_mask);
 
   ret->type = BG_PARAMETER_MULTI_LIST;
   
@@ -3896,7 +3883,7 @@ void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
   
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i,
+    info = bg_plugin_find_by_index(i,
                                    type_mask, flag_mask);
     ret->multi_names_nc[i] = gavl_strdup(info->name);
 
@@ -4316,7 +4303,7 @@ bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
   if(section_ret)
     *section_ret = bg_multi_menu_get_selected(val);
   
-  info = bg_plugin_find_by_name(plugin_reg, plugin_name);
+  info = bg_plugin_find_by_name(plugin_name);
   
   if(!info->parameters)
     return;
@@ -4351,7 +4338,7 @@ bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
     val = gavl_dictionary_get(s, "ve");
     }
   
-  info = bg_plugin_find_by_name(plugin_reg, plugin_name);
+  info = bg_plugin_find_by_name(plugin_name);
   
   if(section_ret)
     *section_ret = NULL;
@@ -4481,14 +4468,14 @@ bg_plugin_registry_set_compressor_parameter(bg_plugin_registry_t * plugin_reg,
     if(val->v.str && !(*plugin))
       {
       const bg_plugin_info_t * info;
-      info = bg_plugin_find_by_name(plugin_reg, val->v.str);
+      info = bg_plugin_find_by_name(val->v.str);
       if(!info)
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot find plugin %s",
                val->v.str);
         return;
         }
-      *plugin = bg_plugin_load(plugin_reg, info);
+      *plugin = bg_plugin_load(info);
       }
     
     }
@@ -4509,7 +4496,7 @@ bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
   if(!bg_cfg_section_get_parameter_string(section, "codec", &codec))
     return GAVL_CODEC_ID_NONE;
 
-  info = bg_plugin_find_by_name(plugin_reg, codec);
+  info = bg_plugin_find_by_name(codec);
   if(!info)
     return GAVL_CODEC_ID_NONE;
   return info->compressions[0];
@@ -4955,10 +4942,10 @@ void bg_plugin_registry_get_input_mimetypes(bg_plugin_registry_t * reg,
   int num_plugins;
   const bg_plugin_info_t * info;
   
-  num_plugins = bg_plugin_registry_get_num_plugins(reg, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
 
     if(!info->mimetypes)
       continue;
@@ -4975,10 +4962,10 @@ void bg_plugin_registry_get_input_protocols(bg_plugin_registry_t * reg,
   int num_plugins;
   const bg_plugin_info_t * info;
   
-  num_plugins = bg_plugin_registry_get_num_plugins(reg, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(reg, i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
 
     if(!info->protocols)
       continue;
@@ -5189,11 +5176,11 @@ void bg_plugin_registry_list_plugins(bg_plugin_type_t type, int flags)
   {
   int i, num;
   const bg_plugin_info_t * info;
-  num = bg_plugin_registry_get_num_plugins(bg_plugin_reg, type, flags);
+  num = bg_get_num_plugins(type, flags);
 
   for(i = 0; i < num; i++)
     {
-    info = bg_plugin_find_by_index(bg_plugin_reg, i, type, flags);
+    info = bg_plugin_find_by_index(i, type, flags);
     printf("%s\n", info->name);
     }
   
@@ -5270,7 +5257,7 @@ void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
     exit(-1);
     }
 
-  if(!(info = bg_plugin_find_by_name(bg_plugin_reg, (*_argv)[arg])))
+  if(!(info = bg_plugin_find_by_name((*_argv)[arg])))
     {
     fprintf(stderr, "No such plugin: %s\n", (*_argv)[arg]);
     exit(-1);
@@ -5318,7 +5305,7 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
 
   name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME);
   
-  if(!(info = bg_plugin_find_by_name(bg_plugin_reg, name)))
+  if(!(info = bg_plugin_find_by_name(name)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No such plugin: %s", name);
     return 0;

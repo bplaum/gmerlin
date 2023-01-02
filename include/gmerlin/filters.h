@@ -62,8 +62,7 @@ typedef struct bg_video_filter_chain_s bg_video_filter_chain_t;
  */
 
 bg_audio_filter_chain_t *
-bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt,
-                             bg_plugin_registry_t * plugin_reg);
+bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt);
 
 /** \brief Return parameters
  *  \param ch An audio filter chain
@@ -155,14 +154,12 @@ bg_msg_sink_t * bg_audio_filter_chain_get_cmd_sink(bg_audio_filter_chain_t * ch)
 
 /** \brief Create a video filter chain
  *  \param opt Conversion options
- *  \param plugin_reg A plugin registry
  *
  *  The conversion options should be valid for the whole lifetime of the filter chain.
  */
 
 bg_video_filter_chain_t *
-bg_video_filter_chain_create(const bg_gavl_video_options_t * opt,
-                             bg_plugin_registry_t * plugin_reg);
+bg_video_filter_chain_create(const bg_gavl_video_options_t * opt);
 
 /** \brief Return parameters
  *  \param ch A video filter chain

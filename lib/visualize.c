@@ -255,8 +255,7 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
 
   //  fprintf(stderr, "visualize: load_plugin\n");
   
-  if(!(v->h = bg_plugin_load_with_options(bg_plugin_reg,
-                                          bg_multi_menu_get_selected(&v->plugin_cfg))))
+  if(!(v->h = bg_plugin_load_with_options(bg_multi_menu_get_selected(&v->plugin_cfg))))
     {
     //    fprintf(stderr, "visualize: loading_plugin failed\n");
     return;

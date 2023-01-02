@@ -269,8 +269,7 @@ static int create_file(void * data, const char * filename)
   return 1;
   }
 
-char * bg_make_thumbnail(bg_plugin_registry_t * plugin_reg,
-                         gavl_video_frame_t * in_frame,
+char * bg_make_thumbnail(gavl_video_frame_t * in_frame,
                          const gavl_video_format_t * input_format,
                          int * max_width, int * max_height,
                          const char * out_file_base,
@@ -339,7 +338,7 @@ char * bg_make_thumbnail(bg_plugin_registry_t * plugin_reg,
   out_format.frame_height = out_format.image_height;
 
   plugin_info =
-    bg_plugin_find_by_mimetype(plugin_reg, mimetype, BG_PLUGIN_IMAGE_WRITER);
+    bg_plugin_find_by_mimetype(mimetype, BG_PLUGIN_IMAGE_WRITER);
   
   if(!plugin_info)
     {
@@ -347,7 +346,7 @@ char * bg_make_thumbnail(bg_plugin_registry_t * plugin_reg,
     goto end;
     }
 
-  output_handle = bg_plugin_load(plugin_reg, plugin_info);
+  output_handle = bg_plugin_load(plugin_info);
 
   if(!output_handle)
     {

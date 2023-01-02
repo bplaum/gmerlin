@@ -126,8 +126,6 @@ struct bg_encoder_s
   int separate;
   int is_stdout;
   
-  bg_plugin_registry_t * plugin_reg;
-
   /* Config stuff */
   const bg_cfg_section_t * es;
   bg_transcoder_track_t * tt;
@@ -181,8 +179,8 @@ static void init_plugin_from_section(bg_encoder_t * e, plugin_config_t * ret,
   name = bg_encoder_section_get_plugin(e->es, type);
   if(name)
     {
-    ret->info = bg_plugin_find_by_name(e->plugin_reg, name);
-    bg_encoder_section_get_plugin_config(e->plugin_reg,
+    ret->info = bg_plugin_find_by_name(name);
+    bg_encoder_section_get_plugin_config(bg_plugin_reg,
                                          e->es, type,
                                          &ret->section, NULL);
     }
@@ -192,7 +190,7 @@ static void init_stream_from_section(bg_encoder_t * e,
                                      stream_config_t * ret,
                                      gavl_stream_type_t type)
   {
-  bg_encoder_section_get_stream_config(e->plugin_reg, e->es,
+  bg_encoder_section_get_stream_config(bg_plugin_reg, e->es,
                                        type, 
                                        &ret->section, NULL);
   }
@@ -232,7 +230,7 @@ static void init_from_tt(bg_encoder_t * e)
   
   if(plugin_name)
     {
-    e->video_plugin.info = bg_plugin_find_by_name(e->plugin_reg, plugin_name);
+    e->video_plugin.info = bg_plugin_find_by_name(plugin_name);
     e->video_plugin.section = gavl_dictionary_get_dictionary(e->es, "ve");
     }
   /* Audio plugin */
@@ -240,33 +238,31 @@ static void init_from_tt(bg_encoder_t * e)
   
   if((plugin_name = bg_transcoder_track_get_audio_encoder(e->tt)))
     {
-    e->audio_plugin.info       = bg_plugin_find_by_name(e->plugin_reg, plugin_name);
+    e->audio_plugin.info       = bg_plugin_find_by_name(plugin_name);
     e->audio_plugin.section = gavl_dictionary_get_dictionary(e->es, "ae");
     }
   
   /* Subtitle text plugin */
   if((plugin_name = bg_transcoder_track_get_text_encoder(e->tt)))
     {
-    e->text_plugin.info = bg_plugin_find_by_name(e->plugin_reg, plugin_name);
+    e->text_plugin.info = bg_plugin_find_by_name(plugin_name);
     e->text_plugin.section = gavl_dictionary_get_dictionary(e->es, "te");
     }
   
   /* Subtitle overlay plugin */
   if((plugin_name = bg_transcoder_track_get_overlay_encoder(e->tt)))
     {
-    e->overlay_plugin.info = bg_plugin_find_by_name(e->plugin_reg, plugin_name);
+    e->overlay_plugin.info = bg_plugin_find_by_name(plugin_name);
     e->overlay_plugin.section = gavl_dictionary_get_dictionary(e->es, "oe");
     }
   }
 #endif
 
-bg_encoder_t * bg_encoder_create(bg_plugin_registry_t * plugin_reg,
-                                 bg_cfg_section_t * es,
+bg_encoder_t * bg_encoder_create(bg_cfg_section_t * es,
                                  bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask)
   {
   bg_encoder_t * ret = calloc(1, sizeof(*ret));
-  ret->plugin_reg = plugin_reg;
   ret->stream_mask = stream_mask;
 
   ret->cb_int.create_output_file = cb_create_output_file;
@@ -416,7 +412,7 @@ static bg_plugin_handle_t * load_encoder(bg_encoder_t * enc,
                          (enc->num_plugins+1)* sizeof(enc->plugins));
 
   enc->plugins[enc->num_plugins] =
-    bg_plugin_load(enc->plugin_reg, info);
+    bg_plugin_load(info);
   ret = enc->plugins[enc->num_plugins];
 
   plugin = (bg_encoder_plugin_t *)ret->plugin;
@@ -1306,7 +1302,7 @@ open_dummy_encoder(bg_encoder_t * enc,
   {
   bg_encoder_plugin_t * plugin;
   bg_plugin_handle_t * ret;
-  ret = bg_plugin_load(enc->plugin_reg, plugin_info);
+  ret = bg_plugin_load(plugin_info);
   
   plugin = (bg_encoder_plugin_t *)ret->plugin;
 

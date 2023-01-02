@@ -66,7 +66,7 @@ void bg_recorder_create_video(bg_recorder_t * rec)
   
   bg_gavl_video_options_init(&vs->opt);
   
-  vs->fc = bg_video_filter_chain_create(&vs->opt, rec->plugin_reg);
+  vs->fc = bg_video_filter_chain_create(&vs->opt);
 
   vs->th = bg_thread_create(rec->tc);
   vs->timer = gavl_timer_create();
@@ -196,8 +196,7 @@ bg_recorder_set_video_parameter(void * data,
       if(vs->input_handle)
         bg_plugin_unref(vs->input_handle);
       
-      if((vs->input_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                         bg_multi_menu_get_selected(val))))
+      if((vs->input_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val))))
         vs->input_plugin = (bg_recorder_plugin_t*)vs->input_handle->plugin;
       }
     
@@ -286,8 +285,7 @@ bg_recorder_set_video_monitor_parameter(void * data,
 
       fprintf(stderr, "Opening monitor plugin %s\n", rec->display_string);
       
-      if((vs->monitor_handle = bg_ov_plugin_load(rec->plugin_reg,
-                                                 sel,
+      if((vs->monitor_handle = bg_ov_plugin_load(sel,
                                                  rec->display_string)))
         vs->monitor_plugin = (bg_ov_plugin_t*)vs->monitor_handle->plugin;
       else
@@ -402,8 +400,7 @@ bg_recorder_set_video_snapshot_parameter(void * data,
       if(vs->snapshot_handle)
         bg_plugin_unref(vs->snapshot_handle);
 
-      if((vs->snapshot_handle = bg_plugin_load_with_options(rec->plugin_reg,
-                                                            bg_multi_menu_get_selected(val))))
+      if((vs->snapshot_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val))))
         {
         vs->snapshot_plugin = (bg_image_writer_plugin_t*)vs->snapshot_handle->plugin;
       

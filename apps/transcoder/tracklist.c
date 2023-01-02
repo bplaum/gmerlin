@@ -160,8 +160,6 @@ struct track_list_s
 
   gavl_dictionary_t t;
 
-  bg_plugin_registry_t * plugin_reg;
-
   GtkTreeViewColumn * col_name;
 
   bg_transcoder_track_t * selected_track;
@@ -640,8 +638,7 @@ static void add_file_callback(char ** files, void * data)
     gavl_metadata_add_src(&dict, GAVL_META_SRC, NULL, files[i]);
     
     new_tracks =
-      bg_transcoder_track_create(&dict, l->plugin_reg,
-                                 l->track_defaults_section,
+      bg_transcoder_track_create(&dict, l->track_defaults_section,
                                  l->encoder_section);
     gavl_dictionary_free(&dict);
 
@@ -1057,7 +1054,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                                   add_file_callback,
                                   urlsel_close_callback,
                                   t, NULL  /* parent */,
-                                  t->plugin_reg,
+                                  bg_plugin_reg,
                                   BG_PLUGIN_INPUT,
                                   BG_PLUGIN_URL);
     gtk_widget_set_sensitive(t->add_url_button, 0);
@@ -1071,7 +1068,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                                       add_file_callback,
                                       drivesel_close_callback,
                                       t, NULL  /* parent */,
-                                      t->plugin_reg,
+                                      bg_plugin_reg,
                                       BG_PLUGIN_INPUT, BG_PLUGIN_REMOVABLE);
     gtk_widget_set_sensitive(t->add_removable_button, 0);
     bg_gtk_drivesel_run(drivesel, 0, t->add_removable_button);
@@ -1094,7 +1091,7 @@ static void button_callback(GtkWidget * w, gpointer data)
   else if((w == t->config_button) || (w == t->menu.selected_menu.configure_item))
     {
     track_dialog = track_dialog_create(t->selected_track, update_track,
-                                       t, t->show_tooltips, t->plugin_reg);
+                                       t, t->show_tooltips);
     track_dialog_run(track_dialog, t->treeview);
     track_dialog_destroy(track_dialog);
 
@@ -1316,8 +1313,7 @@ void track_list_add_url(track_list_t * l, char * url)
   gavl_metadata_add_src(&dict, GAVL_META_SRC, NULL, url);
   
   new_tracks =
-    bg_transcoder_track_create(&dict, l->plugin_reg,
-                               l->track_defaults_section,
+    bg_transcoder_track_create(&dict, l->track_defaults_section,
                                l->encoder_section);
   gavl_dictionary_free(&dict);
   
@@ -1353,7 +1349,6 @@ static void drag_received_callback(GtkWidget *widget,
     new_tracks =
       bg_transcoder_track_create_from_urilist((char*)data_buf,
                                               data_len,
-                                              l->plugin_reg,
                                               l->track_defaults_section, l->encoder_section);
     
 
@@ -1383,8 +1378,7 @@ static void drag_received_callback(GtkWidget *widget,
          (m = gavl_track_get_metadata(m)))
         {
         new_tracks = 
-          bg_transcoder_track_create(m, l->plugin_reg,
-                                     l->track_defaults_section,
+          bg_transcoder_track_create(m, l->track_defaults_section,
                                      l->encoder_section);
         
 
@@ -1438,8 +1432,7 @@ static GtkWidget * create_icon_button(track_list_t * l,
   }
 
 
-track_list_t * track_list_create(bg_plugin_registry_t * plugin_reg,
-                                 bg_cfg_section_t * track_defaults_section,
+track_list_t * track_list_create(bg_cfg_section_t * track_defaults_section,
                                  const bg_parameter_info_t * encoder_parameters,
                                  bg_cfg_section_t * encoder_section)
   {
@@ -1468,8 +1461,6 @@ track_list_t * track_list_create(bg_plugin_registry_t * plugin_reg,
                           TRS("Total playback time"),
                           PACKAGE);
 
-  ret->plugin_reg = plugin_reg;
-  
   /* Create buttons */
   ret->add_file_button =
     create_icon_button(ret,

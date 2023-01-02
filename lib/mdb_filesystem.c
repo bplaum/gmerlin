@@ -373,7 +373,7 @@ static void read_container_info(const bg_mdb_backend_t * be,
       
       if(photo_mode) // Ignore everything except images
         {
-        if(!bg_plugin_find_by_filename(bg_plugin_reg, uri, BG_PLUGIN_IMAGE_READER))
+        if(!bg_plugin_find_by_filename(uri, BG_PLUGIN_IMAGE_READER))
           continue;
         }
       else // Directory mode: We open files only to detect multitrack plugins

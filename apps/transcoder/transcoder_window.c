@@ -427,7 +427,7 @@ static int start_transcode(transcoder_window_t * win)
   
 
   if(!bg_transcoder_init(win->transcoder,
-                         bg_plugin_reg, win->transcoder_track))
+                         win->transcoder_track))
     {
     bg_gtk_log_window_flush(win->logwindow);
     
@@ -746,8 +746,7 @@ transcoder_window_t * transcoder_window_create()
   /* Create track list */
 
   ret->track_defaults_section = bg_cfg_registry_find_section(bg_cfg_registry, "track_defaults");
-  ret->tracklist = track_list_create(bg_plugin_reg,
-                                     ret->track_defaults_section,
+  ret->tracklist = track_list_create(ret->track_defaults_section,
                                      ret->encoder_parameters, ret->encoder_section);
   
   gtk_window_add_accel_group(GTK_WINDOW(ret->win), track_list_get_accel_group(ret->tracklist));
@@ -1002,8 +1001,8 @@ static void transcoder_window_preferences(transcoder_window_t * w)
   bg_gavl_audio_options_init(&ao);
   bg_gavl_video_options_init(&vo);
   
-  ac = bg_audio_filter_chain_create(&ao, bg_plugin_reg);
-  vc = bg_video_filter_chain_create(&vo, bg_plugin_reg);
+  ac = bg_audio_filter_chain_create(&ao);
+  vc = bg_video_filter_chain_create(&vo);
   
   dlg = bg_dialog_create_multi(TR("Transcoder configuration"));
 

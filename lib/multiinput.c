@@ -316,7 +316,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   ret = calloc(1, sizeof(*ret));
 
   ret->plugin = (bg_plugin_common_t*)&multi_plugin;
-  ret->info = bg_plugin_find_by_name(bg_plugin_reg, "i_multi");
+  ret->info = bg_plugin_find_by_name("i_multi");
 
   if(!track)
     track = bg_input_plugin_get_track_info(h, -1);

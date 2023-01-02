@@ -194,7 +194,7 @@ int main(int argc, char ** argv)
   
   /* Initialize output plugin */
   fprintf(stderr, "%s -> %s\n", files[0], files[1]);
-  plugin_info = bg_plugin_find_by_filename(bg_plugin_reg, files[1],
+  plugin_info = bg_plugin_find_by_filename(files[1],
                                            BG_PLUGIN_IMAGE_WRITER);
   if(!plugin_info)
     {
@@ -202,7 +202,7 @@ int main(int argc, char ** argv)
     return -1;
     }
   
-  output_handle = bg_plugin_load(bg_plugin_reg, plugin_info);
+  output_handle = bg_plugin_load(plugin_info);
   output_plugin = (bg_image_writer_plugin_t*)(output_handle->plugin);
   
   gavl_video_format_copy(&out_format, &in_format);

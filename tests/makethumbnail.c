@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
   
   /* Save image */
   
-  path_abs = bg_make_thumbnail(bg_plugin_reg, input_frame, &input_format,
+  path_abs = bg_make_thumbnail(input_frame, &input_format,
                                &max_width, &max_height,
                                out_base, mimetype, &metadata);
   if(!path_abs)

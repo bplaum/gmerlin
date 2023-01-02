@@ -741,8 +741,7 @@ static bg_plugin_handle_t * load_decompressor(gavl_codec_id_t id,
   /* Add decoder */
   const bg_plugin_info_t * info;
   bg_plugin_handle_t * ret;
-  info = bg_plugin_find_by_compression(bg_plugin_reg, id,
-                                       type_mask);
+  info = bg_plugin_find_by_compression(id, type_mask);
   if(!info)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
@@ -751,7 +750,7 @@ static bg_plugin_handle_t * load_decompressor(gavl_codec_id_t id,
            gavl_compression_get_short_name(id));
     return NULL;
     }
-  ret = bg_plugin_load(bg_plugin_reg, info);
+  ret = bg_plugin_load(info);
   if(!ret)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
@@ -2077,7 +2076,7 @@ bg_plugin_handle_t * bg_input_plugin_create_plug()
   ret = calloc(1, sizeof(*ret));
   
   ret->plugin = (bg_plugin_common_t*)&plug_input;
-  ret->info = bg_plugin_find_by_name(bg_plugin_reg, "i_bgplug");
+  ret->info = bg_plugin_find_by_name("i_bgplug");
   
   pthread_mutex_init(&ret->mutex, NULL);
 

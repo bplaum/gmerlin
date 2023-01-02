@@ -72,10 +72,9 @@ int main(int argc, char ** argv)
   
   /* Load and open plugin */
 
-  info = bg_plugin_find_by_index(bg_plugin_reg,
-                                 BG_PLUGIN_RECORDER_AUDIO, 0, 0);
+  info = bg_plugin_find_by_index(BG_PLUGIN_RECORDER_AUDIO, 0, 0);
   
-  id.ra_handle = bg_plugin_load(bg_plugin_reg, info);
+  id.ra_handle = bg_plugin_load(info);
   id.ra_plugin = (bg_recorder_plugin_t*)id.ra_handle->plugin;
   
   /* The soundcard might be busy from last time,

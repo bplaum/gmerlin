@@ -29,8 +29,7 @@
 #include <gmerlin/player.h>
 #include <playerprivate.h>
 
-void bg_player_audio_create(bg_player_t * p,
-                            bg_plugin_registry_t * plugin_reg)
+void bg_player_audio_create(bg_player_t * p)
   {
   bg_player_audio_stream_t * s = &p->audio_stream;
   
@@ -39,8 +38,7 @@ void bg_player_audio_create(bg_player_t * p,
   s->th = bg_thread_create(p->thread_common);
   
   s->fc =
-    bg_audio_filter_chain_create(&s->options,
-                                 plugin_reg);
+    bg_audio_filter_chain_create(&s->options);
   
   
   s->volume = gavl_volume_control_create();

@@ -35,12 +35,12 @@
 typedef struct
   {
   const char * name;
-  int (*supported)(bg_plugin_registry_t * plugin_reg);
+  int (*supported)();
   int (*init)(bg_ocr_t * ocr, gavl_video_format_t*);
   int (*run)(bg_ocr_t * ocr, const gavl_video_format_t*,gavl_video_frame_t*,char ** ret);
   } ocr_funcs_t;
 
-static int supported_tesseract(bg_plugin_registry_t * plugin_reg);
+static int supported_tesseract();
 static int init_tesseract(bg_ocr_t *, gavl_video_format_t *);
 static int run_tesseract(bg_ocr_t *, const gavl_video_format_t *, gavl_video_frame_t*,char ** ret);
 
@@ -60,8 +60,6 @@ struct bg_ocr_s
   gavl_video_converter_t * cnv;
   gavl_video_options_t * opt;
   
-  bg_plugin_registry_t * plugin_reg;
-
   int do_convert;
   char lang[4];
 
@@ -99,8 +97,8 @@ static int load_image_writer(bg_ocr_t * ocr, const char * plugin)
     ocr->iw_handle = NULL;
     }
   
-  info = bg_plugin_find_by_name(ocr->plugin_reg, plugin);
-  ocr->iw_handle = bg_plugin_load(ocr->plugin_reg, info);
+  info = bg_plugin_find_by_name(plugin);
+  ocr->iw_handle = bg_plugin_load(info);
   if(!ocr->iw_handle)
     return 0;
   ocr->iw_plugin = (bg_image_writer_plugin_t*)ocr->iw_handle->plugin;
@@ -110,7 +108,7 @@ static int load_image_writer(bg_ocr_t * ocr, const char * plugin)
   return 1;
   }
 
-bg_ocr_t * bg_ocr_create(bg_plugin_registry_t * plugin_reg)
+bg_ocr_t * bg_ocr_create()
   {
   int i;
   bg_ocr_t * ret;
@@ -119,7 +117,7 @@ bg_ocr_t * bg_ocr_create(bg_plugin_registry_t * plugin_reg)
   i = 0;
   while(ocr_funcs[i].name)
     {
-    if(ocr_funcs[i].supported(plugin_reg))
+    if(ocr_funcs[i].supported(bg_plugin_reg))
       funcs = &ocr_funcs[i];
     i++;
     }
@@ -139,7 +137,6 @@ bg_ocr_t * bg_ocr_create(bg_plugin_registry_t * plugin_reg)
   ret->opt = gavl_video_converter_get_options(ret->cnv);
   gavl_video_options_set_alpha_mode(ret->opt, GAVL_ALPHA_BLEND_COLOR);
   
-  ret->plugin_reg = plugin_reg;
   ret->funcs = funcs;
     
   return ret;
@@ -290,11 +287,11 @@ void bg_ocr_destroy(bg_ocr_t * ocr)
 
 /* Tesseract */
 
-static int supported_tesseract(bg_plugin_registry_t * plugin_reg)
+static int supported_tesseract()
   {
   if(!bg_search_file_exec("tesseract", NULL))
     return 0;
-  if(!bg_plugin_find_by_name(plugin_reg, "iw_tiff"))
+  if(!bg_plugin_find_by_name("iw_tiff"))
     return 0;
   return 1;
   }

@@ -400,8 +400,8 @@ bg_player_t * bg_player_create()
   
   /* Create contexts */
 
-  bg_player_audio_create(ret, bg_plugin_reg);
-  bg_player_video_create(ret, bg_plugin_reg);
+  bg_player_audio_create(ret);
+  bg_player_video_create(ret);
   bg_player_subtitle_create(ret);
   
   bg_player_ov_create(ret);

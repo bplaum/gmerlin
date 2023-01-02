@@ -244,7 +244,7 @@ int main(int argc, char ** argv)
   /* Load output plugin */
   
   plugin_info =
-    bg_plugin_find_by_name(bg_plugin_reg, "iw_png");
+    bg_plugin_find_by_name("iw_png");
   
   if(!plugin_info)
     {
@@ -252,7 +252,7 @@ int main(int argc, char ** argv)
     return -1;
     }
   
-  output_handle = bg_plugin_load(bg_plugin_reg, plugin_info);
+  output_handle = bg_plugin_load(plugin_info);
 
   if(!output_handle)
     {

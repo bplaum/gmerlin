@@ -386,8 +386,6 @@ struct bg_transcoder_s
 
   int total_passes;
   int pass;
-  bg_plugin_registry_t * plugin_reg;
-
   /* Track we are created from */
   bg_transcoder_track_t * transcoder_track;
 
@@ -683,7 +681,7 @@ void bg_transcoder_send_msg_metadata(bg_msg_hub_t * l,
 
 static void init_audio_stream(audio_stream_t * ret,
                               const gavl_dictionary_t * s,
-                              int in_index, bg_plugin_registry_t * plugin_reg)
+                              int in_index)
   {
   ret->com.type = STREAM_TYPE_AUDIO;
   
@@ -697,7 +695,7 @@ static void init_audio_stream(audio_stream_t * ret,
   /* Create converter */
   
   bg_gavl_audio_options_init(&ret->options);
-  ret->fc = bg_audio_filter_chain_create(&ret->options, plugin_reg);
+  ret->fc = bg_audio_filter_chain_create(&ret->options);
   
   /* Apply parameters */
 
@@ -732,7 +730,7 @@ static void start_audio_stream_i(audio_stream_t * ret,
 
 static void init_video_stream(video_stream_t * ret,
                               const gavl_dictionary_t * s,
-                              int in_index, bg_plugin_registry_t * plugin_reg)
+                              int in_index)
   {
   ret->com.type = STREAM_TYPE_VIDEO;
   gavl_dictionary_copy(&ret->com.m, gavl_stream_get_metadata(s));
@@ -741,7 +739,7 @@ static void init_video_stream(video_stream_t * ret,
   
   /* Create converter */
 
-  ret->fc  = bg_video_filter_chain_create(&ret->options, plugin_reg);
+  ret->fc  = bg_video_filter_chain_create(&ret->options);
   
   /* Apply parameters */
 
@@ -2207,7 +2205,7 @@ static void create_streams(bg_transcoder_t * ret,
     ret->audio_streams[i].com.t = ret;
     init_audio_stream(&ret->audio_streams[i],
                       gavl_track_get_audio_stream(track, i),
-                      i, ret->plugin_reg);
+                      i);
     if(ret->audio_streams[i].com.action == STREAM_ACTION_TRANSCODE)
       ret->num_audio_streams_real++;
     }
@@ -2218,7 +2216,7 @@ static void create_streams(bg_transcoder_t * ret,
     ret->video_streams[i].com.t = ret;
     init_video_stream(&ret->video_streams[i],
                       gavl_track_get_video_stream(track, i),
-                      i, ret->plugin_reg);
+                      i);
     if(ret->video_streams[i].com.action == STREAM_ACTION_TRANSCODE)
       ret->num_video_streams_real++;
     }
@@ -2570,8 +2568,7 @@ static int create_output_file_cb(void * priv, const char * filename)
 
 static void create_encoder(bg_transcoder_t * ret)
   {
-  ret->enc = bg_encoder_create(ret->plugin_reg,
-                               NULL,
+  ret->enc = bg_encoder_create(NULL,
                                ret->transcoder_track,
                                GAVL_STREAM_AUDIO |
                                GAVL_STREAM_VIDEO |
@@ -2891,13 +2888,11 @@ static void init_normalize(bg_transcoder_t * ret)
   }
 
 int bg_transcoder_init(bg_transcoder_t * ret,
-                       bg_plugin_registry_t * plugin_reg,
                        bg_transcoder_track_t * track)
   {
   const char * var1;
   const char * var2;
   gavl_time_t duration;
-  ret->plugin_reg = plugin_reg;
   ret->transcoder_track = track;
   
   /* Initialize encoder info */

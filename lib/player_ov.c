@@ -139,7 +139,7 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   bg_player_video_stream_t * ctx = &player->video_stream;
 
   if(!(options = bg_multi_menu_get_selected(val)) ||
-     !(handle = bg_ov_plugin_load(bg_plugin_reg, options, ctx->display_string)))
+     !(handle = bg_ov_plugin_load(options, ctx->display_string)))
     return 0;
   
   bg_player_stream_change_init(player);

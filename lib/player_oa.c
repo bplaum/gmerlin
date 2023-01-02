@@ -330,7 +330,7 @@ static int oa_set_plugin(bg_player_t * player,
   //  fprintf(stderr, "Loading oa plugin %s\n", bg_multi_menu_get_selected_name(val));
   //  gavl_value_dump(val, 2);
   
-  if(!(handle = bg_plugin_load_with_options(bg_plugin_reg, bg_multi_menu_get_selected(val))))
+  if(!(handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val))))
     return 0;
   
   bg_player_stream_change_init(player);

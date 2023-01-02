@@ -585,7 +585,6 @@ static void set_track(bg_transcoder_track_t * track,
 
 gavl_array_t *
 bg_transcoder_track_create(const gavl_dictionary_t * m,
-                           bg_plugin_registry_t * plugin_reg,
                            bg_cfg_section_t * track_defaults_section,
                            bg_cfg_section_t * encoder_section)
   {
@@ -603,7 +602,7 @@ bg_transcoder_track_create(const gavl_dictionary_t * m,
 
   gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &url);
 
-  if((media_info = bg_plugin_registry_load_media_info(plugin_reg, url, 0)) &&
+  if((media_info = bg_plugin_registry_load_media_info(bg_plugin_reg, url, 0)) &&
      (num_tracks = gavl_get_num_tracks(media_info)))
     {
     gavl_value_t val;
@@ -662,7 +661,6 @@ bg_transcoder_track_create(const gavl_dictionary_t * m,
 gavl_array_t *
 bg_transcoder_track_create_from_urilist(const char * list,
                                         int len,
-                                        bg_plugin_registry_t * plugin_reg,
                                         bg_cfg_section_t * track_defaults_section,
                                         bg_cfg_section_t * encoder_section)
   {
@@ -685,9 +683,7 @@ bg_transcoder_track_create_from_urilist(const char * list,
     gavl_dictionary_init(&m);
     gavl_metadata_add_src(&m, GAVL_META_SRC, NULL, uri_list[i]);
     
-    if((arr = bg_transcoder_track_create(&m,
-                                         plugin_reg,
-                                         track_defaults_section,
+    if((arr = bg_transcoder_track_create(&m, track_defaults_section, 
                                          encoder_section)))
       {
       if(!ret)

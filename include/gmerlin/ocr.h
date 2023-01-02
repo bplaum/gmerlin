@@ -26,7 +26,7 @@
 
 typedef struct bg_ocr_s bg_ocr_t;
 
-bg_ocr_t * bg_ocr_create(bg_plugin_registry_t * plugin_reg);
+bg_ocr_t * bg_ocr_create(void);
 const bg_parameter_info_t * bg_ocr_get_parameters();
 int bg_ocr_set_parameter(void * ocr, const char * name,
                           const gavl_value_t * val);

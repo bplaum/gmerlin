@@ -82,7 +82,7 @@ static int video_filter_create(video_filter_t * f,
                                bg_video_filter_chain_t * ch,
                                const gavl_dictionary_t * dict)
   {
-  if(!(f->handle = bg_plugin_load_with_options(ch->plugin_reg, dict)))
+  if(!(f->handle = bg_plugin_load_with_options(dict)))
     return 0;
   f->plugin = (bg_fv_plugin_t*)f->handle->plugin;
   return 1;
@@ -163,13 +163,11 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
 
 
 bg_video_filter_chain_t *
-bg_video_filter_chain_create(const bg_gavl_video_options_t * opt,
-                             bg_plugin_registry_t * plugin_reg)
+bg_video_filter_chain_create(const bg_gavl_video_options_t * opt)
   {
   bg_video_filter_chain_t * ret;
   ret = calloc(1, sizeof(*ret));
   ret->opt = opt;
-  ret->plugin_reg = plugin_reg;
   ret->cmd_sink = bg_msg_sink_create(handle_cmd, ret, 1);
   
   pthread_mutex_init(&ret->mutex, NULL);

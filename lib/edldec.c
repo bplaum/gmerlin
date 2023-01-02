@@ -1257,7 +1257,7 @@ bg_plugin_handle_t * bg_input_plugin_load_edl(const gavl_dictionary_t * edl)
   ret = calloc(1, sizeof(*ret));
     
   ret->plugin = (bg_plugin_common_t*)&edl_plugin;
-  ret->info = bg_plugin_find_by_name(bg_plugin_reg, "i_edldec");
+  ret->info = bg_plugin_find_by_name("i_edldec");
   
   //  fprintf(stderr, "bg_input_plugin_load_edl\n");
   //  gavl_dictionary_dump(edl, 2);

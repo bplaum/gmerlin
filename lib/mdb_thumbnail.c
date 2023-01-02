@@ -101,8 +101,7 @@ static int make_thumbnail(bg_mdb_t * mdb, int64_t image_id,
       }
     }
   
-  real_path = bg_make_thumbnail(bg_plugin_reg,
-                                *f,
+  real_path = bg_make_thumbnail(*f,
                                 format,
                                 &width, &height,
                                 tn_path,

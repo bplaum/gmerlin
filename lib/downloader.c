@@ -61,7 +61,6 @@ struct bg_downloader_s
   
   queue_item_t * queue;
   int queue_len;
-  //  int num_waiting;
   int queue_alloc;
   
   gavl_timer_t * timer;

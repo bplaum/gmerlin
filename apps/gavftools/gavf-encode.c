@@ -277,8 +277,7 @@ int main(int argc, char ** argv)
 
   gavftools_in_plug = gavftools_create_in_plug();
   
-  enc = bg_encoder_create(bg_plugin_reg,
-                          enc_section, // bg_cfg_section_t * section,
+  enc = bg_encoder_create(enc_section, // bg_cfg_section_t * section,
                           NULL, // bg_transcoder_track_t * tt,
                           stream_mask,
                           plugin_mask);
