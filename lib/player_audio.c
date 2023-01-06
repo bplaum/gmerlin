@@ -81,8 +81,9 @@ void bg_player_audio_destroy(bg_player_t * p)
 
 int bg_player_audio_init(bg_player_t * player, int audio_stream)
   {
-  int64_t start_time;
-  const gavl_dictionary_t * stream;
+  const gavl_dictionary_t * sd;
+  gavl_stream_stats_t stats;
+  
   bg_player_audio_stream_t * s;
   //  int do_filter;
 
@@ -115,21 +116,19 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
   gavl_peak_detector_set_format(s->peak_detector,
                                 &s->output_format);
 
-  /* Time offset */
-  stream = gavl_track_get_audio_stream(player->src->track_info, audio_stream);
-  start_time = gavl_stream_get_start_time(stream);
+  /* Initialize time */
+  
+  s->samples_written = 0;
 
-  s->time_offset = start_time - player->display_time_offset;
-  //  fprintf(stderr, "Got time offset: %"PRId64"\n", s->time_offset);
-#if 0
-  if(s->time_offset < 0)
+  gavl_stream_stats_init(&stats);
+  
+  if((sd = gavl_track_get_audio_stream(player->src->track_info, audio_stream)) &&
+     gavl_stream_get_stats(sd, &stats))
     {
-    int64_t samples = gavl_time_scale(s->output_format.samplerate, -s->time_offset);
-    gavl_audio_source_skip(s->src, samples);
-    s->time_offset = 0;
-    fprintf(stderr, "Skipping %"PRId64" samples\n", samples);
+    s->samples_written = stats.pts_start;
+    /* TODO: Handle SBR */
     }
-#endif  
+  
   return 1;
   }
 

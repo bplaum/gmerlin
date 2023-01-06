@@ -228,13 +228,18 @@ static void show_label(GtkWidget * w)
 
 static void set_time_label(main_window_t * w, const gavl_dictionary_t * dict)
   {
+  int local = 0;
   char str[GAVL_TIME_STRING_LEN];
   int64_t t = GAVL_TIME_UNDEFINED;
   
   switch(w->display_mode)
     {
     case DISPLAY_MODE_NORMAL:
-      gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &t);
+      if(gavl_dictionary_get_long(dict, BG_PLAYER_TIME_CLOCK, &t))
+        local = 1;
+      else
+        gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &t);
+      
       break;
     case DISPLAY_MODE_REM:
       gavl_dictionary_get_long(dict, BG_PLAYER_TIME_REM, &t);
@@ -246,7 +251,11 @@ static void set_time_label(main_window_t * w, const gavl_dictionary_t * dict)
       gavl_dictionary_get_long(dict, BG_PLAYER_TIME_REM_ABS, &t);
       break;
     }
-  gavl_time_prettyprint(t, str);
+
+  if(local)
+    gavl_time_prettyprint_local(t, str);
+  else
+    gavl_time_prettyprint(t, str);
   gtk_label_set_text(GTK_LABEL(w->time_label), str);
   }
 

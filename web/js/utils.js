@@ -147,21 +147,9 @@ function time_string_to_seconds(dur)
   return ret;
   }
 
-function seconds_to_time_string(dur)
+function make_time_string(hours, minutes, seconds)
   {
   var ret;
-  var hours;
-  var minutes;
-  var seconds;
-
-  hours = Math.floor(dur / 3600);
-  dur -= hours * 3600;
-
-  minutes = Math.floor(dur / 60);
-  dur -= minutes * 60;
-
-  seconds = Math.floor(dur);
-
   if(hours > 0)
     {
     ret = hours.toString() + ':';
@@ -184,9 +172,32 @@ function seconds_to_time_string(dur)
   return ret;
   }
 
+function seconds_to_time_string(dur)
+  {
+  var ret;
+  var hours;
+  var minutes;
+  var seconds;
+
+  hours = Math.floor(dur / 3600);
+  dur -= hours * 3600;
+
+  minutes = Math.floor(dur / 60);
+  dur -= minutes * 60;
+
+  seconds = Math.floor(dur);
+  return make_time_string(hours, minutes, seconds);
+  }
+
 function time_to_string(time)
   {
-  return  seconds_to_time_string(time / GAVL_TIME_SCALE );
+  return seconds_to_time_string(time / GAVL_TIME_SCALE );
+  }
+
+function time_to_string_local(time)
+  {
+  var d = new Date(time / 1000);
+  return make_time_string(d.getHours(), d.getMinutes(), d.getSeconds());
   }
 
 /* Get file extension */
@@ -1691,7 +1702,6 @@ var obj_icons = [
     { type: GAVL_META_MEDIA_CLASS_SONG,            icon: "icon-music"           },
     { type: GAVL_META_MEDIA_CLASS_MOVIE,           icon: "icon-film"            },
     { type: GAVL_META_MEDIA_CLASS_MOVIE_PART,      icon: "icon-film"            },
-    { type: GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART, icon: "icon-film"            },
     { type: GAVL_META_MEDIA_CLASS_TV_EPISODE,      icon: "icon-tv"              },
     { type: GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST, icon: "icon-radio"           },
     { type: GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST, icon: "icon-radio-station"   },
@@ -1719,7 +1729,6 @@ var obj_icons = [
 /* Root Containers */
     { type: GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,  icon: "icon-music-album"   },
     { type: GAVL_META_MEDIA_CLASS_ROOT_SONGS,        icon: "icon-music"         },
-    { type: GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,    icon: "icon-playlist"      },
     { type: GAVL_META_MEDIA_CLASS_ROOT_MOVIES,       icon: "icon-film"          },
     { type: GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,     icon: "icon-tv"            },
     { type: GAVL_META_MEDIA_CLASS_ROOT_STREAMS,      icon: "icon-network" },

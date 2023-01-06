@@ -257,7 +257,7 @@ static void player_cleanup(bg_player_t * player)
 
   // Input must be cleaned up at the end because it may contain hardware handles also used by the output.
   bg_player_input_cleanup(player);
-
+  
   bg_player_broadcast_time(player, 0);
   }
 
@@ -375,7 +375,7 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
   
   /* Set start time to zero */
 
-  bg_player_broadcast_time(p, time);
+  bg_player_broadcast_time(p, time - p->display_time_offset);
 
   return 1;
   }
@@ -575,7 +575,7 @@ void bg_player_stream_change_init(bg_player_t * player)
     return;
   
   player->saved_state.state = old_state;
-  bg_player_time_get(player, 1, NULL, &player->saved_state.time);
+  bg_player_time_get(player, 1, &player->saved_state.time);
   
   if((old_state != BG_PLAYER_STATUS_STOPPED)  &&
      (old_state != BG_PLAYER_STATUS_CHANGING) &&
@@ -647,7 +647,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   const gavl_dictionary_t * cl;
   
   int old_state;
-
+  
   // fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
   
   old_state = bg_player_get_status(player);
@@ -712,8 +712,9 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
     bg_player_set_status(player, BG_PLAYER_STATUS_PAUSED);
 
     /* Need to update slider and time for seeking case */
-
-    bg_player_broadcast_time(player, sync_time);
+    pthread_mutex_lock(&player->display_time_offset_mutex);
+    bg_player_broadcast_time(player, sync_time - player->display_time_offset);
+    pthread_mutex_unlock(&player->display_time_offset_mutex);
     
     if(DO_VIDEO(player->flags))
       bg_player_ov_update_still(player);
@@ -1630,18 +1631,17 @@ static void load_next_track(bg_player_t * player, int advance)
 static void * player_thread(void * data)
   {
   bg_player_t * player;
-  int old_seconds = -1;
-  int seconds;
+  int64_t seconds;
   int do_exit;
   int state;
-  gavl_time_t time;
   int actions;
-  gavl_time_t duration;
   
   player = data;
 
   bg_player_set_status(player, BG_PLAYER_STATUS_STOPPED);
-  
+
+  player->last_seconds = GAVL_TIME_UNDEFINED;
+    
   do_exit = 0;
   while(1)
     {
@@ -1674,18 +1674,30 @@ static void * player_thread(void * data)
         {
         int chapter;
         const gavl_dictionary_t * cl;
+        gavl_time_t time;
         
         pthread_mutex_lock(&player->src_mutex);
-        bg_player_time_get(player, 1, NULL, &time);
+        bg_player_time_get(player, 1, &time);
+
+        pthread_mutex_lock(&player->display_time_offset_mutex);
+        time -= player->display_time_offset;
+        pthread_mutex_unlock(&player->display_time_offset_mutex);
         
         if(player->time_update_mode == TIME_UPDATE_SECOND)
           {
           seconds = time / GAVL_TIME_SCALE;
-          if(seconds != old_seconds)
+          if(seconds > player->last_seconds)
             {
-            old_seconds = seconds;
+            player->last_seconds = seconds;
             bg_player_broadcast_time(player, time);
             actions++;
+#if 0
+            fprintf(stderr, "Broadcast time: %f %f %f\n",
+                    time / ((double)(GAVL_TIME_SCALE) * 3600.0),
+                    player->display_time_offset / ((double)(GAVL_TIME_SCALE) * 3600.0),
+                    (time + player->display_time_offset) / ((double)(GAVL_TIME_SCALE) * 3600.0)
+                    );
+#endif
             }
           }
         if((cl = gavl_dictionary_get_chapter_list(player->src->metadata)) &&
@@ -1705,7 +1717,7 @@ static void * player_thread(void * data)
         
         /* Check whether to open the next input */
         
-        if(time >= (duration = player->src->duration) - 5 * GAVL_TIME_SCALE)
+        if(time >= player->src->duration - 5 * GAVL_TIME_SCALE)
           {
           if(!player->src_next->input_handle && (player->src->next_track < 0))
             {
@@ -1736,7 +1748,7 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t t)
   
   gavl_value_init(&val);
   dict = gavl_value_set_dictionary(&val);
-
+  
   bg_player_tracklist_get_times(&player->tl, t, &t_abs, &t_rem, &t_rem_abs, &percentage);
 
   //  fprintf(stderr, "Got perc 1: %f\n", percentage);
@@ -1755,6 +1767,10 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t t)
     }
   
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME, t);
+
+  if(player->clock_time_offset != GAVL_TIME_UNDEFINED)
+    gavl_dictionary_set_long(dict, BG_PLAYER_TIME_CLOCK, t + player->clock_time_offset);
+  
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_ABS, t_abs);
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM, t_rem);
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM_ABS, t_rem_abs);
@@ -1784,7 +1800,8 @@ int bg_player_advance_gapless(bg_player_t * player)
   gavl_audio_format_t old_fmt;
   const gavl_audio_format_t * new_fmt;
   int ret = 0;
-
+  gavl_time_t time;
+  
   if(bg_player_get_restart(player))
     return 0;
   
@@ -1816,10 +1833,8 @@ int bg_player_advance_gapless(bg_player_t * player)
 
   if(!player->src_next->track_info)
     {
-    gavl_time_t time;
-
-    bg_player_time_get(player, 0, NULL, &time);
-
+    bg_player_time_get(player, 0, &time);
+    
     if(player->src->duration != GAVL_TIME_UNDEFINED)
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
              "Gapless transition failed: Next track not loaded (unexpected EOF cur: %f, dur: %f)",
@@ -1886,10 +1901,12 @@ int bg_player_advance_gapless(bg_player_t * player)
   bg_msg_hub_send_cb(player->ctrl.evt_hub, msg_gapless, &player);
   
   bg_player_set_current_track(player, player->src->track_info);
+  
+  pthread_mutex_lock(&player->display_time_offset_mutex);
+  bg_player_time_get(player, 0, &player->display_time_offset);
+  pthread_mutex_unlock(&player->display_time_offset_mutex);
 
-  pthread_mutex_lock(&player->time_offset_mutex);
-  bg_player_time_get(player, 0, &player->time_offset, NULL);
-  pthread_mutex_unlock(&player->time_offset_mutex);
+  player->last_seconds = GAVL_TIME_UNDEFINED;
   
   bg_player_source_cleanup(player->src_next);
   
@@ -1897,8 +1914,12 @@ int bg_player_advance_gapless(bg_player_t * player)
 
   fail:
 
+  
   if(ret)
+    {
+    player->flags |= PLAYER_GAPLESS;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Gapless transition succeeded");
+    }
   else
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Gapless transition failed");
   

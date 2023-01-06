@@ -128,8 +128,6 @@ typedef struct
   bg_parameter_info_t * plugin_params;
   bg_control_t * oa_ctrl;
 
-  gavl_time_t time_offset;
-  
   } bg_player_audio_stream_t;
 
 typedef struct
@@ -242,9 +240,12 @@ typedef struct
 #define PLAYER_DO_STILL            (1<<7)
 #define PLAYER_SINGLE_AV_THREAD    (1<<9)
 #define PLAYER_SEEK_WINDOW         (1<<10)
+#define PLAYER_GAPLESS             (1<<11)
 
+/* Bits >= 16 are permanent (not cleared by playback initializations) */
 #define PLAYER_DO_REPORT_PEAK      (1<<16)
 #define PLAYER_FREEZE_FRAME        (1<<17)
+
 
 #define DO_SUBTITLE_TEXT(f) \
  (f & PLAYER_DO_SUBTITLE_TEXT)
@@ -400,11 +401,16 @@ struct bg_player_s
   int last_status;
   
   pthread_mutex_t state_mutex;
-  
-  gavl_time_t display_time_offset; // Time offset for the current source (e.g. live streams)
-  gavl_time_t time_offset;
-  pthread_mutex_t time_offset_mutex;
 
+  // Display offset for the current source (e.g. live streams)
+  // Definition: Display time = Time (of stream PTSes) - display_time_offset
+  
+  gavl_time_t display_time_offset; 
+  pthread_mutex_t display_time_offset_mutex;
+
+  // clock_time = Display time + clock_time_offset
+  gavl_time_t clock_time_offset;
+  
   /* Seek window */
   gavl_time_t seek_window_start; // Time offset for the current source (e.g. live streams)
   gavl_time_t seek_window_end;
@@ -449,6 +455,7 @@ struct bg_player_s
   int restart;
   pthread_mutex_t restart_mutex;
   
+  int64_t last_seconds;
   };
 
 // void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
@@ -475,9 +482,8 @@ void bg_player_state_set_local(bg_player_t * p,
 
 int bg_player_handle_command(void * priv, gavl_msg_t * command);
 
-/* Get the current time (thread save) */
-
-void bg_player_time_get(bg_player_t * player, int exact, gavl_time_t * ret_total, gavl_time_t * ret);
+/* Get the current time (thread save) in stream PTS */
+void bg_player_time_get(bg_player_t * player, int exact, gavl_time_t * ret);
 void bg_player_time_stop(bg_player_t * player);
 void bg_player_time_start(bg_player_t * player);
 void bg_player_time_init(bg_player_t * player);

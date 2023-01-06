@@ -37,6 +37,9 @@
 
 #define DEBUG_COUNTER
 
+// #define DUMP_SEEK_WINDOW
+
+
 /* Send messages about the URL */
 
 struct stream_info_s
@@ -62,16 +65,18 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
 
   if((d = gavl_value_get_dictionary(val)))
     {
-    gavl_time_t start_absolute = 0;
     gavl_time_t start = 0;
     gavl_time_t end = 0;
+#ifdef DUMP_SEEK_WINDOW
+    gavl_time_t start_absolute = 0;
     char start_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
     char end_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
-
+#endif
     gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
     //       gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START_ABSOLUTE, &start_absolute);
     gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
 
+#if DUMP_SEEK_WINDOW
     gavl_time_prettyprint(start, start_str);
     gavl_time_prettyprint(end, end_str);
     fprintf(stderr, "Got seek window %s -> %s ", start_str, end_str);
@@ -83,7 +88,8 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
       }
     else
       fprintf(stderr, "\n");
-
+#endif
+    
     pthread_mutex_lock(&p->seek_window_mutex);
     p->seek_window_start = start;
     p->seek_window_end = end;
@@ -100,6 +106,10 @@ int bg_player_input_start(bg_player_t * p)
   int num_text_streams;
   int num_overlay_streams;
   const gavl_value_t * v;
+
+  int64_t clock_time_pts = GAVL_TIME_UNDEFINED;
+  int clock_time_scale = 0;
+  gavl_time_t clock_time = GAVL_TIME_UNDEFINED;
   
   bg_media_source_t * ms;
   bg_media_source_stream_t * s = NULL;
@@ -235,6 +245,26 @@ int bg_player_input_start(bg_player_t * p)
 
   p->display_time_offset = gavl_track_get_display_time_offset(p->src->track_info);
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->display_time_offset);
+
+  if(gavl_track_get_clock_time_map(p->src->track_info,
+                                   &clock_time_pts, &clock_time_scale, &clock_time))
+    {
+
+    // display_time = pts_time - display_time_offset
+    // pts_time = display_time + display_time_offset
+
+    // Clock time = pts_time - clock_time_pts(map) + clock_time(map) =
+    //            = display_time + display_time_offset - clock_time_pts(map) + clock_time(map)
+
+    // clock_time_offset = display_time_offset - clock_time_pts(map) + clock_time(map)
+    
+    p->clock_time_offset =
+      p->display_time_offset
+      - gavl_time_unscale(clock_time_scale, clock_time_pts)
+      + clock_time;
+    }
+  else
+    p->clock_time_offset = GAVL_TIME_UNDEFINED;
   
   return 1;
   }

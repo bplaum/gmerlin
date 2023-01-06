@@ -1400,7 +1400,6 @@ function append_meta_info(parent, obj, parent_container)
   append_meta_info_internal(parent, obj, GAVL_META_APPROX_DURATION, parent_container);
 
   if((klass == GAVL_META_MEDIA_CLASS_MOVIE) ||
-     (klass == GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART) ||
      (klass == GAVL_META_MEDIA_CLASS_MOVIE_PART))
     {
     append_dom_element(parent, "br");
@@ -3800,7 +3799,12 @@ function create_player_control()
 			  if(msg.args[3].t != "d")
                               break;      
 //                      console.log("Got time " + JSON.stringify(msg.args[3].v));
-                      document.getElementById("player-display").innerHTML = time_to_string(msg.args[3].v[BG_PLAYER_TIME].v);
+                      if(msg.args[3].v[BG_PLAYER_TIME_CLOCK])
+                        document.getElementById("player-display").innerHTML =
+		          time_to_string_local(msg.args[3].v[BG_PLAYER_TIME_CLOCK].v);
+		      else
+		        document.getElementById("player-display").innerHTML =
+		          time_to_string(msg.args[3].v[BG_PLAYER_TIME].v);
 
                       if(msg.args[3].v[BG_PLAYER_TIME_PERC].v >= 0.0)
                         document.getElementById("player-slider").value = 

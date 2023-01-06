@@ -61,6 +61,10 @@ static void start_multi(void * priv)
   const gavl_dictionary_t * track;
   gavl_dictionary_t * metadata = NULL;
   bg_media_source_stream_t * stream;
+  int have_clock_time = 0;
+  int64_t clock_time = GAVL_TIME_UNDEFINED;
+  int64_t clock_time_pts = GAVL_TIME_UNDEFINED;
+  int clock_time_scale = 0;
   
   for(i = 0; i < m->src.num_streams; i++)
     {
@@ -82,6 +86,10 @@ static void start_multi(void * priv)
 
     gavl_dictionary_merge2(gavl_track_get_metadata_nc(m->ti),
                            gavl_track_get_metadata(track));
+    
+    if(gavl_track_get_clock_time_map(track, &clock_time_pts, &clock_time_scale, &clock_time))
+      have_clock_time = 1;
+
     }
   else
     {
@@ -122,8 +130,12 @@ static void start_multi(void * priv)
         can_seek = 0;
       if(can_pause && !gavl_track_can_pause(track))
         can_pause = 0;
-      }
 
+      if(!have_clock_time &&
+         gavl_track_get_clock_time_map(track, &clock_time_pts, &clock_time_scale, &clock_time))
+        have_clock_time = 1;
+      }
+    
     m->src.streams[i]->psrc = stream->psrc;
     m->src.streams[i]->vsrc = stream->vsrc;
     m->src.streams[i]->asrc = stream->asrc;
@@ -148,6 +160,9 @@ static void start_multi(void * priv)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
   if(can_pause)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_PAUSE, 1);
+
+  if(have_clock_time)
+    gavl_track_set_clock_time_map(m->ti, clock_time_pts, clock_time_scale, clock_time);
   
   }
 

@@ -391,10 +391,6 @@ void * bg_player_ov_thread(void * data)
     pthread_mutex_lock(&p->config_mutex);
     frame_time += p->sync_offset; // Passed by user
     pthread_mutex_unlock(&p->config_mutex);
-
-    pthread_mutex_lock(&p->time_offset_mutex);
-    frame_time -= p->display_time_offset;
-    pthread_mutex_unlock(&p->time_offset_mutex);
     
     if((s->frame_time == GAVL_TIME_UNDEFINED))
       {
@@ -420,7 +416,7 @@ void * bg_player_ov_thread(void * data)
       gavl_timer_set(timer, s->frame_time);
       }
     
-    bg_player_time_get(p, 1, NULL, &current_time);
+    bg_player_time_get(p, 1, &current_time);
     diff_time =  s->frame_time - current_time;
 
 #if 0
@@ -462,7 +458,9 @@ void * bg_player_ov_thread(void * data)
     
     if(p->time_update_mode == TIME_UPDATE_FRAME)
       {
-      bg_player_broadcast_time(p, s->frame_time);
+      pthread_mutex_lock(&p->display_time_offset_mutex);
+      bg_player_broadcast_time(p, s->frame_time - p->display_time_offset);
+      pthread_mutex_unlock(&p->display_time_offset_mutex);
       }
 
     sink = bg_ov_get_sink(s->ov);

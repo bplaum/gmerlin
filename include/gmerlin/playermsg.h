@@ -57,6 +57,7 @@
 #define BG_PLAYER_TIME_ABS      "time_abs"      // long
 #define BG_PLAYER_TIME_REM_ABS  "time_rem_abs"  // long
 #define BG_PLAYER_TIME_PERC     "time_perc"     // float
+#define BG_PLAYER_TIME_CLOCK    "time_clock"    // long
 
 /* These change when we have a sliding window */
 // #define BG_PLAYER_TIME_WINDOW_START "time_start" // long, default 0. GAVL_TIME_SCALE

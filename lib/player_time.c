@@ -61,7 +61,7 @@ void bg_player_time_start(bg_player_t * player)
   if(ctx->sync_mode == SYNC_SOFTWARE)
     {
     pthread_mutex_lock(&ctx->time_mutex);
-    gavl_timer_set(ctx->timer, ctx->current_time);
+    gavl_timer_set(ctx->timer, player->display_time_offset);
     gavl_timer_start(ctx->timer);
     pthread_mutex_unlock(&ctx->time_mutex);
     }
@@ -94,11 +94,10 @@ void bg_player_time_reset(bg_player_t * player)
 /* Get the current time */
 
 void bg_player_time_get(bg_player_t * player, int exact,
-                        gavl_time_t * ret_total, gavl_time_t * ret)
+                        gavl_time_t * ret)
   {
   gavl_time_t t;
   bg_player_audio_stream_t * ctx = &player->audio_stream;
-  gavl_time_t test_time;
   int samples_in_soundcard;
   
   if(!exact)
@@ -127,26 +126,17 @@ void bg_player_time_get(bg_player_t * player, int exact,
       // fprintf(stderr, "Samples: %s: Got latency: %f\n", (double)samples_in_soundcard / ctx->output_format.samplerate);
             
       pthread_mutex_lock(&ctx->time_mutex);
-      test_time = gavl_samples_to_time(ctx->output_format.samplerate,
-                                       ctx->samples_written-samples_in_soundcard) + ctx->time_offset;
-
       //      if(test_time > ctx->current_time)
-      ctx->current_time = test_time;
+      ctx->current_time = gavl_samples_to_time(ctx->output_format.samplerate,
+                                               ctx->samples_written-samples_in_soundcard);
       
       t = ctx->current_time;
       pthread_mutex_unlock(&ctx->time_mutex);
       }
     }
-
-  if(ret_total)
-    *ret_total = t;
-
+  
   if(ret)
-    {
-    pthread_mutex_lock(&player->time_offset_mutex);
-    *ret = t - player->time_offset;
-    pthread_mutex_unlock(&player->time_offset_mutex);
-    }
+    *ret = t;
   }
 
 void bg_player_time_set(bg_player_t * player, gavl_time_t time)
@@ -161,18 +151,19 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time)
     ctx->samples_written =
       gavl_time_to_samples(ctx->output_format.samplerate,
                            time);
-    /* If time is set explicitely, we don't do that timestamp offset stuff */
     }
+
+  if(player->flags & PLAYER_GAPLESS)
+    {
+    player->flags &= ~PLAYER_GAPLESS;
+    pthread_mutex_lock(&player->display_time_offset_mutex);
+    player->display_time_offset = 0;
+    pthread_mutex_unlock(&player->display_time_offset_mutex);
+    }
+  
   ctx->current_time = time;
   pthread_mutex_unlock(&ctx->time_mutex);
-
-  /* Also reset the time offset */
-  pthread_mutex_lock(&player->time_offset_mutex);
-  player->time_offset = 0;
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resetting time offset");
-  
-  pthread_mutex_unlock(&player->time_offset_mutex);
-  
+  player->last_seconds = GAVL_TIME_UNDEFINED;
   }
 
