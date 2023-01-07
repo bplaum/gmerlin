@@ -2469,7 +2469,8 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
 
       mi = NULL;
       
-      if(!bg_file_is_blacklisted(location))
+      if(!bg_file_is_blacklisted(location) &&
+         !gavl_string_ends_with_i(location, ".srt")) // TODO: Make this more elegant
         {
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", location);
       

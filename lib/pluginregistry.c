@@ -3443,8 +3443,14 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
   location = bg_url_append_vars(location, &vars);
   
   if(!input_plugin_load(location, info, options, &ret))
+    {
+    if(ret)
+      {
+      bg_plugin_unref(ret);
+      ret = NULL;
+      }
     goto end;
-  
+    }
   end:
   
   if(location)

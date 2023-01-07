@@ -126,7 +126,10 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
      gavl_stream_get_stats(sd, &stats))
     {
     s->samples_written = stats.pts_start;
-    /* TODO: Handle SBR */
+
+    /* Handle SBR */
+    if(gavl_stream_is_sbr(sd))
+      s->samples_written *= 2;
     }
   
   return 1;
