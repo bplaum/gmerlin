@@ -194,7 +194,7 @@ static gavl_dictionary_t * get_val_dict(gavl_dictionary_t * state, const char * 
   return ret;
   }
 
-void bg_state_set(gavl_dictionary_t * state,
+int bg_state_set(gavl_dictionary_t * state,
                   int last,
                   const char * ctx,
                   const char * var,
@@ -218,6 +218,7 @@ void bg_state_set(gavl_dictionary_t * state,
     bg_msg_set_state(msg, id, last, ctx, var, val);
     bg_msg_sink_put(sink, msg);
     }
+  return changed;
   }
 
 const gavl_value_t * bg_state_get(gavl_dictionary_t * state,

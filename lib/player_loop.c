@@ -258,6 +258,8 @@ static void player_cleanup(bg_player_t * player)
   // Input must be cleaned up at the end because it may contain hardware handles also used by the output.
   bg_player_input_cleanup(player);
   
+  player->clock_time_offset = GAVL_TIME_UNDEFINED;
+  
   bg_player_broadcast_time(player, 0);
   }
 
@@ -636,6 +638,7 @@ int bg_player_stream_change_done(bg_player_t * player)
   bg_player_time_reset(player);
   
   bg_player_input_cleanup(player);
+  player->clock_time_offset = GAVL_TIME_UNDEFINED;
   bg_player_broadcast_time(player, 0);
   return 0;
   }

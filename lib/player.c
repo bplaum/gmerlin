@@ -140,6 +140,7 @@ static void buffer_notify(void * data, float percentage)
 
 static void state_init_time(gavl_dictionary_t * dict)
   {
+  int result;
   gavl_value_t val;
   gavl_dictionary_t * current_time;
 
@@ -152,10 +153,18 @@ static void state_init_time(gavl_dictionary_t * dict)
   gavl_dictionary_set_long(current_time, BG_PLAYER_TIME_ABS, GAVL_TIME_UNDEFINED);
   gavl_dictionary_set_long(current_time, BG_PLAYER_TIME_REM_ABS, GAVL_TIME_UNDEFINED);
   gavl_dictionary_set_float(current_time, BG_PLAYER_TIME_PERC, -1.0);
+  //  gavl_dictionary_set(current_time, BG_PLAYER_TIME_CLOCK, NULL);
+  
+  result = bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME, &val, NULL, 0);
+  
+  //  fprintf(stderr, "state_init_time %d\n", result);
+  //  gavl_dictionary_dump(gavl_dictionary_get_dictionary(dict, BG_PLAYER_STATE_CTX), 2);
+  //  gavl_dictionary_dump(current_time, 2);
 
-  bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME, &val, NULL, 0);
+  //  gavl_dictionary_dump(gavl_dictionary_get_dictionary(gavl_dictionary_get_dictionary(dict, BG_PLAYER_STATE_CTX), BG_PLAYER_STATE_CURRENT_TIME), 2);
   
   gavl_value_free(&val);
+
   }
 
 static void state_init_track(gavl_dictionary_t * dict)
