@@ -191,6 +191,12 @@ static const char * get_type_class(type_id_t type)
   return NULL;
   }
 
+static int is_blacklisted(const char * location)
+  {
+  return bg_file_is_blacklisted(location) ||
+    gavl_string_ends_with_i(location, ".srt"); // TODO: Make this more elegant
+  }
+
 static int append_string_callback(void * data, int argc, char **argv, char **azColName)
   {
   gavl_value_t val;
@@ -199,6 +205,7 @@ static int append_string_callback(void * data, int argc, char **argv, char **azC
   gavl_array_splice_val_nocopy(data, -1, 0, &val);
   return 0;
   }
+
 
 typedef struct
   {
@@ -2166,15 +2173,16 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
   //  bg_mdb_create_thumbnails(b->db, track);
   
   m = gavl_track_get_metadata_nc(track);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Adding object %s %s",
-           gavl_dictionary_get_string(m, GAVL_META_LABEL), 
-           gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS));
-  
+
   if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
     return -1;
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Adding object %s %s",
+           gavl_dictionary_get_string(m, GAVL_META_LABEL), 
+           klass);
+  
   /* Single part movies are handled same as multipart in the db */
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE))
+  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) && (obj_id < 0))
     {
     gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_MOVIE_PART);
     klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
@@ -2469,8 +2477,7 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
 
       mi = NULL;
       
-      if(!bg_file_is_blacklisted(location) &&
-         !gavl_string_ends_with_i(location, ".srt")) // TODO: Make this more elegant
+      if(!is_blacklisted(location)) // TODO: Make this more elegant
         {
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", location);
       
@@ -2507,7 +2514,7 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
       {
       mi = NULL;
 
-      if(!bg_file_is_blacklisted(location))
+      if(!is_blacklisted(location))
         {
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", location);
         mi = bg_plugin_registry_load_media_info(bg_plugin_reg,

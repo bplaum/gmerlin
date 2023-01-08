@@ -3380,8 +3380,10 @@ static void set_multitrack_locations(gavl_dictionary_t * dict, const char * loca
 
     track = gavl_get_track_nc(dict, i);
 
-    if(!(src = gavl_track_get_src_nc(track, GAVL_META_SRC, 0)))
-      src = gavl_track_add_src(track, GAVL_META_SRC, NULL, NULL);
+    if(gavl_track_get_src_nc(track, GAVL_META_SRC, 0))
+      continue;
+      
+    src = gavl_track_add_src(track, GAVL_META_SRC, NULL, NULL);
     
     m = gavl_track_get_metadata_nc(track);
     gavl_dictionary_set_int(m, GAVL_META_TRACKNUMBER, i+1);
