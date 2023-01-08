@@ -2230,8 +2230,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
 
   b->parameters = parameters;
   
-  //  b->flags |= (BE_FLAG_VOLUMES | BE_FLAG_RESCAN);
-  b->flags |= (BE_FLAG_VOLUMES);
+  b->flags |= (BE_FLAG_VOLUMES | BE_FLAG_RESCAN);
   
   priv->root_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES);
   priv->image_root_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_PHOTOS);

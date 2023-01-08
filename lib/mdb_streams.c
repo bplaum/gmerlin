@@ -2679,7 +2679,7 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   priv = calloc(1, sizeof(*priv));
   b->priv = priv;
 
-  //  b->flags |= BE_FLAG_RESCAN;
+  b->flags |= BE_FLAG_RESCAN;
   
   filename = gavl_sprintf("%s/streams.sqlite", b->db->path);
 
