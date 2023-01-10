@@ -129,7 +129,11 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
 
     /* Handle SBR */
     if(gavl_stream_is_sbr(sd))
+      {
       s->samples_written *= 2;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got SBR");
+      }
+    
     }
   
   return 1;

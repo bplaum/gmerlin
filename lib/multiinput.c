@@ -354,7 +354,8 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
     if(gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading primary uri: %s", uri);
-      h = bg_input_plugin_load(uri);
+      if(!(h = bg_input_plugin_load(uri)))
+        goto fail;
       bg_input_plugin_set_track(h, 0);
       }
     }
@@ -364,8 +365,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
     gavl_dictionary_t * ti;
     
     ti = bg_input_plugin_get_track_info(h, 0);
-
-        
+    
     num = gavl_track_get_num_streams_all(ti);
     for(i = 0; i < num; i++)
       {
@@ -404,4 +404,10 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   //  fprintf(stderr, "Loaded multi plugin\n");
   //  gavl_dictionary_dump(priv->ti, 2);
   return ret;
+
+  fail:
+  if(ret)
+    bg_plugin_unref(ret);
+  return NULL;
+
   }

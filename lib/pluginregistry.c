@@ -5941,7 +5941,9 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
     if(gavl_track_get_num_external_streams(src_track))
       {
       /* Load multi plugin */
-      ret = bg_input_plugin_load_multi(src_track, NULL);
+      if(!(ret = bg_input_plugin_load_multi(src_track, NULL)))
+        goto end;
+      
       bg_input_plugin_set_track(ret, 0);
       goto end;
       }
