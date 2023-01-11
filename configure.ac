@@ -806,7 +806,6 @@ fi
 AM_CONDITIONAL(HAVE_PLAYER, test x$have_player = xtrue)
 
 
-
 dnl Transcoder
 
 AC_ARG_ENABLE(transcoder,
@@ -834,6 +833,20 @@ AC_ARG_ENABLE(thumbnailer,
 	       have_thumbnailer=true)
 
 AM_CONDITIONAL(HAVE_THUMBNAILER, test x$have_thumbnailer = xtrue)
+
+dnl
+dnl Toys
+dnl
+
+AC_ARG_ENABLE(toys,
+              AC_HELP_STRING(--enable-toys, [Enable some non multimedia toys (default: disabled)]),
+              [case "${enableval}" in
+                 yes) have_toys=true ;;
+                 no) have_toys=false ;;
+               esac],
+	       have_toys=false)
+
+AM_CONDITIONAL(HAVE_TOYS, test x$have_toys = xtrue)
 
 dnl
 dnl CFLAGS
@@ -921,6 +934,7 @@ apps/mediainfo/Makefile \
 apps/remote/Makefile \
 apps/renderer/Makefile \
 apps/server/Makefile \
+apps/toys/Makefile \
 doc/Makefile \
 doc/Doxyfile \
 icons/Makefile \
@@ -1215,6 +1229,13 @@ fi
 
 echo -n "Thumbnailer:         "
 if test "x$have_thumbnailer" = "xtrue"; then
+echo "Enabled"
+else
+echo "Disabled"
+fi
+
+echo -n "Additional toys:     "
+if test "x$have_toys" = "xtrue"; then
 echo "Enabled"
 else
 echo "Disabled"
