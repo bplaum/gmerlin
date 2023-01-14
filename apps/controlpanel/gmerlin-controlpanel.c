@@ -767,7 +767,6 @@ static void init_state()
         {
         case TYPE_POWER:
           {
-          
           }
           break;
         case TYPE_VOLUME:
@@ -856,7 +855,7 @@ static void init_state()
             bg_state_set(&state, 0, ctrl_name, META_OPTIMUM, &val_f, NULL, 0);
             gavl_value_free(&val_f);
             }
-        
+          controls[i].update_interval = 1 * GAVL_TIME_SCALE;
           }
           break;
         case TYPE_SLIDER:

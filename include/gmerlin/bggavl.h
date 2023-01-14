@@ -168,7 +168,7 @@ Lower quality means more speed. Values above 3 enable slow high quality calculat
                    "24",              \
                    "25",              \
                    "29_970",          \
-                   "30",              \
+                     "30",            \
                    "50",              \
                    "59_940",          \
                    "60", (char*)0
@@ -724,6 +724,7 @@ int bg_dictionary_from_json(gavl_dictionary_t * dict,
 
 const char * bg_json_dict_get_string(json_object * obj, const char * tag);
 int bg_json_dict_get_int(json_object * obj, const char * tag);
+double bg_json_dict_get_double(json_object * obj, const char * tag);
 int bg_json_dict_get_bool(json_object * obj, const char * tag);
 
 /* xml Interface */
