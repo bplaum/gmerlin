@@ -2024,7 +2024,8 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           const char * id;
           const char * uri;
           const char * klass;
-          
+          const char * pos;
+
           gavl_dictionary_init(&vol);
           gavl_dictionary_init(&obj);
           
@@ -2041,6 +2042,23 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             {
             return 1;
             }
+          
+          if((pos = strstr(uri, "://")))
+            {
+            char * protocol;
+            
+            protocol = gavl_strndup(uri, pos);
+
+            if(!bg_plugin_find_by_protocol(protocol))
+              {
+              gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "No plugin for protocol %s", protocol);
+              free(protocol);
+              return 1;
+              }
+            free(protocol);
+            }
+          
+
           if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD) &&
              !fs->mount_audiocd)
             {

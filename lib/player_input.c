@@ -453,8 +453,6 @@ void bg_player_input_seek(bg_player_t * p,
   vs = &p->video_stream;
   ss = &p->subtitle_stream;
 
-  fprintf(stderr, "bg_player_input_seek: %"PRId64" (%d)\n", *time, scale);
-  
   //  bg_plugin_lock(p->input_handle);
 
   bg_input_plugin_seek(p->src->input_handle, time, scale);

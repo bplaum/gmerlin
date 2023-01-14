@@ -3225,14 +3225,7 @@ static int input_plugin_load(const char * location,
                       NULL, // hostname,
                       NULL,   //  port,
                       &path))
-        {
         info = bg_plugin_find_by_protocol(protocol);
-        if(info)
-          {
-          if(info->flags & BG_PLUGIN_REMOVABLE)
-            real_location = path;
-          }
-        }
       }
     else if(!strcmp(location, "-"))
       {

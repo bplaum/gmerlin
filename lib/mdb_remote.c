@@ -382,7 +382,8 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
             int idx = 0;
             int del = 0;
             gavl_value_t add;
-
+            char * local_id;
+            
             gavl_value_init(&add);
             
             gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
@@ -441,20 +442,15 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
             
             /* Send message to core */
             msg1 = bg_msg_sink_get(s->be->ctrl.evt_sink);
-            gavl_msg_set_id_ns(msg1, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
 
-            gavl_msg_set_arg_int(msg, 0, last);
-            gavl_msg_set_arg_int(msg, 1, idx);
-            gavl_msg_set_arg_int(msg, 2, del);
-            gavl_msg_set_arg(msg, 3, &add);
-
-            /* Transfer parent_id */
-            if(remote_id)
-              gavl_dictionary_set_string_nocopy(&msg1->header, GAVL_MSG_CONTEXT_ID,
-                                                id_remote_to_local(s, remote_id));
+            local_id = id_remote_to_local(s, remote_id);
             
+            bg_msg_set_splice_children(msg1, BG_MSG_DB_SPLICE_CHILDREN, local_id, last, idx, del, &add);
             bg_msg_sink_put(s->be->ctrl.evt_sink, msg1);
             gavl_value_free(&add);
+
+            free(local_id);
+            
             return 1;
             }
           

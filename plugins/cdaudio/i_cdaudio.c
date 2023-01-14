@@ -41,7 +41,7 @@
 
 #define FRAME_SAMPLES 588
 
-#define MIMETYPE "audio/x-gmerlin-cda"
+// #define MIMETYPE "audio/x-gmerlin-cda"
 
 typedef struct
   {
@@ -276,18 +276,21 @@ static int open_cdaudio(void * data, const char * arg)
   gavl_dictionary_t * m;
   gavl_dictionary_t * track;
   gavl_dictionary_t * sm;
-  
+  const char * pos;
   char * tmp_filename;
   cdaudio_t * cd = data;
-  char * uri;
+  //  char * uri;
 
   /* Destroy data from previous open */
   destroy_cd_data(cd);
+
+  if((pos = strstr(arg, "://")))
+    arg = pos + 3;
   
   cd->device_name = gavl_strrep(cd->device_name, arg);
   gavl_url_get_vars(cd->device_name, NULL);
 
-  uri = bg_sprintf("cda://%s", cd->device_name);
+  //  uri = bg_sprintf("cda://%s", cd->device_name);
   
   cd->cdio = bg_cdaudio_open(cd->device_name);
   if(!cd->cdio)
@@ -315,7 +318,7 @@ static int open_cdaudio(void * data, const char * arg)
       gavl_track_set_num_audio_streams(ti, 1);
       m = gavl_track_get_metadata_nc(ti);
       
-      gavl_metadata_add_src(m, GAVL_META_SRC, MIMETYPE, uri);
+      // gavl_metadata_add_src(m, GAVL_META_SRC, MIMETYPE, uri);
 
       memset(&stats, 0, sizeof(stats));
 
@@ -367,7 +370,7 @@ static int open_cdaudio(void * data, const char * arg)
 
   gavl_track_update_children(&cd->mi);
   
-  free(uri);
+  //  free(uri);
   
   /* Create the disc ID */
 
@@ -874,17 +877,13 @@ static void set_parameter_cdaudio(void * data, const char * name,
 
 
 char const * const protocols = "cda";
-char const * const mimetypes = MIMETYPE;
+// char const * const mimetypes = MIMETYPE;
 
 static const char * get_protocols(void * priv)
   {
   return protocols;
   }
 
-static const char * get_mimetypes(void * priv)
-  {
-  return mimetypes;
-  }
 
 const bg_input_plugin_t the_plugin =
   {
@@ -907,8 +906,7 @@ const bg_input_plugin_t the_plugin =
       .get_controllable = get_controllable_cdaudio
     },
     .get_protocols = get_protocols,
-    .get_mimetypes = get_mimetypes,
-
+    
     /* Open file/device */
     .open = open_cdaudio,
     

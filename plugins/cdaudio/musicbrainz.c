@@ -285,18 +285,18 @@ int bg_cdaudio_get_metadata_musicbrainz(bg_cdaudio_index_t * idx,
     goto fail;
 
   GET_STRING(mb5_release_get_id,FullRelease,FullReleaseID);
-  fprintf(stderr, "Fullrelease ID: %s\n", FullReleaseID);
+  //  fprintf(stderr, "Fullrelease ID: %s\n", FullReleaseID);
 
-  /* TODO: Fetch json from http://coverartarchive.org/release/<ID>
+  /* Fetch json from http://coverartarchive.org/release/<ID>
      and parse json */
 
   fetch_cover_art(disk_dict, FullReleaseID);
   
   GET_STRING(mb5_release_get_title,FullRelease,ReleaseTitle);
-  fprintf(stderr, "Fullrelease Title: %s\n", ReleaseTitle);
+  //  fprintf(stderr, "Fullrelease Title: %s\n", ReleaseTitle);
 
   GET_STRING(mb5_release_get_date,FullRelease,Date);
-  fprintf(stderr, "Date: %s\n", Date);
+  //  fprintf(stderr, "Date: %s\n", Date);
 
   gavl_dictionary_set_date(disk_dict, 
                            GAVL_META_DATE,

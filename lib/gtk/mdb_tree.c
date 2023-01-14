@@ -988,11 +988,13 @@ static void set_entry_tree(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * dict
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(t->treeview));
 
   locked = gavl_track_is_locked(dict);
-  
-  if(!m)
-    return;
 
-  id = gavl_dictionary_get_string(m, GAVL_META_ID);
+  
+  // fprintf(stderr, "set_entry_tree\n");
+  // gavl_dictionary_dump(dict, 2);
+  
+  if(!m || !(id = gavl_dictionary_get_string(m, GAVL_META_ID)))
+    return;
   
   if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
     {
@@ -1292,7 +1294,7 @@ static int handle_msg(void * data, gavl_msg_t * msg)
   bg_gtk_mdb_tree_t * t = data;
 
 #ifdef DUMP_MESSAGES
-  gavl_dprintf("Got message:\n");
+  gavl_dprintf("mdb_tree: Got message:\n");
   gavl_msg_dump(msg, 2);
 #endif
   
