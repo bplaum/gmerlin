@@ -965,7 +965,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
           const char * id = gavl_msg_get_arg_string_c(msg, 0);
           idx = gavl_get_track_idx_by_id(&db->root, id);
 
-          fprintf(stderr, "DEL ROOT ELEMENT %s %d\n", id, idx);
+          //          fprintf(stderr, "DEL ROOT ELEMENT %s %d\n", id, idx);
 
           res = bg_msg_sink_get(db->ctrl.evt_sink);
           bg_msg_set_splice_children(res, BG_MSG_DB_SPLICE_CHILDREN, "/", 1, idx, 1, NULL);

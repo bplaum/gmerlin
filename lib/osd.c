@@ -270,6 +270,7 @@ struct bg_osd_s
 
   gavl_time_t track_time;
   gavl_time_t track_duration;
+  double percentage;
   
   char track_duration_str[GAVL_TIME_STRING_LEN];
 
@@ -569,7 +570,7 @@ static char * make_time_string(bg_osd_t * osd)
   str = gavl_strcat(str, tmp_string);
   free(tmp_string);
     
-  if(osd->track_duration != GAVL_TIME_UNDEFINED)
+  if(osd->percentage >= 0.0)
     {
     char bar[TIME_BAR_SIZE_TOTAL+1];
 
@@ -577,7 +578,7 @@ static char * make_time_string(bg_osd_t * osd)
     str = gavl_strcat(str, tmp_string);
     free(tmp_string);
     
-    print_bar(bar, (double)(osd->track_time)/(double)(osd->track_duration), TIME_BAR_SIZE);
+    print_bar(bar, osd->percentage, TIME_BAR_SIZE);
     tmp_string = bg_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>",
                             BG_ICON_FONT_FAMILY, bar);
     
@@ -1100,6 +1101,8 @@ static int handle_message(void * priv, gavl_msg_t * msg)
               if(!(dict = gavl_value_get_dictionary(&val)) ||
                  !gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &osd->track_time))
                 return 1;
+              
+              gavl_dictionary_get_float(dict, BG_PLAYER_TIME_PERC, &osd->percentage);
               
               if(osd->current_osd == OSD_TIME)
                 {

@@ -89,7 +89,7 @@ static int
 get_multipart_edl(const gavl_dictionary_t * track, gavl_dictionary_t * edl);
 
 static void
-set_multitrack_locations(gavl_dictionary_t * dict, const char * location);
+set_locations(gavl_dictionary_t * dict, const char * location);
 
 
 static int probe_image(bg_plugin_registry_t * r,
@@ -3007,7 +3007,7 @@ static void create_language_arrays(gavl_dictionary_t * ti)
   
   }
 
-static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * location, int track)
+static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * location, int track, int total_tracks)
   {
   gavl_dictionary_t * ti;
   gavl_dictionary_t * m;
@@ -3038,6 +3038,12 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
     }
   
   m = gavl_track_get_metadata_nc(ti);
+
+  if(total_tracks > 1)
+    {
+    gavl_dictionary_set_int(m, GAVL_META_TRACKNUMBER, track+1);
+    gavl_dictionary_set_int(m, GAVL_META_TOTAL_TRACKS, total_tracks);
+    }
   
   //  mimetype = gavl_dictionary_get_string(m, GAVL_META_MIMETYPE);
   //  gavl_metadata_add_src(m, GAVL_META_SRC, mimetype, location);
@@ -3172,14 +3178,14 @@ static int input_plugin_finalize(bg_plugin_handle_t * h, const char * location)
   
   for(i = 0; i < num; i++)
     {
-    if(!input_plugin_finalize_track(h, location, i))
+    if(!input_plugin_finalize_track(h, location, i, num))
       return 0;
     }
   
-  set_multitrack_locations(mi, location);
+  set_locations(mi, location);
 
   if((edl = gavl_dictionary_get_dictionary_nc(mi, GAVL_META_EDL)))
-    set_multitrack_locations(edl, location);
+    set_locations(edl, location);
   
   return 1;
   }
@@ -3352,35 +3358,34 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
   }
 
-static void set_multitrack_locations(gavl_dictionary_t * dict, const char * location)
+static void set_locations(gavl_dictionary_t * dict, const char * location)
   {
   int num, i;
-
+  gavl_dictionary_t vars;
+  
   num = gavl_get_num_tracks(dict);
 
-  if(num < 2)
-    return;
-  
+  gavl_dictionary_init(&vars);
+
   for(i = 0; i < num; i++)
     {
+    const char * klass;
     char * new_location;
-    gavl_dictionary_t vars;
     gavl_dictionary_t * src;
     gavl_dictionary_t * track;
     gavl_dictionary_t * m;
-    
-    gavl_dictionary_init(&vars);
 
     track = gavl_get_track_nc(dict, i);
 
-    if(gavl_track_get_src_nc(track, GAVL_META_SRC, 0))
+    if(!(m = gavl_track_get_metadata_nc(track)))
       continue;
-      
-    src = gavl_track_add_src(track, GAVL_META_SRC, NULL, NULL);
-    
-    m = gavl_track_get_metadata_nc(track);
-    gavl_dictionary_set_int(m, GAVL_META_TRACKNUMBER, i+1);
-    gavl_dictionary_set_int(m, GAVL_META_TOTAL_TRACKS, num);
+
+    if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+       !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+      continue;
+
+    if(!(src = gavl_metadata_get_src_nc(m, GAVL_META_SRC, 0)))
+      src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, NULL);
     
     new_location = gavl_strdup(location);
     gavl_url_get_vars(new_location, &vars);
@@ -3390,9 +3395,7 @@ static void set_multitrack_locations(gavl_dictionary_t * dict, const char * loca
     
     gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
     gavl_dictionary_reset(&vars);
-    
     }
-  
   }
 
 bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
@@ -4524,7 +4527,7 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
   gavl_set_current_track(mi, track);
   ti = gavl_get_track_nc(mi, track);
   
-  input_plugin_finalize_track(h, bg_track_get_current_location(ti), track);
+  input_plugin_finalize_track(h, bg_track_get_current_location(ti), track, gavl_get_num_tracks(mi));
 
   if(p->get_src)
     {
@@ -4816,7 +4819,7 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
         set_track_info(h);
         }
       /* Need to do this again as it might override things */
-      input_plugin_finalize_track(h, location, i);
+      input_plugin_finalize_track(h, location, i, num_tracks);
       }
     }
   else
