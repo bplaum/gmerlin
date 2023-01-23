@@ -925,64 +925,6 @@ static void selected_add(bg_gtk_mdb_tree_t * t, album_t * a, int replace, int pl
   gavl_dictionary_destroy(album);
   }
 
-#if 0
-static void entry_add(bg_gtk_mdb_tree_t * t, album_t * a, const char * id, int replace, int play)
-  {
-  gavl_msg_t * msg;
-  const gavl_dictionary_t * track;
-  const char * play_id = NULL;
-
-  if(!t->player_ctrl.cmd_sink)
-    return;
-  
-  if(gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
-    {
-    gavl_msg_t * msg;
-    if(!play)
-      return;
-
-    /* Set current track */
-    
-    msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
-    gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-    gavl_msg_set_arg_string(msg, 0, id);
-    bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
-    return;
-    }
-  
-  if(!(track = gavl_get_track_by_id(a->a, id)))
-    return;
-
-  if(play)
-    {
-    play_id = gavl_track_get_id(track);
-    }
-  /* Add track */
-  msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
-    
-  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-    
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
-  
-  if(replace)
-    {
-    gavl_msg_set_arg_int(msg, 0, 0);
-    gavl_msg_set_arg_int(msg, 1, -1);
-    }
-  else
-    {
-    gavl_msg_set_arg_int(msg, 0, -1);
-    gavl_msg_set_arg_int(msg, 1, 0);
-    }
-  
-  gavl_msg_set_arg_dictionary(msg, 2, track);
-  bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
-
-  if(play_id)
-    do_play(t, play_id);
-  
-  }
-#endif
 
 static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
                                            gpointer data)

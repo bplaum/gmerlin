@@ -50,12 +50,13 @@ extern const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_renderer;
 extern const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_mediaserver;
 
 extern const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_renderer;
-
+extern const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_mediaserver;
 
 static const bg_remote_dev_backend_t *
 remote_dev_backends[] =
   {
     &bg_remote_dev_backend_upnp_renderer,
+    &bg_remote_dev_backend_upnp_mediaserver,
     &bg_remote_dev_backend_gmerlin_mediaserver,
     &bg_remote_dev_backend_gmerlin_renderer,
 #ifdef HAVE_DBUS

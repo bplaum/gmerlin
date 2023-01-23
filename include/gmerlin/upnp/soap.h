@@ -61,13 +61,26 @@ int bg_soap_request_read_req(gavl_dictionary_t * s, bg_http_connection_t * conn)
 int bg_soap_request_write_res(gavl_dictionary_t * s, bg_http_connection_t * conn);
 
 /* Client side */
+typedef struct
+  {
+  gavl_dictionary_t * s;
+  gavf_io_t * io; // http client
+  gavl_buffer_t req_buf;
+  gavl_buffer_t res_buf;
+  } bg_soap_client_request_t;
+
 int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
                          const char * service, int version, const char * function);
 
-int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd);
-int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd);
+// int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd);
+// int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd);
 
 int bg_soap_request(gavl_dictionary_t * s, int * fd);
+
+/* Start an asynchronous request. io MUST be an gavl http client. Check for
+   completion with gavl_http_client_run_async_done() */
+int bg_soap_request_start_async(gavl_dictionary_t * s, gavf_io_t * io);
+
 
 #endif // BG_UPNP_SOAP_H_INCLUDED
 

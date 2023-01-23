@@ -531,7 +531,7 @@ static int handle_message_cmd(void * priv, gavl_msg_t * msg)
     routing_table_put(c->evt_sink, client_id);
     }
   
-  if(c->ctrl)
+  if(c->ctrl && c->ctrl->cmd_sink)
     {
     gavl_msg_t * msg1 = bg_msg_sink_get(c->ctrl->cmd_sink);
     gavl_msg_copy(msg1, msg);

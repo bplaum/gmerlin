@@ -44,6 +44,8 @@
  */
 
 char * bg_xml_save_to_memory(xmlDocPtr doc);
+void bg_xml_save_to_buffer(xmlDocPtr doc, gavl_buffer_t * buf);
+
 
 /* Opt can be a combination of
    XML_SAVE_FORMAT = 1 : format save output
@@ -57,6 +59,7 @@ char * bg_xml_save_to_memory(xmlDocPtr doc);
 */
 
 char * bg_xml_save_to_memory_opt(xmlDocPtr doc, int opt);
+void bg_xml_save_to_buffer_opt(xmlDocPtr doc, int opt, gavl_buffer_t * buf);
 
 xmlDocPtr bg_xml_load_FILE(FILE * f);
 void bg_xml_save_FILE(xmlDocPtr doc, FILE * f);

@@ -3361,11 +3361,8 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
 static void set_locations(gavl_dictionary_t * dict, const char * location)
   {
   int num, i;
-  gavl_dictionary_t vars;
   
   num = gavl_get_num_tracks(dict);
-
-  gavl_dictionary_init(&vars);
 
   for(i = 0; i < num; i++)
     {
@@ -3386,15 +3383,21 @@ static void set_locations(gavl_dictionary_t * dict, const char * location)
 
     if(!(src = gavl_metadata_get_src_nc(m, GAVL_META_SRC, 0)))
       src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, NULL);
-    
+
     new_location = gavl_strdup(location);
-    gavl_url_get_vars(new_location, &vars);
-    gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
     
-    new_location = bg_url_append_vars(new_location, &vars);
-    
+    if(num > 1)
+      {
+      gavl_dictionary_t vars;
+      gavl_dictionary_init(&vars);
+      
+      gavl_url_get_vars(new_location, &vars);
+      gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
+      new_location = bg_url_append_vars(new_location, &vars);
+      gavl_dictionary_reset(&vars);
+      }
     gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, new_location);
-    gavl_dictionary_reset(&vars);
+    
     }
   }
 
@@ -5970,6 +5973,8 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
     if(!ret)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No playable location found");
+      gavl_dictionary_dump(track, 2);
+
       goto end;
       }
     if((edl = bg_input_plugin_get_edl(ret)))

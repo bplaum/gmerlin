@@ -1127,24 +1127,6 @@ static int handle_msg_mpris2(void * priv, // Must be bg_backend_handle_t
 #if 0
             else if(!strcmp(var, BG_PLAYER_STATE_MUTE))          // int
               {
-              int val_i;
-              gavl_dictionary_t s;
-              gavl_dictionary_t * args_in;
-              
-              if(!(r->flags & RENDERER_HAS_MUTE) || !gavl_value_get_int(&val, &val_i))
-                break;
-              val_i &= 1;
-              
-              bg_soap_request_init(&s, r->rc_control_url, "RenderingControl", 1, "SetMute");
-
-              args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
-              SET_INSTANCE_ID(args_in);
-
-              gavl_dictionary_set_string(args_in, "Channel", "Master");
-              gavl_dictionary_set_string_nocopy(args_in, "DesiredMute", bg_sprintf("%d", val_i));
-              bg_soap_request(&s, &r->control_fd);
-              gavl_dictionary_free(&s);
-              
               gavl_dprintf("BG_CMD_SET_STATE %s %s ", ctx, var);
               gavl_value_dump(&val, 2);
               gavl_dprintf("\n");

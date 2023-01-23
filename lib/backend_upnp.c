@@ -32,6 +32,7 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #include <gmerlin/websocket.h>
+#include <gmerlin/mdb.h>
 
 #include <backend_priv.h>
 
@@ -64,7 +65,7 @@ device_types[] =
       .upnp_version = 1,
       .type         = BG_BACKEND_RENDERER,
     },
-#if 0 // We don't detect remote media servers yet
+#if 1 // We don't detect remote media servers yet
     {
       .upnp_type    = "MediaServer",
       .upnp_version = 1,
@@ -1304,6 +1305,9 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
 
   fail:
 
+  if(dev_desc)
+    xmlFreeDoc(dev_desc);
+  
   if(service_desc)
     xmlFreeDoc(service_desc);
 
@@ -1958,19 +1962,186 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_renderer =
     .destroy     = destroy_renderer,
   };
 
-#if 0
+#if 1
 
 /* Upnp mediaserver */
+
+static char * id_gmerlin_to_upnp(const char * id)
+  {
+  if(!strcmp(id, "/"))
+    {
+    return gavl_strdup("0");
+    }
+  else
+    {
+    gavl_buffer_t buf;
+    uint8_t zero = 0x00;
+    
+    const char * pos = strrchr(id, '/');
+    if(!pos)
+      return NULL;
+
+    gavl_buffer_init(&buf);
+    gavl_base64_decode_data_urlsafe(pos + 1, &buf);
+    gavl_buffer_append_data(&buf, &zero, 0);
+    return (char*)buf.buf;
+    }
+  }
+
+static char * id_upnp_to_gmerlin(const char * id, const char * parent_id_gmerlin)
+  {
+  char * ret;
+  char * tmp_string = gavl_base64_encode_data_urlsafe(id, strlen(id));
+
+  ret = gavl_sprintf("%s/%s", parent_id_gmerlin, tmp_string);
+  free(tmp_string);
+  return ret;
+  }
+
+typedef struct
+  {
+  char * cd_control_url;
+  
+  } server_t;
+
+static int handle_msg_server(void * priv, // Must be bg_backend_handle_t
+                             gavl_msg_t * msg)
+  {
+  bg_backend_handle_t * be = priv;
+  server_t * s = be->priv;
+
+  fprintf(stderr, "handle_msg_server %d %d\n", msg->NS, msg->ID);
+
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_DB: // 114
+      {
+      switch(msg->ID)
+        {
+        case BG_FUNC_DB_BROWSE_OBJECT:
+          {
+          gavl_dictionary_t dict;
+          const char * id;
+          char * id_upnp;
+          id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+          fprintf(stderr, "BG_FUNC_DB_BROWSE_OBJECT: %s\n", id);
+
+          id_upnp = id_gmerlin_to_upnp(id);
+          
+          gavl_dictionary_init(&dict);
+          gavl_dictionary_get_dictionary_create(&dict, GAVL_META_METADATA);
+#if 0
+          if(!browse_object(be, id, &dict))
+            {
+            gavl_dictionary_free(&dict);
+            return 1;
+            }
+          
+          res = bg_msg_sink_get(be->ctrl.evt_sink);
+          bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
+          bg_msg_sink_put(be->ctrl.evt_sink, res);
+          gavl_dictionary_free(&dict);
+#endif
+          }
+          break;
+        case BG_FUNC_DB_BROWSE_CHILDREN:
+          {
+          int start = 0, num = 0, one_answer = 0;
+          const char * id = NULL;
+          
+          bg_mdb_get_browse_children_request(msg, &id, &start, &num, &one_answer);
+          
+          fprintf(stderr, "BG_FUNC_DB_BROWSE_CHILDREN %s\n", id);
+          }
+          break;
+        }
+      }
+    }
+  
+  return 1;
+  }
+
+static int create_server(bg_backend_handle_t * dev, const char * uri_1, const char * root_url)
+  {
+  const char * pos;
+  char * uri;
+
+  const char * var;
+  //  const char * label;
+  
+  xmlDocPtr dev_desc = NULL;
+  xmlNodePtr service_node = NULL;
+  xmlNodePtr dev_node = NULL;
+  xmlNodePtr node;
+  char * url_base      = NULL;
+  int ret = 0;
+  //  gavl_dictionary_t s;
+  
+  //  gavl_array_t icons;
+  
+  server_t * server = calloc(1, sizeof(*server));
+
+  if((pos = strstr(uri_1, "://")))
+    uri = bg_sprintf("http%s", pos);
+  else
+    uri = gavl_strdup(uri_1);
+  
+  if(!(dev_desc = bg_xml_from_url(uri, NULL)))
+    goto fail;
+  
+  /* URL Base */
+  url_base = bg_upnp_device_description_get_url_base(uri, dev_desc);
+  
+  /* Get control- and event URLs */
+
+  if(!(dev_node = bg_upnp_device_description_get_device_node(dev_desc, "MediaServer", 1)))
+    goto fail;
+
+  /* ContentDirectory */
+  if(!(service_node = bg_upnp_device_description_get_service_node(dev_node, "ContentDirectory", 1)))
+    goto fail;
+
+  if(!(node = bg_xml_find_node_child(service_node, "controlURL")) ||
+     !(var = bg_xml_node_get_text_content(node)))
+    goto fail;
+  server->cd_control_url = bg_upnp_device_description_make_url(var, url_base);
+
+  fprintf(stderr, "Got control URI: %s\n", server->cd_control_url);
+  
+  ret = 1;
+  
+  fail:
+
+  if(dev_desc)
+    xmlFreeDoc(dev_desc);
+  
+  if(ret)
+    {
+    
+    }
+  
+  return ret;
+  }
+
+static void destroy_server(bg_backend_handle_t * dev)
+  {
+  
+  }
 
 const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_mediaserver =
   {
     .name = "upnp media server",
-    .protocol = "upnp",
-    .type = BG_BACKEND_SERVER,
+    .uri_prefix = BG_BACKEND_URI_SCHEME_UPNP_SERVER"://",
+
+    .type = BG_BACKEND_MEDIASERVER,
+
+    .handle_msg  = handle_msg_server,
     
     //    .ping    = ping_gmerlin,
     .create    = create_server,
     .destroy   = destroy_server,
   };
+
 
 #endif

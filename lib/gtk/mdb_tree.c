@@ -1481,18 +1481,28 @@ void bg_gtk_mdb_browse_children(bg_gtk_mdb_tree_t * t, const char * id)
 void bg_gtk_mdb_browse_object(bg_gtk_mdb_tree_t * t, const char * id)
   {
   gavl_msg_t * msg;
-
+  int is_playqueue = 0;
+  
+  if(gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
+    is_playqueue = 1;
+  
   if(bg_gtk_mdb_array_get_flag_str(&t->browse_object_requests, id))
     return;
 
   bg_gtk_mdb_array_set_flag_str(&t->browse_object_requests, id, 1);
-  
-  msg = bg_msg_sink_get(t->ctrl.cmd_sink);
+
+  if(is_playqueue)
+    msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
+  else
+    msg = bg_msg_sink_get(t->ctrl.cmd_sink);
   
   gavl_msg_set_id_ns(msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
 
-  bg_msg_sink_put(t->ctrl.cmd_sink, msg);
+  if(is_playqueue)
+    bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+  else
+    bg_msg_sink_put(t->ctrl.cmd_sink, msg);
   }
 
 static void row_collapsed_callback(GtkTreeView *treeview,

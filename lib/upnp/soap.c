@@ -393,7 +393,7 @@ static int connect_inet(const gavl_dictionary_t * s)
   return ret;
   }
 
-int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd)
+static int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd)
   {
   xmlDocPtr req;
   const char * function;
@@ -464,7 +464,7 @@ int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd)
   return ret;
   }
 
-int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd)
+static int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd)
   {
   int ret = 0;
   gavl_dictionary_t * args;

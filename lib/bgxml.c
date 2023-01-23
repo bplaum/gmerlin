@@ -42,69 +42,70 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "xmlutils"
 
+#if 0
 typedef struct
   {
   int bytes_written;
   int bytes_allocated;
   char * buffer;
   } bg_xml_output_mem_t;
+#endif
 
 static int mem_write_callback(void * context, const char * buffer,
                               int len)
   {
-  bg_xml_output_mem_t * o = context;
-
-  if(o->bytes_allocated - o->bytes_written < len)
-    {
-    o->bytes_allocated += BLOCK_SIZE;
-    while(o->bytes_allocated < o->bytes_written + len)
-      o->bytes_allocated += BLOCK_SIZE;
-    o->buffer = realloc(o->buffer, o->bytes_allocated);
-    }
-  memcpy(&o->buffer[o->bytes_written], buffer, len);
-  o->bytes_written += len;
+  gavl_buffer_append_data(context, (const uint8_t*)buffer, len);
   return len;
   }
 
 static int mem_close_callback(void * context)
   {
-  bg_xml_output_mem_t * o = context;
-
-  if(o->bytes_allocated == o->bytes_written)
-    {
-    o->bytes_allocated++;
-    o->buffer = realloc(o->buffer, o->bytes_allocated);
-    }
-  o->buffer[o->bytes_written] = '\0';
+  uint8_t zero = 0x00;
+  gavl_buffer_append_data(context, &zero, 1);
   return 0;
+  }
+
+
+void bg_xml_save_to_buffer(xmlDocPtr doc, gavl_buffer_t * buf)
+  {
+  xmlOutputBufferPtr b = xmlOutputBufferCreateIO (mem_write_callback,
+                                                  mem_close_callback,
+                                                  buf,
+                                                  NULL);
+  /*
+   *  From the libxml documentation of xmlSaveFileTo:
+   *  Warning ! This call xmlOutputBufferClose() on buf which is not available after this call.
+   */
+  xmlSaveFileTo(b, doc, NULL);
   }
 
 char * bg_xml_save_to_memory(xmlDocPtr doc)
   {
-  xmlOutputBufferPtr b;
-  bg_xml_output_mem_t ctx;
-  memset(&ctx, 0, sizeof(ctx));
+  gavl_buffer_t buffer;
+  gavl_buffer_init(&buffer);
+  bg_xml_save_to_buffer(doc, &buffer);
+  return (char*)buffer.buf;
+  }
+
+
+void bg_xml_save_to_buffer_opt(xmlDocPtr doc, int opt, gavl_buffer_t * buf)
+  {
+  xmlSaveCtxtPtr xtc;
   
-  b = xmlOutputBufferCreateIO (mem_write_callback,
-                               mem_close_callback,
-                               &ctx,
-                               NULL);
-  xmlSaveFileTo(b, doc, NULL);
-  return ctx.buffer;
+  xtc = xmlSaveToIO(mem_write_callback, 
+                    mem_close_callback, 
+                    buf, NULL, opt);
+  xmlSaveDoc(xtc, doc);
+  xmlSaveClose(xtc);
   }
 
 char * bg_xml_save_to_memory_opt(xmlDocPtr doc, int opt)
   {
-  bg_xml_output_mem_t ctx;
-  xmlSaveCtxtPtr xtc;
+  gavl_buffer_t buf;
 
-  memset(&ctx, 0, sizeof(ctx));
-  xtc = xmlSaveToIO(mem_write_callback, 
-                    mem_close_callback, 
-                    &ctx, NULL, opt);
-  xmlSaveDoc(xtc, doc);
-  xmlSaveClose(xtc);
-  return ctx.buffer;
+  gavl_buffer_init(&buf);
+  bg_xml_save_to_buffer_opt(doc, opt, &buf);
+  return (char*)buf.buf;
   }
 
 static int FILE_write_callback(void * context, const char * buffer,
