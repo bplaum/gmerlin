@@ -415,6 +415,8 @@ static void dump_int_range(const range_t * r)
 #define RENDERER_FINISHING                      (1<<11)
 #define RENDERER_NEED_METADATA                  (1<<12)
 
+#define RENDERER_NEED_STATE                     (1<<13)
+
 #define SET_INSTANCE_ID(a) gavl_dictionary_set_string(a, "InstanceID", "0")
 
 static void do_play(bg_backend_handle_t * be);
@@ -454,9 +456,8 @@ typedef struct
 
   // We use this to detect track changes if we don't own the playback
   char * TrackMetaData; 
+  gavf_io_t * control_io;
   
-  int control_fd;
-
   range_t Volume_range;
   
   int flags;
@@ -496,16 +497,17 @@ static void set_track_from_didl(bg_backend_handle_t * be, const char * str)
   gavl_value_init(&v);
 
   dict = gavl_value_set_dictionary(&v);
-  m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
-                
+  
   if((doc = xmlParseMemory(str, strlen(str))) &&
      (child = bg_xml_find_doc_child(doc, "DIDL-Lite")) &&
      (child = bg_xml_find_node_child(child, "item")))
-    bg_metadata_from_didl(m, child);
+    bg_track_from_didl(dict, child);
   
   if(doc)
     xmlFreeDoc(doc);
-                
+
+  m = gavl_track_get_metadata_nc(dict);
+  
   gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &didl_duration);
                 
   if((r->duration == GAVL_TIME_UNDEFINED) &&
@@ -553,7 +555,7 @@ static void detect_can_seek_pause(bg_backend_handle_t * be)
     args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
     SET_INSTANCE_ID(args_in);
     
-    if(bg_soap_request(&s, &r->control_fd) &&
+    if(bg_soap_request(&s, &r->control_io) &&
        (args_out = gavl_dictionary_get_dictionary(&s, BG_SOAP_META_ARGS_OUT)) &&
        (actions = gavl_dictionary_get_string(args_out, "Actions")) &&
        (actions_arr = gavl_strbreak(actions, ',')))
@@ -592,7 +594,7 @@ static void renderer_poll(bg_backend_handle_t * be)
   args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
   SET_INSTANCE_ID(args_in);
   
-  if(!bg_soap_request(&s, &r->control_fd))
+  if(!bg_soap_request(&s, &r->control_io))
     {
     gavl_dictionary_free(&s);
     return;
@@ -717,7 +719,7 @@ static void renderer_poll(bg_backend_handle_t * be)
         gavl_dictionary_set_string(args_in, "NextURI", r->NextAVTransportURI);
         gavl_dictionary_set_string(args_in, "NextURIMetaData", uri_metadata);
 
-        bg_soap_request(&s, &r->control_fd);
+        bg_soap_request(&s, &r->control_io);
 
         gavl_dictionary_reset(&s);
         }
@@ -792,12 +794,31 @@ static void renderer_poll(bg_backend_handle_t * be)
   
   }
 
+static int get_player_state(const char * upnp_state)
+  {
+  if(!strcmp(upnp_state, "STOPPED"))
+    return BG_PLAYER_STATUS_STOPPED;
+  else if(!strcmp(upnp_state, "PLAYING"))
+    return BG_PLAYER_STATUS_PLAYING;
+  else if(!strcmp(upnp_state, "TRANSITIONING"))
+    return BG_PLAYER_STATUS_CHANGING;
+  else if(!strcmp(upnp_state, "PAUSED_PLAYBACK"))
+    return BG_PLAYER_STATUS_PAUSED;
+  else if(!strcmp(upnp_state, "NO_MEDIA_PRESENT"))
+    return BG_PLAYER_STATUS_INIT;
+  else
+    return BG_PLAYER_STATUS_ERROR;
+  }
+
 static int handle_upnp_event(void * priv, gavl_msg_t * msg)
   {
   bg_backend_handle_t * be = priv;
 
   renderer_t * r = be->priv;
 
+  //  fprintf(stderr, "Got UPNP event:\n");
+  //  gavl_msg_dump(msg, 2);
+  
   switch(msg->NS)
     {
     case BG_MSG_NS_UPNP:
@@ -860,9 +881,9 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
             
             if(!strcmp(var, "TransportState"))
               {
-              r->player_status = BG_PLAYER_STATUS_STOPPED;
+              r->player_status = get_player_state(val);
               
-              if(!strcmp(val, "STOPPED"))
+              if(r->player_status == BG_PLAYER_STATUS_STOPPED)
                 {
                 gavl_dictionary_t * dict = NULL;
                 if(r->flags & RENDERER_OUR_PLAYBACK)
@@ -909,8 +930,6 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
                              &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
                 gavl_value_reset(&v);
                 
-                r->player_status = BG_PLAYER_STATUS_STOPPED;
-
                 if(r->TrackURI)
                   {
                   free(r->TrackURI);
@@ -930,21 +949,13 @@ static int handle_upnp_event(void * priv, gavl_msg_t * msg)
                 
                 r->flags &= ~(RENDERER_STOP_SENT|RENDERER_FINISHING);
                 }
-              else if(!strcmp(val, "PLAYING"))
+              else if(r->player_status == BG_PLAYER_STATUS_PLAYING)
                 {
-                r->player_status = BG_PLAYER_STATUS_PLAYING;
                 /* trigger initial poll */
                 r->last_poll_time = GAVL_TIME_UNDEFINED;
                 }
-              else if(!strcmp(val, "TRANSITIONING"))
-                r->player_status = BG_PLAYER_STATUS_CHANGING;
-              else if(!strcmp(val, "PAUSED_PLAYBACK"))
-                r->player_status = BG_PLAYER_STATUS_PAUSED;
-              else if(!strcmp(val, "NO_MEDIA_PRESENT"))
-                r->player_status = BG_PLAYER_STATUS_INIT;
-
+              
               gavl_value_set_int(&v, r->player_status);
-
               bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
                            &v, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
               
@@ -1128,7 +1139,7 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
     goto fail;
     }
 
-  r->control_fd = -1;
+  r->control_io = NULL;
 
   r->timer = gavl_timer_create();
   gavl_timer_start(r->timer);
@@ -1265,7 +1276,7 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
   /* Get protocol info */
   bg_soap_request_init(&s, r->cm_control_url, "ConnectionManager", 1, "GetProtocolInfo");
 
-  if(!bg_soap_request(&s, &r->control_fd) ||
+  if(!bg_soap_request(&s, &r->control_io) ||
      !(dict = gavl_dictionary_get_dictionary(&s, BG_SOAP_META_ARGS_OUT)))
     goto fail;
 
@@ -1300,6 +1311,9 @@ static int create_renderer(bg_backend_handle_t * dev, const char * uri_1, const 
 
   bg_set_network_node_info(label, &icons, NULL, dev->ctrl_int.evt_sink);
   gavl_array_free(&icons);
+
+  r->flags |= RENDERER_NEED_STATE;
+
   
   ret = 1;
 
@@ -1351,43 +1365,19 @@ static void destroy_renderer(bg_backend_handle_t * dev)
   if(r->NextAVTransportURI_dev) free(r->NextAVTransportURI_dev);
     
   if(r->NextAVTransportURIMetaData_dev) free(r->NextAVTransportURIMetaData_dev);
-  
+
+  if(r->control_io)
+    gavf_io_destroy(r->control_io);
+    
   free(r);
   }
 
 static const char * track_to_uri(bg_backend_handle_t * be, const gavl_dictionary_t * track)
   {
   renderer_t * r;
-#if 0
-  const char * uri;
-  const char * mimetype;
-  int idx = 0;
-  const gavl_dictionary_t * m = gavl_track_get_metadata(track);
-
-  const gavl_array_t * mimetypes;
-  const gavl_value_t * mimetypes_val;
-  
-  r = be->priv;
-
-  if(!(mimetypes_val = bg_state_get(&r->gmerlin_state, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES)) ||
-     !(mimetypes = gavl_value_get_array(mimetypes_val)))
-    return NULL;
-  
-  while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
-    {
-    if((gavl_string_array_indexof(mimetypes, mimetype) >= 0) &&
-       gavl_string_starts_with(uri, "http://"))
-      return uri;
-    idx++;
-    }
-  
-  return NULL;
-#else
   r = be->priv;
 
   return bg_player_track_get_uri(&r->gmerlin_state, track);
-#endif
-  
   }
 
 static char * track_to_metadata(const gavl_dictionary_t * track_p, const char * current_uri)
@@ -1456,6 +1446,7 @@ static void do_play(bg_backend_handle_t * be)
   if(!(uri = track_to_uri(be, track)))
     {
     fprintf(stderr, "Track has no uri\n");
+    gavl_dictionary_dump(track, 2);
     goto fail;
     }
   
@@ -1489,7 +1480,7 @@ static void do_play(bg_backend_handle_t * be)
   gavl_dictionary_set_string(args_in, "CurrentURI", r->AVTransportURI);
   gavl_dictionary_set_string(args_in, "CurrentURIMetaData", uri_metadata);
 
-  if(!bg_soap_request(&s, &r->control_fd))
+  if(!bg_soap_request(&s, &r->control_io))
     goto fail;
     
   gavl_dictionary_reset(&s);
@@ -1502,7 +1493,7 @@ static void do_play(bg_backend_handle_t * be)
   
   gavl_dictionary_set_string(args_in, "Speed", "1");
   
-  if(!bg_soap_request(&s, &r->control_fd))
+  if(!bg_soap_request(&s, &r->control_io))
     goto fail;
     
   gavl_dictionary_reset(&s);
@@ -1529,7 +1520,7 @@ static void do_stop(bg_backend_handle_t * be)
   args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
   SET_INSTANCE_ID(args_in);
   
-  bg_soap_request(&s, &r->control_fd);
+  bg_soap_request(&s, &r->control_io);
 
   r->flags |= RENDERER_STOP_SENT;
   
@@ -1552,11 +1543,14 @@ static void do_seek(bg_backend_handle_t * be, gavl_time_t time)
   SET_INSTANCE_ID(args_in);
   
   gavl_dictionary_set_string(args_in, "Unit", "REL_TIME");
-  
-  gavl_time_prettyprint_ms_full(time, str);
+
+  //  gavl_time_prettyprint_ms_full(time, str);
+  gavl_time_prettyprint(time, str);
   gavl_dictionary_set_string(args_in, "Target", str);
+
+  fprintf(stderr, "Seek time: %s\n", str);
   
-  bg_soap_request(&s, &r->control_fd);
+  bg_soap_request(&s, &r->control_io);
 
   //  fprintf(stderr, "do_seek %s\n", str);
   //  gavl_dictionary_dump(&s, 2);
@@ -1701,7 +1695,7 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
 
               gavl_dictionary_set_string(args_in, "Channel", "Master");
               gavl_dictionary_set_string_nocopy(args_in, "DesiredVolume", bg_sprintf("%d", val_i));
-              bg_soap_request(&s, &r->control_fd);
+              bg_soap_request(&s, &r->control_io);
               gavl_dictionary_free(&s);
               }
             else if(!strcmp(var, BG_PLAYER_STATE_MODE))          // int
@@ -1736,7 +1730,7 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
 
               gavl_dictionary_set_string(args_in, "Channel", "Master");
               gavl_dictionary_set_string_nocopy(args_in, "DesiredMute", bg_sprintf("%d", val_i));
-              bg_soap_request(&s, &r->control_fd);
+              bg_soap_request(&s, &r->control_io);
               gavl_dictionary_free(&s);
               
               gavl_dprintf("BG_CMD_SET_STATE %s %s ", ctx, var);
@@ -1824,7 +1818,7 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
             bg_soap_request_init(&s, r->avt_control_url, "AVTransport", 1, "Pause");
             args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
             SET_INSTANCE_ID(args_in);
-            bg_soap_request(&s, &r->control_fd);
+            bg_soap_request(&s, &r->control_io);
             gavl_dictionary_free(&s);
             }
           else if(r->player_status == BG_PLAYER_STATUS_PAUSED)
@@ -1836,7 +1830,7 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
             args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
             SET_INSTANCE_ID(args_in);
             gavl_dictionary_set_string(args_in, "Speed", "1");
-            bg_soap_request(&s, &r->control_fd);
+            bg_soap_request(&s, &r->control_io);
             gavl_dictionary_free(&s);
             }
           
@@ -1922,7 +1916,41 @@ static int ping_renderer(bg_backend_handle_t * be)
   bg_msg_sink_iteration(r->evt_sink);
   
   cur = gavl_timer_get(r->timer);
-  
+
+  if(r->flags & RENDERER_NEED_STATE)
+    {
+    gavl_dictionary_t s;
+    gavl_dictionary_t * args_in;
+    const gavl_dictionary_t * args_out;
+    
+    r->flags &= ~RENDERER_NEED_STATE;
+
+    bg_soap_request_init(&s, r->avt_control_url, "AVTransport", 1, "GetTransportInfo");
+    args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
+    SET_INSTANCE_ID(args_in);
+    
+    if(!bg_soap_request(&s, &r->control_io))
+      {
+      gavl_dictionary_free(&s);
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Couldn't get initial state");
+      }
+    else
+      {
+      const char * var;
+      gavl_value_t val;
+      gavl_value_init(&val);
+      
+      args_out = gavl_dictionary_get_dictionary(&s, BG_SOAP_META_ARGS_OUT);
+      var = gavl_dictionary_get_string(args_out, "CurrentTransportState");
+      r->player_status = get_player_state(var);
+      gavl_value_set_int(&val, r->player_status);
+      bg_state_set(&r->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
+                   &val, be->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
+      
+      gavl_value_reset(&val);
+      }
+    }
+    
   if(r->player_status == BG_PLAYER_STATUS_PLAYING)
     {
     /* Poll Interval: 1 s */
@@ -1993,7 +2021,10 @@ static char * id_upnp_to_gmerlin(const char * id, const char * parent_id_gmerlin
   char * ret;
   char * tmp_string = gavl_base64_encode_data_urlsafe(id, strlen(id));
 
-  ret = gavl_sprintf("%s/%s", parent_id_gmerlin, tmp_string);
+  if(!strcmp(parent_id_gmerlin, "/"))
+    ret = gavl_sprintf("%s%s", parent_id_gmerlin, tmp_string);
+  else
+    ret = gavl_sprintf("%s/%s", parent_id_gmerlin, tmp_string);
   free(tmp_string);
   return ret;
   }
@@ -2001,6 +2032,8 @@ static char * id_upnp_to_gmerlin(const char * id, const char * parent_id_gmerlin
 typedef struct
   {
   char * cd_control_url;
+
+  gavf_io_t * control_io;
   
   } server_t;
 
@@ -2008,9 +2041,9 @@ static int handle_msg_server(void * priv, // Must be bg_backend_handle_t
                              gavl_msg_t * msg)
   {
   bg_backend_handle_t * be = priv;
-  server_t * s = be->priv;
+  server_t * server = be->priv;
 
-  fprintf(stderr, "handle_msg_server %d %d\n", msg->NS, msg->ID);
+  //  fprintf(stderr, "handle_msg_server %d %d\n", msg->NS, msg->ID);
 
   switch(msg->NS)
     {
@@ -2020,39 +2053,174 @@ static int handle_msg_server(void * priv, // Must be bg_backend_handle_t
         {
         case BG_FUNC_DB_BROWSE_OBJECT:
           {
-          gavl_dictionary_t dict;
+          const char * Result;
+          gavl_dictionary_t s;
+          gavl_dictionary_t * args_in;
+          const gavl_dictionary_t * args_out;
+          
           const char * id;
           char * id_upnp;
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
 
-          fprintf(stderr, "BG_FUNC_DB_BROWSE_OBJECT: %s\n", id);
+          //          fprintf(stderr, "BG_FUNC_DB_BROWSE_OBJECT: %s\n", id);
 
           id_upnp = id_gmerlin_to_upnp(id);
           
-          gavl_dictionary_init(&dict);
-          gavl_dictionary_get_dictionary_create(&dict, GAVL_META_METADATA);
-#if 0
-          if(!browse_object(be, id, &dict))
+          bg_soap_request_init(&s, server->cd_control_url, "ContentDirectory", 1, "Browse");
+          args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
+
+          gavl_dictionary_set_string(args_in, "ObjectID", id_upnp);
+          gavl_dictionary_set_string(args_in, "BrowseFlag", "BrowseMetadata");
+          gavl_dictionary_set_string(args_in, "Filter", "*");
+          gavl_dictionary_set_string(args_in, "StartingIndex", "0");
+          gavl_dictionary_set_string(args_in, "RequestedCount", "0");
+          gavl_dictionary_set_string(args_in, "SortCriteria", BG_SOAP_ARG_EMPTY);
+
+          if(bg_soap_request(&s, &server->control_io) &&
+             (args_out = gavl_dictionary_get_dictionary(&s, BG_SOAP_META_ARGS_OUT)) &&
+             (Result = gavl_dictionary_get_string(args_out, "Result")))
             {
-            gavl_dictionary_free(&dict);
-            return 1;
+            xmlDocPtr doc;
+            xmlNodePtr node;
+            gavl_dictionary_t dict;
+            gavl_dictionary_t * m;
+
+            gavl_dictionary_init(&dict);
+            m = gavl_dictionary_get_dictionary_create(&dict, GAVL_META_METADATA);
+            
+            //            fprintf(stderr, "Got result:\n%s\n", Result);
+
+            //            gavl_dictionary_dump(&be->dev, 2);
+            
+            if((doc = xmlParseMemory(Result, strlen(Result))) &&
+               (node = bg_xml_find_doc_child(doc, "DIDL-Lite")) &&
+               (node = bg_xml_find_next_node_child(node, NULL)) &&
+               (!strcmp((const char*)node->name, "container") || !strcmp((const char*)node->name, "item")))
+              {
+              gavl_msg_t * res;
+              
+              bg_track_from_didl(&dict, node);
+              /* upnp ID -> gmerlin id */
+              gavl_track_set_id(&dict, id);
+
+              if(!strcmp(id, "/"))
+                {
+                /* Merge device info */
+                gavl_dictionary_copy_value(m, &be->dev, GAVL_META_LABEL);
+                gavl_dictionary_copy_value(m, &be->dev, GAVL_META_ICON_URL);
+                }
+
+              res = bg_msg_sink_get(be->ctrl->evt_sink);
+              bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
+              bg_msg_sink_put(be->ctrl->evt_sink, res);
+              // gavl_dictionary_dump(&dict, 2);
+              gavl_dictionary_free(&dict);
+              
+              }
+            if(doc)
+              xmlFreeDoc(doc);
             }
           
-          res = bg_msg_sink_get(be->ctrl.evt_sink);
-          bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
-          gavl_dictionary_free(&dict);
-#endif
+          gavl_dictionary_free(&s);
           }
           break;
         case BG_FUNC_DB_BROWSE_CHILDREN:
           {
           int start = 0, num = 0, one_answer = 0;
           const char * id = NULL;
+          const char * Result;
+          gavl_dictionary_t s;
+          gavl_dictionary_t * args_in;
+          const gavl_dictionary_t * args_out;
+
           
           bg_mdb_get_browse_children_request(msg, &id, &start, &num, &one_answer);
           
-          fprintf(stderr, "BG_FUNC_DB_BROWSE_CHILDREN %s\n", id);
+          //          fprintf(stderr, "BG_FUNC_DB_BROWSE_CHILDREN %s %d %d %d\n", id, start, num, one_answer);
+          
+          bg_soap_request_init(&s, server->cd_control_url, "ContentDirectory", 1, "Browse");
+          args_in = gavl_dictionary_get_dictionary_nc(&s, BG_SOAP_META_ARGS_IN);
+
+          if(num < 0)
+            num = 0;
+          
+          gavl_dictionary_set_string_nocopy(args_in, "ObjectID", id_gmerlin_to_upnp(id));
+          gavl_dictionary_set_string(args_in, "BrowseFlag", "BrowseDirectChildren");
+          gavl_dictionary_set_string(args_in, "Filter", "*");
+          gavl_dictionary_set_string_nocopy(args_in, "StartingIndex", gavl_sprintf("%d", start));
+          gavl_dictionary_set_string_nocopy(args_in, "RequestedCount", gavl_sprintf("%d", num));
+          gavl_dictionary_set_string(args_in, "SortCriteria", BG_SOAP_ARG_EMPTY);
+
+          if(bg_soap_request(&s, &server->control_io) &&
+             (args_out = gavl_dictionary_get_dictionary(&s, BG_SOAP_META_ARGS_OUT)) &&
+             (Result = gavl_dictionary_get_string(args_out, "Result")))
+            {
+            int total_matches = -1;
+            xmlDocPtr doc;
+            xmlNodePtr node;
+            int num_ret = 0;
+            int total = 0;
+
+            gavl_dictionary_get_int(args_out, "NumberReturned", &num_ret);
+            gavl_dictionary_get_int(args_out, "TotalMatches",   &total);
+            
+            //            fprintf(stderr, "Got result: %s\n", Result);
+            //            gavl_dictionary_dump(track, 2);
+
+            if((doc = xmlParseMemory(Result, strlen(Result))) &&
+               (node = bg_xml_find_doc_child(doc, "DIDL-Lite")))
+              {
+              gavl_array_t arr;
+              xmlNodePtr child = NULL;
+
+              gavl_array_init(&arr);
+              
+              while((child = bg_xml_find_next_node_child(node, child)))
+                {
+                char * child_id;
+                gavl_value_t track_val;
+                gavl_dictionary_t * track;
+                
+                if(strcmp((const char*)child->name, "container") &&
+                   strcmp((const char*)child->name, "item"))
+                  continue;
+
+                gavl_value_init(&track_val);
+                track = gavl_value_set_dictionary(&track_val);
+
+                bg_track_from_didl(track, child);
+
+                /* Translate ID */
+                child_id = id_upnp_to_gmerlin(gavl_track_get_id(track), id);
+                gavl_track_set_id_nocopy(track, child_id);
+                
+                //                fprintf(stderr, "Got track:\n");
+                //                gavl_dictionary_dump(track, 2);
+
+                gavl_array_splice_val_nocopy(&arr, -1, 0, &track_val);
+                
+                }
+
+              if(arr.num_entries != num_ret)
+                {
+                gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Number of objects mismatch: %d != %d",
+                         arr.num_entries, num_ret);
+                }
+              
+              if(arr.num_entries > 0)
+                {
+                gavl_msg_t * res;
+
+                //                fprintf(stderr, "Got tracks:\n");
+                //                gavl_array_dump(&arr, 2);
+                
+                res = bg_msg_sink_get(be->ctrl->evt_sink);
+                bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total_matches);
+                bg_msg_sink_put(be->ctrl->evt_sink, res);
+                }
+              gavl_array_free(&arr);
+              }
+            }
           }
           break;
         }
@@ -2082,6 +2250,10 @@ static int create_server(bg_backend_handle_t * dev, const char * uri_1, const ch
   
   server_t * server = calloc(1, sizeof(*server));
 
+  dev->priv = server;
+  
+  fprintf(stderr, "create_server\n");
+  
   if((pos = strstr(uri_1, "://")))
     uri = bg_sprintf("http%s", pos);
   else
@@ -2108,6 +2280,7 @@ static int create_server(bg_backend_handle_t * dev, const char * uri_1, const ch
   server->cd_control_url = bg_upnp_device_description_make_url(var, url_base);
 
   fprintf(stderr, "Got control URI: %s\n", server->cd_control_url);
+
   
   ret = 1;
   

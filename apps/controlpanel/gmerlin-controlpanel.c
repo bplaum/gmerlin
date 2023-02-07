@@ -1075,17 +1075,20 @@ static int handle_msg(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-static int update_controls(gavl_time_t t)
+static int update_controls(gavl_timer_t * timer)
   {
   int ret = 0;
   int i;
-
+  gavl_time_t t;
+  
   for(i = 0; i < num_controls; i++)
     {
+    t = gavl_timer_get(timer);
+    
     if(controls[i].next_update_time <= t)
       {
       ret += update_control(i);
-      controls[i].next_update_time = t + controls[i].update_interval;
+      controls[i].next_update_time = gavl_timer_get(timer) + controls[i].update_interval;
       }
     }
   
@@ -1099,8 +1102,6 @@ int main(int argc, char ** argv)
   bg_http_server_t * srv;
   bg_websocket_context_t * ws;
 
-  gavl_time_t t;
-  
   timer = gavl_timer_create();
 
   gavl_timer_start(timer);
@@ -1155,11 +1156,10 @@ int main(int argc, char ** argv)
   
   while(1)
     {
-    t = gavl_timer_get(timer);
     
     if(!bg_http_server_iteration(srv) &&
        !bg_websocket_context_iteration(ws) &&
-       !update_controls(t))
+       !update_controls(timer))
       gavl_time_delay(&delay_time);
     
     if(bg_got_sigint())

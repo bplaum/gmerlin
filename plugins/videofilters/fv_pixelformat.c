@@ -67,7 +67,7 @@ static const bg_parameter_info_t parameters[] =
     {
       .gettext_domain = PACKAGE,
       .gettext_directory = LOCALE_DIR,
-      .name = "fmf",
+      .name = "pixelformat",
       .long_name = TRS("Pixelformat"),
       .type = BG_PARAMETER_STRINGLIST,
       .flags = BG_PARAMETER_SYNC,

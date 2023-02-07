@@ -34,8 +34,8 @@
 #define BG_SOAP_META_ARGS_IN   "args_in"   // Dictionary
 #define BG_SOAP_META_ARGS_OUT  "args_out"  // Dictionary
 
-#define BG_SOAP_META_REQ_HDR   "req_hdr"   // Dictionary
-#define BG_SOAP_META_RES_HDR   "res_hdr"   // Dictionary
+#define BG_SOAP_META_REQ_VARS   "req_vars"   // Dictionary
+#define BG_SOAP_META_RES_HDR    "res_hdr"   // Dictionary
 
 #define BG_SOAP_ARG_EMPTY      "*NULL*"    // Empty string
 
@@ -75,7 +75,7 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
 // int bg_soap_request_write_req(gavl_dictionary_t * s, int * fd);
 // int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd);
 
-int bg_soap_request(gavl_dictionary_t * s, int * fd);
+int bg_soap_request(gavl_dictionary_t * s, gavf_io_t ** io);
 
 /* Start an asynchronous request. io MUST be an gavl http client. Check for
    completion with gavl_http_client_run_async_done() */

@@ -473,7 +473,8 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   /* TODO: Add icons */
   
   ret->srv = bg_http_server_create();
-
+  bg_http_server_get_media_dirs(ret->srv);
+  
   if(!(ret->mdb = bg_mdb_create(db_path, 1, ret->srv)))
     goto fail;
 

@@ -123,7 +123,7 @@ struct edldec_s
 
 typedef struct edldec_s edldec_t;
 
-static void streams_destroy(stream_t * s, int num);
+static void streams_destroy(edldec_t *dec);
 
 static void free_segments(edl_segment_t * s, int len)
   {
@@ -229,18 +229,25 @@ static int segment_from_dictionary(edl_segment_t * seg,
   {
   seg->seg = dict;
 
+  seg->speed_num = 1;
+  seg->speed_den = 1;
+  
   if(!gavl_dictionary_get_int(dict,  GAVL_EDL_TRACK_IDX,  &seg->track) ||
      !gavl_dictionary_get_int(dict,  GAVL_EDL_STREAM_IDX, &seg->stream) ||
      !gavl_dictionary_get_int(dict,  GAVL_META_STREAM_SAMPLE_TIMESCALE, &seg->timescale) ||
      !gavl_dictionary_get_long(dict, GAVL_EDL_SRC_TIME,   &seg->src_time) ||
      !gavl_dictionary_get_long(dict, GAVL_EDL_DST_TIME,   &seg->dst_time) ||
-     !gavl_dictionary_get_long(dict, GAVL_EDL_DST_DUR,    &seg->dst_duration) ||
-     !gavl_dictionary_get_int(dict,  GAVL_EDL_SPEED_NUM,  &seg->speed_num) ||
-     !gavl_dictionary_get_int(dict,  GAVL_EDL_SPEED_DEN,  &seg->speed_den))
+     !gavl_dictionary_get_long(dict, GAVL_EDL_DST_DUR,    &seg->dst_duration))
+    {
+    fprintf(stderr, "segment_from_dictionary\n");
+    gavl_dictionary_dump(dict, 2);
     return 0;
-
+    }
+     
+  gavl_dictionary_get_int(dict,  GAVL_EDL_SPEED_NUM,  &seg->speed_num);
+  gavl_dictionary_get_int(dict,  GAVL_EDL_SPEED_DEN,  &seg->speed_den);
+     
   return 1;
-
   }
 
 static int stream_init(stream_t * s, gavl_dictionary_t * es,
@@ -265,7 +272,10 @@ static int stream_init(stream_t * s, gavl_dictionary_t * es,
 
       if((val = gavl_array_get(segs, i)) &&
          (dict = gavl_value_get_dictionary(val)))
-        segment_from_dictionary(&s->segs[i], dict);
+        {
+        if(!segment_from_dictionary(&s->segs[i], dict))
+          return 0;
+        }
       }
     }
 
@@ -411,12 +421,12 @@ static gavl_dictionary_t * get_media_info_edl(void * priv)
   return &ed->mi;
   }
 
-static void streams_create(edldec_t * dec)
+static int streams_create(edldec_t * dec)
   {
   int num, i;
   
   if(!(num = gavl_track_get_num_streams_all(dec->ti_cur)))
-    return;
+    return 1;
   
   dec->streams = calloc(num, sizeof(*dec->streams));
 
@@ -437,20 +447,29 @@ static void streams_create(edldec_t * dec)
       }
     }
 
-  return;
+  return 1;
   
   fail:
   
-  streams_destroy(dec->streams, num);
+  streams_destroy(dec);
+  dec->streams = NULL;
+  return 0;
   }
 
-static void streams_destroy(stream_t * s, int num)
+static void streams_destroy(edldec_t * ed)
   {
   int i;
+  int num = 0;
+  if(!ed->streams)
+    return;
+
+  if(ed->ti_cur)
+    num = gavl_track_get_num_streams_all(ed->ti_cur);
+  
   for(i = 0; i < num; i++)
-    stream_cleanup(&s[i]);
-  if(s)
-    free(s);
+    stream_cleanup(&ed->streams[i]);
+  
+  free(ed->streams);
   }
 
 static int set_track_edl(void * priv, int track)
@@ -464,13 +483,14 @@ static int set_track_edl(void * priv, int track)
   /* Clean up earlier streams */
   if(ed->ti_cur)
     {
-    streams_destroy(ed->streams, gavl_track_get_num_streams_all(ed->ti_cur));
+    streams_destroy(ed);
     bg_media_source_cleanup(&ed->src);
     bg_media_source_init(&ed->src);
     }
   ed->ti_cur = gavl_get_track_nc(&ed->mi, track);
 
-  streams_create(ed);
+  if(!streams_create(ed))
+    return 0;
   
   return 1;
   }
@@ -481,7 +501,7 @@ static void destroy_edl(void * priv)
   edldec_t * ed = priv;
 
   if(ed->ti_cur)
-    streams_destroy(ed->streams, gavl_track_get_num_streams_all(ed->ti_cur));
+    streams_destroy(ed);
   
   if(ed->sources)
     {
@@ -666,7 +686,14 @@ static int start_audio_stream(edldec_t * ed, int idx_rel)
   
   s = &ed->streams[idx_abs];
 
-    // bg_audio_info_t * ai
+  // bg_audio_info_t * ai
+  
+  if(!s || !s->src_s)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Stream not initialized ");
+    return 0;
+    }
+
   
   if(s->src_s->action == BG_STREAM_ACTION_OFF)
     return 1;
@@ -942,45 +969,7 @@ static gavl_source_status_t read_overlay(void * priv,
 
   (*f)->duration = truncate_duration(s, (*f)->timestamp, (*f)->duration);
   
-#if 0  
-  while(1)
-    {
-    /* Read text */
-    st = gavl_video_source_read_frame(s->vsrc_int, f);
-    
-    if(st == GAVL_SOURCE_OK)
-      {
-      (*f)->timestamp = edl_src_time_to_dst(s, s->seg, (*f)->timestamp);
-      (*f)->duration = gavl_time_rescale(s->seg->timescale, s->timescale, (*f)->duration);
-      
-      /* Check for segment end */
-      if((*f)->timestamp < s->seg->dst_time + s->seg->dst_duration)
-        {
-        /* Adjust duration to the segment end */
-        if((*f)->timestamp + (*f)->duration > s->seg->dst_time + s->seg->dst_duration)
-          (*f)->duration = s->seg->dst_time + s->seg->dst_duration - (*f)->timestamp;
-        return GAVL_SOURCE_OK;
-        }
-      }
-    
-    /* Get next segment */
-    
-    s->seg = edl_dst_time_to_src(s->dec, s, s->seg->dst_time + s->seg->dst_duration,
-                                 &src_time, &s->mute_time);
-    
-    if(!s->seg)
-      break;
-    
-    if(!(s->vsrc_int = get_overlay_source(s->dec, s->seg, &s->src, src_time)))
-      return GAVL_SOURCE_EOF;
-    
-    gavl_video_format_copy(&fmt, s->vfmt);
-    fmt.timescale = s->seg->timescale;
-
-    /* Set destination format */
-    gavl_video_source_set_dst(s->vsrc_int, 0, &fmt);
-    }
-#endif
+  
   return GAVL_SOURCE_EOF;
   }
 
@@ -1219,6 +1208,7 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           if(!set_track_edl(priv, track))
             {
             /* TODO */
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Selecting track failed");
             }
           
           }

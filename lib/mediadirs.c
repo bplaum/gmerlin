@@ -151,8 +151,10 @@ static int do_export(bg_media_dirs_t * dirs, const char * path)
   if(ret &&
      (array_contains(&dirs->restricted_dirs, path) ||
       array_contains(&dirs->restricted_dirs, cpath)))
+    {
+    
     ret = 0;
-  
+    }
   free(cpath);
 
   if(!ret)
@@ -171,7 +173,7 @@ bg_media_dirs_t * bg_media_dirs_create()
   }
 
 /* paths are transformed like:
-   /media_path/dir/file -> http://example.com/media/2/dir/file
+   /media_path/dir/file -> http://example.com/media/<md5>/dir/file
 */
    
 void bg_media_dirs_destroy(bg_media_dirs_t * d)
@@ -189,6 +191,9 @@ static int find_by_local_path(bg_media_dirs_t * d, const char * path)
   const gavl_dictionary_t * dict;
   const char * var;
 
+  //  fprintf(stderr, "find_by_local_path %s\n", path);
+  //  gavl_array_dump(&d->dirs, 2);
+  
   for(i = 0; i < d->dirs.num_entries; i++)
     {
     if((dict = gavl_value_get_dictionary(&d->dirs.entries[i])) &&
@@ -197,6 +202,22 @@ static int find_by_local_path(bg_media_dirs_t * d, const char * path)
       return i;
     }
   return -1;
+  }
+
+static int has_local_path(bg_media_dirs_t * d, const char * path)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * var;
+  
+  for(i = 0; i < d->dirs.num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&d->dirs.entries[i])) &&
+       (var = gavl_dictionary_get_string(dict, LOCAL_PATH)) &&
+       !strcmp(path, var))
+      return 1;
+    }
+  return 0;
   }
 
 
@@ -222,6 +243,15 @@ void bg_media_dirs_add_path(bg_media_dirs_t * d, const char * path)
   gavl_value_t val;
   gavl_dictionary_t * dict;
 
+  pthread_mutex_lock(&d->mutex);
+  if(has_local_path(d, path))
+    {
+    pthread_mutex_unlock(&d->mutex);
+    return;
+    }
+  
+  pthread_mutex_unlock(&d->mutex);
+  
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Exporting media dir %s", path);
   
   gavl_value_init(&val);
@@ -356,7 +386,7 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
     }
   else
     {
-#if 0
+#if 1
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 1: idx: %d, dict: %p\n",
             idx, dict);
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 2: str_local: %s\n",
@@ -411,8 +441,16 @@ int bg_media_dirs_set_parameter(void * data, const char * name,
   bg_media_dirs_t * dirs = data;
 
   if(!name)
-    return 0;
+    {
+    int i;
+    /* TODO: Transfer to dirs->dirs */
 
+    for(i = 0; i < dirs->export_dirs.num_entries; i++)
+      bg_media_dirs_add_path(dirs, gavl_string_array_get(&dirs->export_dirs, i));
+    
+    return 0;
+    }
+  
   pthread_mutex_lock(&dirs->mutex);
   
   if(!strcmp(name, "export_media_dirs"))

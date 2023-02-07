@@ -187,3 +187,224 @@ int bg_upnp_parse_bool(const char * str)
   else
     return 0;
   }
+
+/* DLNA */
+
+// DLNA flags
+
+#define DLNA_SenderPacedFlag      (1<<31)
+#define DLNA_lop_npt              (1<<30)
+#define DLNA_lop_bytes            (1<<29)
+#define DLNA_playcontainer_param  (1<<28)
+#define DLNA_s_0_Increasing       (1<<27)
+#define DLNA_s_N_Increasing       (1<<26)
+#define DLNA_rtsp_pause           (1<<25)
+#define DLNA_tm_s                 (1<<24)
+#define DLNA_tm_i                 (1<<23)
+#define DLNA_tm_b                 (1<<22)
+#define DLNA_http_stalling        (1<<21)
+#define DLNA_1_5_version_flag     (1<<20)
+
+char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
+                                    const gavl_dictionary_t * uri,
+                                    int can_seek_http, int can_seek_dlna)
+  {
+  uint32_t flags;
+  
+  const char * klass;
+
+  const gavl_dictionary_t * m1 = gavl_track_get_metadata(track);
+
+#if 0
+  fprintf(stderr, "bg_get_dlna_content_features\n");
+  gavl_dictionary_dump(m1, 2);
+  fprintf(stderr, "uri:\n");
+  gavl_dictionary_dump(uri, 2);
+#endif
+  
+  
+  if(!(klass = gavl_dictionary_get_string(m1, GAVL_META_MEDIA_CLASS)))
+    return  NULL;
+  
+  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_IMAGE))
+    {
+    int width  = -1;
+    int height = -1;
+    const char * mimetype = NULL;
+    const char * profile_id;
+
+    if(gavl_dictionary_get_int(m1, GAVL_META_WIDTH, &width) &&
+       gavl_dictionary_get_int(m1, GAVL_META_HEIGHT, &height) &&
+       (mimetype = gavl_dictionary_get_string(uri, GAVL_META_MIMETYPE)) &&
+       (profile_id = bg_get_dlna_image_profile(mimetype, width, height)))
+      return bg_sprintf("DLNA.ORG_PN=%s", profile_id);
+    else
+      return NULL;
+    }
+  
+  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) ||
+     gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+    {
+    const char * profile_id = NULL;
+    const char * mimetype = NULL;
+    const char * location = NULL;
+    const char * format   = NULL;
+    
+    char * ret = NULL;
+    char * tmp_string;
+
+    int is_http_media_uri;
+    
+    // TimeSeekRange.dlna.org: npt=00:05:35.3-00:05:37.5 
+    // X-AvailableSeekRange: 1 npt=00:05:35.3-00:05:37.5 
+    
+    location = gavl_dictionary_get_string(uri, GAVL_META_URI);
+    mimetype = gavl_dictionary_get_string(uri, GAVL_META_MIMETYPE);
+    format = gavl_dictionary_get_string(uri, GAVL_META_FORMAT);
+
+    if(!gavl_string_starts_with(location, "http://") &&
+       !gavl_string_starts_with(location, "https://"))
+      return NULL;
+    
+    //    fprintf(stderr, "Audio mimetype %s\n", mimetype);
+    
+    if(mimetype)
+      {
+      if(!strcmp(mimetype, "audio/mpeg") &&
+         format && !strcmp(format, GAVL_META_FORMAT_MP3))
+        profile_id = "MP3";
+
+      /* LPCM */
+      else if(gavl_string_starts_with(mimetype, "audio/L16;"))
+        profile_id = "LPCM";
+      else
+        return NULL;
+      }
+    
+    /* Check if we can seek. It is only possible for the mediafile handler. */
+    is_http_media_uri = bg_is_http_media_uri(location);
+    
+    // DLNA.ORG_PN
+    
+    if(profile_id)
+      {
+      tmp_string = bg_sprintf("DLNA.ORG_PN=%s", profile_id);
+
+      if(ret)
+        ret = gavl_strcat(ret, ";");
+      
+      ret = gavl_strcat(ret, tmp_string);
+      free(tmp_string);
+      }
+   
+    // DLNA.ORG_OP
+    tmp_string = bg_sprintf("DLNA.ORG_OP=%d%d", can_seek_dlna, can_seek_http);
+    if(ret)
+      ret = gavl_strcat(ret, ";");
+    ret = gavl_strcat(ret, tmp_string);
+    free(tmp_string);
+
+    // DLNA.ORG_FLAGS
+    flags = 0;
+    
+    
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
+       !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST))
+      flags |= DLNA_SenderPacedFlag;
+
+    // #define DLNA_lop_npt              (1<<30) // Limited Random Access Data Availability
+    // #define DLNA_lop_bytes            (1<<29) // Limited Random Access Data Availability
+    // #define DLNA_playcontainer_param  (1<<28) // DLNA PlayContainer URI
+
+    /* Would be used only for seeking in live-streams */
+    // #define DLNA_s_0_Increasing       (1<<27) // Byte start position increasing
+    // #define DLNA_s_N_Increasing       (1<<26) // Byte end position increasing
+
+    // #define DLNA_rtsp_pause           (1<<25)
+
+    flags |= DLNA_tm_s; // Stream is fast enough for realtime rendering (Streaming Mode Transfer Flag)
+    
+    // #define DLNA_tm_i                 (1<<23) //  Setting the tm-i flag to true for Audio-only or AV content is expressly prohibited
+
+    if(is_http_media_uri)
+      {
+      flags |= DLNA_tm_b;
+      flags |= DLNA_http_stalling;
+      }
+    
+    flags |= DLNA_1_5_version_flag;
+
+    /* 8 hexdigits primary-flags + 24 hexdigits reserved-data (all zero) */
+    tmp_string = bg_sprintf("DLNA.ORG_FLAGS=%08x000000000000000000000000", flags);
+    if(ret)
+      ret = gavl_strcat(ret, ";");
+    ret = gavl_strcat(ret, tmp_string);
+    free(tmp_string);
+    
+    return ret;
+    }
+  
+  return NULL;
+  }
+static const struct
+  {
+  const char * mimetype;
+  int max_width;
+  int max_height;
+  const char * profile;
+  }
+image_profiles[] =
+  {
+    {
+       .mimetype   = "image/jpeg",
+       .max_width  = 160,
+       .max_height = 160,
+       .profile    = "JPEG_TN",
+    },
+    {
+       .mimetype   = "image/jpeg",
+       .max_width  = 640,
+       .max_height = 480,
+       .profile    = "JPEG_SM",
+    },
+    {
+       .mimetype   = "image/jpeg",
+       .max_width  = 1024,
+       .max_height = 768,
+       .profile    = "JPEG_MED",
+    },
+    {
+       .mimetype   = "image/jpeg",
+       .max_width  = 4096,
+       .max_height = 4096,
+       .profile    = "JPEG_LRG",
+    },
+    {
+       .mimetype   = "image/png",
+       .max_width  = 160,
+       .max_height = 160,
+       .profile    = "PNG_TN",
+    },
+    {
+       .mimetype   = "image/png",
+       .max_width  = 4096,
+       .max_height = 4096,
+       .profile    = "PNG_LRG",
+    },
+    { /* */ }
+  };
+
+const char * bg_get_dlna_image_profile(const char * mimetype, int width, int height)
+  {
+  int i = 0;
+  while(image_profiles[i].mimetype)
+    {
+    if(!strcmp(mimetype, image_profiles[i].mimetype) &&
+       (width <= image_profiles[i].max_width) &&
+       (height <= image_profiles[i].max_height))
+      return image_profiles[i].profile;
+    else
+      i++;
+    }
+  return NULL;
+  }

@@ -35,6 +35,9 @@
 // #define DUMP_SUBTITLE
 // #define DUMP_TIMESTAMPS
 
+#define NOSKIP
+
+
 static int handle_message(void * data, gavl_msg_t * msg)
   {
   bg_player_t * p = data;
@@ -445,6 +448,7 @@ void * bg_player_ov_thread(void * data)
         gavl_time_delay(&diff_time);
         s->skip = 0;
         }
+#ifndef NOSKIP
       /* Drop frame */
       else if(diff_time < -GAVL_TIME_SCALE / 20) // 50 ms
         {
@@ -452,6 +456,7 @@ void * bg_player_ov_thread(void * data)
         s->skip++;
         continue;
         }
+#endif
       }
     
     s->last_time = current_time;

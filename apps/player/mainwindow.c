@@ -826,6 +826,12 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
                                                  bg_http_server_get_root_url(w->g->srv));
                   if((w->g->player_backend = bg_backend_handle_create(&dev, tmp_string)))
                     w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
+                  else
+                    {
+                    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
+                    break;
+                    }
+                  
                   free(tmp_string);
                   }
                 

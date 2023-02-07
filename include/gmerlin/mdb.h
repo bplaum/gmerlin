@@ -76,6 +76,9 @@ bg_cfg_ctx_t * bg_mdb_get_cfg(bg_mdb_t * db);
 int bg_mdb_browse_object_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
 int bg_mdb_browse_children_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
 
+void bg_mdb_set_browse_obj_response(gavl_msg_t * msg, const gavl_dictionary_t * obj,
+                                    const gavl_msg_t * cmd, int idx, int total);
+
 void bg_mdb_set_browse_children_response(gavl_msg_t * res, const gavl_array_t * children,
                                          const gavl_msg_t * cmd, int * idx, int last, int total);
 

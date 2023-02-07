@@ -37,225 +37,7 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "didl"
 
-static const struct
-  {
-  const char * mimetype;
-  int max_width;
-  int max_height;
-  const char * profile;
-  }
-image_profiles[] =
-  {
-    {
-       .mimetype   = "image/jpeg",
-       .max_width  = 160,
-       .max_height = 160,
-       .profile    = "JPEG_TN",
-    },
-    {
-       .mimetype   = "image/jpeg",
-       .max_width  = 640,
-       .max_height = 480,
-       .profile    = "JPEG_SM",
-    },
-    {
-       .mimetype   = "image/jpeg",
-       .max_width  = 1024,
-       .max_height = 768,
-       .profile    = "JPEG_MED",
-    },
-    {
-       .mimetype   = "image/jpeg",
-       .max_width  = 4096,
-       .max_height = 4096,
-       .profile    = "JPEG_LRG",
-    },
-    {
-       .mimetype   = "image/png",
-       .max_width  = 160,
-       .max_height = 160,
-       .profile    = "PNG_TN",
-    },
-    {
-       .mimetype   = "image/png",
-       .max_width  = 4096,
-       .max_height = 4096,
-       .profile    = "PNG_LRG",
-    },
-    { /* */ }
-  };
 
-const char * bg_didl_get_dlna_image_profile(const char * mimetype, int width, int height)
-  {
-  int i = 0;
-  while(image_profiles[i].mimetype)
-    {
-    if(!strcmp(mimetype, image_profiles[i].mimetype) &&
-       (width <= image_profiles[i].max_width) &&
-       (height <= image_profiles[i].max_height))
-      return image_profiles[i].profile;
-    else
-      i++;
-    }
-  return NULL;
-  }
-
-// DLNA flags
-
-#define DLNA_SenderPacedFlag      (1<<31)
-#define DLNA_lop_npt              (1<<30)
-#define DLNA_lop_bytes            (1<<29)
-#define DLNA_playcontainer_param  (1<<28)
-#define DLNA_s_0_Increasing       (1<<27)
-#define DLNA_s_N_Increasing       (1<<26)
-#define DLNA_rtsp_pause           (1<<25)
-#define DLNA_tm_s                 (1<<24)
-#define DLNA_tm_i                 (1<<23)
-#define DLNA_tm_b                 (1<<22)
-#define DLNA_http_stalling        (1<<21)
-#define DLNA_1_5_version_flag     (1<<20)
-
-char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
-                                    const gavl_dictionary_t * uri,
-                                    int can_seek_http, int can_seek_dlna)
-  {
-  uint32_t flags;
-  
-  const char * klass;
-
-  const gavl_dictionary_t * m1 = gavl_track_get_metadata(track);
-
-#if 0
-  fprintf(stderr, "bg_get_dlna_content_features\n");
-  gavl_dictionary_dump(m1, 2);
-  fprintf(stderr, "uri:\n");
-  gavl_dictionary_dump(uri, 2);
-#endif
-  
-  
-  if(!(klass = gavl_dictionary_get_string(m1, GAVL_META_MEDIA_CLASS)))
-    return  NULL;
-  
-  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_IMAGE))
-    {
-    int width  = -1;
-    int height = -1;
-    const char * mimetype = NULL;
-    const char * profile_id;
-
-    if(gavl_dictionary_get_int(m1, GAVL_META_WIDTH, &width) &&
-       gavl_dictionary_get_int(m1, GAVL_META_HEIGHT, &height) &&
-       (mimetype = gavl_dictionary_get_string(uri, GAVL_META_MIMETYPE)) &&
-       (profile_id = bg_didl_get_dlna_image_profile(mimetype, width, height)))
-      return bg_sprintf("DLNA.ORG_PN=%s", profile_id);
-    else
-      return NULL;
-    }
-  
-  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) ||
-     gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
-    {
-    const char * profile_id = NULL;
-    const char * mimetype = NULL;
-    const char * location = NULL;
-    const char * format   = NULL;
-    
-    char * ret = NULL;
-    char * tmp_string;
-
-    int is_http_media_uri;
-    
-    // TimeSeekRange.dlna.org: npt=00:05:35.3-00:05:37.5 
-    // X-AvailableSeekRange: 1 npt=00:05:35.3-00:05:37.5 
-    
-    location = gavl_dictionary_get_string(uri, GAVL_META_URI);
-    mimetype = gavl_dictionary_get_string(uri, GAVL_META_MIMETYPE);
-    format = gavl_dictionary_get_string(uri, GAVL_META_FORMAT);
-
-    if(!gavl_string_starts_with(location, "http://") &&
-       !gavl_string_starts_with(location, "https://"))
-      return NULL;
-    
-    //    fprintf(stderr, "Audio mimetype %s\n", mimetype);
-    
-    if(mimetype)
-      {
-      if(!strcmp(mimetype, "audio/mpeg") &&
-         format && !strcmp(format, GAVL_META_FORMAT_MP3))
-        profile_id = "MP3";
-
-      /* LPCM */
-      else if(gavl_string_starts_with(mimetype, "audio/L16;"))
-        profile_id = "LPCM";
-      else
-        return NULL;
-      }
-    
-    /* Check if we can seek. It is only possible for the mediafile handler. */
-    is_http_media_uri = bg_is_http_media_uri(location);
-    
-    // DLNA.ORG_PN
-    
-    if(profile_id)
-      {
-      tmp_string = bg_sprintf("DLNA.ORG_PN=%s", profile_id);
-
-      if(ret)
-        ret = gavl_strcat(ret, ";");
-      
-      ret = gavl_strcat(ret, tmp_string);
-      free(tmp_string);
-      }
-   
-    // DLNA.ORG_OP
-    tmp_string = bg_sprintf("DLNA.ORG_OP=%d%d", can_seek_dlna, can_seek_http);
-    if(ret)
-      ret = gavl_strcat(ret, ";");
-    ret = gavl_strcat(ret, tmp_string);
-    free(tmp_string);
-
-    // DLNA.ORG_FLAGS
-    flags = 0;
-    
-    
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-       !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST))
-      flags |= DLNA_SenderPacedFlag;
-
-    // #define DLNA_lop_npt              (1<<30) // Limited Random Access Data Availability
-    // #define DLNA_lop_bytes            (1<<29) // Limited Random Access Data Availability
-    // #define DLNA_playcontainer_param  (1<<28) // DLNA PlayContainer URI
-
-    /* Would be used only for seeking in live-streams */
-    // #define DLNA_s_0_Increasing       (1<<27) // Byte start position increasing
-    // #define DLNA_s_N_Increasing       (1<<26) // Byte end position increasing
-
-    // #define DLNA_rtsp_pause           (1<<25)
-
-    flags |= DLNA_tm_s; // Stream is fast enough for realtime rendering (Streaming Mode Transfer Flag)
-    
-    // #define DLNA_tm_i                 (1<<23) //  Setting the tm-i flag to true for Audio-only or AV content is expressly prohibited
-
-    if(is_http_media_uri)
-      {
-      flags |= DLNA_tm_b;
-      flags |= DLNA_http_stalling;
-      }
-    
-    flags |= DLNA_1_5_version_flag;
-
-    /* 8 hexdigits primary-flags + 24 hexdigits reserved-data (all zero) */
-    tmp_string = bg_sprintf("DLNA.ORG_FLAGS=%08x000000000000000000000000", flags);
-    if(ret)
-      ret = gavl_strcat(ret, ";");
-    ret = gavl_strcat(ret, tmp_string);
-    free(tmp_string);
-    
-    return ret;
-    }
-  
-  return NULL;
-  }
 
 
 static void remove_ns(char * filter_tag)
@@ -390,19 +172,6 @@ xmlNodePtr bg_didl_add_element(xmlDocPtr doc,
   return ret;
   }
 
-void bg_didl_set_class(xmlDocPtr doc,
-                       xmlNodePtr node,
-                       const char * klass)
-  {
-  bg_didl_add_element(doc, node, "upnp:class", klass);
-  }
-
-void bg_didl_set_title(xmlDocPtr doc,
-                           xmlNodePtr node,
-                           const char * title)
-  {
-  bg_didl_add_element(doc, node, "dc:title", title);
-  }
 
 int bg_didl_filter_element(const char * name, char ** filter)
   {
@@ -411,6 +180,9 @@ int bg_didl_filter_element(const char * name, char ** filter)
   if(!filter)
     return 1;
 
+  if((pos = strchr(name, ':')))
+    name = pos+1;
+  
   while(filter[i])
     {
     if(!strcmp(filter[i], name))
@@ -456,81 +228,346 @@ int bg_didl_filter_attribute(const char * element, const char * attribute, char 
   return 0;
   }
 
-xmlNodePtr bg_didl_add_element_string(xmlDocPtr doc,
-                                    xmlNodePtr node,
-                                    const char * name,
-                                    const char * content, char ** filter)
+
+/* Class names */
+
+static const struct
   {
-  if(!bg_didl_filter_element(name, filter))
-    return NULL;
-  return bg_didl_add_element(doc, node, name, content);
+  const char * gavl_class;
+  const char * didl_class;
+  }
+class_names[] =
+  {
+    { GAVL_META_MEDIA_CLASS_AUDIO_FILE,         "object.item.audioItem" },
+    { GAVL_META_MEDIA_CLASS_VIDEO_FILE,         "object.item.videoItem" },
+    { GAVL_META_MEDIA_CLASS_SONG,               "object.item.audioItem.musicTrack" },
+    { GAVL_META_MEDIA_CLASS_MOVIE,              "object.item.videoItem.movie" },
+    { GAVL_META_MEDIA_CLASS_TV_EPISODE,         "object.item.videoItem.movie" },
+    { GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST,    "object.item.audioItem.audioBroadcast" },
+    { GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST,    "object.item.videoItem.videoBroadcast" },
+    { GAVL_META_MEDIA_CLASS_IMAGE,              "object.item.imageItem" },
+    
+    
+    /* Container values */
+    { GAVL_META_MEDIA_CLASS_CONTAINER,          "object.container" },
+    { GAVL_META_MEDIA_CLASS_MUSICALBUM,         "object.container.album.musicAlbum" },
+    { GAVL_META_MEDIA_CLASS_PLAYLIST,           "object.container.playlistContainer" },
+    //    { GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR,    "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR, "object.container" },
+    { GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST,   "object.container.person.musicArtist" },
+    //    { GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY,  "object.container" },
+    { GAVL_META_MEDIA_CLASS_CONTAINER_GENRE,    "object.container.genre" },
+    //    { GAVL_META_MEDIA_CLASS_TV_SEASON,          "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_TV_SHOW,            "object.container" },
+    { GAVL_META_MEDIA_CLASS_DIRECTORY,          "object.container.storageFolder" },
+        
+    /* Root Containers */
+    //    { GAVL_META_MEDIA_CLASS_ROOT,               "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,   "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_SONGS,         "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,     "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,        "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,      "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO,      "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,   "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,        "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,       "object.container" },
+    //    { GAVL_META_MEDIA_CLASS_ROOT_INCOMING,      "object.container" },
+    { /* End */ }
+  };
+
+static const char * class_gavl_to_didl(const char * gavl_class)
+  {
+  int i = 0;
+  
+  while(class_names[i].gavl_class)
+    {
+    if(!strcmp(class_names[i].gavl_class, gavl_class))
+      return class_names[i].didl_class;
+    i++;
+    }
+
+  if(gavl_string_starts_with(gavl_class, "container"))
+    return "object.container";
+  else if(gavl_string_starts_with(gavl_class, GAVL_META_MEDIA_CLASS_AUDIO_FILE))
+    return "object.item.audioItem";
+  else if(gavl_string_starts_with(gavl_class, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+    return "object.item.videoItem";
+  else
+    return "object.item";
   }
 
-xmlNodePtr bg_didl_add_element_int(xmlDocPtr doc,
-                                       xmlNodePtr node,
-                                       const char * name,
-                                       int64_t content, char ** filter)
+static const char * class_didl_to_gavl(const char * didl_class)
   {
-  char buf[128];
-  if(!bg_didl_filter_element(name, filter))
-    return NULL;
-  snprintf(buf, 127, "%"PRId64, content);
-  return bg_didl_add_element(doc, node, name, buf);
-  }
+  int i = 0;
+  
+  while(class_names[i].gavl_class)
+    {
+    if(!strcmp(class_names[i].didl_class, didl_class))
+      return class_names[i].gavl_class;
+    i++;
+    }
 
-/* Filtering must be done by the caller!! */
-void bg_didl_set_attribute_int(xmlNodePtr node, const char * name, int64_t val)
-  {
-  char buf[128];
-  snprintf(buf, 127, "%"PRId64, val);
-  BG_XML_SET_PROP(node, name, buf);
+  if(gavl_string_starts_with(didl_class, "object.container"))
+    return GAVL_META_MEDIA_CLASS_CONTAINER;
+  else if(gavl_string_starts_with(didl_class, "object.item.audioItem"))
+    return GAVL_META_MEDIA_CLASS_AUDIO_FILE;
+  else if(gavl_string_starts_with(didl_class, "object.item.videoItem"))
+    return GAVL_META_MEDIA_CLASS_VIDEO_FILE;
+  else if(gavl_string_starts_with(didl_class, "object.item.imageItem"))
+    return GAVL_META_MEDIA_CLASS_IMAGE;
+  
+  return NULL;
+  
   }
 
 /* TO / From internal metadata */
 
-static const struct
+#define FLAG_IS_INTEGER    (1<<0)
+#define FLAG_IS_MULTI_DIDL (1<<1)
+#define FLAG_IS_MULTI_GAVL (1<<2)
+#define FLAG_IS_URI        (1<<3) // didl URIs need to be escaped
+#define FLAG_REQUIRED      (1<<4) // Will never be filtered
+
+typedef struct
   {
   const char * gavl_name;
   const char * didl_name;
-  }
-gavl_didl[] =
+  int flags;
+  } name_tab_t;
+
+static const name_tab_t
+gavl_didl_names[] =
   {
-    {GAVL_META_TITLE,              "dc:title"    },
-    {GAVL_META_ARTIST,             "upnp:artist" },
-    {GAVL_META_ALBUM,              "upnp:album" },
-    {GAVL_META_GENRE,              "upnp:genre" },
-    {GAVL_META_TRACKNUMBER,        "upnp:originalTrackNumber" },
-    {GAVL_META_ACTOR,              "upnp:actor" },
-    {GAVL_META_DIRECTOR,           "upnp:director" },
-    {GAVL_META_PLOT,               "upnp:longDescription" },
+    // http://upnp.org/specs/av/UPnP-av-ContentDirectory-v4-Service.pdf
+    {GAVL_META_ARTIST,             "upnp:artist",   },
+    {GAVL_META_ARTIST,             "dc:creator",  FLAG_IS_MULTI_DIDL|FLAG_IS_MULTI_GAVL   },
+    {GAVL_META_ACTOR,              "upnp:actor",  FLAG_IS_MULTI_DIDL|FLAG_IS_MULTI_GAVL   },
+    {GAVL_META_AUTHOR,             "upnp:author", FLAG_IS_MULTI_DIDL|FLAG_IS_MULTI_GAVL   },
+    {GAVL_META_DIRECTOR,           "upnp:director", FLAG_IS_MULTI_DIDL|FLAG_IS_MULTI_GAVL },
+
+    {GAVL_META_GENRE,              "upnp:genre", FLAG_IS_MULTI_DIDL|FLAG_IS_MULTI_GAVL    },
+    {GAVL_META_ALBUM,              "upnp:album", FLAG_IS_MULTI_DIDL },
+    
+    {GAVL_META_TITLE,              "dc:title",    FLAG_REQUIRED },
+    {GAVL_META_TRACKNUMBER,        "upnp:originalTrackNumber", FLAG_IS_INTEGER },
+    {GAVL_META_PLOT,               "upnp:longDescription",  },
     {GAVL_META_DATE,               "dc:date" },
     { /* End */ }
   };
 
-static int get_year(xmlNodePtr node)
+
+static const name_tab_t * name_by_gavl(const name_tab_t * arr, const char * gavl_name)
   {
-  const char * str;
-  int dummy1, dummy2, ret;
+  int idx = 0;
 
-  str = bg_xml_node_get_child_content(node, "date");
-
-  if(str && (sscanf(str, "%d-%d-%d", &ret, &dummy1, &dummy2) == 3))
-    return ret;
-  else
-    return -1;
+  while(arr[idx].gavl_name)
+    {
+    if(!strcmp(arr[idx].gavl_name, gavl_name))
+      return &arr[idx];
+    idx++;
+    }
+  return NULL;
   }
 
-void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
+static const name_tab_t * name_by_didl(const name_tab_t * arr, const char * didl_name)
   {
-  int i;
-  xmlNodePtr child;
+  int idx = 0;
   const char * pos;
+  
+  while(arr[idx].gavl_name)
+    {
+    if(!(pos = strchr(arr[idx].didl_name, ':')))
+      pos = arr[idx].didl_name;
+    else
+      pos++;
+    
+    if(!strcmp(pos, didl_name))
+      return &arr[idx];
+    idx++;
+    }
+  return NULL;
+  }
+  
+static int node_didl_to_gavl(const xmlNodePtr node,
+                             gavl_dictionary_t * metadata)
+  {
+  const char * val;
+  const name_tab_t * tab;
+
+  if(!(tab = name_by_didl(gavl_didl_names, (const char*)node->name)))
+    return 0;
+
+  if(!(val = bg_xml_node_get_text_content(node)))
+    return 1;
+  
+  if(tab->flags & FLAG_IS_MULTI_GAVL)
+    gavl_metadata_append(metadata, tab->gavl_name, val);
+  else if(tab->flags & FLAG_IS_INTEGER)
+    gavl_dictionary_set_int(metadata, tab->gavl_name, atoi(val));
+  else
+    gavl_dictionary_set_string(metadata, tab->gavl_name, val);
+  return 1;
+  }
+
+typedef struct 
+  {
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  char ** filter;
+  
+  } gavl_to_didl_t;
+
+// gavl_dictionary_foreach_func
+static void node_gavl_to_didl(void * priv, const char * name,
+                              const gavl_value_t * val)
+  {
+  const gavl_value_t * item_val;
+  const char * item;
+  const name_tab_t * tab;
+  
+  gavl_to_didl_t * d = priv;
+
+  if(!(tab = name_by_gavl(gavl_didl_names, name)))
+    return;
+  
+  if(!bg_didl_filter_element(tab->didl_name, d->filter))
+    return;
+  
+  if(tab->flags & FLAG_IS_INTEGER)
+    {
+    int val_i = 0;
+
+    if(gavl_value_get_int(val, &val_i))
+      {
+      char * tmp_string = gavl_sprintf("%d", val_i);
+      bg_didl_add_element(d->doc, d->node, tab->didl_name, tmp_string);
+      free(tmp_string);
+      }
+    }
+  else if(tab->flags & FLAG_IS_MULTI_DIDL)
+    {
+    int i = 0;
+    
+    while((item_val = gavl_value_get_item(val, i)) &&
+          (item = gavl_value_get_string(val)))
+      {
+      bg_didl_add_element(d->doc, d->node, tab->didl_name, item);
+      i++;
+      }
+        
+    }
+  else
+    {
+    if((item_val = gavl_value_get_item(val, 0)) &&
+       (item = gavl_value_get_string(val)))
+      bg_didl_add_element(d->doc, d->node, tab->didl_name, item);
+    }
+  return;
+  }
+
+/* res translation */
+
+static const name_tab_t
+res_attrs[] =
+  {
+    {GAVL_META_BITRATE,            "bitrate",          FLAG_IS_INTEGER },
+    {GAVL_META_AUDIO_SAMPLERATE,   "sampleFrequency ", FLAG_IS_INTEGER },
+    {GAVL_META_AUDIO_CHANNELS,     "nrAudioChannels",  FLAG_IS_INTEGER },
+    { /* End */ }
+  };
+
+static void res_to_src(const xmlNodePtr node, gavl_dictionary_t * src)
+  {
+  int idx = 0;
+  char * var;
+  while(res_attrs[idx].didl_name)
+    {
+    if((var = BG_XML_GET_PROP(node, res_attrs[idx].didl_name)))
+      {
+      if(res_attrs[idx].flags & FLAG_IS_INTEGER)
+        gavl_dictionary_set_int(src, res_attrs[idx].gavl_name, atoi(var));
+      free(var);
+      }
+    idx++;
+    }
+
+  if((var = BG_XML_GET_PROP(node, "resolution")))
+    {
+    int w, h;
+    if(sscanf(var, "%dx%d", &w, &h) == 2)
+      {
+      gavl_dictionary_set_int(src, GAVL_META_WIDTH, w);
+      gavl_dictionary_set_int(src, GAVL_META_HEIGHT, h);
+      }
+    free(var);
+    }
+  }
+
+typedef struct
+  {
+  xmlNodePtr node;
+  char ** filter;
+  } src_to_res_t;
+
+static void src_to_res_func(void * priv, const char * name,
+                            const gavl_value_t * val)
+  {
+  src_to_res_t * data = priv;
+
+  const name_tab_t * tab;
+
+  if(!(tab = name_by_gavl(res_attrs, name)))
+    return;
+  
+  if(!bg_didl_filter_attribute("res", tab->didl_name, data->filter))
+    return;
+
+  if(tab->flags & FLAG_IS_INTEGER)
+    {
+    int i = 0;
+
+    if(gavl_value_get_int(val, &i))
+      {
+      char * tmp_string;
+      tmp_string = gavl_sprintf("%d", i);
+      BG_XML_SET_PROP(data->node, tab->didl_name, tmp_string);
+      free(tmp_string);
+      }
+    }
+  
+  }
+
+static void src_to_res(const gavl_dictionary_t * src, xmlNodePtr node, char ** filter)
+  {
+  src_to_res_t data;
+  int w, h;
+  
+  data.node = node;
+  data.filter = filter;
+  
+  gavl_dictionary_foreach(src, src_to_res_func, &data);
+
+  if(bg_didl_filter_attribute("res", "resolution", filter) &&
+     gavl_dictionary_get_int(src, GAVL_META_WIDTH, &w) &&
+     gavl_dictionary_get_int(src, GAVL_META_HEIGHT, &h))
+    {
+    char * tmp_string;
+    tmp_string = gavl_sprintf("%dx%d", w, h);
+    BG_XML_SET_PROP(data.node, "resolution", tmp_string);
+    free(tmp_string);
+    }
+  
+  }
+
+
+void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl)
+  {
+  xmlNodePtr child;
   const char * gavl_name;
-  char * gavl_name_nc = NULL;
-  char * label = NULL;
   char * var;
   
-  gavl_value_t val;
+  gavl_dictionary_t * m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
   
   child = didl->children;
 
@@ -538,6 +575,33 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
     {
     gavl_dictionary_set_string(m, GAVL_META_ID, var);
     free(var);
+    }
+
+  if((var = BG_XML_GET_PROP(didl, "childCount")))
+    {
+    int num_children;
+    int num_container_children = -1;
+    int num_item_children = -1;
+
+    num_children = atoi(var);
+    free(var);
+
+    if((var = BG_XML_GET_PROP(didl, "childContainerCount")))
+      {
+      num_container_children = atoi(var);
+      num_item_children = num_children - num_container_children;
+      free(var);
+      }
+    else
+      {
+      /* Ugly but should be harmless */
+      num_container_children = num_children;
+      num_item_children = num_children;
+      }
+    
+    gavl_dictionary_set_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, num_container_children);
+    gavl_dictionary_set_int(m, GAVL_META_NUM_ITEM_CHILDREN,      num_item_children);
+    gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN,           num_children);
     }
   
   while(child)
@@ -548,11 +612,17 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
       continue;
       }
 
+    if(node_didl_to_gavl(child, m))
+      {
+      child = child->next;
+      continue;
+      }
+    
     if(!strcmp((char*)child->name, "res"))
       {
       gavl_dictionary_t * dict = NULL;
 
-      if(!gavl_dictionary_get_string(m, GAVL_META_APPROX_DURATION) &&
+      if(!gavl_dictionary_get(m, GAVL_META_APPROX_DURATION) &&
          (var = BG_XML_GET_PROP(child, "duration")))
         {
         gavl_time_t dur;
@@ -578,43 +648,7 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
         }
             
       if(dict)
-        {
-        gavl_value_init(&val);
-        
-        if((var = BG_XML_GET_PROP(child, "sampleFrequency")))
-          {
-          gavl_value_set_int(&val, atoi(var)); 
-          gavl_dictionary_set_nocopy(dict, GAVL_META_AUDIO_SAMPLERATE, &val);
-          free(var);
-          }
-        if((var = BG_XML_GET_PROP(child, "nrAudioChannels")))
-          {
-          gavl_value_set_int(&val, atoi(var)); 
-          gavl_dictionary_set_nocopy(dict, GAVL_META_AUDIO_CHANNELS, &val);
-          free(var);
-          }
-        if((var = BG_XML_GET_PROP(child, "bitrate")))
-          {
-          gavl_value_set_int(&val, 8*atoi(var)); 
-          gavl_dictionary_set_nocopy(dict, GAVL_META_BITRATE, &val);
-          free(var);
-          }
-        if((var = BG_XML_GET_PROP(child, "resolution")))
-          {
-          int w, h;
-          if(sscanf(var, "%dx%d", &w, &h) == 2)
-            {
-            gavl_value_set_int(&val, w);
-            gavl_dictionary_set_nocopy(dict, GAVL_META_WIDTH, &val);
-            
-            gavl_value_set_int(&val, h);
-            gavl_dictionary_set_nocopy(dict, GAVL_META_HEIGHT, &val);
-            }
-          
-          free(var);
-          }
-        
-        }
+        res_to_src(child, dict);
       
       child = child->next;
       continue;
@@ -635,113 +669,23 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
       }
     else if(!strcmp((char*)child->name, "class"))
       {
-      const char * gmerlin_class = NULL;
-      const char * upnp_class = bg_xml_node_get_text_content(child);
-
-      if(!strncasecmp(upnp_class, "object.item.videoItem", 21))
-        {
-        if(!strcmp(upnp_class, "object.item.videoItem.movie"))
-          {
-          int year;
-          const char * title = bg_xml_node_get_child_content(didl, "title");
-          if((year = get_year(didl)) > 0)
-            {
-            label = bg_sprintf("%s (%d)", title, year);
-            gmerlin_class = GAVL_META_MEDIA_CLASS_MOVIE;
-            }
-          else
-            gmerlin_class = GAVL_META_MEDIA_CLASS_VIDEO_FILE;
-          }
-        else
-          gmerlin_class = GAVL_META_MEDIA_CLASS_VIDEO_FILE;
-        }
-      else if(!strncasecmp(upnp_class, "object.item.audioItem", 21))
-        {
-        if(!strcmp(upnp_class, "object.item.audioItem.audioBroadcast"))
-          {
-          gmerlin_class = GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST;
-          }
-        else if(!strcmp(upnp_class, "object.item.audioItem.musicTrack"))
-          {
-          const char * artist;
-          const char * album = bg_xml_node_get_child_content(didl, "album");
-          const char * title = bg_xml_node_get_child_content(didl, "title");
-
-          if(!(artist = bg_xml_node_get_child_content(didl, "artist")))
-            artist = bg_xml_node_get_child_content(didl, "creator");
-        
-          if(artist && title && album)
-            {
-            label = bg_sprintf("%s - %s", artist, title);
-            gmerlin_class = GAVL_META_MEDIA_CLASS_SONG;
-            }
-          else
-            gmerlin_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
-          }
-        else
-          gmerlin_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
-        }
-      else if(!strncasecmp(upnp_class, "object.item.imageItem", 21))
-        gmerlin_class = GAVL_META_MEDIA_CLASS_IMAGE;
+      const char * gavl_class;
+      const char * upnp_class;
       
-      if(gmerlin_class)
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, gmerlin_class);
+      if((upnp_class = bg_xml_node_get_text_content(child)) &&
+         (gavl_class = class_didl_to_gavl(upnp_class)))
+        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, gavl_class);
       
       child = child->next;
       continue;
       }
     
-    gavl_name = NULL;
-
-    //    fprintf(stderr, "name: %s\n", child->name);
-    
-    i = 0;
-    while(gavl_didl[i].gavl_name)
-      {
-      if((pos = strchr(gavl_didl[i].didl_name, ':')))
-        pos++;
-      else
-        pos = gavl_didl[i].didl_name;
-
-      if(!strcmp(pos, (char*)child->name))
-        {
-        gavl_name = gavl_didl[i].gavl_name;
-        break;
-        }
-      i++;
-      }
-    
-    if(!gavl_name)
-      {
-      if(!child->ns)
-        {
-        child = child->next;
-        continue;
-        }
-      
-      /* WARNING: This assumes standard prefixes */
-      gavl_name_nc = bg_sprintf("%s:%s", child->ns->prefix, child->name);
-      gavl_name = gavl_name_nc;
-      }
-    
-    gavl_metadata_append(m, gavl_name, bg_xml_node_get_text_content(child));
-    
-    if(gavl_name_nc)
-      {
-      free(gavl_name_nc);
-      gavl_name_nc = NULL;
-      }
-
     child = child->next;
+
     }
 
-  if(!label)
-    label = gavl_strdup(bg_xml_node_get_child_content(didl, "title"));
-  if(!label)
-    label = gavl_strdup(TR("Unnamed item"));
-
-  gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, label);
-
+  gavl_track_set_label(track);
+  
   /* If we just loaded a movie, move image res entries from src to poster uri */
 
   if((gavl_name = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
@@ -771,78 +715,7 @@ void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl)
       else
         idx++;
       }
-    
-    
     }
-    
-  
-  }
-
-static const struct
-  {
-  const char * gavl_name;
-  const char * upnp_name;
-  }
-class_names[] =
-  {
-    { GAVL_META_MEDIA_CLASS_AUDIO_FILE,         "object.item.audioItem" },
-    { GAVL_META_MEDIA_CLASS_VIDEO_FILE,         "object.item.videoItem" },
-    { GAVL_META_MEDIA_CLASS_SONG,               "object.item.audioItem.musicTrack" },
-    { GAVL_META_MEDIA_CLASS_MOVIE,              "object.item.videoItem.movie" },
-    { GAVL_META_MEDIA_CLASS_TV_EPISODE,         "object.item.videoItem.movie" },
-    { GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST,    "object.item.audioItem.audioBroadcast" },
-    { GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST,    "object.item.videoItem.videoBroadcast" },
-    { GAVL_META_MEDIA_CLASS_IMAGE,              "object.item.imageItem" },
-        
-    /* Container values */
-    { GAVL_META_MEDIA_CLASS_CONTAINER,          "object.container" },
-    { GAVL_META_MEDIA_CLASS_MUSICALBUM,         "object.container.album.musicAlbum" },
-    { GAVL_META_MEDIA_CLASS_PLAYLIST,           "object.container.playlistContainer" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR,    "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR, "object.container" },
-    { GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST,   "object.container.person.musicArtist" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY,  "object.container" },
-    { GAVL_META_MEDIA_CLASS_CONTAINER_GENRE,    "object.container.genre" },
-    //    { GAVL_META_MEDIA_CLASS_TV_SEASON,          "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_TV_SHOW,            "object.container" },
-    { GAVL_META_MEDIA_CLASS_DIRECTORY,          "object.container.storageFolder" },
-        
-    /* Root Containers */
-    //    { GAVL_META_MEDIA_CLASS_ROOT,               "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,   "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_SONGS,         "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,     "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,        "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,      "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO,      "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,   "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,        "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,       "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_INCOMING,      "object.container" },
-    { /* End */ }
-  };
-
-static const char * get_class_name(const gavl_dictionary_t * dict)
-  {
-  int i;
-  const char * gavl_class;
-
-  if(!(gavl_class = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
-    return NULL;
-
-  i = 0;
-  
-  while(class_names[i].gavl_name)
-    {
-    if(!strcmp(class_names[i].gavl_name, gavl_class))
-      return class_names[i].upnp_name;
-    i++;
-    }
-
-  if(gavl_string_starts_with(gavl_class, "container"))
-    return "object.container";
-  
-  return NULL;
   }
 
 xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char ** filter)
@@ -850,11 +723,9 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
   int i;
   const char * id;
   const char * var;
-  const char * klass;
+  const char * gavl_class;
+  const char * didl_class;
   char * tmp_string;
-  xmlNodePtr node;
-  const gavl_value_t * val;
-  int tracknumber;
   
   const char * location;
   const char * mimetype;
@@ -866,7 +737,10 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
 
   const gavl_dictionary_t * m;
 
-
+  gavl_to_didl_t data;
+  data.doc = ret;
+  data.filter = filter;
+  
   if(!track)
     return NULL;
 
@@ -877,137 +751,65 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
   
   //  fprintf(stderr, "bg_track_to_didl\n");
   //  gavl_dictionary_dump(track, 2);
-  
-  if(!(klass = get_class_name(m)))
-    {
-    //    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot convert to DIDL: class missing");
-    
-    //    fprintf(stderr, "Cannot convert to DIDL: class missing\n");
-    //    gavl_dictionary_dump(m, 2);
-    
+
+  if(!(gavl_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+     !(didl_class = class_gavl_to_didl(gavl_class)))
     return NULL;
-    }
-  
-  if(gavl_string_starts_with(klass, "object.container"))
-    node = bg_didl_add_container(ret);
+    
+  if(gavl_string_starts_with(didl_class, "object.container"))
+    data.node = bg_didl_add_container(ret);
   else
-    node = bg_didl_add_item(ret);
+    data.node = bg_didl_add_item(ret);
 
   /* Required properties */
   
-  bg_didl_add_element(ret, node, "upnp:class", klass);
+  bg_didl_add_element(ret, data.node, "upnp:class", didl_class);
   
   if((id = gavl_dictionary_get_string(m, GAVL_META_ID)))
-    BG_XML_SET_PROP(node, "id", id);
+    BG_XML_SET_PROP(data.node, "id", id);
   else
-    BG_XML_SET_PROP(node, "id", "item_id");
+    BG_XML_SET_PROP(data.node, "id", "item_id");
   
   tmp_string = bg_upnp_parent_id_to_upnp(id);
-  BG_XML_SET_PROP(node, "parentID", tmp_string);
+  BG_XML_SET_PROP(data.node, "parentID", tmp_string);
   free(tmp_string);
   
-  BG_XML_SET_PROP(node, "restricted", "1");
+  BG_XML_SET_PROP(data.node, "restricted", "1");
 
   if((var = gavl_dictionary_get_string(m, GAVL_META_TITLE)))
-    bg_didl_add_element(ret, node, "dc:title", var);
+    bg_didl_add_element(ret, data.node, "dc:title", var);
   else if((var = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
-    bg_didl_add_element(ret, node, "dc:title", var);
+    bg_didl_add_element(ret, data.node, "dc:title", var);
 
   if(bg_didl_filter_attribute("container", "childCount", filter) &&
-     gavl_string_starts_with(klass, "object.container"))
+     gavl_string_starts_with(didl_class, "object.container"))
     {
     int num_children = 0;
-
+    
     gavl_dictionary_get_int(m, GAVL_META_NUM_CHILDREN, &num_children);
 
     tmp_string = bg_sprintf("%d", num_children);
-    BG_XML_SET_PROP(node, "childCount", tmp_string);
+    BG_XML_SET_PROP(data.node, "childCount", tmp_string);
     free(tmp_string);
     }
 
-  /* Artist */
-  if(bg_didl_filter_element("artist", filter) &&
-     gavl_dictionary_get_item(m, GAVL_META_ARTIST, 0))
+  if(bg_didl_filter_attribute("container", "childContainerCount", filter) &&
+     gavl_string_starts_with(didl_class, "object.container"))
     {
-    int i = 0;
-    while((val = gavl_dictionary_get_item(m, GAVL_META_ARTIST, i)) &&
-          (var = gavl_value_get_string(val)))
-      {
-      bg_didl_add_element(ret, node, "upnp:artist", var);
-      i++;
-      }
-    }
-
-  /* Genre */
-  if(bg_didl_filter_element("genre", filter) &&
-     gavl_dictionary_get_item(m, GAVL_META_GENRE, 0))
-    {
-    i = 0;
-    while((val = gavl_dictionary_get_item(m, GAVL_META_GENRE, i)) &&
-          (var = gavl_value_get_string(val)))
-      {
-      bg_didl_add_element(ret, node, "upnp:genre", var);
-      i++;
-      }
-    }
-
-  /* Director */
-  if(bg_didl_filter_element("director", filter) &&
-     gavl_dictionary_get_item(m, GAVL_META_DIRECTOR, 0))
-    {
-    i = 0;
-    while((val = gavl_dictionary_get_item(m, GAVL_META_DIRECTOR, i)) &&
-          (var = gavl_value_get_string(val)))
-      {
-      bg_didl_add_element(ret, node, "upnp:director", var);
-      i++;
-      }
-    }
-
-  /* Actor */
-  if(bg_didl_filter_element("actor", filter) &&
-     gavl_dictionary_get_item(m, GAVL_META_ACTOR, 0))
-    {
-    i = 0;
-    while((val = gavl_dictionary_get_item(m, GAVL_META_ACTOR, i)) &&
-          (var = gavl_value_get_string(val)))
-      {
-      bg_didl_add_element(ret, node, "upnp:actor", var);
-      i++;
-      }
-    }
-
-  /* Album  */
-  if(bg_didl_filter_element("album", filter) &&
-     (var = gavl_dictionary_get_string(m, GAVL_META_ALBUM)))
-    {
-    bg_didl_add_element(ret, node, "upnp:album", var);
-    }
-
-  /* Tracknumber */
-  tracknumber = 0;
-
-  if(bg_didl_filter_element("originalTrackNumber", filter) &&
-     gavl_dictionary_get_int(m, GAVL_META_TRACKNUMBER, &tracknumber) &&
-     (tracknumber > 0))
-    {
-    char * tmp_string = bg_sprintf("%d", tracknumber);
-    bg_didl_add_element(ret, node, "upnp:originalTrackNumber", tmp_string);
+    int num_children = 0;
+    
+    gavl_dictionary_get_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, &num_children);
+    
+    tmp_string = bg_sprintf("%d", num_children);
+    BG_XML_SET_PROP(data.node, "childContainerCount", tmp_string);
     free(tmp_string);
     }
+
+  gavl_dictionary_foreach(m, node_gavl_to_didl, &data);
   
-  /* Plot  */
-  if(bg_didl_filter_element("longDescription", filter) &&
-     (var = gavl_dictionary_get_string(m, GAVL_META_PLOT)))
-    {
-    bg_didl_add_element(ret, node, "upnp:longDescription", var);
-    }
-
   /* res */
 
   i = 0;
-
-  
   
   while((src = gavl_metadata_get_src(m, GAVL_META_SRC, i, &mimetype, &location)))
     {
@@ -1045,7 +847,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
 
     uri_encoded = bg_string_to_uri(location, -1);
     
-    child = bg_xml_append_child_node(node, "res", uri_encoded);
+    child = bg_xml_append_child_node(data.node, "res", uri_encoded);
     BG_XML_SET_PROP(child, "protocolInfo", protocol_info);
 
     //    fprintf(stderr, "Protocol info: %s\n", protocol_info);
@@ -1058,7 +860,9 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
       gavl_time_prettyprint_ms(dur, buf);
       BG_XML_SET_PROP(child, "duration", buf);
       }
-    /* TODO: Bitrate, samplerate, channels, resolution */
+    /* Bitrate, samplerate, channels, resolution */
+    src_to_res(src, child, filter);
+
     free(uri_encoded);
     free(protocol_info);
     i++;
@@ -1069,11 +873,13 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
   if(bg_didl_filter_element("albumArtURI", filter))
     {
     if((image_uri = gavl_dictionary_get_image_max_proto(m, GAVL_META_COVER_URL,
+                                                        600, 600, "image/jpeg", "http")) ||
+       (image_uri = gavl_dictionary_get_image_max_proto(m, GAVL_META_POSTER_URL,
                                                         600, 600, "image/jpeg", "http")))
       {
       xmlNodePtr child; 
       uri_encoded = bg_string_to_uri(gavl_dictionary_get_string(image_uri, GAVL_META_URI), -1);
-      child = bg_xml_append_child_node(node, "upnp:albumArtURI", uri_encoded);
+      child = bg_xml_append_child_node(data.node, "upnp:albumArtURI", uri_encoded);
 
       //      fprintf(stderr, "Image URI: %s\n", gavl_dictionary_get_string(image_uri, GAVL_META_URI));
 
@@ -1088,7 +894,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
         if(gavl_dictionary_get_int(image_uri, GAVL_META_WIDTH, &w) &&
            gavl_dictionary_get_int(image_uri, GAVL_META_HEIGHT, &h) &&
            (mimetype = gavl_dictionary_get_string(image_uri, GAVL_META_MIMETYPE)) &&
-           (dlna_id = bg_didl_get_dlna_image_profile(mimetype, w, h)))
+           (dlna_id = bg_get_dlna_image_profile(mimetype, w, h)))
           {
           xmlNsPtr dlna_ns;
           dlna_ns = xmlNewNs(child,
@@ -1103,12 +909,12 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
     else if((var = gavl_dictionary_get_string(m, GAVL_META_LOGO_URL)))
       {
       uri_encoded = bg_string_to_uri(var, -1);
-      bg_xml_append_child_node(node, "upnp:albumArtURI", uri_encoded);
+      bg_xml_append_child_node(data.node, "upnp:albumArtURI", uri_encoded);
       free(uri_encoded);
       }
     }
   
   
-  return node;
+  return data.node;
   }
 

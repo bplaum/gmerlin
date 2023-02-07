@@ -795,9 +795,9 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
           gavl_msg_get_arg_dictionary(msg, 0, &dict);
           
           if(gavl_dictionary_get_int(&dict, BG_BACKEND_TYPE, &type) &&
-             (type == BG_BACKEND_MEDIASERVER) &&
-             (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&
-             !strcmp(protocol, "gmerlin"))
+             (type == BG_BACKEND_MEDIASERVER))
+            //            (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&
+            //              !strcmp(protocol, "gmerlin"))
             {
             //            fprintf(stderr, "Add remote device %s\n", gavl_dictionary_get_string(&dict, GAVL_META_LABEL));
             add_server(be, &dict);

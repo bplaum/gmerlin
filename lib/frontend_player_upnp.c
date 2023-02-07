@@ -611,12 +611,12 @@ static void make_track(gavl_dictionary_t * track,
   
   gavl_dictionary_t * m;
 
-  m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
-
   if((doc = xmlParseMemory(metadata, strlen(metadata))) &&
      (child = bg_xml_find_doc_child(doc, "DIDL-Lite")) &&
      (child = bg_xml_find_node_child(child, "item")))
-    bg_metadata_from_didl(m, child);
+    bg_track_from_didl(track, child);
+  
+  m = gavl_track_get_metadata_nc(track);
   
   if(doc)
     xmlFreeDoc(doc);

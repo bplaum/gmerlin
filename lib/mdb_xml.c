@@ -163,7 +163,9 @@ static void item_from_storage(bg_mdb_backend_t * b,
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, id);
 
   bg_mdb_add_http_uris(b->db, dict);
-  
+
+  //  fprintf(stderr, "Added http uris\n");
+  //  gavl_dictionary_dump(dict, 2);
   }
 
 

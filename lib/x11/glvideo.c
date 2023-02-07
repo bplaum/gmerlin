@@ -272,7 +272,7 @@ static const char * fragment_shader_gl_nocm =
   "  gl_FragColor = texture2D(frame, TexCoord);"
   "  }";
 
-#if 0
+
 static const char * fragment_shader_planar_gl =
   "#version 110\n"
   "varying vec2 TexCoord;" 
@@ -286,7 +286,7 @@ static const char * fragment_shader_planar_gl =
   "  vec4 color = vec4( texture2D(frame, TexCoord).r, texture2D(frame_u, TexCoord).r, texture2D(frame_v, TexCoord).r, 1.0 );\n"
   "  gl_FragColor = colormatrix * color + coloroffset;"
   "  }";
-#endif
+
 
 static const char * fragment_shader_gles_cm =
   "#version 300 es\n"
@@ -328,6 +328,7 @@ static const char * fragment_shader_planar_gles_cm =
   "  FragColor = colormatrix * color + coloroffset;\n"
   "  }";
 
+#if 0
 static const char * fragment_shader_planar_gles_nocm =
   "#version 300 es\n"
   "precision mediump float;\n"
@@ -340,6 +341,7 @@ static const char * fragment_shader_planar_gles_nocm =
   "  {\n"
   "  FragColor = vec4( texture2D(frame, TexCoord).r, texture2D(frame_u, TexCoord).r, texture2D(frame_v, TexCoord).r, 1.0 );\n"
   "  }";
+#endif
 
 static const char * fragment_shader_gles_ext_cm =
   "#version 300 es\n"
@@ -460,11 +462,18 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
     {
     case GAVL_HW_EGL_GL_X11:
-      if(cm)
-        shader[0] = fragment_shader_gl_cm;
+
+      if(background && (num_planes > 1))
+        {
+        shader[0] = fragment_shader_planar_gl;
+        }
       else
-        shader[0] = fragment_shader_gl_nocm;
-      
+        {
+        if(cm)
+          shader[0] = fragment_shader_gl_cm;
+        else
+          shader[0] = fragment_shader_gl_nocm;
+        }
       num = 1;
       break;
     case GAVL_HW_EGL_GLES_X11:
@@ -477,10 +486,7 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
         }
       else if(background && (num_planes > 1))
         {
-        if(cm)
-          shader[0] = fragment_shader_planar_gles_cm;
-        else
-          shader[0] = fragment_shader_planar_gles_nocm;
+        shader[0] = fragment_shader_planar_gles_cm;
         }
       else
         {
@@ -652,8 +658,11 @@ static int init_gl(driver_data_t * d)
   gl_priv_t * priv;
   priv = calloc(1, sizeof(*priv));
   /* Create initial context to check if that works */
-
+#if 0  
   if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GLES_X11, d->win->dpy)))
+#else
+  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GL_X11, d->win->dpy)))
+#endif
     {
     free(priv);
     return 0;
@@ -759,6 +768,9 @@ static int open_gl(driver_data_t * d)
   priv->mode = 0;
   
   //  priv->texture_target = GL_TEXTURE_2D;
+
+  fprintf(stderr, "Open GL\n");
+  gavl_video_format_dump(&w->video_format);
   
   if(w->video_format.hwctx)
     {

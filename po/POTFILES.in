@@ -208,6 +208,7 @@ lib/metadata.c
 lib/httplpcmhandler.c
 lib/frontend_player_upnp.c
 lib/bggavl.c
+lib/multiinput.c
 lib/backend_mpd.c
 lib/cmdline.c
 lib/cfg_registry.c
@@ -268,7 +269,6 @@ lib/transcoder.c
 lib/player_video.c
 lib/cfg_ctx.c
 lib/backend.c
-lib/mbd_streams.c
 lib/gtk/cfg_color.c
 lib/gtk/fileselect.c
 lib/gtk/multiinfo.c
@@ -294,6 +294,7 @@ lib/gtk/aboutwindow.c
 lib/gtk/plugin_multi.c
 lib/gtk/pluginmenu.c
 lib/gtk/gtk_dialog.h
+lib/gtk/dictview.c
 lib/gtk/infowindow.c
 lib/gtk/cfg_multi_list.c
 lib/gtk/vumeter.c
@@ -310,7 +311,6 @@ lib/gtk/cfg_button.c
 lib/gtk/cfg_string.c
 lib/gtk/cfg_dirlist.c
 lib/gtk/backendmenu.c
-lib/mdb_iptv.c
 lib/serverstorage.c
 lib/trackio.c
 lib/mdb_image.c
@@ -468,6 +468,8 @@ apps/renderer/renderer.c
 apps/renderer/renderer.h
 apps/renderer/gmerlin-renderer.c
 apps/remote/gmerlin-remote.c
+apps/toys/energenie.c
+apps/toys/shellyplug.c
 apps/mediainfo/gmerlin-mediainfo.c
 apps/cmdlineplayer/gmerlin-play.c
 apps/transcoder/main.c

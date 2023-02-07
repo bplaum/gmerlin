@@ -316,7 +316,7 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   int port = -1;
   char * request_host = NULL;
 
-  gavl_dictionary_t * dict;
+  gavl_dictionary_t * req_vars;
   gavl_dictionary_init(s);
   
   gavl_dictionary_set_string(s, BG_SOAP_META_FUNCTION, function);
@@ -328,8 +328,10 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_ARGS_IN);
   gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_ARGS_OUT);
   gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_RES_HDR);
+
+  gavl_dictionary_set_string(s, GAVL_META_URI, control_uri);
   
-  dict = gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_REQ_HDR);
+  req_vars = gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_REQ_VARS);
   
   if(!bg_url_split(control_uri, NULL, NULL, NULL, &host, &port, &path))
     goto fail;
@@ -345,16 +347,14 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   else
     request_host = bg_sprintf("%s:%d", host, port);
   
-  gavl_http_request_init(dict, "POST", path, "HTTP/1.1");
-  
-  gavl_dictionary_set_string(dict, "HOST", request_host);
-  gavl_dictionary_set_string(dict, "Connection", "keep-alive");
+  gavl_dictionary_set_string(req_vars, "HOST", request_host);
+  gavl_dictionary_set_string(req_vars, "Connection", "keep-alive");
   
   tmp_string = bg_sprintf("\"urn:schemas-upnp-org:service:%s:%d#%s\"",
                           service, version, function);
 
-  gavl_dictionary_set_string_nocopy(dict, "SOAPACTION", tmp_string);
-  gavl_dictionary_set_string(dict, "Content-Type", "text/xml; charset=\"utf-8\"");
+  gavl_dictionary_set_string_nocopy(req_vars, "SOAPACTION", tmp_string);
+  gavl_dictionary_set_string(req_vars, "Content-Type", "text/xml; charset=\"utf-8\"");
 
   ret = 1;
   fail:
@@ -368,6 +368,7 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   return ret;
   }
 
+#if 0
 static int connect_inet(const gavl_dictionary_t * s)
   {
   int ret = -1;
@@ -573,9 +574,123 @@ static int bg_soap_request_read_res(gavl_dictionary_t * s, int * fd)
   return ret;
   
   }
+#endif
 
-int bg_soap_request(gavl_dictionary_t * s, int * fd)
+
+int bg_soap_request(gavl_dictionary_t * s, gavf_io_t ** io_p)
   {
-  return bg_soap_request_write_req(s, fd) && bg_soap_request_read_res(s, fd);
-  }
+  int ret = 0;
+  gavf_io_t * io = *io_p;
+  const char * function;
+  const char * service;
+  gavl_buffer_t req_buf;
+  gavl_buffer_t res_buf;
+  int version = 0;
+  xmlDocPtr req;
+  
+  function = gavl_dictionary_get_string(s, BG_SOAP_META_FUNCTION);
+  service = gavl_dictionary_get_string(s, BG_SOAP_META_SERVICE);
+  gavl_dictionary_get_int(s, BG_SOAP_META_VERSION, &version);
+  
+  req = soap_create(function, service, version, 0);
+  gavl_dictionary_foreach(gavl_dictionary_get_dictionary(s, BG_SOAP_META_ARGS_IN),
+                          write_arg_foreach, req);
 
+  gavl_buffer_init(&req_buf);
+  bg_xml_save_to_buffer(req, &req_buf);
+  
+  if(!io)
+    {
+    io = gavl_http_client_create();
+    *io_p = io;
+    }
+
+  gavl_http_client_set_req_vars(io, gavl_dictionary_get_dictionary(s, BG_SOAP_META_REQ_VARS));
+  gavl_http_client_set_request_body(io, &req_buf);
+
+  gavl_buffer_init(&res_buf);
+  gavl_http_client_set_response_body(io, &res_buf);
+
+  ret = gavl_http_client_open(io, "POST", gavl_dictionary_get_string(s, GAVL_META_URI));
+
+  //  fprintf(stderr, "gavl_http_client_open %d %d\n", ret, res_buf.len);
+  
+  /* Parse body also in case of an error */
+  if(res_buf.len)
+    {
+    xmlDocPtr doc;
+    
+    if(!(doc = xmlParseMemory((char*)res_buf.buf, res_buf.len)))
+      goto fail;
+    
+    if(!ret)
+      {
+      xmlNodePtr node;
+      const gavl_dictionary_t * res;
+      int status = 0;
+      
+      res = gavl_http_client_get_response(io);
+      status = gavl_http_response_get_status_int(res);
+      
+      if(doc && (node = get_body(doc)))
+        {
+        xmlNodePtr err_code;
+        xmlNodePtr err_str;
+        
+        if(!(node = bg_xml_find_node_child(node, "Fault")))
+          goto fail;
+        if(!(node = bg_xml_find_node_child(node, "detail")))
+          goto fail;
+        if(!(node = bg_xml_find_node_child(node, "UPnPError")))
+          goto fail;
+
+        if(!(err_code = bg_xml_find_node_child(node, "errorCode")))
+          goto fail;
+        if(!(err_str = bg_xml_find_node_child(node, "errorDescription")))
+          goto fail;
+      
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "SOAP request failed. HTTP code: %d %s UPNP code: %s %s", 
+                 status, gavl_http_response_get_status_str(res),
+                 bg_xml_node_get_text_content(err_code),
+                 bg_xml_node_get_text_content(err_str));
+        }
+      else
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "SOAP request failed. HTTP code: %d %s", 
+                 status, gavl_http_response_get_status_str(res));
+      }
+    else
+      {
+      xmlNodePtr func_xml;
+      xmlNodePtr arg = NULL;
+      gavl_dictionary_t * args;
+      
+      if(!(func_xml = bg_soap_get_function(doc)))
+        goto fail;
+    
+      args = gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_ARGS_OUT);
+      
+      while((arg = bg_soap_request_next_argument(func_xml, arg)))
+        {
+        const char * str = bg_xml_node_get_text_content(arg);
+
+        if(!str || (*str == '\0'))
+          gavl_dictionary_set_string(args, (char*)arg->name, BG_SOAP_ARG_EMPTY);
+        else
+          gavl_dictionary_set_string(args, (char*)arg->name, str);
+        }
+
+      //      fprintf(stderr, "Got return args\n");
+      //      gavl_dictionary_dump(args, 2);
+      }
+    
+    }
+  
+  fail:
+
+  gavl_buffer_free(&req_buf);
+  gavl_buffer_free(&res_buf);
+  
+  
+  return ret;
+  
+  }

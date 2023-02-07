@@ -56,4 +56,12 @@ bg_upnp_client_translate_mimetype(const bg_upnp_client_t * cl, const char * mime
 
 int bg_upnp_parse_bool(const char * str);
 
+/* DLNA specific stuff */
+
+const char * bg_get_dlna_image_profile(const char * mimetype, int width, int height);
+
+char * bg_get_dlna_content_features(const gavl_dictionary_t * track, const gavl_dictionary_t * uri,
+                                    int can_seek_http, int can_seek_dlna);
+
+
 #endif // BG_UPNPUTILS_H_INCLUDED

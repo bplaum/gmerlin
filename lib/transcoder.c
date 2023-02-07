@@ -2065,6 +2065,9 @@ static void check_compressed(bg_transcoder_t * ret)
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Audio stream %d cannot be written compressed", i+1);
       ret->audio_streams[i].com.action = STREAM_ACTION_TRANSCODE;
+
+      gavl_compression_info_dump(&ret->audio_streams[i].com.ci);
+
       continue;
       }
 

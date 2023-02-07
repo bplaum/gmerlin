@@ -22,13 +22,10 @@
 #ifndef BG_UPNP_H_INCLUDED
 #define BG_UPNP_H_INCLUDED
 
-const char * bg_didl_get_dlna_image_profile(const char * mimetype, int width, int height);
-
-char * bg_get_dlna_content_features(const gavl_dictionary_t * track, const gavl_dictionary_t * uri,
-                                    int can_seek_http, int can_seek_dlna);
 
 xmlDocPtr bg_didl_create(void);
 
+// #if 0
 xmlNodePtr bg_didl_add_item(xmlDocPtr doc);
 
 xmlNodePtr bg_didl_add_container(xmlDocPtr doc);
@@ -37,6 +34,7 @@ xmlNodePtr bg_didl_add_element(xmlDocPtr doc,
                                xmlNodePtr node,
                                const char * name,
                                const char * value);
+#if 0
 
 void bg_didl_set_class(xmlDocPtr doc,
                        xmlNodePtr node,
@@ -45,11 +43,13 @@ void bg_didl_set_class(xmlDocPtr doc,
 void bg_didl_set_title(xmlDocPtr doc,
                        xmlNodePtr node,
                        const char * title);
+#endif
 
 int bg_didl_filter_element(const char * name, char ** filter);
 
 int bg_didl_filter_attribute(const char * element, const char * attribute, char ** filter);
 
+#if 0
 xmlNodePtr bg_didl_add_element_string(xmlDocPtr doc,
                                       xmlNodePtr node,
                                       const char * name,
@@ -59,12 +59,12 @@ xmlNodePtr bg_didl_add_element_int(xmlDocPtr doc,
                                    xmlNodePtr node,
                                    const char * name,
                                    int64_t content, char ** filter);
-
 /* Filtering must be done by the caller!! */
 void bg_didl_set_attribute_int(xmlNodePtr node, const char * name, int64_t val);
+#endif
 
 
-void bg_metadata_from_didl(gavl_dictionary_t * m, xmlNodePtr didl);
+void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl);
 
 xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char ** filter);
 
