@@ -670,9 +670,10 @@ static gavl_source_status_t read_audio(void * priv,
   
   (*frame)->timestamp = s->pts;
   (*frame)->valid_samples = truncate_duration(s, (*frame)->timestamp, (*frame)->valid_samples);
-  
+
   s->pts += (*frame)->valid_samples;
-  return GAVL_SOURCE_OK;
+  
+  return (*frame)->valid_samples > 0 ? GAVL_SOURCE_OK : GAVL_SOURCE_EOF;
   }
 
 static int start_audio_stream(edldec_t * ed, int idx_rel)
