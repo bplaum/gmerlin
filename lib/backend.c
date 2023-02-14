@@ -61,8 +61,8 @@ remote_dev_backends[] =
     &bg_remote_dev_backend_gmerlin_renderer,
 #ifdef HAVE_DBUS
     &bg_remote_dev_backend_mpris2_player,
-#endif
     &bg_remote_dev_backend_mpd_player,
+#endif
     NULL,
   };
 
