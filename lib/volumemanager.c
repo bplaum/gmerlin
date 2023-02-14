@@ -746,7 +746,7 @@ void bg_volume_manager_destroy(bg_volume_manager_t * volman)
   
   }
 
-bg_msg_hub_t * bg_volume_manager_get_msg_hub(bg_volume_manager_t *)
+bg_msg_hub_t * bg_volume_manager_get_msg_hub(bg_volume_manager_t * volman)
   {
   return NULL;
   }
