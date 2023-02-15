@@ -1177,14 +1177,15 @@ int bg_ssdp_update(bg_ssdp_t * s)
  
     }
 
-  if((s->last_notify_time == GAVL_TIME_UNDEFINED) ||
-     ((s->search_count < SEARCH_NUM) && (current_time - s->last_notify_time >= SEARCH_INTERVAL)))
+  if((s->last_search_time == GAVL_TIME_UNDEFINED) ||
+     ((s->search_count < SEARCH_NUM) && (current_time - s->last_search_time >= SEARCH_INTERVAL)))
     {
     /* Send search packet */
     gavl_udp_socket_send(s->ucast_fd, (uint8_t*)search_string,
                          strlen(search_string), s->mcast_addr);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
     s->search_count++;
+    s->last_search_time = current_time;
     }
   
   return ret;
