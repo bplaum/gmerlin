@@ -236,8 +236,6 @@ void bg_plugin_info_destroy(bg_plugin_info_t * info)
   
   if(info->module_filename)
     free(info->module_filename);
-  if(info->devices)
-    bg_device_info_destroy(info->devices);
   if(info->cmp_name)
     free(info->cmp_name);
   if(info->compressions)
@@ -944,9 +942,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
            num * sizeof(*new_info->compressions));
     }
   
-  if(plugin->find_devices)
-    new_info->devices = plugin->find_devices();
-
   return new_info;
   }
 
@@ -2403,112 +2398,9 @@ void bg_plugin_unlock(void * p)
   pthread_mutex_unlock(&h->mutex);
   }
 
-void bg_plugin_registry_add_device(bg_plugin_registry_t * reg,
-                                   const char * plugin_name,
-                                   const char * device,
-                                   const char * name)
-  {
-  bg_plugin_info_t * info;
-
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-
-  info->devices = bg_device_info_append(info->devices,
-                                        device, name);
-
-  bg_plugin_registry_save(reg->entries);
-  }
-
-void bg_plugin_registry_set_device_name(bg_plugin_registry_t * reg,
-                                        const char * plugin_name,
-                                        const char * device,
-                                        const char * name)
-  {
-  int i;
-  bg_plugin_info_t * info;
-
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info || !info->devices)
-    return;
-  
-  i = 0;
-  while(info->devices[i].device)
-    {
-    if(!strcmp(info->devices[i].device, device))
-      {
-      info->devices[i].name = gavl_strrep(info->devices[i].name, name);
-      bg_plugin_registry_save(reg->entries);
-      return;
-      }
-    i++;
-    }
-  
-  }
-
-static int my_strcmp(const char * str1, const char * str2)
-  {
-  if(!str1 && !str2)
-    return 0;
-  else if(str1 && str2)
-    return strcmp(str1, str2); 
-  return 1;
-  }
-
-void bg_plugin_registry_remove_device(bg_plugin_registry_t * reg,
-                                      const char * plugin_name,
-                                      const char * device,
-                                      const char * name)
-  {
-  bg_plugin_info_t * info;
-  int index;
-  int num_devices;
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-    
-  index = -1;
-  num_devices = 0;
-  while(info->devices[num_devices].device)
-    {
-    if(!my_strcmp(info->devices[num_devices].name, name) &&
-       !strcmp(info->devices[num_devices].device, device))
-      {
-      index = num_devices;
-      }
-    num_devices++;
-    }
 
 
-  if(index != -1)
-    memmove(&info->devices[index], &info->devices[index+1],
-            sizeof(*(info->devices)) * (num_devices - index));
-    
-  bg_plugin_registry_save(reg->entries);
-  }
 
-void bg_plugin_registry_find_devices(bg_plugin_registry_t * reg,
-                                     const char * plugin_name)
-  {
-  bg_plugin_info_t * info;
-  bg_plugin_handle_t * handle;
-  
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-
-  handle = bg_plugin_load(info);
-    
-  bg_device_info_destroy(info->devices);
-  info->devices = NULL;
-  
-  if(!handle || !handle->plugin->find_devices)
-    return;
-
-  info->devices = handle->plugin->find_devices();
-  bg_plugin_registry_save(reg->entries);
-  bg_plugin_unref(handle);
-  }
 
 char ** bg_plugin_registry_get_plugins(uint32_t type_mask,
                                        uint32_t flag_mask)

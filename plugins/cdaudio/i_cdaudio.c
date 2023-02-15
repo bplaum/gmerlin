@@ -901,8 +901,6 @@ const bg_input_plugin_t the_plugin =
       .destroy =       destroy_cdaudio,
       .get_parameters = get_parameters_cdaudio,
       .set_parameter =  set_parameter_cdaudio,
-      .find_devices = bg_cdaudio_find_devices,
-      .check_device = bg_cdaudio_check_device,
       .get_controllable = get_controllable_cdaudio
     },
     .get_protocols = get_protocols,

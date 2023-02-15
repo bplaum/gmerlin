@@ -139,8 +139,6 @@ struct bg_plugin_info_s
   int flags;             //!< Flags (see \ref plugin_flags)
   int priority;          //!< Priority (1..10)
   
-  bg_device_info_t * devices; //!< Device list returned by the plugin
-  
   bg_plugin_info_t * next; //!< Used for chaining, never touch this
 
   bg_parameter_info_t * parameters; //!< Parameters, which can be passed to the plugin
@@ -722,65 +720,9 @@ bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
  */
 
 
-/** \ingroup plugin_registry
- *  \brief Add a device to a plugin
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param device Device file
- *  \param name Name for the device
- */
-
-void bg_plugin_registry_add_device(bg_plugin_registry_t * reg,
-                                   const char * plugin_name,
-                                   const char * device,
-                                   const char * name);
-
-/** \ingroup plugin_registry
- *  \brief Change the name of a device
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param device Device file name
- *  \param name New name for the device
- *
- *  Usually, plugins are quite smart in getting the name (Vendor, Model etc)
- *  of devices from the OS. In the case, you want to change names of a device
- *  use this function
- */
-
-void bg_plugin_registry_set_device_name(bg_plugin_registry_t * reg,
-                                        const char * plugin_name,
-                                        const char * device,
-                                        const char * name);
 
 /* Rescan the available devices */
 
-/** \ingroup plugin_registry
- *  \brief Let a plugin rescan for devices
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *
- *  This will let the plugin rescan for devices. Call this,
- *  after you changed your hardware.
- */
-
-void bg_plugin_registry_find_devices(bg_plugin_registry_t * reg,
-                                     const char * plugin_name);
-
-/** \ingroup plugin_registry
- *  \brief Remove a device
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param device Device file name
- *  \param name New name for the device
- *
- *  Remove a device from the list of devices. Call this if a
- *  plugin detected a device multiple times.
- */
-
-void bg_plugin_registry_remove_device(bg_plugin_registry_t * reg,
-                                      const char * plugin_name,
-                                      const char * device,
-                                      const char * name);
 
 /** \ingroup plugin_registry
  *  \brief Load an image

@@ -35,9 +35,6 @@ typedef struct
   {
   gavl_volume_control_t * vc;
 
-  bg_read_audio_func_t read_func;
-  void * read_data;
-  int read_stream;
   
   gavl_audio_format_t format;
 

@@ -112,8 +112,6 @@ static const char * const module_time_key       = "MODULE_TIME";
 static const char * const type_key              = "TYPE";
 static const char * const flags_key             = "FLAGS";
 static const char * const priority_key          = "PRIORITY";
-static const char * const device_info_key       = "DEVICE_INFO";
-static const char * const device_key            = "DEVICE";
 static const char * const max_audio_streams_key = "MAX_AUDIO_STREAMS";
 static const char * const max_video_streams_key = "MAX_VIDEO_STREAMS";
 static const char * const max_text_streams_key = "MAX_TEXT_STREAMS";
@@ -159,53 +157,6 @@ bg_plugin_type_t bg_plugin_type_from_string(const char * name)
   return 0;
   }
 
-static bg_device_info_t *
-load_device(bg_device_info_t * arr, xmlDocPtr doc, xmlNodePtr node)
-  {
-  char * tmp_string;
-  xmlNodePtr cur;
-  char * device = NULL;
-  char * name = NULL;
-  
-  cur = node->children;
-  while(cur)
-    {
-    if(!cur->name)
-      {
-      cur = cur->next;
-      continue;
-      }
-    tmp_string = (char*)xmlNodeListGetString(doc, cur->children, 1);
-
-    if(!BG_XML_STRCMP(cur->name, name_key))
-      {
-      name = tmp_string;
-      tmp_string = NULL;
-      }
-    else if(!BG_XML_STRCMP(cur->name, device_key))
-      {
-      device = tmp_string;
-      tmp_string = NULL;
-      }
-    if(tmp_string)
-      free(tmp_string);
-    cur =  cur->next;
-    }
-  
-  if(device)
-    {
-    arr = bg_device_info_append(arr,
-                                device,
-                                name);
-    
-    xmlFree(device);
-    }
-  if(name)
-    {
-    xmlFree(name);
-    }
-  return arr;
-  }
 
 static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
   {
@@ -377,10 +328,6 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
         start_ptr++;
         }
       }
-    else if(!BG_XML_STRCMP(cur->name, device_info_key))
-      {
-      ret->devices = load_device(ret->devices, doc, cur);
-      }
     else if(!BG_XML_STRCMP(cur->name, max_audio_streams_key))
       {
       ret->max_audio_streams = atoi(tmp_string);
@@ -417,34 +364,6 @@ static const char * get_flag_name(uint32_t flag)
   return flag_names[index].name;
   }
 
-static void save_devices(xmlNodePtr parent, const bg_device_info_t * info)
-  {
-  int i;
-  xmlNodePtr xml_device, xml_item;
-
-  i = 0;
-  while(info[i].device)
-    {
-    xmlAddChild(parent, BG_XML_NEW_TEXT("\n"));
-    
-    xml_device = xmlNewTextChild(parent, NULL,
-                                 (xmlChar*)device_info_key, NULL);
-        
-    xmlAddChild(xml_device, BG_XML_NEW_TEXT("\n"));
-    
-    xml_item = xmlNewTextChild(xml_device, NULL, (xmlChar*)device_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(info[i].device));
-    xmlAddChild(xml_device, BG_XML_NEW_TEXT("\n"));
-
-    if(info[i].name)
-      {
-      xml_item = xmlNewTextChild(xml_device, NULL, (xmlChar*)name_key, NULL);
-      xmlAddChild(xml_item, BG_XML_NEW_TEXT(info[i].name));
-      xmlAddChild(xml_device, BG_XML_NEW_TEXT("\n"));
-      }
-    i++;
-    }
-  }
 
 static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
   {
@@ -678,8 +597,6 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
     xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
     }
 
-  if(info->devices && info->devices->device)
-    save_devices(xml_plugin, info->devices);
   }
 
 bg_plugin_info_t * bg_plugin_registry_load(const char * filename)

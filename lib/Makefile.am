@@ -123,7 +123,6 @@ charset.c \
 cmdline.c \
 colormatrix.c \
 country_table.c \
-device.c \
 downloader.c \
 edldec.c \
 edl_xml.c \

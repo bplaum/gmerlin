@@ -72,11 +72,6 @@ struct bg_audio_filter_chain_s
 
   pthread_mutex_t mutex;
 
-  /* Legacy!! */
-  bg_read_audio_func_t in_func;
-  void * in_data;
-  int in_stream;
-  
   };
 
 int bg_audio_filter_chain_need_restart(bg_audio_filter_chain_t * ch)

@@ -50,15 +50,15 @@
 
 #define QUEUE_SIZE 128
 
-// #define META_METHOD "$METHOD"
-// #define META_STATUS "$STATUS"
-
 #define NOTIFY_INTERVAL_LONG  (900*GAVL_TIME_SCALE) // max-age / 2
 #define NOTIFY_INTERVAL_SHORT (GAVL_TIME_SCALE/2)
 #define NOTIFY_NUM 5 // Number of notify messages sent in shorter intervals
 
 #define SEARCH_INTERVAL (GAVL_TIME_SCALE/2)
 #define SEARCH_NUM      5
+
+// #define DUMP_RECEIVED_SEARCH_REQUESTS
+// #define DUMP_SENT_SEARCH_RESPONSES
 
 typedef struct
   {
@@ -734,12 +734,18 @@ static void flush_reply_packet(bg_ssdp_t * s, const gavl_dictionary_t * h,
                                gavl_socket_address_t * sender)
   {
   int len = 0;
+#ifdef DUMP_SENT_SEARCH_RESPONSES
   char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
+#endif
   
   char * str = gavl_http_response_to_string(h, &len);
+
+  gavl_udp_socket_send(s->ucast_fd, (uint8_t*)str, len, sender);
+
+#ifdef DUMP_SENT_SEARCH_RESPONSES
   fprintf(stderr, "Sending search reply to %s:\n%s\n",
           gavl_socket_address_to_string(sender, addr_string), str);
-  gavl_udp_socket_send(s->ucast_fd, (uint8_t*)str, len, sender);
+#endif
   free(str);
   }
                                
@@ -877,16 +883,18 @@ static void handle_multicast(bg_ssdp_t * s, const char * buffer,
     {
     int mx;
     const char * type_version;
+#ifdef DUMP_RECEIVED_SEARCH_REQUESTS
     char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
+#endif
   
-    gavl_socket_address_to_string(sender, addr_string);
-    
     /* Got search request */
     if(!s->local_dev)
       goto fail;
-    
+
+#ifdef DUMP_RECEIVED_SEARCH_REQUESTS
     fprintf(stderr, "Got search request from %s\n", gavl_socket_address_to_string(sender, addr_string));
     gavl_dictionary_dump(&m, 0);
+#endif
     
     if(!gavl_dictionary_get_int_i(&m, "MX", &mx))
       goto fail;

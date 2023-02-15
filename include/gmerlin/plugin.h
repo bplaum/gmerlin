@@ -70,37 +70,6 @@
 #define BG_PLUGIN_INPUT_STATE_METADATA    "metadata"
 #define BG_PLUGIN_INPUT_STATE_SEEK_WINDOW "seekwin"
 
-
-/** \ingroup plugin
- *  \brief Generic prototype for reading audio
- *  \param priv Private data
- *  \param frame Audio frame
- *  \param stream Stream index (0 is only one stream)
- *  \param samples Samples to read
- *  \returns The number of samples read
- *
- *  This is a generic prototype for reading audio. It's shared between
- *  input pluigns, recorders and filters to enable arbitrary chaining.
- */
-
-typedef int (*bg_read_audio_func_t)(void * priv, gavl_audio_frame_t* frame,
-                                    int stream,
-                                    int num_samples);
-
-/** \ingroup plugin
- *  \brief Generic prototype for reading video
- *  \param priv Private data
- *  \param frame Video frame
- *  \param stream Stream index (0 is only one stream)
- *  \returns 1 if a frame could be read, 0 else
- *
- *  This is a generic prototype for reading audio. It's shared between
- *  input pluigns, recorders and filters to enable arbitrary chaining.
- */
-
-typedef int (*bg_read_video_func_t)(void * priv, gavl_video_frame_t* frame,
-                                    int stream);
-
 /** \defgroup plugin_flags Plugin flags
  *  \ingroup plugin
  *  \brief Macros for the plugin flags
@@ -135,7 +104,7 @@ typedef int (*bg_read_video_func_t)(void * priv, gavl_video_frame_t* frame,
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 33
+#define BG_PLUGIN_API_VERSION 34
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -203,6 +172,7 @@ typedef enum
  *  which access multiple drives. For output plugins, devices are normal parameters.
  */
 
+#if 0
 typedef struct
   {
   char * device; //!< String, which can be passed to the open() method
@@ -229,6 +199,7 @@ bg_device_info_t * bg_device_info_append(bg_device_info_t * arr,
  */
 
 void bg_device_info_destroy(bg_device_info_t * arr);
+#endif
 
 /* Common part */
 
@@ -309,26 +280,6 @@ struct bg_plugin_common_s
 
   bg_controllable_t * (*get_controllable)(void * priv);
   
-  /** \brief Check, if a device can be opened by the plugin (optional)
-   *  \param device The device as passed to the open() method
-   *  \param name Returns the name if available
-   *  \returns 1 if the device is supported, 0 else
-   *
-   *  The name should be set to NULL before this call, and must be freed
-   *  if it's non-NULL after the call.
-   */
-  
-  int (*check_device)(const char * device, char ** name);
-  
-  /** \brief Get an array of all supported devices found on the system
-   *  \returns A NULL terminated device array
-   *
-   *  The returned array must be freed with \ref bg_device_info_destroy by
-   *  the caller.
-   */
-  
-  bg_device_info_t * (*find_devices)();
-    
   };
 
 /*

@@ -65,8 +65,6 @@ CdIo_t * bg_cdaudio_open(const char * device);
 bg_cdaudio_index_t * bg_cdaudio_get_index(CdIo_t *);
 
 void bg_cdaudio_close(CdIo_t*);
-int bg_cdaudio_check_device(const char * device, char ** name);
-bg_device_info_t * bg_cdaudio_find_devices();
 
 int bg_cdaudio_play(CdIo_t*, int first_sector, int last_sector);
 void bg_cdaudio_stop(CdIo_t*);

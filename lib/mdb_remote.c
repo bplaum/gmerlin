@@ -788,8 +788,6 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
         case BG_MSG_ADD_BACKEND:
           {
           int type = BG_BACKEND_NONE;
-          const char * protocol;
-          
           gavl_dictionary_t dict;
           gavl_dictionary_init(&dict);
           gavl_msg_get_arg_dictionary(msg, 0, &dict);

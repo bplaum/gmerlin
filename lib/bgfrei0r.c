@@ -237,10 +237,6 @@ typedef struct
   /* Parameter values are cached here */
   bg_cfg_section_t * section;
 
-  bg_read_video_func_t read_func;
-  void * read_data;
-  int read_stream;
-
   gavl_video_frame_t * in_frame;
   gavl_video_frame_t * out_frame;
   

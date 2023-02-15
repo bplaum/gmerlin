@@ -62,10 +62,6 @@ struct bg_video_filter_chain_s
   int need_rebuild;
   int need_restart;
   
-  bg_read_video_func_t in_func;
-  void * in_data;
-  int in_stream;
-  
   pthread_mutex_t mutex;
   
   bg_msg_sink_t * cmd_sink;
