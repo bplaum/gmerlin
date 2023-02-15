@@ -103,6 +103,8 @@ struct bg_ssdp_s
 
 bg_msg_hub_t * bg_ssdp_get_event_hub(bg_ssdp_t * s)
   {
+  if(!s->event_hub)
+    s->event_hub = bg_msg_hub_create(1);
   return s->event_hub;
   }
 
@@ -413,7 +415,6 @@ bg_ssdp_t * bg_ssdp_create(bg_ssdp_root_device_t * local_dev)
   char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
   bg_ssdp_t * ret = calloc(1, sizeof(*ret));
 
-  ret->event_hub = bg_msg_hub_create(1);
   
   ret->local_dev = local_dev;
   
@@ -733,8 +734,11 @@ static void flush_reply_packet(bg_ssdp_t * s, const gavl_dictionary_t * h,
                                gavl_socket_address_t * sender)
   {
   int len = 0;
+  char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
+  
   char * str = gavl_http_response_to_string(h, &len);
-  //  fprintf(stderr, "Sending search reply:\n%s\n", str);
+  fprintf(stderr, "Sending search reply to %s:\n%s\n",
+          gavl_socket_address_to_string(sender, addr_string), str);
   gavl_udp_socket_send(s->ucast_fd, (uint8_t*)str, len, sender);
   free(str);
   }
@@ -877,7 +881,7 @@ static void handle_multicast(bg_ssdp_t * s, const char * buffer,
     /* Got search request */
     if(!s->local_dev)
       goto fail;
-
+    
     //    fprintf(stderr, "Got search request\n");
     //    gavl_dictionary_dump(&m, 0);
     
@@ -930,6 +934,9 @@ static void handle_multicast(bg_ssdp_t * s, const char * buffer,
     const char * nt;
     const char * nts;
     /* Got notify request */
+
+    if(!s->event_hub)
+      goto fail;
     
     nts = gavl_dictionary_get_string_i(&m, "NTS");
     
@@ -1007,9 +1014,9 @@ static void handle_unicast(bg_ssdp_t * s, const char * buffer,
   
   if(!(st = gavl_dictionary_get_string_i(&m, "ST")))
     goto fail;
-  
-  update_device(s, st, &m);
 
+  if(s->event_hub)
+    update_device(s, st, &m);
   
   fail:
   gavl_dictionary_free(&m);
@@ -1173,20 +1180,27 @@ int bg_ssdp_update(bg_ssdp_t * s)
       s->notify_count++;
       if(s->notify_count > NOTIFY_NUM)
         s->notify_count = 0;
+
+      ret++;
       }
- 
     }
 
-  if((s->last_search_time == GAVL_TIME_UNDEFINED) ||
-     ((s->search_count < SEARCH_NUM) && (current_time - s->last_search_time >= SEARCH_INTERVAL)))
+  if(s->event_hub)
     {
-    /* Send search packet */
-    gavl_udp_socket_send(s->ucast_fd, (uint8_t*)search_string,
-                         strlen(search_string), s->mcast_addr);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
-    s->search_count++;
-    s->last_search_time = current_time;
+    if((s->last_search_time == GAVL_TIME_UNDEFINED) ||
+       ((s->search_count < SEARCH_NUM) && (current_time - s->last_search_time >= SEARCH_INTERVAL)))
+      {
+      /* Send search packet */
+      gavl_udp_socket_send(s->ucast_fd, (uint8_t*)search_string,
+                           strlen(search_string), s->mcast_addr);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
+      s->search_count++;
+      s->last_search_time = current_time;
+      ret++;
+      }
+
     }
+  
   
   return ret;
   }
@@ -1228,6 +1242,7 @@ void bg_ssdp_destroy(bg_ssdp_t * s)
   free(s);
   }
 
+#if 0
 void bg_ssdp_browse(bg_ssdp_t * s, bg_msg_sink_t * sink)
   {
   const char * type;
@@ -1291,6 +1306,7 @@ void bg_ssdp_browse(bg_ssdp_t * s, bg_msg_sink_t * sink)
     
     }
   }
+#endif
 
 /* Create device info */
 void bg_create_ssdp_device(gavl_dictionary_t * desc, bg_backend_type_t type,

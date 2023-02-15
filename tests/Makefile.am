@@ -44,7 +44,6 @@ upnpdesc \
 websocket_test \
 $(gtk_programs) \
 gmerlin_imgconvert \
-gmerlin-upnp-discover \
 gmerlin_imgdiff \
 gmerlin_imgsplit \
 gmerlin_psnr \
@@ -71,8 +70,6 @@ msgiotest_LDADD = ../lib/libgmerlin.la -ldl
 
 ssdp_SOURCES = ssdp.c
 ssdp_LDADD = ../lib/libgmerlin.la -ldl
-
-gmerlin_upnp_discover_LDADD = ../lib/libgmerlin.la -ldl
 
 upnpdesc_SOURCES = upnpdesc.c
 upnpdesc_LDADD = ../lib/libgmerlin.la -ldl @UUID_LIBS@ @XML2_LIBS@

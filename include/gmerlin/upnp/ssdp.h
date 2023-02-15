@@ -115,7 +115,7 @@ bg_backend_type_t bg_ssdp_is_gmerlin_nt(const char * nt);
 int bg_ssdp_update(bg_ssdp_t *);
 void bg_ssdp_destroy(bg_ssdp_t *);
 
-void bg_ssdp_browse(bg_ssdp_t *, bg_msg_sink_t * sink);
+// void bg_ssdp_browse(bg_ssdp_t *, bg_msg_sink_t * sink);
 
 void bg_create_ssdp_device(gavl_dictionary_t * desc, bg_backend_type_t type,
                            const char * uri, const char * protocol);
