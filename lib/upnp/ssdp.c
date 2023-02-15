@@ -53,7 +53,12 @@
 // #define META_METHOD "$METHOD"
 // #define META_STATUS "$STATUS"
 
-#define NOTIFY_INTERVAL (900*GAVL_TIME_SCALE) // max-age / 2
+#define NOTIFY_INTERVAL_LONG  (900*GAVL_TIME_SCALE) // max-age / 2
+#define NOTIFY_INTERVAL_SHORT (GAVL_TIME_SCALE/2)
+#define NOTIFY_NUM 5 // Number of notify messages sent in shorter intervals
+
+#define SEARCH_INTERVAL (GAVL_TIME_SCALE/2)
+#define SEARCH_NUM      5
 
 typedef struct
   {
@@ -85,7 +90,11 @@ struct bg_ssdp_s
 #endif
 
   gavl_time_t last_notify_time;
+  int notify_count;
 
+  gavl_time_t last_search_time;
+  int search_count;
+  
   bg_msg_hub_t * event_hub;
   
   //  bg_ssdp_callback_t cb;
@@ -409,6 +418,7 @@ bg_ssdp_t * bg_ssdp_create(bg_ssdp_root_device_t * local_dev)
   ret->local_dev = local_dev;
   
   ret->last_notify_time = GAVL_TIME_UNDEFINED;
+  ret->last_search_time = GAVL_TIME_UNDEFINED;
   
 #ifdef DUMP_DEVS
   if(ret->local_dev)
@@ -448,10 +458,6 @@ bg_ssdp_t * bg_ssdp_create(bg_ssdp_root_device_t * local_dev)
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Unicast socket bound at %s", 
          gavl_socket_address_to_string(ret->local_addr, addr_str));
   
-  /* Send search packet */
-  gavl_udp_socket_send(ret->ucast_fd, (uint8_t*)search_string,
-                     strlen(search_string), ret->mcast_addr);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
 
   ret->timer = gavl_timer_create(ret->timer);
   gavl_timer_start(ret->timer);
@@ -1154,12 +1160,31 @@ int bg_ssdp_update(bg_ssdp_t * s)
 
   ret += flush_queue(s, current_time);
 
-  if(s->local_dev &&
-     ((s->last_notify_time == GAVL_TIME_UNDEFINED) ||
-      (current_time - s->last_notify_time > NOTIFY_INTERVAL)))
+  if(s->local_dev)
     {
-    notify(s, 1);
-    s->last_notify_time = current_time;
+    if((s->last_notify_time == GAVL_TIME_UNDEFINED) ||
+       (!s->notify_count && (current_time - s->last_notify_time > NOTIFY_INTERVAL_LONG)) ||
+       (s->notify_count && (current_time - s->last_notify_time > NOTIFY_INTERVAL_SHORT)))
+      {
+      notify(s, 1);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent notify packet");
+      s->last_notify_time = current_time;
+      
+      s->notify_count++;
+      if(s->notify_count > NOTIFY_NUM)
+        s->notify_count = 0;
+      }
+ 
+    }
+
+  if((s->last_notify_time == GAVL_TIME_UNDEFINED) ||
+     ((s->search_count < SEARCH_NUM) && (current_time - s->last_notify_time >= SEARCH_INTERVAL)))
+    {
+    /* Send search packet */
+    gavl_udp_socket_send(s->ucast_fd, (uint8_t*)search_string,
+                         strlen(search_string), s->mcast_addr);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
+    s->search_count++;
     }
   
   return ret;

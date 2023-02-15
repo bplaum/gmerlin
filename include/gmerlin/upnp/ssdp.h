@@ -37,55 +37,6 @@ typedef gavl_dictionary_t bg_ssdp_service_t;
 typedef gavl_dictionary_t bg_ssdp_device_t;
 typedef gavl_dictionary_t bg_ssdp_root_device_t;
 
-#if 0
-typedef struct
-  {
-  char * type;
-  int version;
-  } bg_ssdp_service_t;
-
-
-void
-bg_ssdp_service_free(bg_ssdp_service_t * s);
-
-typedef struct
-  {
-  char * type;
-  char * uuid;
-  int version;
-
-  int num_services;
-  bg_ssdp_service_t * services;
-  } bg_ssdp_device_t;
-
-void
-bg_ssdp_device_free(bg_ssdp_device_t * dev);
-
-typedef struct
-  {
-  char * uuid;
-  char * url;
-
-  char * type;
-  int version;
-  
-  int num_devices;
-  bg_ssdp_device_t * devices;
-
-  int num_services;
-  bg_ssdp_service_t * services;
-
-  gavl_time_t expire_time;
-  } bg_ssdp_root_device_t;
-
-void
-bg_ssdp_root_device_free(bg_ssdp_root_device_t*);
-
-void
-bg_ssdp_root_device_dump(const bg_ssdp_root_device_t*);
-
-#endif
-
 // BG_MSG_NS_SSDP
 
 /*
@@ -125,13 +76,6 @@ bg_ssdp_device_t *
 bg_ssdp_device_add_device(bg_ssdp_root_device_t*, const char * uuid);
 
 typedef struct bg_ssdp_s bg_ssdp_t;
-
-#if 0
-typedef void (*bg_ssdp_callback_t)(void * priv, int add, const char * type,
-                                   int version,
-                                   const char * desc_url,
-                                   const char * uuid);
-#endif
 
 bg_ssdp_t *
 bg_ssdp_create(bg_ssdp_root_device_t * local_dev);
