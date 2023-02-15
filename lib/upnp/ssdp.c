@@ -877,13 +877,16 @@ static void handle_multicast(bg_ssdp_t * s, const char * buffer,
     {
     int mx;
     const char * type_version;
+    char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
+  
+    gavl_socket_address_to_string(sender, addr_string);
     
     /* Got search request */
     if(!s->local_dev)
       goto fail;
     
-    //    fprintf(stderr, "Got search request\n");
-    //    gavl_dictionary_dump(&m, 0);
+    fprintf(stderr, "Got search request from %s\n", gavl_socket_address_to_string(sender, addr_string));
+    gavl_dictionary_dump(&m, 0);
     
     if(!gavl_dictionary_get_int_i(&m, "MX", &mx))
       goto fail;
