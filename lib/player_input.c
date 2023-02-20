@@ -319,7 +319,7 @@ int bg_player_input_get_audio_format(bg_player_t * p)
   }
 
 /* Video input */
-
+#if 0
 static gavl_source_status_t
 read_video_still(void * priv, gavl_video_frame_t ** frame)
   {
@@ -383,6 +383,7 @@ read_video(void * priv, gavl_video_frame_t ** frame)
   
   return st;
   }
+#endif
 
 int bg_player_input_get_video_format(bg_player_t * p)
   {
@@ -403,24 +404,10 @@ int bg_player_input_get_video_format(bg_player_t * p)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot handle zero timescale");
     return 0;
     }
-  
+#if 0  
   if(DO_STILL(p->flags))
     {
-    gavl_video_format_t fmt;
-
-    gavl_video_format_copy(&fmt, &p->video_stream.input_format);
     
-    fmt.timescale = GAVL_TIME_SCALE;
-    fmt.framerate_mode = GAVL_FRAMERATE_CONSTANT;
-    
-    pthread_mutex_lock(&p->config_mutex);
-    fmt.frame_duration =
-      (int)((float)GAVL_TIME_SCALE / p->still_framerate);
-    pthread_mutex_unlock(&p->config_mutex);
-
-    gavl_video_source_set_dst(p->video_stream.in_src_int, 0, &fmt);
-    
-    p->video_stream.in_src = gavl_video_source_create(read_video_still, p, GAVL_SOURCE_SRC_ALLOC, &fmt);
     }
   else if(DO_SUBTITLE_ONLY(p->flags))
     {
@@ -430,11 +417,9 @@ int bg_player_input_get_video_format(bg_player_t * p)
     }
   else
     {
-    gavl_video_source_set_dst(p->video_stream.in_src_int, 0, &p->video_stream.input_format);
-    p->video_stream.in_src = gavl_video_source_create(read_video, p, GAVL_SOURCE_SRC_ALLOC,
-                                                      &p->video_stream.input_format);
+    
     }
-  
+#endif
   return 1;
   }
 
@@ -465,17 +450,7 @@ void bg_player_input_seek(bg_player_t * p,
     vs->frames_read =
       gavl_time_to_frames(vs->output_format.timescale, vs->output_format.frame_duration,
                           *time);
-  else
-    {
-    vs->frames_written =
-      gavl_time_to_frames(vs->input_format.timescale, vs->input_format.frame_duration,
-                          *time);
-    }
-
-  if(vs->in_src)
-    gavl_video_source_reset(vs->in_src);
-  if(as->in_src)
-    gavl_audio_source_reset(as->in_src);
+  
   
   // Clear EOF states
   do_audio = DO_AUDIO(p->flags);

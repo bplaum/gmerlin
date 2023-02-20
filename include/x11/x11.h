@@ -66,6 +66,8 @@ void bg_x11_window_set_state(bg_x11_window_t * win,
 
 void bg_x11_window_handle_events(bg_x11_window_t*, int milliseconds);
 
+void bg_x11_window_check_redraw(bg_x11_window_t*);
+
 int bg_x11_window_set_fullscreen(bg_x11_window_t * w,int fullscreen);
 void bg_x11_window_set_title(bg_x11_window_t * w, const char * title);
 void bg_x11_window_set_options(bg_x11_window_t * w,
@@ -91,10 +93,6 @@ void bg_x11_window_get_size(bg_x11_window_t * win, int * width, int * height);
 // void bg_x11_window_stop_gl(bg_x11_window_t * win);
 
 
-/*
- *  Swap buffers and make your rendered work visible
- */
-void bg_x11_window_swap_gl(bg_x11_window_t *);
 
 // void bg_x11_window_cleanup_gl(bg_x11_window_t *);
 
@@ -118,7 +116,6 @@ void bg_x11_window_set_saturation(bg_x11_window_t*);
 void bg_x11_window_set_contrast(bg_x11_window_t*);
 
 void bg_x11_window_put_frame(bg_x11_window_t*, gavl_video_frame_t * frame);
-void bg_x11_window_put_still(bg_x11_window_t*, gavl_video_frame_t * frame);
 
 void bg_x11_window_close_video(bg_x11_window_t*);
 

@@ -47,6 +47,9 @@ typedef struct
   VADisplayAttribute attr_b;
   VADisplayAttribute attr_s;
   VADisplayAttribute attr_c;
+
+  VASurfaceID cur_frame;
+  
   } vaapi_priv_t;
 
 
@@ -219,15 +222,10 @@ static gavl_video_frame_t * create_frame_vaapi(driver_data_t * d)
                                         &w->video_format);
   }
 
-
-static void put_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
+static void set_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
   {
-  int i;
   vaapi_priv_t * priv;
   bg_x11_window_t * w = d->win;
-  VAStatus status;
-  unsigned int flags = 0;
-  VASurfaceID surf;  
   
   priv = d->priv;
 
@@ -241,7 +239,22 @@ static void put_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
     f = priv->surface;
     }
   
-  surf = gavl_vaapi_get_surface_id(f);
+  priv->cur_frame = gavl_vaapi_get_surface_id(f);
+  
+  }
+
+
+static void put_frame_vaapi(driver_data_t * d)
+  {
+  int i;
+  vaapi_priv_t * priv;
+  bg_x11_window_t * w = d->win;
+  VAStatus status;
+  unsigned int flags = 0;
+  VASurfaceID surf;  
+  
+  priv = d->priv;
+  
 
   /* Draw overlays */
   flags = 0;
@@ -252,7 +265,7 @@ static void put_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
 
     status = vaAssociateSubpicture(priv->dpy,
                                    gavl_vaapi_get_subpicture_id(w->overlay_streams[i]->ovl),
-                                   &surf,
+                                   &priv->cur_frame,
                                    1,
                                    w->overlay_streams[i]->ovl->src_rect.x, /* upper left offset in subpicture */
                                    w->overlay_streams[i]->ovl->src_rect.y,
@@ -282,7 +295,7 @@ static void put_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
   fprintf(stderr, "\n");
 #endif
   
-  if((status = vaPutSurface(priv->dpy, surf,
+  if((status = vaPutSurface(priv->dpy, priv->cur_frame,
                             w->current->win, /* X Drawable */
                             (int)w->src_rect.x,  /* src_x  */
                             (int)w->src_rect.y,  /* src_y  */
@@ -313,6 +326,7 @@ static void put_frame_vaapi(driver_data_t * d, gavl_video_frame_t * f)
                                      1);
     }
   }
+
 
 static void set_overlay_vaapi(driver_data_t* d, overlay_stream_t * str)
   {
@@ -404,6 +418,7 @@ const video_driver_t vaapi_driver =
     .set_contrast        = set_contrast_vaapi,
 
     .create_frame        = create_frame_vaapi,
+    .set_frame           = set_frame_vaapi,
     .put_frame           = put_frame_vaapi,
     .close               = close_vaapi,
     .cleanup             = cleanup_vaapi,

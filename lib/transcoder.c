@@ -1561,7 +1561,7 @@ static int video_iteration(video_stream_t * s, bg_transcoder_t * t)
     
     for(i = 0; i < s->num_subtitle_streams; i++)
       {
-      bg_subtitle_handler_update(s->subtitle_streams[i]->sh, frame);
+      bg_subtitle_handler_update(s->subtitle_streams[i]->sh, frame->timestamp);
       gavl_overlay_blend(s->subtitle_streams[i]->blend_context, frame);
       }
 

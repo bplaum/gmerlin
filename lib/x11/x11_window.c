@@ -675,10 +675,6 @@ static int open_display(bg_x11_window_t * w)
     }
 #endif
 
-  /* Check for XShm */
-  if(bg_x11_window_check_shm(w->dpy, &w->shm_completion_type))
-    SET_FLAG(w, FLAG_HAVE_SHM); 
-  
   return 1;
   }
 
@@ -1548,8 +1544,6 @@ bg_x11_window_t * bg_x11_window_create(const char * display_string,
   bg_x11_window_t * ret;
   ret = calloc(1, sizeof(*ret));
   ret->display_string_parent = gavl_strrep(ret->display_string_parent, display_string);
-  ret->scaler = gavl_video_scaler_create();
-
 
   ret->accel_map = bg_accelerator_map_create();
 
@@ -1635,9 +1629,6 @@ void bg_x11_window_destroy(bg_x11_window_t * w)
   if(w->display_string_child)
     free(w->display_string_child);
 
-  if(w->scaler)
-    gavl_video_scaler_destroy(w->scaler);
-
   bg_controllable_cleanup(&w->ctrl);
 
   gavl_dictionary_free(&w->state);
@@ -1701,13 +1692,6 @@ static const bg_parameter_info_t common_parameters[] =
       .type =        BG_PARAMETER_CHECKBUTTON,
       .val_default = GAVL_VALUE_INIT_INT(1)
     },
-    {
-      .name =        "force_hw_scale",
-      .long_name =   TRS("Force hardware scaling"),
-      .type =        BG_PARAMETER_CHECKBUTTON,      .val_default = GAVL_VALUE_INIT_INT(1),
-      .help_string = TRS("Use hardware scaling even if it involves more CPU intensive pixelformat conversions"),
-
-    },
 #ifdef HAVE_EGL
     {
       .name =        "background_color",
@@ -1718,54 +1702,6 @@ static const bg_parameter_info_t common_parameters[] =
 
     },
 #endif
-    {
-      .name =        "sw_scaler",
-      .long_name =   TRS("Software scaler"),
-      .type =        BG_PARAMETER_SECTION,
-    },
-    {
-      .name =        "scale_mode",
-      .long_name =   TRS("Scale mode"),
-      .type =        BG_PARAMETER_STRINGLIST,
-      .multi_names =  (char const*[]){ "auto",
-                               "nearest",
-                               "bilinear",
-                               "quadratic",
-                               "cubic_bspline",
-                               "cubic_mitchell",
-                               "cubic_catmull",
-                               "sinc_lanczos",
-                               NULL },
-      .multi_labels = (char const*[]){ TRS("Auto"),
-                               TRS("Nearest"),
-                               TRS("Bilinear"),
-                               TRS("Quadratic"),
-                               TRS("Cubic B-Spline"),
-                               TRS("Cubic Mitchell-Netravali"),
-                               TRS("Cubic Catmull-Rom"),
-                               TRS("Sinc with Lanczos window"),
-                               NULL },
-      .val_default = GAVL_VALUE_INIT_STRING("auto"),
-      .help_string = TRS("Choose scaling method. Auto means to choose based on the conversion quality. Nearest is fastest, Sinc with Lanczos window is slowest."),
-    },
-    {
-      .name =        "scale_order",
-      .long_name =   TRS("Scale order"),
-      .type =        BG_PARAMETER_INT,
-      .val_min =     GAVL_VALUE_INIT_INT(4),
-      .val_max =     GAVL_VALUE_INIT_INT(1000),
-      .val_default = GAVL_VALUE_INIT_INT(4),
-      .help_string = TRS("Order for sinc scaling"),
-    },
-    {
-      .name =        "scale_quality",
-      .long_name =   TRS("Scale quality"),
-      .type =        BG_PARAMETER_SLIDER_INT,
-      .val_min =     GAVL_VALUE_INIT_INT(GAVL_QUALITY_FASTEST),
-      .val_max =     GAVL_VALUE_INIT_INT(GAVL_QUALITY_BEST),
-      .val_default = GAVL_VALUE_INIT_INT(GAVL_QUALITY_DEFAULT),
-      .help_string = TRS("Scale quality"),
-    },
     { /* End of parameters */ },
   };
 
@@ -1779,8 +1715,6 @@ void
 bg_x11_window_set_parameter(void * data, const char * name,
                             const gavl_value_t * val)
   {
-  gavl_scale_mode_t scale_mode = GAVL_SCALE_AUTO;
-  gavl_video_options_t * opt;
   bg_x11_window_t * win;
   if(!name)
     return;
@@ -1814,54 +1748,6 @@ bg_x11_window_set_parameter(void * data, const char * name,
     }
 #endif
   
-  else if(!strcmp(name, "force_hw_scale"))
-    {
-    if(val->v.i)
-      SET_FLAG(win, FLAG_FORCE_HW_SCALE);
-    else
-      CLEAR_FLAG(win, FLAG_FORCE_HW_SCALE);
-    }
-  else if(!strcmp(name, "scale_mode"))
-    {
-    if(!strcmp(val->v.str, "auto"))
-      scale_mode = GAVL_SCALE_AUTO;
-    else if(!strcmp(val->v.str, "nearest"))
-      scale_mode = GAVL_SCALE_NEAREST;
-    else if(!strcmp(val->v.str, "bilinear"))
-      scale_mode = GAVL_SCALE_BILINEAR;
-    else if(!strcmp(val->v.str, "quadratic"))
-      scale_mode = GAVL_SCALE_QUADRATIC;
-    else if(!strcmp(val->v.str, "cubic_bspline"))
-      scale_mode = GAVL_SCALE_CUBIC_BSPLINE;
-    else if(!strcmp(val->v.str, "cubic_mitchell"))
-      scale_mode = GAVL_SCALE_CUBIC_MITCHELL;
-    else if(!strcmp(val->v.str, "cubic_catmull"))
-      scale_mode = GAVL_SCALE_CUBIC_CATMULL;
-    else if(!strcmp(val->v.str, "sinc_lanczos"))
-      scale_mode = GAVL_SCALE_SINC_LANCZOS;
-
-    opt = gavl_video_scaler_get_options(win->scaler);
-    if(scale_mode != gavl_video_options_get_scale_mode(opt))
-      {
-      gavl_video_options_set_scale_mode(opt, scale_mode);
-      }
-    }
-  else if(!strcmp(name, "scale_order"))
-    {
-    opt = gavl_video_scaler_get_options(win->scaler);
-    if(val->v.i != gavl_video_options_get_scale_order(opt))
-      {
-      gavl_video_options_set_scale_order(opt, val->v.i);
-      }
-    }
-  else if(!strcmp(name, "scale_quality"))
-    {
-    opt = gavl_video_scaler_get_options(win->scaler);
-    if(val->v.i != gavl_video_options_get_quality(opt))
-      {
-      gavl_video_options_set_quality(opt, val->v.i);
-      }
-    }
   else if(!strcmp(name, "window_width"))
     win->window_rect.w = val->v.i;
   else if(!strcmp(name, "window_height"))

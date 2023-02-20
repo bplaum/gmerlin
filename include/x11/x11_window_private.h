@@ -49,7 +49,7 @@
 #endif
 
 
-#include <X11/extensions/XShm.h>
+// #include <X11/extensions/XShm.h>
 
 
 /* Screensaver module */
@@ -166,8 +166,8 @@ struct video_driver_s
   
   void (*destroy_frame)(driver_data_t* data, gavl_video_frame_t *);
   
-  void (*put_frame)(driver_data_t* data,
-                    gavl_video_frame_t * frame);
+  void (*set_frame)(driver_data_t* data, gavl_video_frame_t * frame);
+  void (*put_frame)(driver_data_t* data);
 
   void (*set_brightness)(driver_data_t* data,float brightness);
   void (*set_saturation)(driver_data_t* data,float saturation);
@@ -233,23 +233,19 @@ typedef struct
 #define FLAG_DO_DELETE                      (1<<1)
 #define FLAG_POINTER_HIDDEN                 (1<<2)
 #define FLAG_AUTO_RESIZE                    (1<<3)
-#define FLAG_HAVE_SHM                       (1<<4)
 #define FLAG_DISABLE_SCREENSAVER_NORMAL     (1<<5)
 #define FLAG_DISABLE_SCREENSAVER_FULLSCREEN (1<<6)
-#define FLAG_WAIT_FOR_COMPLETION            (1<<7)
-#define FLAG_DO_SW_SCALE                    (1<<8)
 #define FLAG_VIDEO_OPEN                     (1<<9)
 #define FLAG_DRIVERS_INITIALIZED            (1<<10)
 #define FLAG_NEED_FOCUS                     (1<<11)
 #define FLAG_NEED_FULLSCREEN                (1<<12)
-#define FLAG_FORCE_HW_SCALE                 (1<<13)
-#define FLAG_STILL_MODE                     (1<<14)
 #define FLAG_OVERLAY_CHANGED                (1<<15)
 #define FLAG_NO_GET_FRAME                   (1<<16)
 #define FLAG_CLEAR_BORDER                   (1<<17)
 #define FLAG_TRACK_RESIZE                   (1<<18)
 #define FLAG_ZEROCOPY                       (1<<19)
 #define FLAG_DRAWING_COORDS_CHANGED         (1<<20)
+#define FLAG_NEED_REDRAW                    (1<<21)
 
 #define SET_FLAG(w, flag) w->flags |= (flag)
 #define CLEAR_FLAG(w, flag) w->flags &= ~(flag)
@@ -332,16 +328,11 @@ struct bg_x11_window_s
   float background_color[3];
 #endif
 
-  /* XShm */
-  
-  int shm_completion_type;
-  
   gavl_video_format_t video_format;
   
   /* Scaling stuff */
   gavl_video_format_t window_format;
-  gavl_video_frame_t * window_frame;
-  gavl_video_scaler_t * scaler;
+  //  gavl_video_frame_t * window_frame;
   
   gavl_rectangle_f_t src_rect;
   gavl_rectangle_i_t dst_rect;
@@ -371,8 +362,6 @@ struct bg_x11_window_s
 
   /* Frame from the sink */
   gavl_video_frame_t * frame;
-  gavl_video_frame_t * still_frame;
-  gavl_video_frame_t * still_frame_priv;
   
   bg_controllable_t ctrl;
 
@@ -413,11 +402,6 @@ void bg_x11_window_make_icon(bg_x11_window_t * win,
 
 int bg_x11_window_check_shm(Display * dpy, int * completion_type);
 
-int bg_x11_window_create_shm(bg_x11_window_t * w,
-                          XShmSegmentInfo * shminfo, int size);
-
-void bg_x11_window_destroy_shm(bg_x11_window_t * w,
-                            XShmSegmentInfo * shminfo);
 
 void bg_x11_window_size_changed(bg_x11_window_t * w);
 

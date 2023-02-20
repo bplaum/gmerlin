@@ -484,15 +484,22 @@ static void pixbuf_from_buffer(load_gtk_image_t * d, const gavl_buffer_t * buf)
 GdkPixbuf * bg_gtk_pixbuf_from_buffer(const gavl_buffer_t * buf, int max_width, int max_height)
   {
   load_gtk_image_t d;
+  GdkPixbuf * transformed;
+  
   memset(&d, 0, sizeof(d));
 
   d.max_width = max_width;
   d.max_height = max_height;
   
   pixbuf_from_buffer(&d, buf);
+
+  if((transformed = gdk_pixbuf_apply_embedded_orientation(d.ret)))
+    {
+    g_object_unref(d.ret);
+    return transformed;
+    }
   
   return d.ret;
-  
   }
   
 GdkPixbuf * bg_gtk_pixbuf_from_uri(const char * url, int max_width, int max_height, int use_cache)

@@ -408,18 +408,11 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
   int  accel_id;
   int  button_number = 0;
   window_t * cur;
-  int still_shown = 0;
   
   gavl_msg_t * msg;
 
   gavl_value_t val;
   
-  if(TEST_FLAG(w, FLAG_OVERLAY_CHANGED) &&
-     TEST_FLAG(w, FLAG_STILL_MODE))
-    {
-    bg_x11_window_put_frame_internal(w, w->still_frame);
-    still_shown = 1;
-    }
   
   CLEAR_FLAG(w, FLAG_DO_DELETE);
   
@@ -460,21 +453,11 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
   if(!evt)
     return;
 
-  if(evt->type == w->shm_completion_type)
-    {
-    CLEAR_FLAG(w, FLAG_WAIT_FOR_COMPLETION);
-    return;
-    }
-
   
   switch(evt->type)
     {
     case Expose:
-      if(TEST_FLAG(w, FLAG_STILL_MODE) && !still_shown && w->still_frame)
-        {
-        bg_x11_window_put_frame_internal(w, w->still_frame);
-        still_shown = 1;
-        }
+      SET_FLAG(w, FLAG_NEED_REDRAW);
       break;
     case PropertyNotify:
       if(evt->xproperty.atom == w->_XEMBED_INFO)
@@ -864,6 +847,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
           }
         }
       SET_FLAG(w, FLAG_DRAWING_COORDS_CHANGED);
+      SET_FLAG(w, FLAG_NEED_REDRAW);
       }
       break;
     case MotionNotify:
@@ -1188,25 +1172,15 @@ void bg_x11_window_handle_events(bg_x11_window_t * win, int milliseconds)
   {
   XEvent evt;
   
-  if(TEST_FLAG(win, FLAG_WAIT_FOR_COMPLETION))
+  while(1)
     {
-    while(TEST_FLAG(win, FLAG_WAIT_FOR_COMPLETION))
+    if(!x11_window_next_event(win, &evt, milliseconds))
       {
-      x11_window_next_event(win, &evt, -1);
-      bg_x11_window_handle_event(win, &evt);
+      /* Still need to hide the mouse cursor and ping the screensaver */
+      bg_x11_window_handle_event(win, NULL);
+      return;
       }
+    bg_x11_window_handle_event(win, &evt);
     }
-  else
-    {
-    while(1)
-      {
-      if(!x11_window_next_event(win, &evt, milliseconds))
-        {
-        /* Still need to hide the mouse cursor and ping the screensaver */
-        bg_x11_window_handle_event(win, NULL);
-        return;
-        }
-      bg_x11_window_handle_event(win, &evt);
-      }
-    }
+    
   }

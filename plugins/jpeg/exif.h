@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-void bg_exif_get_metadata(const gavl_buffer_t * buf, gavl_dictionary_t * ret);
+void bg_exif_read_metadata(const gavl_buffer_t * buf, gavl_dictionary_t * ret, gavl_video_format_t * fmt);
 
 void bg_exif_write_metadata(const gavl_dictionary_t * m,
                             const gavl_video_format_t * video_format,

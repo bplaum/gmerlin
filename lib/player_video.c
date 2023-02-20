@@ -84,14 +84,15 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
   if(!bg_player_input_get_video_format(player))
     return 0;
 
-  s->src = s->in_src;
+  s->src = s->in_src_int;
 
   //  s->vi = &player->src->track_info->video_streams[video_stream];
   
   if(!DO_SUBTITLE_ONLY(player->flags))
     s->src = bg_video_filter_chain_connect(s->fc, s->src);
 
-  if(!bg_player_ov_init(&player->video_stream))
+  if(!bg_player_ov_init
+     (&player->video_stream))
     return 0;
   
   if(!DO_SUBTITLE_ONLY(player->flags))
@@ -115,14 +116,7 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
 
 void bg_player_video_cleanup(bg_player_t * player)
   {
-  bg_player_video_stream_t * s;
-  s = &player->video_stream;
   
-  if(s->in_src)
-    {
-    gavl_video_source_destroy(s->in_src);
-    s->in_src = NULL;
-    }
   //  s->vi = NULL;
   }
 
@@ -272,12 +266,6 @@ void bg_player_set_video_filter_parameter(void * data, const char * name,
   
   }
 
-int
-bg_player_read_video(bg_player_t * p, gavl_video_frame_t ** frame)
-  {
-  bg_player_video_stream_t * s = &p->video_stream;
-  return (gavl_video_source_read_frame(s->src, frame) == GAVL_SOURCE_OK);
-  }
 
 void bg_player_video_set_eof(bg_player_t * p)
   {

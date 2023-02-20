@@ -53,14 +53,14 @@ static const struct
   }
 orientations[8] =
   {
-    { GAVL_META_IMAGE_ORIENT_NORMAL,        1 },
-    { GAVL_META_IMAGE_ORIENT_ROT90_CW,      8 },
-    { GAVL_META_IMAGE_ORIENT_ROT180_CW,     3 },
-    { GAVL_META_IMAGE_ORIENT_ROT270_CW,     6 },
-    { GAVL_META_IMAGE_ORIENT_FH,            2 },
-    { GAVL_META_IMAGE_ORIENT_FH_ROT90_CW,   7 },
-    { GAVL_META_IMAGE_ORIENT_FH_ROT180_CW,  4 },
-    { GAVL_META_IMAGE_ORIENT_FH_ROT270_CW,  5 },
+    { GAVL_IMAGE_ORIENT_NORMAL,        1 },
+    { GAVL_IMAGE_ORIENT_ROT90_CW,      8 },
+    { GAVL_IMAGE_ORIENT_ROT180_CW,     3 },
+    { GAVL_IMAGE_ORIENT_ROT270_CW,     6 },
+    { GAVL_IMAGE_ORIENT_FH,            2 },
+    { GAVL_IMAGE_ORIENT_FH_ROT90_CW,   7 },
+    { GAVL_IMAGE_ORIENT_FH_ROT180_CW,  4 },
+    { GAVL_IMAGE_ORIENT_FH_ROT270_CW,  5 },
 
   };
 
@@ -165,6 +165,7 @@ typedef struct
   gavl_dictionary_t * m;
   bg_charset_converter_t * cnv;
   ExifByteOrder bo;
+  gavl_video_format_t * fmt;
   } foreach_data_t;
 
 typedef struct
@@ -499,7 +500,7 @@ static void foreach2(ExifEntry * e, void * priv)
       num = get_short(e->data, fd->bo);
       
       if((num = orientation_from_exif(num)) >= 0)
-        gavl_dictionary_set_int(fd->m, GAVL_META_IMAGE_ORIENTATION, num);
+        fd->fmt->orientation = num;
       }
       break;
     default:
@@ -610,12 +611,14 @@ static void foreach1(ExifContent * c, void * priv)
   exif_content_foreach_entry(c, foreach2, priv);
   }
 
-void bg_exif_get_metadata(const gavl_buffer_t * buf,
-                          gavl_dictionary_t * ret)
+void bg_exif_read_metadata(const gavl_buffer_t * buf,
+                           gavl_dictionary_t * ret,
+                           gavl_video_format_t * fmt)
   {
   ExifData * d;
   foreach_data_t fd;
   fd.m = ret;
+  fd.fmt = fmt;
   
   d = exif_data_new_from_data(buf->buf, buf->len);
   if(!d)
@@ -673,7 +676,6 @@ void bg_exif_write_metadata(const gavl_dictionary_t * m,
                             const gavl_video_format_t * video_format,
                             gavl_buffer_t * buf)
   {
-  int orientation_g = 0;
   int orientation_e;
   unsigned char *exif_data;
   unsigned int exif_data_len;
@@ -701,8 +703,8 @@ void bg_exif_write_metadata(const gavl_dictionary_t * m,
 
   /* Write orientation */
   
-  if(m && gavl_dictionary_get_int(m, GAVL_META_IMAGE_ORIENTATION, &orientation_g) &&
-     orientation_g && ((orientation_e = orientation_from_gavl(orientation_g)) > 0))
+  if((video_format->orientation != GAVL_IMAGE_ORIENT_NORMAL) &&
+     ((orientation_e = orientation_from_gavl(video_format->orientation)) > 0))
     {
     entry = init_tag(exif, EXIF_IFD_0, EXIF_TAG_ORIENTATION);
     exif_set_short(entry->data, FILE_BYTE_ORDER, orientation_e);

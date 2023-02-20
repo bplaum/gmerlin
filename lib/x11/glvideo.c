@@ -72,6 +72,8 @@
 /* Use textures imported from DMA-Buffers */
 #define MODE_TEXTURE_DMABUF  3
 
+#define DEFAULT_GL_MODE GAVL_HW_EGL_GLES_X11
+
 typedef struct
   {
   float  pos[3];
@@ -121,6 +123,7 @@ typedef struct
   int use_cmat;
   int use_cmat_ovl;
   
+  gavl_gl_frame_info_t * cur_frame;
   } gl_priv_t;
 
 static int supports_hw_gl(driver_data_t* d,
@@ -221,13 +224,16 @@ static void update_colormatrix(driver_data_t* d);
 static void set_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
+  fprintf(stderr, "set GL... %p", priv->hwctx_gl);
   gavl_hw_egl_set_current(priv->hwctx_gl, d->win->current->egl_surface);
+  fprintf(stderr, "set GL done\n");
   }
 
 static void unset_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
   gavl_hw_egl_unset_current(priv->hwctx_gl);
+  fprintf(stderr, "unset GL %p\n", priv->hwctx_gl);
   }
 
 static const char * vertex_shader_gl = 
@@ -658,11 +664,7 @@ static int init_gl(driver_data_t * d)
   gl_priv_t * priv;
   priv = calloc(1, sizeof(*priv));
   /* Create initial context to check if that works */
-#if 0  
-  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GLES_X11, d->win->dpy)))
-#else
-  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GL_X11, d->win->dpy)))
-#endif
+  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, DEFAULT_GL_MODE, d->win->dpy)))
     {
     free(priv);
     return 0;
@@ -797,8 +799,42 @@ static int open_gl(driver_data_t * d)
     }
   else
     {
+    double shrink_factor;
+    GLint max_size;
     priv->hwctx_gl = priv->hwctx_priv;
     priv->mode = MODE_TEXTURE_COPY;
+
+    /* Check image size against MAX_TEXTURE_SIZE */
+    gavl_hw_egl_set_current(priv->hwctx_gl, NULL);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
+    gavl_hw_egl_unset_current(priv->hwctx_gl);
+
+    if((w->video_format.image_width > max_size) ||
+       (w->video_format.image_height > max_size))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Image size exceeds maximum texture size, forcing downscaling");
+
+      if(w->video_format.image_height > w->video_format.image_width)
+        {
+        shrink_factor = (double)max_size / (double)w->video_format.image_height;
+
+        w->video_format.image_width = (int)(shrink_factor * w->video_format.image_width + 0.5);
+        w->video_format.image_height = max_size;
+        
+        }
+      else
+        {
+        shrink_factor = (double)max_size / (double)w->video_format.image_width;
+        
+        w->video_format.image_height = (int)(shrink_factor * w->video_format.image_height + 0.5);
+        if(w->video_format.image_height > max_size)
+          w->video_format.image_height = max_size;
+
+        w->video_format.image_width = max_size;
+        }
+      gavl_video_format_set_frame_size(&w->video_format, 0, 0);
+      }
+    
     }
   
   switch(priv->mode)
@@ -807,10 +843,11 @@ static int open_gl(driver_data_t * d)
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (direct)", (src_type == GAVL_HW_EGL_GL_X11) ? "" : "ES");
       break;
     case MODE_TEXTURE_COPY:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL ES via EGL (indirect)");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (indirect)",
+               (DEFAULT_GL_MODE == GAVL_HW_EGL_GL_X11) ? "" : "ES");
       break;
     case MODE_TEXTURE_DMABUF:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing DMA buffers with OpenGL ES");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing DMA buffers with OpenGL ES via EGL");
       break;
     default:
       break;
@@ -876,19 +913,11 @@ static int is_unity(double cmat[4][5])
   return 1;
   }
 
-static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
+static void set_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   {
-  int i;
   bg_x11_window_t * w;
-  float tex_x1, tex_x2, tex_y1, tex_y2;
-  float v_x1, v_x2, v_y1, v_y2;
-  gavl_video_frame_t * ovl;
   gl_priv_t * priv;
-  gavl_gl_frame_info_t * info;
 
-  double cmat[4][5];
-
-  shader_program_t * p = NULL;
   
   priv = d->priv;
     
@@ -901,7 +930,8 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     
     gavl_video_frame_ram_to_hw(&w->video_format, priv->texture, f);
     f = priv->texture;
-    info = f->storage;
+
+    priv->cur_frame = f->storage;
     }
 
 #ifdef HAVE_DRM
@@ -918,11 +948,27 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
       {
       
       }
-    info = f->storage;
+    priv->cur_frame = f->storage;
     }
 #endif
   else
-    info = f->storage;
+    priv->cur_frame = f->storage;
+  }
+
+static void put_frame_gl(driver_data_t * d)
+  {
+  int i;
+  float tex_x1, tex_x2, tex_y1, tex_y2;
+  float v_x1, v_x2, v_y1, v_y2;
+  gavl_video_frame_t * ovl;
+  gl_priv_t * priv;
+
+  double cmat[4][5];
+
+  shader_program_t * p = NULL;
+  bg_x11_window_t * w  = d->win;
+  
+  priv = d->priv;
   
   set_gl(d);
 
@@ -963,10 +1009,10 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   /* Put image into texture */
   //  glEnable(GL_TEXTURE_2D);
 
-  for(i = 0; i < info->num_textures; i++)
+  for(i = 0; i < priv->cur_frame->num_textures; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(info->texture_target, info->textures[i]);
+    glBindTexture(priv->cur_frame->texture_target, priv->cur_frame->textures[i]);
     glUniform1i(p->frame_locations[i], i);
 #if 0
     fprintf(stderr, "Bind texture %d %d %d\n",
@@ -1049,6 +1095,8 @@ static void put_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     
     for(i = 0; i < w->num_overlay_streams; i++)
       {
+      gavl_gl_frame_info_t * info;
+      
       if(!w->overlay_streams[i]->active)
         continue;
 
@@ -1203,7 +1251,7 @@ static void close_gl(driver_data_t * d)
     {
     /* Re-create the hw context */
     gavl_hw_ctx_destroy(priv->hwctx_priv);
-    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GLES_X11, d->win->dpy);
+    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, DEFAULT_GL_MODE, d->win->dpy);
     }
 
   
@@ -1337,6 +1385,7 @@ const video_driver_t gl_driver =
     .set_brightness     = set_brightness_gl,
     .set_saturation     = set_saturation_gl,
     .set_contrast       = set_contrast_gl,
+    .set_frame          = set_frame_gl,
     .put_frame          = put_frame_gl,
     .close              = close_gl,
     .cleanup            = cleanup_gl,

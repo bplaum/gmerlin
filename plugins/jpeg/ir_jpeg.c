@@ -165,13 +165,6 @@ int read_header_jpeg(void * priv, const char * filename,
   if(setjmp(jpeg->jerr.setjmp_buffer))
     return 0;
 
-#ifdef HAVE_LIBEXIF
-  bg_exif_get_metadata(&jpeg->buf, &jpeg->metadata);
-
-  /* TODO: Handle orientation */
-  
-#endif
- 
   
   jpeg_mem_src(&jpeg->cinfo, jpeg->buf.buf, jpeg->buf.len);
   
@@ -187,7 +180,7 @@ int read_header_jpeg(void * priv, const char * filename,
   format->frame_height = jpeg->cinfo.image_height;
   format->pixel_width = 1;
   format->pixel_height = 1;
-  
+
   /*
    *  Get the colorspace, we handle YUV 444, YUV 422, YUV 420 directly.
    *  All other formats are converted to RGB24
@@ -241,6 +234,11 @@ int read_header_jpeg(void * priv, const char * filename,
     default:
       format->pixelformat = GAVL_RGB_24;
     }
+
+#ifdef HAVE_LIBEXIF
+  bg_exif_read_metadata(&jpeg->buf, &jpeg->metadata, format);
+#endif
+
   gavl_video_format_copy(&jpeg->format, format);
 
 

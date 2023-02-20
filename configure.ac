@@ -337,47 +337,6 @@ fi
 AM_CONDITIONAL(HAVE_XTEST, test x$have_xtest = xtrue)
 
 dnl
-dnl Xv
-dnl
-
-AH_TEMPLATE([HAVE_LIBXV],
-            [Do we have xv installed?])
-
-have_xv="false"
-XV_LIBS=""
-
-if test x$have_x = xtrue; then
-
-OLD_CFLAGS=$CFLAGS
-OLD_LIBS=$LIBS
-CFLAGS=$X_FLAGS
-LIBS="$X_LIBS -lXv"
-
-AC_MSG_CHECKING(for xv)
-AC_TRY_LINK([#include <X11/Xlib.h>
-             #include <X11/extensions/Xvlib.h>],
-            [int i = 0;
-             /* We ensure the function is here but never call it */
-             if(i)
-		 XvQueryExtension(NULL, NULL, NULL, NULL, NULL, NULL);
-             return 0;],
-            [XV_LIBS="-lXv";have_xv=true;AC_MSG_RESULT(Yes)],
-	    AC_MSG_RESULT("No"))
-
-if test x$have_xv = "xtrue"; then
-AC_DEFINE(HAVE_LIBXV)
-fi
-
-AC_SUBST(XV_LIBS)
-
-CFLAGS=$OLD_CFLAGS
-LIBS=$OLD_LIBS
-
-fi
-
-AM_CONDITIONAL(HAVE_XV, test x$have_xv = xtrue)
-
-dnl
 dnl X11 DPMS extension
 dnl
 

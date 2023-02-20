@@ -33,15 +33,11 @@
 #define LOCK(p)   bg_plugin_lock(p->h)
 #define UNLOCK(p) bg_plugin_unlock(p->h)
 
-#define FLAG_EMULATE_OVL     (1<<0)
-#define FLAG_EMULATE_STILL   (1<<1)
-#define FLAG_STILL_MODE      (1<<2)
 #define FLAG_OPEN            (1<<3)
-#define FLAG_OVERLAY_CHANGED (1<<4)
 
 typedef struct
   {
-  gavl_overlay_blend_context_t * ctx;
+  //  gavl_overlay_blend_context_t * ctx;
   gavl_overlay_t * ovl;
   gavl_video_format_t format;
     
@@ -60,9 +56,6 @@ struct bg_ov_s
 
   ovl_stream_t ** ovl_str;
   int num_ovl_str;
-  gavl_video_frame_t * still_frame;
-
-  gavl_video_sink_t * sink_ext;
   gavl_video_sink_t * sink_int;
 
   gavl_dictionary_t ov_state;
@@ -96,9 +89,7 @@ void bg_ov_destroy(bg_ov_t * ov)
     UNLOCK(ov);
     }
   bg_plugin_unref(ov->h);
-  if(ov->sink_ext)
-    gavl_video_sink_destroy(ov->sink_ext);
-
+  
   gavl_dictionary_free(&ov->ov_state);
   free(ov);
   }
@@ -118,90 +109,6 @@ void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   bg_ov_plugin_set_window_title(ov->h, title);
   }
 
-static gavl_video_frame_t * get_frame_func(void * priv)
-  {
-  gavl_video_frame_t * ret;
-  bg_ov_t * ov = priv;
-  LOCK(ov);
-  ret = gavl_video_sink_get_frame(ov->sink_int);
-  UNLOCK(ov);
-  return ret;
-  }
-
-static void blend_overlays(bg_ov_t * ov, gavl_video_frame_t * f)
-  {
-  int i;
-  for(i = 0; i < ov->num_ovl_str; i++)
-    {
-    if(ov->ovl_str[i]->ovl)
-      {
-      gavl_overlay_blend(ov->ovl_str[i]->ctx, f);
-      }
-    }
-  ov->flags &= ~FLAG_OVERLAY_CHANGED;
-  }
-
-static gavl_sink_status_t put_video(bg_ov_t * ov, gavl_video_frame_t*frame)
-  {
-  gavl_sink_status_t ret;
-
-  //  fprintf(stderr, "Put video %p\n", frame);
-  
-  ov->flags &= ~FLAG_STILL_MODE;
-  
-  if(ov->flags & FLAG_EMULATE_OVL)
-    blend_overlays(ov, frame);
-  LOCK(ov);
-  ret = gavl_video_sink_put_frame(ov->sink_int, frame);
-  UNLOCK(ov);
-
-  bg_ov_handle_events(ov);
-  
-  return ret;
-  }
-
-static gavl_sink_status_t put_still(bg_ov_t * ov, gavl_video_frame_t*frame)
-  {
-  gavl_sink_status_t ret;
-  
-  //  fprintf(stderr, "Put still %p\n", frame);
-  
-  ov->flags |= FLAG_STILL_MODE;
-  if(!(ov->plugin->common.flags & BG_PLUGIN_OV_STILL))
-    ov->flags |= FLAG_EMULATE_STILL;
-
-  /* Save this frame */
-
-  if(ov->flags & (FLAG_EMULATE_STILL|FLAG_EMULATE_OVL))
-    {
-    if(!ov->still_frame)
-      ov->still_frame = gavl_video_frame_create(&ov->format);
-
-    gavl_video_frame_copy(&ov->format, ov->still_frame, frame);
-    ov->still_frame->duration = -1;
-    }
-  
-  if(ov->flags & FLAG_EMULATE_OVL)
-    blend_overlays(ov, frame);
-  
-  LOCK(ov);
-  ret = gavl_video_sink_put_frame(ov->sink_int, frame);
-  UNLOCK(ov);
-
-  bg_ov_handle_events(ov);
-  
-  return ret;
-  }
-
-
-static gavl_sink_status_t put_frame_func(void * priv, gavl_video_frame_t*frame)
-  {
-  bg_ov_t * ov = priv;
-  if(frame->duration < 0)
-    return put_still(ov, frame);
-  else
-    return put_video(ov, frame);
-  }
 
 int bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect)
   {
@@ -221,9 +128,6 @@ int bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect)
   gavl_video_format_copy(&ov->format, format);
   ov->flags = FLAG_OPEN;
   
-  ov->sink_ext = gavl_video_sink_create(get_frame_func,
-                                        put_frame_func, ov, format);
-  
   //  fprintf(stderr, "open_ov done\n");
 
   return ret;
@@ -231,24 +135,9 @@ int bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect)
 
 gavl_video_sink_t * bg_ov_get_sink(bg_ov_t * ov)
   {
-  return ov->sink_ext;
+  return ov->sink_int;
   }
 
-static gavl_sink_status_t
-put_overlay(void * priv, gavl_video_frame_t * frame)
-  {
-  ovl_stream_t * str = priv;
-
-  if(frame && frame->src_rect.w && frame->src_rect.h)
-    {
-    str->ovl = frame;
-    gavl_overlay_blend_context_set_overlay(str->ctx,
-                                           str->ovl);
-    }
-  else
-    str->ovl = NULL;
-  return GAVL_SINK_OK;
-  }
 
 gavl_video_sink_t *
 bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
@@ -273,58 +162,19 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
 
     }
  
-  if(ov->plugin->add_overlay_stream)
-    {
-    /* Try hardware overlay */
-    LOCK(ov);
-    str->sink_int = ov->plugin->add_overlay_stream(ov->priv, format);
-    UNLOCK(ov);
-    
-    if(str->sink_int)
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
-             "Using hardeware overlay for stream %d",
-             ov->num_ovl_str-1);
-      return str->sink_int;
-      }
-    }
-  /* Software overlay */
-  ov->flags |= FLAG_EMULATE_OVL;
+  /* Try hardware overlay */
+  LOCK(ov);
+  str->sink_int = ov->plugin->add_overlay_stream(ov->priv, format);
+  UNLOCK(ov);
   
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
-         "Using software overlay for stream %d",
-         ov->num_ovl_str - 1);
-  
-  str->ctx = gavl_overlay_blend_context_create();
-  
-  gavl_overlay_blend_context_init(str->ctx,
-                                  &ov->format, format);
-  str->sink_ext = gavl_video_sink_create(NULL, put_overlay, str, format);
-  
-  gavl_video_format_copy(&str->format, format);
-  
-  return str->sink_ext;
+           "Using hardeware overlay for stream %d",
+           ov->num_ovl_str-1);
+  return str->sink_int;
   }
 
 void bg_ov_handle_events(bg_ov_t * ov)
   {
-  if(ov->flags & FLAG_STILL_MODE)
-    {
-    if(ov->flags & (FLAG_EMULATE_STILL|FLAG_OVERLAY_CHANGED))
-      {
-      gavl_video_frame_t * f;
-      LOCK(ov);
-      f = gavl_video_sink_get_frame(ov->sink_int);
-      gavl_video_frame_copy(&ov->format, f, ov->still_frame);
-      
-      if(ov->flags & FLAG_EMULATE_OVL)
-        blend_overlays(ov, f);
-
-      gavl_video_sink_put_frame(ov->sink_int, f);
-      UNLOCK(ov);
-      }
-    }
-  
   if(ov->plugin->handle_events)
     {
     LOCK(ov);
@@ -346,19 +196,11 @@ void bg_ov_close(bg_ov_t * ov)
   ov->plugin->close(ov->priv);
   UNLOCK(ov);
 
-  if(ov->still_frame)
-    {
-    gavl_video_frame_destroy(ov->still_frame);
-    ov->still_frame = NULL;
-    }
-
   if(ov->num_ovl_str)
     {
     int i;
     for(i = 0; i < ov->num_ovl_str; i++)
       {
-      if(ov->ovl_str[i]->ctx)
-        gavl_overlay_blend_context_destroy(ov->ovl_str[i]->ctx);
       free(ov->ovl_str[i]);
       }
     free(ov->ovl_str);
@@ -366,12 +208,6 @@ void bg_ov_close(bg_ov_t * ov)
     ov->num_ovl_str = 0;
     }
 
-  if(ov->sink_ext)
-    {
-    gavl_video_sink_destroy(ov->sink_ext);
-    ov->sink_ext = NULL;
-    }
-  
   //  fprintf(stderr, "close_ov done\n");
 
   }

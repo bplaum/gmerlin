@@ -120,9 +120,6 @@
 /* Do we have xinerama installed? */
 #undef HAVE_LIBXINERAMA
 
-/* Do we have xv installed? */
-#undef HAVE_LIBXV
-
 /* Define to 1 if you have the <linux/videodev2.h> header file. */
 #undef HAVE_LINUX_VIDEODEV2_H
 

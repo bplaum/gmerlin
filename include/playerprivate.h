@@ -178,7 +178,6 @@ typedef struct
   
   bg_msg_sink_t * evt_sink;
   
-  int64_t frames_written;
   int64_t frames_read;
   
   bg_accelerator_map_t * accel_map;
@@ -205,7 +204,7 @@ typedef struct
   int do_skip;
   
   gavl_video_source_t * in_src_int;
-  gavl_video_source_t * in_src;
+  //  gavl_video_source_t * in_src;
 
   gavl_video_source_t * src;
   //  bg_video_info_t * vi;
@@ -579,8 +578,6 @@ void bg_player_video_cleanup(bg_player_t * p);
 void bg_player_video_create(bg_player_t * p);
 void bg_player_video_destroy(bg_player_t * p);
 
-int bg_player_read_video(bg_player_t * p,
-                         gavl_video_frame_t ** frame);
 
 void bg_player_video_set_eof(bg_player_t * p);
 

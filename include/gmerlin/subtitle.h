@@ -34,7 +34,7 @@ void bg_subtitle_handler_init(bg_subtitle_handler_t * h,
                               gavl_video_sink_t * sink);
 
 void bg_subtitle_handler_update(bg_subtitle_handler_t *,
-                                const gavl_video_frame_t * frame);
+                                int64_t frame_time);
 
 void bg_subtitle_handler_reset(bg_subtitle_handler_t *);
 

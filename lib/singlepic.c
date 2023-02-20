@@ -409,6 +409,11 @@ static int open_stills_input(void * priv, const char * filename)
   fmt->frame_duration = 0;
   fmt->framerate_mode = GAVL_FRAMERATE_STILL;
 
+  /* Add message stream */
+  gavl_track_append_msg_stream(inp->track_info, GAVL_META_STREAM_ID_MSG_PROGRAM);
+  
+
+  
   /* Metadata */
 
   if(inp->image_reader->get_metadata &&
@@ -819,6 +824,9 @@ bg_plugin_info_t * bg_singlepic_stills_input_info(void)
 static int handle_cmd_input(void * data, gavl_msg_t * msg)
   {
   input_t * priv = data;
+
+  //  fprintf(stderr, "handle_cmd_input:\n");
+  //  gavl_msg_dump(msg, 2);
   
   switch(msg->NS)
     {
@@ -902,7 +910,7 @@ void * bg_singlepic_stills_input_create()
   ret->track_info = gavl_append_track(&ret->mi, NULL);
 
   bg_controllable_init(&ret->controllable,
-                       bg_msg_sink_create(handle_cmd_input, ret, 0),
+                       bg_msg_sink_create(handle_cmd_input, ret, 1),
                        bg_msg_hub_create(1));
 
   ret->do_still = 1;

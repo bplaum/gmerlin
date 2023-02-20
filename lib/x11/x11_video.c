@@ -40,13 +40,6 @@ static video_driver_t const * const drivers[] =
    &vaapi_driver,
 #endif    
 
-    /* TODO: Remove ximage and xv */
-    &ximage_driver,
-#ifdef HAVE_LIBXV
-    &xv_driver,
-#endif
-
-
   };
 
 
@@ -54,8 +47,7 @@ static video_driver_t const * const drivers[] =
 static gavl_video_frame_t * create_frame(bg_x11_window_t * w)
   {
   gavl_video_frame_t * ret;
-  if(!TEST_FLAG(w, FLAG_DO_SW_SCALE) &&
-     w->current_driver->driver->create_frame)
+  if(w->current_driver->driver->create_frame)
     {
     ret = w->current_driver->driver->create_frame(w->current_driver);
     }
@@ -69,8 +61,7 @@ static gavl_video_frame_t * create_frame(bg_x11_window_t * w)
 
 static void destroy_frame(bg_x11_window_t * w, gavl_video_frame_t * f)
   {
-  if(!TEST_FLAG(w, FLAG_DO_SW_SCALE) &&
-     w->current_driver->driver->destroy_frame)
+  if(w->current_driver->driver->destroy_frame)
     w->current_driver->driver->destroy_frame(w->current_driver, f);
   else
     gavl_video_frame_destroy(f);
@@ -186,31 +177,8 @@ static gavl_sink_status_t put_frame(void * priv, gavl_video_frame_t * f)
     CLEAR_FLAG(w, FLAG_CLEAR_BORDER);
     }
 
-  if(f->duration >= 0)
-    {
-    CLEAR_FLAG(w, FLAG_STILL_MODE);
-    bg_x11_window_put_frame_internal(w, f);
-    }
-  else
-    {
-    SET_FLAG(w, FLAG_STILL_MODE);
-
-    if(w->current_driver->driver->init_overlay_stream)
-      {
-      /* Keep the frame */
-      w->still_frame = f;
-      }
-    else
-      {
-      if(!w->still_frame)
-        {
-        w->still_frame_priv = create_frame(w);
-        w->still_frame = w->still_frame_priv;
-        }
-      gavl_video_frame_copy(&w->video_format, w->still_frame, f);
-      }
-    bg_x11_window_put_frame_internal(w, w->still_frame);
-    }
+  bg_x11_window_put_frame_internal(w, f);
+  bg_x11_window_handle_events(w, 0);
   
   return GAVL_SINK_OK;
   }
@@ -228,7 +196,7 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   
   gavl_video_frame_t * (*get_func)(void * priv) = NULL;
   
-  CLEAR_FLAG(w, (FLAG_DO_SW_SCALE|FLAG_NO_GET_FRAME));
+  CLEAR_FLAG(w, (FLAG_NO_GET_FRAME));
   w->current_driver = NULL;  
   if(!TEST_FLAG(w, FLAG_DRIVERS_INITIALIZED))
     {
@@ -303,8 +271,6 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
    *  Now, get the driver with the lowest penalty.
    *  Scaling would be nice as well
    */
-  force_hw_scale = !!TEST_FLAG(w, FLAG_FORCE_HW_SCALE);
-  
   while(1)
     {
     min_index = -1;
@@ -314,8 +280,6 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
        have the pixelformat unset */
     for(i = 0; i < num_drivers; i++)
       {
-      if(!w->drivers[i].driver->can_scale && force_hw_scale)
-        continue;
       if(w->drivers[i].pixelformat != GAVL_PIXELFORMAT_NONE)
         {
         if((min_penalty < 0) || w->drivers[i].penalty < min_penalty)
@@ -374,9 +338,6 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   /* All other values are already set or will be set by set_rectangles */
   w->window_format.pixelformat = format->pixelformat;
   
-  if(!w->current_driver->driver->can_scale)
-    SET_FLAG(w, FLAG_DO_SW_SCALE);
-  
   bg_x11_window_set_contrast(w);
   bg_x11_window_set_saturation(w);
   bg_x11_window_set_brightness(w);
@@ -384,7 +345,7 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   XSync(w->dpy, False);
   bg_x11_window_handle_events(w, 0);
 
-  if(TEST_FLAG(w, FLAG_DO_SW_SCALE|FLAG_NO_GET_FRAME) ||
+  if(TEST_FLAG(w, FLAG_NO_GET_FRAME) ||
      !w->current_driver->driver->create_frame)
     get_func = NULL;
   else
@@ -417,7 +378,6 @@ void bg_x11_window_set_rectangles(bg_x11_window_t * w,
                                   gavl_rectangle_f_t * src_rect,
                                   gavl_rectangle_i_t * dst_rect)
   {
-  gavl_video_options_t * opt;
   gavl_rectangle_f_copy(&w->src_rect, src_rect);
   gavl_rectangle_i_copy(&w->dst_rect, dst_rect);
 #if 0
@@ -428,50 +388,6 @@ void bg_x11_window_set_rectangles(bg_x11_window_t * w,
   fprintf(stderr, "\n");
 #endif
   
-  if(w->current_driver && TEST_FLAG(w, FLAG_DO_SW_SCALE))
-    {
-
-    if((w->window_format.image_width > w->window_format.frame_width) ||
-       (w->window_format.image_height > w->window_format.frame_height))
-      {
-      w->window_format.frame_width = w->window_format.image_width;
-      w->window_format.frame_height = w->window_format.image_height;
-      
-      PAD_IMAGE_SIZE(w->window_format.frame_width);
-      PAD_IMAGE_SIZE(w->window_format.frame_height);
-      
-      if(w->window_frame)
-        {
-        if(w->current_driver->driver->destroy_frame)
-          w->current_driver->driver->destroy_frame(w->current_driver,
-                                                   w->window_frame);
-        else
-          gavl_video_frame_destroy(w->window_frame);
-        w->window_frame = NULL;
-        }
-      }
-
-    if(!w->window_frame)
-      {
-      if(w->current_driver->driver->create_frame)
-        w->window_frame = w->current_driver->driver->create_frame(w->current_driver);
-      else
-        w->window_frame = gavl_video_frame_create(&w->window_format);
-      }
-    
-    /* Clear window */
-    gavl_video_frame_clear(w->window_frame, &w->window_format);
-    
-    /* Reinitialize scaler */
-    
-    opt = gavl_video_scaler_get_options(w->scaler);
-    gavl_video_options_set_rectangles(opt, &w->src_rect,
-                                      &w->dst_rect);
-    
-    gavl_video_scaler_init(w->scaler,
-                           &w->video_format,
-                           &w->window_format); 
-    }
   bg_x11_window_clear(w);
   SET_FLAG(w, FLAG_CLEAR_BORDER);
   }
@@ -481,15 +397,9 @@ void bg_x11_window_set_rectangles(bg_x11_window_t * w,
 void bg_x11_window_put_frame_internal(bg_x11_window_t * w,
                                       gavl_video_frame_t * f)
   {
-  if(TEST_FLAG(w, FLAG_DO_SW_SCALE))
-    {
-    gavl_video_scaler_scale(w->scaler, f, w->window_frame);
-    w->current_driver->driver->put_frame(w->current_driver,
-                                         w->window_frame);
-    }
-  else
-    w->current_driver->driver->put_frame(w->current_driver, f);
-
+  w->current_driver->driver->set_frame(w->current_driver, f);
+  w->current_driver->driver->put_frame(w->current_driver);
+  
   CLEAR_FLAG(w, FLAG_OVERLAY_CHANGED);
   }
 
@@ -498,23 +408,7 @@ void bg_x11_window_put_frame_internal(bg_x11_window_t * w,
 void bg_x11_window_close_video(bg_x11_window_t * w)
   {
   int i;
-  if(w->window_frame)
-    {
-    if(w->current_driver->driver->destroy_frame)
-      w->current_driver->driver->destroy_frame(w->current_driver, w->window_frame);
-    else
-      gavl_video_frame_destroy(w->window_frame);
-    w->window_frame = NULL;
-    }
-
-  if(w->still_frame_priv)
-    {
-    destroy_frame(w, w->still_frame_priv);
-    w->still_frame_priv = NULL;
-    }
-
-  w->still_frame = NULL;
-
+  
   if(w->frame)
     {
     destroy_frame(w, w->frame);
@@ -560,3 +454,17 @@ void bg_x11_window_close_video(bg_x11_window_t * w)
   bg_x11_window_handle_events(w, 0);
   }
 
+void bg_x11_window_check_redraw(bg_x11_window_t* win)
+  {
+  if(!TEST_FLAG(win, (FLAG_OVERLAY_CHANGED|FLAG_NEED_REDRAW)))
+    return;
+  
+  if(win->current_driver)
+    {
+    fprintf(stderr, "Redraw\n");
+    win->current_driver->driver->put_frame(win->current_driver);
+    }
+  
+  if(CLEAR_FLAG(win, (FLAG_OVERLAY_CHANGED|FLAG_NEED_REDRAW)))
+    return;
+  }

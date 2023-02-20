@@ -290,7 +290,6 @@ char * bg_make_thumbnail(gavl_video_frame_t * in_frame,
   double ar;
   gavl_video_options_t * opt;
   gavl_dictionary_t m_out;
-  int orientation = GAVL_META_IMAGE_ORIENT_NORMAL;
   
   cnv = gavl_video_converter_create();
 
@@ -357,12 +356,6 @@ char * bg_make_thumbnail(gavl_video_frame_t * in_frame,
   output_plugin = (bg_image_writer_plugin_t*)output_handle->plugin;
 
   output_plugin->set_callbacks(output_handle->priv, &cb);
-
-  if(m && gavl_dictionary_get_int(m, GAVL_META_IMAGE_ORIENTATION, &orientation) &&
-     orientation)
-    {
-    gavl_dictionary_set_int(&m_out, GAVL_META_IMAGE_ORIENTATION, orientation);
-    }
   
   if(!output_plugin->write_header(output_handle->priv,
                                   out_file_base, &out_format, &m_out))

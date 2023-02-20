@@ -132,7 +132,7 @@ fvtest_LDADD = ../lib/libgmerlin.la -ldl
 
 
 cfgtest_SOURCES = cfgtest.c
-cfgtest_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
+cfgtest_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 mdb_tree_SOURCES = mdb-tree.c
 mdb_tree_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@

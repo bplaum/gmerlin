@@ -264,7 +264,6 @@ int bg_player_ov_init(bg_player_video_stream_t * vs)
   /* Fixme: Lets just hope, that the OSD format doesn't get changed
      by this call. Otherwise, we would need a gavl_video_converter */
   
-  vs->frames_written = 0;
   vs->last_time = GAVL_TIME_UNDEFINED;
   return result;
   }
@@ -279,14 +278,14 @@ void bg_player_ov_update_still(bg_player_t * p)
   
   //  frame = gavl_video_sink_get_frame(sink);
   
-  if(!bg_player_read_video(p, &frame))
+  if(gavl_video_source_read_frame(s->src, &frame) != GAVL_SOURCE_OK)
     return;
   s->frame_time =
     gavl_time_unscale(s->output_format.timescale,
                       frame->timestamp);
   
   if(DO_SUBTITLE(p->flags))
-    bg_subtitle_handler_update(s->sh, frame);
+    bg_subtitle_handler_update(s->sh, frame->timestamp);
   
   bg_osd_update(s->osd);
 
@@ -341,17 +340,23 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   }
 
 
+#define STATE_READ  1  // Try to read frame
+#define STATE_WAIT  2  // Wait to show frame
+#define STATE_STILL 3 // Show still image
+#define STATE_SHOW  4 // Show frame
+
 void * bg_player_ov_thread(void * data)
   {
   bg_player_video_stream_t * s;
-  gavl_time_t diff_time;
-  gavl_time_t current_time;
-  gavl_time_t frame_time;
-  
   bg_player_t * p = data;
-  gavl_video_frame_t * frame;
+  gavl_video_frame_t * frame = NULL;
   gavl_video_sink_t * sink;
   gavl_timer_t * timer = gavl_timer_create();
+  gavl_source_status_t st = GAVL_SOURCE_OK;
+  int warn_wait = 0;
+  int state = STATE_READ;
+  int done = 0;
+  int still_shown = 0;
   
   s = &p->video_stream;
   
@@ -360,57 +365,156 @@ void * bg_player_ov_thread(void * data)
   s->frame_time = GAVL_TIME_UNDEFINED;
   s->skip = 0;
   
-  while(1)
+  while(!done)
     {
     if(!bg_thread_check(s->th))
       {
       // fprintf(stderr, "bla 1");
       break;
       }
-    /*
-     *  TODO: Check if we had a gapless transition and need to update the cover. We do that
-     *  in the vidoe thread so the rest is not disturbed
-     */
 
-    frame = NULL;
-    
-    if(!bg_player_read_video(p, &frame))
+    /* Check whether to read a frame */
+
+    if(state == STATE_READ)
       {
-      bg_player_video_set_eof(p);
-      if(!bg_thread_wait_for_start(s->th))
+      gavl_time_t frame_time;
+
+      //    fprintf(stderr, "do read\n");
+      
+      if((st = gavl_video_source_read_frame(s->src, &frame)) != GAVL_SOURCE_OK)
         {
-        break;
+        bg_player_video_set_eof(p);
+        if(!bg_thread_wait_for_start(s->th))
+          done = 1;
+        continue;
         }
-      continue;
+      
+      //      fprintf(stderr, "do read done\n");
+
+      frame_time = gavl_time_unscale(s->output_format.timescale,
+                                     frame->timestamp);
+
+      pthread_mutex_lock(&p->config_mutex);
+      frame_time += p->sync_offset; // Passed by user
+      pthread_mutex_unlock(&p->config_mutex);
+      
+      if(DO_STILL(p->flags) && (s->frame_time == GAVL_TIME_UNDEFINED))
+        gavl_timer_set(timer, frame_time);
+      
+      s->frame_time = frame_time;
+
+      if(DO_STILL(p->flags))
+        state = STATE_STILL;
+      else
+        {
+        /* Subtitle handling */
+        if(DO_SUBTITLE(p->flags))
+          bg_subtitle_handler_update(s->sh, frame->timestamp);
+      
+        state = STATE_WAIT;
+        warn_wait = 0;
+        }
       }
 
-    //    fprintf(stderr, "Got frame: %p\n", frame);
-    
-    /* Get frame time */
-
-    frame_time = gavl_time_unscale(s->output_format.timescale,
-                                   frame->timestamp);
-
-    pthread_mutex_lock(&p->config_mutex);
-    frame_time += p->sync_offset; // Passed by user
-    pthread_mutex_unlock(&p->config_mutex);
-    
-    if((s->frame_time == GAVL_TIME_UNDEFINED))
+    if(state == STATE_WAIT)
       {
-      gavl_timer_set(timer, frame_time);
-      }
-    s->frame_time = frame_time;
-    
-    /* Subtitle handling */
-    if(DO_SUBTITLE(p->flags))
-      bg_subtitle_handler_update(s->sh, frame);
-//      handle_subtitle(p);
-    
-    /* Handle stuff */
-    bg_osd_update(s->osd);
+      gavl_time_t diff_time;
+      gavl_time_t current_time;
+      
+      bg_player_time_get(p, 1, &current_time);
+      diff_time =  s->frame_time - current_time;
 
-    /* Check Timing */
+      if((diff_time >= GAVL_TIME_SCALE / 2) && !warn_wait)
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Waiting  %f sec. (cur: %f, frame: %f)",
+                 gavl_time_to_seconds(diff_time), gavl_time_to_seconds(current_time),
+                 gavl_time_to_seconds(s->frame_time));
+        warn_wait = 1;
+        }
+      
+      if(diff_time > GAVL_TIME_SCALE / 10)
+        {
+        diff_time = GAVL_TIME_SCALE / 10;
+        gavl_time_delay(&diff_time);
+        }
+      else if(diff_time > 0)
+        {
+        gavl_time_delay(&diff_time);
+        state = STATE_SHOW;
+        }
+#ifndef NOSKIP
+      /* Drop frame */
+      else if(diff_time < -GAVL_TIME_SCALE / 20) // 50 ms
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
+        s->skip++;
+        state = STATE_READ;
+        continue;
+        }
+#endif
+      else
+        state = STATE_SHOW;
+      }
     
+    if(state == STATE_STILL)
+      {
+      gavl_time_t delay_time = GAVL_TIME_SCALE / 20; // 50 ms
+      if(!frame)
+        {
+        if((st = gavl_video_source_read_frame(s->src, &frame)) != GAVL_SOURCE_OK)
+          frame = NULL;
+        }
+      
+      if(frame)
+        {
+        gavl_time_t current_time;
+        
+        if(!still_shown)
+          {
+          state = STATE_SHOW;
+          still_shown = 1;
+          continue;
+          }
+
+        bg_player_time_get(p, 1, &current_time);
+        if(s->frame_time <= current_time)
+          {
+          state = STATE_SHOW;
+          still_shown = 1;
+          continue;
+          }
+        }
+
+      /* Idle action for still mode */
+      bg_osd_update(s->osd);
+      bg_ov_handle_events(s->ov);
+      }
+    
+    if(state == STATE_SHOW)
+      {
+      bg_osd_update(s->osd);
+
+      if(p->time_update_mode == TIME_UPDATE_FRAME)
+        {
+        pthread_mutex_lock(&p->display_time_offset_mutex);
+        bg_player_broadcast_time(p, s->frame_time - p->display_time_offset);
+        pthread_mutex_unlock(&p->display_time_offset_mutex);
+        }
+
+      sink = bg_ov_get_sink(s->ov);
+      //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
+      gavl_video_sink_put_frame(sink, frame);
+      s->skip = 0;
+      
+      frame = NULL;
+      
+      if(DO_STILL(p->flags))
+        state = STATE_STILL;
+      else
+        state = STATE_READ;
+      }
+    
+#if 0    
     /* Check for underruns */
     if(s->frame_time - gavl_timer_get(timer) < -GAVL_TIME_SCALE)
       {
@@ -421,18 +525,12 @@ void * bg_player_ov_thread(void * data)
     
     bg_player_time_get(p, 1, &current_time);
     diff_time =  s->frame_time - current_time;
-
-#if 0
-    if(diff_time < -GAVL_TIME_SCALE)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Detected underrun due to slow video pipeline");
-      }
-#endif
     
 #ifdef DUMP_TIMESTAMPS
     bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
              current_time, s->frame_time, s->frame_time - current_time);
 #endif
+    
     /* Wait until we can display the frame */
 
     if((s->last_time == GAVL_TIME_UNDEFINED) ||
@@ -444,37 +542,19 @@ void * bg_player_ov_thread(void * data)
         if(diff_time >= GAVL_TIME_SCALE / 2)
           gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Waiting  %f sec. (cur: %f, frame: %f)",
                    gavl_time_to_seconds(diff_time), gavl_time_to_seconds(current_time),
-                   gavl_time_to_seconds(frame_time));
+                   gavl_time_to_seconds(s->frame_time));
         gavl_time_delay(&diff_time);
         s->skip = 0;
         }
-#ifndef NOSKIP
-      /* Drop frame */
-      else if(diff_time < -GAVL_TIME_SCALE / 20) // 50 ms
-        {
-        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
-        s->skip++;
-        continue;
-        }
-#endif
       }
     
     s->last_time = current_time;
     
-    if(p->time_update_mode == TIME_UPDATE_FRAME)
-      {
-      pthread_mutex_lock(&p->display_time_offset_mutex);
-      bg_player_broadcast_time(p, s->frame_time - p->display_time_offset);
-      pthread_mutex_unlock(&p->display_time_offset_mutex);
-      }
-
-    sink = bg_ov_get_sink(s->ov);
-    //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
-    gavl_video_sink_put_frame(sink, frame);
-    s->frames_written++;
 
     if(!gavl_timer_is_running(timer))
       gavl_timer_start(timer);
+#endif
+
     }
   
   gavl_timer_destroy(timer);

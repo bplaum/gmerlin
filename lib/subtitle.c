@@ -146,17 +146,14 @@ static void clear_overlay(bg_subtitle_handler_t * h)
 #endif
   }
 
-void bg_subtitle_handler_update(bg_subtitle_handler_t * h,
-                                const gavl_video_frame_t * frame)
+void bg_subtitle_handler_update(bg_subtitle_handler_t * h, int64_t current_time)
   {
   gavl_video_frame_t * swp;
   gavl_time_t frame_start;
-  gavl_time_t frame_end;
   gavl_time_t overlay_start;
   gavl_time_t overlay_end;
   
-  frame_start = gavl_time_unscale(h->video_format.timescale, frame->timestamp);
-  frame_end = gavl_time_unscale(h->video_format.timescale, frame->timestamp + frame->duration);
+  frame_start = gavl_time_unscale(h->video_format.timescale, current_time);
   
   /* Check if the subtitle is expired */
   if(h->active && (h->cur->duration > 0))
@@ -183,9 +180,8 @@ void bg_subtitle_handler_update(bg_subtitle_handler_t * h,
     {
     overlay_start = gavl_time_unscale(h->ovl_format.timescale,
                                       h->cur->timestamp);
-
     
-    if(overlay_start < frame_end)
+    if(overlay_start <= frame_start)
       put_overlay(h);
     }
   /* Check if the next subtitle became valid */
@@ -193,7 +189,7 @@ void bg_subtitle_handler_update(bg_subtitle_handler_t * h,
     {
     overlay_start = gavl_time_unscale(h->ovl_format.timescale,
                                       h->next->timestamp);
-    if(overlay_start < frame_end)
+    if(overlay_start <= frame_start)
       {
       h->cur->src_rect.w = 0;
       

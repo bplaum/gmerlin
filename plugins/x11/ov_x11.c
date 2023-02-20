@@ -197,6 +197,9 @@ static void handle_events_x11(void * data)
   {
   x11_t * priv = data;
   bg_x11_window_handle_events(priv->win, 0);
+
+  /* Check redraw */
+  bg_x11_window_check_redraw(priv->win);
   }
 
 static void close_x11(void * data)
