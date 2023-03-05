@@ -24,6 +24,7 @@
 #include <x11/x11.h>
 #include <x11/x11_window_private.h>
 
+#include <gmerlin/plugin.h>
 #include <gmerlin/state.h>
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "x11_video"
@@ -193,7 +194,6 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   int i;
   int force_hw_scale;
   int min_penalty, min_index;
-  
   gavl_video_frame_t * (*get_func)(void * priv) = NULL;
   
   CLEAR_FLAG(w, (FLAG_NO_GET_FRAME));
@@ -357,9 +357,21 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
 
   SET_FLAG(w, FLAG_VIDEO_OPEN);
 
+  /* Normalize orientation */
+  if(w->video_format.orientation == GAVL_IMAGE_ORIENT_NORMAL)
+    {
+    gavl_video_format_copy(&w->video_format_n, &w->video_format);
+    }
+  else
+    {
+    gavl_video_format_t fmt;
+    gavl_video_format_copy(&fmt, &w->video_format);
+    gavl_video_format_normalize_orientation(&fmt, &w->video_format_n);
+    }
     
   bg_x11_window_set_drawing_coords(w);
 
+  
   SET_FLAG(w, FLAG_CLEAR_BORDER);
   return 1;
   }

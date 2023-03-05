@@ -28,8 +28,6 @@
 
 #define BG_URL_VAR_CLIENT_ID "cid"
 
-int bg_http_request_write(int socket, gavl_dictionary_t * req);
-
 int bg_http_response_write(int socket, gavl_dictionary_t * req);
 
 int bg_http_send_request(const char * url, int head,
@@ -55,6 +53,8 @@ void bg_http_header_set_date(gavl_dictionary_t * h, const char * name);
 
 /* Get a file with redirection */
 int bg_http_get(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict);
+
+char * bg_http_download(const char * url, const char * out_base);
 
 /* Get a file with redirection and specific range*/
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,

@@ -244,7 +244,6 @@ typedef struct
 #define FLAG_CLEAR_BORDER                   (1<<17)
 #define FLAG_TRACK_RESIZE                   (1<<18)
 #define FLAG_ZEROCOPY                       (1<<19)
-#define FLAG_DRAWING_COORDS_CHANGED         (1<<20)
 #define FLAG_NEED_REDRAW                    (1<<21)
 
 #define SET_FLAG(w, flag) w->flags |= (flag)
@@ -329,10 +328,10 @@ struct bg_x11_window_s
 #endif
 
   gavl_video_format_t video_format;
+  /* Video format with normalized orientation */
+  gavl_video_format_t video_format_n;
   
-  /* Scaling stuff */
   gavl_video_format_t window_format;
-  //  gavl_video_frame_t * window_frame;
   
   gavl_rectangle_f_t src_rect;
   gavl_rectangle_i_t dst_rect;

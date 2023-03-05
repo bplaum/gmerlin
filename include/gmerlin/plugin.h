@@ -70,6 +70,7 @@
 #define BG_PLUGIN_INPUT_STATE_METADATA    "metadata"
 #define BG_PLUGIN_INPUT_STATE_SEEK_WINDOW "seekwin"
 
+
 /** \defgroup plugin_flags Plugin flags
  *  \ingroup plugin
  *  \brief Macros for the plugin flags

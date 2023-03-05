@@ -110,6 +110,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
           break;
         }
       }
+      break;
     }
   
   return 1;
@@ -458,7 +459,8 @@ void * bg_player_ov_thread(void * data)
     
     if(state == STATE_STILL)
       {
-      gavl_time_t delay_time = GAVL_TIME_SCALE / 20; // 50 ms
+      gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
+      
       if(!frame)
         {
         if((st = gavl_video_source_read_frame(s->src, &frame)) != GAVL_SOURCE_OK)
@@ -488,6 +490,7 @@ void * bg_player_ov_thread(void * data)
       /* Idle action for still mode */
       bg_osd_update(s->osd);
       bg_ov_handle_events(s->ov);
+      gavl_time_delay(&delay_time);
       }
     
     if(state == STATE_SHOW)

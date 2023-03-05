@@ -85,6 +85,7 @@ typedef struct
 void bg_player_tracklist_splice(bg_player_tracklist_t * l, int idx, int del, gavl_value_t * val, const char * client_id);
 
 char * bg_player_tracklist_make_id(const char * client_id, const char * original_id);
+char * bg_player_tracklist_id_from_uri(const char * client_id, const char * location);
 
 int bg_player_tracklist_handle_message(bg_player_tracklist_t * l, gavl_msg_t * msg);
 

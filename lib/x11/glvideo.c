@@ -224,16 +224,16 @@ static void update_colormatrix(driver_data_t* d);
 static void set_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
-  fprintf(stderr, "set GL... %p", priv->hwctx_gl);
+  //  fprintf(stderr, "set GL... %p", priv->hwctx_gl);
   gavl_hw_egl_set_current(priv->hwctx_gl, d->win->current->egl_surface);
-  fprintf(stderr, "set GL done\n");
+  //  fprintf(stderr, "set GL done\n");
   }
 
 static void unset_gl(driver_data_t * d)
   {
   gl_priv_t * priv = d->priv;
   gavl_hw_egl_unset_current(priv->hwctx_gl);
-  fprintf(stderr, "unset GL %p\n", priv->hwctx_gl);
+  //  fprintf(stderr, "unset GL %p\n", priv->hwctx_gl);
   }
 
 static const char * vertex_shader_gl = 
@@ -704,39 +704,105 @@ static void create_vertex_buffer(driver_data_t * d)
   
   }
 
+static void transform_vertex(float mat[2][2],
+                             float src_x, float src_y, float * dst)
+  {
+  dst[0] = src_x * mat[0][0] + src_y * mat[0][1];
+  dst[1] = src_x * mat[1][0] + src_y * mat[1][1];
+  }
+
 static void update_vertex_buffer(driver_data_t * d,
                                  float llx, float lly, float urx, float ury,
-                                 float tllx, float tlly, float turx, float tury)
+                                 float tllx, float tlly, float turx, float tury,
+                                 gavl_image_orientation_t orient)
   {
   vertex v[4];
   gl_priv_t * priv;
+  float mat[2][2];
   priv = d->priv;
+  
+  switch(orient)
+    {
+    case GAVL_IMAGE_ORIENT_NORMAL:  // EXIF: 1
+      mat[0][0] = 1.0;
+      mat[0][1] = 0.0;
+      mat[1][0] = 0.0;
+      mat[1][1] = 1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT90_CW:  // EXIF: 8
+      mat[0][0] =  0.0;
+      mat[0][1] = -1.0;
+      mat[1][0] =  1.0;
+      mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT180_CW: // EXIF: 3
+      mat[0][0] = -1.0;
+      mat[0][1] =  0.0;
+      mat[1][0] =  0.0;
+      mat[1][1] = -1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT270_CW: // EXIF: 6
+      mat[0][0] =  0.0;
+      mat[0][1] =  1.0;
+      mat[1][0] = -1.0;
+      mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH:       // EXIF: 2
+      mat[0][0] = -1.0;
+      mat[0][1] = 0.0;
+      mat[1][0] = 0.0;
+      mat[1][1] = 1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT90_CW:  // EXIF: 7
+      mat[0][0] =  0.0;
+      mat[0][1] =  1.0;
+      mat[1][0] =  1.0;
+      mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT180_CW: // EXIF: 4
+      mat[0][0] =  1.0;
+      mat[0][1] =  0.0;
+      mat[1][0] =  0.0;
+      mat[1][1] = -1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT270_CW: // EXIF: 5
+      mat[0][0] =  0.0;
+      mat[0][1] =  -1.0;
+      mat[1][0] =  -1.0;
+      mat[1][1] =  0.0;
+      break;
+      
+    }
+  
+  transform_vertex(mat, llx, lly, v[0].pos);
+  transform_vertex(mat, llx, ury, v[1].pos);
+  transform_vertex(mat, urx, lly, v[2].pos);
+  transform_vertex(mat, urx, ury, v[3].pos);
+  
+  //  v[0].pos[0] = llx;
+  //  v[0].pos[1] = lly;
+  
+  //  v[1].pos[0] = llx;
+  //  v[1].pos[1] = ury;
+  
+  //  v[2].pos[0] = urx;
+  //  v[2].pos[1] = lly;
+  
+  //  v[3].pos[0] = urx;
+  //  v[3].pos[1] = ury;
 
-  v[0].pos[0] = llx;
-  v[0].pos[1] = lly;
+  
   v[0].pos[2] = 0.0;
-
+  v[1].pos[2] = 0.0;
+  v[2].pos[2] = 0.0;
+  v[3].pos[2] = 0.0;
+  
   v[0].tex[0] = tllx;
   v[0].tex[1] = tlly;
-  
-  v[1].pos[0] = llx;
-  v[1].pos[1] = ury;
-  v[1].pos[2] = 0.0;
-
   v[1].tex[0] = tllx;
   v[1].tex[1] = tury;
-  
-  v[2].pos[0] = urx;
-  v[2].pos[1] = lly;
-  v[2].pos[2] = 0.0;
-
   v[2].tex[0] = turx;
   v[2].tex[1] = tlly;
-
-  v[3].pos[0] = urx;
-  v[3].pos[1] = ury;
-  v[3].pos[2] = 0.0;
-
   v[3].tex[0] = turx;
   v[3].tex[1] = tury;
   
@@ -1033,17 +1099,17 @@ static void put_frame_gl(driver_data_t * d)
 
   /* Draw this */
   
-  tex_x1 = (w->src_rect.x) / w->video_format.image_width;
-  tex_y1 = (w->src_rect.y + w->src_rect.h) / w->video_format.image_height;
+  tex_x1 = (w->src_rect.x) / w->video_format_n.image_width;
+  tex_y1 = (w->src_rect.y + w->src_rect.h) / w->video_format_n.image_height;
   
-  tex_x2 = (w->src_rect.x + w->src_rect.w) / w->video_format.image_width;
-  tex_y2 = (w->src_rect.y) / w->video_format.image_height;
+  tex_x2 = (w->src_rect.x + w->src_rect.w) / w->video_format_n.image_width;
+  tex_y2 = (w->src_rect.y) / w->video_format_n.image_height;
 
 
   update_vertex_buffer(d,
                        // 0, 0, w->dst_rect.w, w->dst_rect.h,
                        -1.0, -1.0, 1.0, 1.0,
-                       tex_x1, tex_y1, tex_x2, tex_y2);
+                       tex_x1, tex_y1, tex_x2, tex_y2, w->video_format.orientation);
   
   //  glColor4f(1.0, 1.0, 1.0, 1.0);
   //  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
@@ -1147,7 +1213,7 @@ static void put_frame_gl(driver_data_t * d)
       update_vertex_buffer(d,
                            // 0, 0, w->dst_rect.w, w->dst_rect.h,
                            v_x1, v_y1, v_x2, v_y2,
-                           tex_x1, tex_y1, tex_x2, tex_y2);
+                           tex_x1, tex_y1, tex_x2, tex_y2, GAVL_IMAGE_ORIENT_NORMAL);
       
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       

@@ -254,7 +254,7 @@ void x11_window_accel_pressed(bg_x11_window_t * win, int id)
       {
       gavl_msg_t * msg;
       msg = bg_msg_sink_get(win->ctrl.evt_sink);
-      gavl_msg_set_id_ns(msg, GAVL_MSG_NS_GUI, GAVL_MSG_GUI_ACCEL);
+      gavl_msg_set_id_ns(msg, GAVL_MSG_GUI_ACCEL, GAVL_MSG_NS_GUI);
       gavl_msg_set_arg_int(msg, 0, id);
       bg_msg_sink_put(win->ctrl.evt_sink, msg);
       }
@@ -2077,14 +2077,14 @@ void bg_x11_window_set_drawing_coords(bg_x11_window_t * win)
   win->window_format.image_width = win->window_rect.w;
   win->window_format.image_height = win->window_rect.h;
   
-  gavl_rectangle_f_set_all(&src_rect_f, &win->video_format);
+  gavl_rectangle_f_set_all(&src_rect_f, &win->video_format_n);
 
 #if 0  
   if(priv->keep_aspect)
     {
 #endif 
     gavl_rectangle_fit_aspect(&dst_rect,
-                              &win->video_format,
+                              &win->video_format_n,
                               &src_rect_f,
                               &win->window_format,
                               zoom_factor, squeeze_factor);
@@ -2098,10 +2098,11 @@ void bg_x11_window_set_drawing_coords(bg_x11_window_t * win)
   
   gavl_rectangle_crop_to_format_scale(&src_rect_f,
                                       &dst_rect,
-                                      &win->video_format,
+                                      &win->video_format_n,
                                       &win->window_format);
   
   bg_x11_window_set_rectangles(win, &src_rect_f, &dst_rect);
 
-  SET_FLAG(win, FLAG_DRAWING_COORDS_CHANGED);
+  SET_FLAG(win, FLAG_NEED_REDRAW);
+  
   }

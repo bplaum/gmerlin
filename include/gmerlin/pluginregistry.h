@@ -482,6 +482,10 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
 
 bg_plugin_handle_t *  bg_load_track(const gavl_dictionary_t * track);
 
+
+void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, int flags);
+
+
 /* Set the supported extensions and mimetypes for a plugin */
 
 /** \ingroup plugin_registry
@@ -992,11 +996,12 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
                                                        const char * location,
                                                        int flags);
 
+#if 0
 void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
                                               const gavl_value_t * val,
                                               int flags,
                                               gavl_array_t * ret);
-
+#endif
 
 int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const char * name, const gavl_value_t * val);
 int bg_plugin_handle_get_state(bg_plugin_handle_t * h, const char * ctx, const char * name, gavl_value_t * val);

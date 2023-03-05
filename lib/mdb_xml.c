@@ -407,81 +407,8 @@ static int do_add(bg_mdb_backend_t * b,
   return 1;
   }
 
-#if 0
-static void add_uri(bg_mdb_backend_t * b,
-                    gavl_dictionary_t * dir_idx, int * idx, const char * uri, const char * parent_id,
-                    gavl_array_t * add_array_real, int depth)
-  {
-  gavl_array_t * tracks;
-  int j;
-  gavl_dictionary_t * dict;
 
-  if(depth > 5)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Nesting depth exceeded");
-    return;
-    }
-  
-  //  fprintf(stderr, "mdb_xml: Loading %s\n", uri);
-
-  if(gavl_string_ends_with(uri, ".m3u"))
-    {
-    gavl_buffer_t buf;
-    gavl_dictionary_t import_dict;
-    gavl_dictionary_init(&import_dict);
-    
-    gavl_buffer_init(&buf);
-    
-    if(bg_read_location(uri, &buf, 0, -1, NULL) &&
-       bg_tracks_from_string(&import_dict, BG_TRACK_FORMAT_M3U, (const char *)buf.buf, buf.len))
-      {
-      tracks = gavl_get_tracks_nc(&import_dict);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing m3u playlist %d entries", tracks->num_entries);
-      for(j = 0; j < tracks->num_entries; j++)
-        {
-        const char * next_uri = NULL;
-        const gavl_dictionary_t * m;
-        
-        if((dict = gavl_value_get_dictionary_nc(&tracks->entries[j])) &&
-           (m = gavl_track_get_metadata(dict)) &&
-           gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &next_uri) &&
-           next_uri)
-          add_uri(b, dir_idx, idx, next_uri, parent_id, add_array_real, depth + 1);
-        }
-      }
-    gavl_dictionary_free(&import_dict);
-    gavl_buffer_free(&buf);
-    }
-  else
-    {
-    gavl_dictionary_t * mi;
-    
-    mi = bg_plugin_registry_load_media_info(bg_plugin_reg,
-                                            uri, BG_INPUT_FLAG_GET_FORMAT);
-
-    if(!mi)
-      return;
-  
-    tracks = gavl_get_tracks_nc(mi);
-  
-    for(j = 0; j < tracks->num_entries; j++)
-      {
-      gavl_dictionary_t * dict;
-      dict = gavl_value_get_dictionary_nc(&tracks->entries[j]);
-      do_add(b, dir_idx, *idx, dict, parent_id);
-      gavl_array_splice_val_nocopy(add_array_real, -1, 0, &tracks->entries[j]);
-      (*idx)++;
-      }
-    gavl_dictionary_destroy(mi);
-    }
-  
-  }
-#endif
-
-// splice(b, last, idx, del, &add);
-
-
-static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_value_t * add)
+static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_array_t * add_arr)
   {
   int i;
   gavl_dictionary_t * dir_idx = NULL;
@@ -494,8 +421,6 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   gavl_msg_t * res;
   int idx_res;
   gavl_dictionary_t dict;
-  int got_uris = 0;
-  gavl_array_t add_array_real;
   gavl_dictionary_t * root_dict = NULL ;
   xml_t * xml = b->priv;
   const char * klass;
@@ -505,8 +430,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   gavl_time_t duration;
 
   gavl_dictionary_t * metadata;
-  
-  gavl_array_init(&add_array_real);
+  gavl_dictionary_t * track;
   
   gavl_dictionary_init(&dict);
 
@@ -581,42 +505,16 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
       }
     gavl_array_splice_val(child_ids, idx, del, NULL);
     }
-  
-  if(add->type == GAVL_TYPE_ARRAY)
+
+  for(i = 0; i < add_arr->num_entries; i++)
     {
-    gavl_dictionary_t * dict;
-    //    const char * uri;
-
-    gavl_array_t * add_arr = gavl_value_get_array_nc(add);
-
-    if(!add_arr->num_entries)
+    if((track = gavl_value_get_dictionary_nc(&add_arr->entries[i])))
       {
-      /* Nothing to add */
-      }
-    else if((dict = gavl_value_get_dictionary_nc(&add_arr->entries[0])))
-      {
-      for(i = 0; i < add_arr->num_entries; i++)
+      if(do_add(b, dir_idx, idx, track, ctx_id))
         {
-        if((dict = gavl_value_get_dictionary_nc(&add_arr->entries[i])))
-          {
-          if(do_add(b, dir_idx, idx, dict, ctx_id))
-            {
-            idx++;
-            num_added++;
-            }
-          }
+        idx++;
+        num_added++;
         }
-      }
-    }
-  else if(add->type == GAVL_TYPE_DICTIONARY)
-    {
-    gavl_dictionary_t * dict;
-    dict = gavl_value_get_dictionary_nc(add);
-    
-    if(do_add(b, dir_idx, idx, dict, ctx_id))
-      {
-      idx++;
-      num_added++;
       }
     }
   
@@ -637,10 +535,8 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
 
   if(!num_added)
     gavl_msg_set_arg(res, 2, NULL);
-  else if(got_uris)
-    gavl_msg_set_arg_array(res, 2, &add_array_real);
   else
-    gavl_msg_set_arg_nocopy(res, 2, add);
+    gavl_msg_set_arg_array(res, 2, add_arr);
   
   bg_msg_sink_put(b->ctrl.evt_sink, res);
 
@@ -675,8 +571,6 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   
   if(parent_directory)
     free(parent_directory);
-
-  gavl_array_free(&add_array_real);
 
   gavl_dictionary_free(&dict);
 
@@ -1019,39 +913,23 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_array_free(&arr);
           }
           break;
-        case BG_CMD_DB_LOAD_URIS:
-          {
-          const gavl_value_t * loc;
-          int idx;
-          
-          /* TODO */
-          gavl_value_t add_val;
-          gavl_array_t * add_arr;
-
-          gavl_value_init(&add_val);
-          add_arr = gavl_value_set_array(&add_val);
-
-          idx = gavl_msg_get_arg_int(msg, 0);
-          loc = gavl_msg_get_arg_c(msg, 1);
-          
-          bg_plugin_registry_tracks_from_locations(bg_plugin_reg, loc, BG_INPUT_FLAG_GET_FORMAT, add_arr);
-
-          splice(b, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), 1, idx, 0, &add_val);
-          gavl_value_free(&add_val);
-          }
-          break;
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
           int last = 0;
           int idx = 0;
           int del = 0;
           gavl_value_t add;
+          gavl_array_t add_arr;
           gavl_value_init(&add);
+          gavl_array_init(&add_arr);
           
           gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
 
-          splice(b, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add);
+          bg_tracks_resolve_locations(&add, &add_arr, BG_INPUT_FLAG_GET_FORMAT);
+          
+          splice(b, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add_arr);
           gavl_value_free(&add);
+          gavl_array_free(&add_arr);
           }
           break;
         case BG_CMD_DB_SORT:

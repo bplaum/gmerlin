@@ -408,6 +408,55 @@ static void list_delete_selected(album_t * album)
     delete_items(sink, id, idx, del);
   }
 
+static void list_download_selected(album_t * album)
+  {
+  int              i;
+  GtkTreeIter      iter;
+  GtkTreeModel     * model;
+  GtkTreeSelection * selection;
+  int j;
+  int num;
+  gavl_array_t arr;
+  gavl_msg_t * cmd;
+  gavl_array_init(&arr);
+  
+  if(!album->a)
+    return;
+  
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(album->list->listview));
+  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(album->list->listview));
+
+  
+  gtk_tree_model_get_iter_first(model, &iter);
+  
+  // album->a will be updated just after this function call
+  num = gavl_get_num_tracks(album->a);
+
+  //   num = gtk_tree_model_iter_n_children(model, NULL);
+  
+  for(i = 0; i < num; i++)
+    {
+    if(((j = list_transform_idx(album->a, i)) >= 0) &&
+       gtk_tree_model_iter_nth_child(model, &iter, NULL, j) &&
+       gtk_tree_selection_iter_is_selected(selection, &iter))
+      {
+      cmd = bg_msg_sink_get(album->t->ctrl.cmd_sink);
+      gavl_msg_set_id_ns(cmd, BG_CMD_DB_SAVE_LOCAL, BG_MSG_NS_DB);
+      gavl_dictionary_set_string_nocopy(&cmd->header, GAVL_MSG_CONTEXT_ID,
+                                        iter_to_id_list(GTK_TREE_VIEW(album->list->listview), &iter));
+
+      //      fprintf(stderr, "Download selected 1\n");
+      //      gavl_msg_dump(cmd, 2);
+      bg_msg_sink_put(album->t->ctrl.cmd_sink, cmd);
+
+      }
+    }
+  
+  gavl_array_free(&arr);
+  
+  }
+
+
 static void list_copy(album_t * a)
   {
   GtkClipboard *clipboard;
@@ -597,8 +646,9 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
     markup = bg_sprintf("%s", gavl_dictionary_get_string(m, GAVL_META_LABEL));
 
   gtk_label_set_markup(GTK_LABEL(l->menu_label), markup);
+  
   g_free(markup);
-
+  
 
   if((buf = bg_gtk_load_track_image(dict, 48, 72)))
     {
@@ -624,6 +674,9 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
     }
   
   markup = bg_gtk_mdb_tree_create_markup(dict, NULL);
+
+  //  fprintf(stderr, "Tab label: %s\n", markup);
+  
   gtk_label_set_markup(GTK_LABEL(l->tab_label), markup);
   free(markup);
 
@@ -731,6 +784,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   /* Show/hide items */
   gtk_widget_hide(t->menu.track_menu.paste_item);
   gtk_widget_hide(t->menu.track_menu.delete_item);
+  gtk_widget_hide(t->menu.track_menu.download_item);
 
   gtk_widget_hide(t->menu.album_menu.sort_item);
   gtk_widget_hide(t->menu.album_menu.load_files_item);
@@ -767,21 +821,24 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
     const char * klass;
     const gavl_dictionary_t * m;
     
-    if(t->menu_ctx.tree && t->menu_ctx.parent && bg_mdb_is_editable(t->menu_ctx.parent))
-      gtk_widget_show(t->menu.album_menu.delete_item);
+    if(t->menu_ctx.tree && t->menu_ctx.parent)
+      {
+      if(bg_mdb_is_editable(t->menu_ctx.parent))
+        gtk_widget_show(t->menu.album_menu.delete_item);
+      }
+
+    m = gavl_track_get_metadata(t->menu_ctx.album);
+    klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
     
     if(bg_mdb_is_editable(t->menu_ctx.album))
       {
-      m = gavl_track_get_metadata(t->menu_ctx.album);
-      klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
-
       gtk_widget_show(t->menu.track_menu.paste_item);
  
       if(!t->menu_ctx.tree)
         gtk_widget_show(t->menu.track_menu.delete_item);
       else if(t->menu_ctx.parent && bg_mdb_is_editable(t->menu_ctx.parent))
         gtk_widget_show(t->menu.album_menu.delete_item);
-
+      
       gtk_widget_show(t->menu.album_menu.sort_item);
 
       if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_STREAMS))
@@ -806,6 +863,9 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
         }
       }
 
+    if(!t->menu_ctx.tree && klass && !strcmp(klass, GAVL_META_MEDIA_CLASS_PODCAST))
+      gtk_widget_show(t->menu.track_menu.download_item);
+    
     if(!strcmp(gavl_track_get_id(t->menu_ctx.album), BG_PLAYQUEUE_ID))
       {
       gtk_widget_hide(t->menu.album_menu.add_item);
@@ -1254,31 +1314,38 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     {
     bg_gtk_mdb_tree_delete_selected_album(tree);
     }
-  else if((item == tree->menu.track_menu.info_item))
+  else if(item == tree->menu.track_menu.info_item)
     {
     if(tree->menu_ctx.item)
       bg_gtk_trackinfo_show(tree->menu_ctx.item, tree->menu_ctx.widget);
     }
-  else if((item == tree->menu.track_menu.copy_item))
+  else if(item == tree->menu.track_menu.copy_item)
     {
     list_copy(tree->menu_ctx.a);
     }
-  else if((item == tree->menu.track_menu.save_item))
+  else if(item == tree->menu.track_menu.save_item)
     {
     // fprintf(stderr, "Save\n");
     save_selected(tree);
     
     }
-  else if((item == tree->menu.track_menu.paste_item))
+  else if(item == tree->menu.track_menu.paste_item)
     {
     list_paste(tree->menu_ctx.a);
     }
-  else if((item == tree->menu.track_menu.delete_item))
+  else if(item == tree->menu.track_menu.delete_item)
     {
     //    fprintf(stderr, "Delete\n");
 
     if(tree->menu_ctx.a)
       list_delete_selected(tree->menu_ctx.a);
+    }
+  else if(item == tree->menu.track_menu.download_item)
+    {
+    //    fprintf(stderr, "Download selected\n");
+    
+    if(tree->menu_ctx.a)
+      list_download_selected(tree->menu_ctx.a);
     }
   
   }
@@ -1351,6 +1418,7 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->track_menu.paste_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_PASTE, "Paste", GDK_KEY_v, GDK_CONTROL_MASK);
   m->track_menu.save_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_SAVE, "Save as...", 0, 0);
   m->track_menu.delete_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_TRASH, "Delete...", GDK_KEY_Delete, 0);
+  m->track_menu.download_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_DOWNLOAD, "Download", 0, 0);
   gtk_widget_show(m->track_menu.menu);
 
   m->album_item = create_list_menu_item(tree, m->menu, NULL, "Album...", 0, 0);
@@ -1442,14 +1510,8 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
       }
 
     msg = bg_msg_sink_get(sink);
+    bg_mdb_set_load_uris(msg, gavl_track_get_id(a->a), idx, &arr);
     
-    gavl_msg_set_id_ns(msg, BG_CMD_DB_LOAD_URIS, BG_MSG_NS_DB);
-        
-    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID,
-                               gavl_track_get_id(a->a));
-    
-    gavl_msg_set_arg_int(msg, 0, idx);
-    gavl_msg_set_arg_array(msg, 1, &arr);
     bg_msg_sink_put(sink, msg);
     
     gavl_array_free(&arr);
@@ -2021,9 +2083,7 @@ void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, const gavl_va
       set_entry_list(l, gavl_value_get_dictionary(add), &iter);
       num_added = 1;
       }
-
     }
-  
   
   /* Restore selection */
   gtk_tree_selection_unselect_all(selection);
@@ -2260,14 +2320,7 @@ static void load_files(bg_gtk_mdb_tree_t * tree)
         sink = tree->player_ctrl.cmd_sink;
       
       msg = bg_msg_sink_get(sink);
-      
-      gavl_msg_set_id_ns(msg, BG_CMD_DB_LOAD_URIS, BG_MSG_NS_DB);
-      
-      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID,
-                                 id);
-      
-      gavl_msg_set_arg_int(msg, 0, -1);
-      gavl_msg_set_arg_array(msg, 1, &arr);
+      bg_mdb_set_load_uris(msg, id, -1, &arr);
       bg_msg_sink_put(sink, msg);
       
       //      bg_mdb_add_uris(bg_mdb_t * mdb, const char * parent_id, int idx,
@@ -2525,20 +2578,15 @@ static void load_uri(bg_gtk_mdb_tree_t * tree)
   if(!str)
     return;
   
-  //  fprintf(stderr, "Load URI %s\n", str);
+  fprintf(stderr, "Load URI %s\n", str);
 
   if(!strcmp(id, BG_PLAYQUEUE_ID))
     sink = tree->player_ctrl.cmd_sink;
   
   msg = bg_msg_sink_get(sink);
+
+  bg_mdb_set_load_uri(msg, id, -1, str);
   
-  gavl_msg_set_id_ns(msg, BG_CMD_DB_LOAD_URIS, BG_MSG_NS_DB);
-  
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID,
-                             id);
-  
-  gavl_msg_set_arg_int(msg, 0, -1);
-  gavl_msg_set_arg_string(msg, 1, str);
   bg_msg_sink_put(sink, msg);
   
   free(str);

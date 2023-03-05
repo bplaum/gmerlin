@@ -1384,7 +1384,7 @@ static void set_directories(bg_mdb_backend_t * be,
     }
   
   resp = bg_msg_sink_get(be->ctrl.evt_sink);
-
+  
   gavl_msg_set_splice_children_nocopy(resp, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
                                       gavl_track_get_id(container),
                                       1, 0, num_deleted, &val_add);
@@ -2163,16 +2163,6 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             fs->have_params = 1;
             return 1;
             }
-#if 0          
-          if(!strcmp(name, "dirs"))
-            {
-            set_directories(be, &fs->dirs, gavl_value_get_array(&val), fs->container, 0);
-            }
-          else if(!strcmp(name, "image_dirs"))
-            {
-            set_directories(be, &fs->image_dirs, gavl_value_get_array(&val), fs->image_container, 1);
-            }
-#endif
           else if(!strcmp(name, "mount_removable"))
             {
             fs->mount_removable = val.v.i;
@@ -2223,19 +2213,6 @@ static const bg_parameter_info_t parameters[] =
       .long_name = TRS("Mount video disks"),
       .type = BG_PARAMETER_CHECKBUTTON,
     },
-#if 1
-    {
-      .name = "dirs",
-      .long_name = TRS("Directories"),
-      .help_string = TRS("Folder which can be browsed like a file manager"),
-      .type = BG_PARAMETER_DIRLIST,
-    },
-    {
-      .name = "image_dirs",
-      .long_name = TRS("Folder containing photoalbums"),
-      .type = BG_PARAMETER_DIRLIST,
-    },
-#endif
     { /* End */ },
   };
 

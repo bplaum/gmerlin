@@ -462,7 +462,6 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_MSG_NS_MDB_PRIVATE       116 // mdb_private.h
 
 #define BG_MSG_NS_VOLUMEMANAGER     117 // volumemanager.h
-// #define BG_MSG_NS_DOWNLOADER        118 // downloader.h
 
 #define BG_MSG_NS_PRIVATE           200 // Used only within a single .c file
 
@@ -537,7 +536,7 @@ void bg_control_cleanup(bg_control_t * c);
  *
  */
 
-#define BG_CMD_DB_LOAD_URIS               2
+// #define BG_CMD_DB_LOAD_URIS               2
 
 /*
  *  Sort by *label*
@@ -553,6 +552,13 @@ void bg_control_cleanup(bg_control_t * c);
  */
 
 #define BG_CMD_DB_RESCAN                  5
+
+/*
+ *  Make a local copy of an item (currently only supported for
+ *  podcast episodes)
+ */
+
+#define BG_CMD_DB_SAVE_LOCAL             6
 
 /*
  *  ContextID: album_id

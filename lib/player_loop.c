@@ -30,6 +30,7 @@
 #include <gmerlin/player.h>
 #include <playerprivate.h>
 #include <gmerlin/log.h>
+#include <gmerlin/mdb.h>
 
 #include <gavl/metatags.h>
 #include <gavl/http.h>
@@ -1235,7 +1236,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           break;
         case BG_PLAYER_CMD_SET_LOCATION:
           {
-          int idx;
+          char * id;
           gavl_msg_t msg1;
           
           int state = bg_player_get_status(player);
@@ -1252,24 +1253,20 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           gavl_msg_init(&msg1);
 
           /* After the last track */
-          
-          gavl_msg_set_id_ns(&msg1, BG_CMD_DB_LOAD_URIS, BG_MSG_NS_DB);
 
-          gavl_dictionary_set_string(&msg1.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
-
-          idx = gavl_get_num_tracks(player->tl.cnt);
-          
-          gavl_msg_set_arg_int(&msg1, 0, idx);
-          gavl_msg_set_arg(&msg1, 1, gavl_msg_get_arg_c(command, 0));
-          
+          bg_mdb_set_load_uri(&msg1, BG_PLAYQUEUE_ID, -1, gavl_msg_get_arg_string_c(command, 0));
           bg_player_tracklist_handle_message(&player->tl, &msg1);
           
           bg_player_source_cleanup(player->src_next);
 
-          bg_player_tracklist_set_current_by_idx(&player->tl, idx);
-
+          id = bg_player_tracklist_id_from_uri(NULL, gavl_msg_get_arg_string_c(command, 0));
+          bg_player_tracklist_set_current_by_id(&player->tl, id);
+          free(id);
+          
           if(gavl_msg_get_arg_int(command, 1))
             play_cmd(player);
+          
+          gavl_msg_free(&msg1);
           }
           break;
         case BG_PLAYER_CMD_QUIT:

@@ -24,6 +24,7 @@
 #include <gavl/gavl.h>
 #include <gavl/metatags.h>
 #include <gavl/gavlsocket.h>
+#include <gavl/http.h>
 
 #include <gmerlin/http.h>
 #include <gmerlin/utils.h>
@@ -52,18 +53,6 @@
 
 // Keepalive timeout
 #define KA_TIMEOUT (10*GAVL_TIME_SCALE) // 10 Secs
-
-int bg_http_request_write(int fd, gavl_dictionary_t * req)
-  {
-  int result, len = 0;
-  char * line;
-  
-  line = gavl_http_request_to_string(req, &len);
-  
-  result = gavl_socket_write_data(fd, (const uint8_t*)line, len);
-  free(line);
-  return result;
-  }
 
 int bg_http_response_write(int fd, gavl_dictionary_t * req)
   {
@@ -301,7 +290,7 @@ int bg_http_read_response(gavf_io_t * io,
 
 
 /* Simple function implementing GET for (small) files */ 
-
+#if 0
 static int http_get(const char * url,
                     gavl_dictionary_t * res, char ** redirect,
                     int head, gavl_buffer_t * buf, const gavl_dictionary_t * vars)
@@ -353,10 +342,12 @@ static int http_get(const char * url,
   
   return ret;
   }
+#endif
 
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size)
   {
+#if 0
   int i;
   char * redirect = NULL;
   char * real_url = gavl_strdup(url);
@@ -400,11 +391,106 @@ int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t *
   gavl_dictionary_free(&vars);
   free(real_url);
   return result;
+#else
+  gavf_io_t * io;
+  io = gavl_http_client_create();
+
+  if((offset > 0) || (size > 0))
+    {
+    if(size <= 0)
+      gavl_http_client_set_range(io, offset, -1);
+    else
+      gavl_http_client_set_range(io, offset, offset + size);
+    }
+
+  gavl_http_client_set_response_body(io, ret);
+  
+  if(!gavl_http_client_open(io, "GET", url))
+    return 0;
+
+  if(dict)
+    {
+    const gavl_dictionary_t * resp;
+    resp = gavl_http_client_get_response(io);
+    gavl_dictionary_set_string(dict, GAVL_META_MIMETYPE,
+                               gavl_dictionary_get_string_i(resp, "Content-Type"));
+    }
+  gavf_io_destroy(io);
+  return 1;
+#endif
   }
 
 int bg_http_get(const char * url, gavl_buffer_t * buf, gavl_dictionary_t * dict)
   {
   return bg_http_get_range(url, buf, dict, 0, 0);
+  }
+
+char * bg_http_download(const char * url, const char * out_base)
+  {
+  int ret = 0;
+  const char * pos1;
+  const char * pos2;
+  
+  char * extension = NULL;
+  char * filename = NULL;
+  
+  gavl_buffer_t  buf;
+  gavl_dictionary_t dict;
+
+  gavl_dictionary_init(&dict);
+  gavl_buffer_init(&buf);
+  
+  if(!bg_http_get(url, &buf, &dict))
+    goto fail;
+
+  /* Figure out extension */
+  if((pos1 = strrchr(url, '.')))
+    {
+    pos1++;
+    
+    if((pos2 = strchr(url, '?')))
+      extension = gavl_strndup(pos1, pos2);
+    else
+      extension = gavl_strdup(pos1);
+
+    if(!bg_ext_to_mimetype(extension))
+      {
+      free(extension);
+      extension = NULL;
+      }
+    }
+
+  if(!extension)
+    {
+    if((pos1 = gavl_dictionary_get_string(&dict, GAVL_META_MIMETYPE)))
+      extension = gavl_strdup(bg_mimetype_to_ext(pos1));
+    }
+
+  if(!extension)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't download %s, no suitable extension found", url);
+    goto fail;
+    }
+
+  filename = gavl_sprintf("%s.%s", out_base, extension);
+  bg_write_file(filename, buf.buf, buf.len);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Downloaded %s (%d bytes)", url, buf.len);
+  
+  ret = 1;
+  fail:
+
+  if(!ret)
+    {
+    free(filename);
+    filename = NULL;
+    }
+
+  if(extension)
+    free(extension);
+  
+  gavl_dictionary_free(&dict);
+  gavl_buffer_free(&buf);
+  return filename;
   }
 
 

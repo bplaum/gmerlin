@@ -386,7 +386,7 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
     }
   else
     {
-#if 1
+#if 0
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 1: idx: %d, dict: %p\n",
             idx, dict);
     fprintf(stderr, "bg_media_dirs_local_to_http_uri failed 2: str_local: %s\n",

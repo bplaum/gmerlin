@@ -79,6 +79,15 @@ bg_x11_window_add_overlay_stream(bg_x11_window_t * w,
   /* Initialize */
   gavl_video_format_copy(&str->format, format); 
 
+  if(!str->format.image_width || !str->format.image_height)
+    {
+    str->format.image_width = w->video_format_n.image_width;
+    str->format.image_height = w->video_format_n.image_height;
+    str->format.pixel_width = w->video_format_n.pixel_width;
+    str->format.pixel_height = w->video_format_n.pixel_height;
+    gavl_video_format_set_frame_size(&str->format, 0, 0);
+    }
+  
   str->format.pixelformat = gavl_pixelformat_get_best(str->format.pixelformat, 
                                                       w->current_driver->ovl_formats, 0);
   

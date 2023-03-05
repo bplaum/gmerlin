@@ -76,6 +76,7 @@ enum
   TREE_COLUMN_EXPANDED,
   TREE_COLUMN_ID,
   TREE_COLUMN_SEARCH_STRING,
+  TREE_COLUMN_TOOLTIP,
   NUM_TREE_COLUMNS
 };
 
@@ -252,9 +253,25 @@ static void set_object_array(album_array_t * arr, const char * id,
                              const gavl_dictionary_t * obj)
   {
   int i;
+  gavl_dictionary_t * child;
   
   for(i = 0; i < arr->num_albums; i++)
     {
+    if(arr->albums[i]->a && (child = gavl_get_track_by_id_nc(arr->albums[i]->a, id)))
+      {
+      const gavl_dictionary_t * src_m;
+      gavl_dictionary_t * dst_m;
+      
+      src_m = gavl_track_get_metadata(obj);
+      dst_m = gavl_track_get_metadata_nc(child);
+      gavl_dictionary_update_fields(dst_m, src_m);
+
+      //      fprintf(stderr, "Updated child album\n");
+      //      gavl_dictionary_dump(dst_m, 2);
+      
+      continue;
+      }
+    
     if(strcmp(arr->albums[i]->id, id))
       continue;
 
@@ -500,29 +517,49 @@ static const gavl_dictionary_t * id_to_album(bg_gtk_mdb_tree_t * t, const char *
   char * parent_id;
   const gavl_dictionary_t * ret;
 
+  //  fprintf(stderr, "id_to_album %s\n", id);
+
+  //  if(!strcmp(id, "/podcasts/be9d0ed8dcdd982a6abf520f3dc62554/saved"))
+  //    fprintf(stderr, "Blupp\n");
   
-  if((ret = album_array_get_album(&t->tab_albums, id)) ||
-     (ret = album_array_get_album(&t->win_albums, id)) ||
-     (ret = album_array_get_album(&t->exp_albums, id)))
+  if((ret = album_array_get_album(&t->tab_albums, id)))
     {
+    //    fprintf(stderr, "Found tab album\n");
     return ret;
     }
-
+  if((ret = album_array_get_album(&t->win_albums, id)))
+    {
+    //    fprintf(stderr, "Found win album\n");
+    return ret;
+    }
+  if((ret = album_array_get_album(&t->exp_albums, id)))
+    {
+    //    fprintf(stderr, "Found exp album\n");
+    //    gavl_dictionary_dump(ret, 2);
+    return ret;
+    }
   parent_id = bg_mdb_get_parent_id(id);
 
-  if((ret = album_array_get_album(&t->tab_albums, parent_id)) ||
-     (ret = album_array_get_album(&t->win_albums, parent_id)) ||
-     (ret = album_array_get_album(&t->exp_albums, parent_id)))
+  if((ret = album_array_get_album(&t->tab_albums, parent_id)) && (ret = gavl_get_track_by_id(ret, id)))
     {
-    ret = gavl_get_track_by_id(ret, id);
+    //    fprintf(stderr, "Found tab album child\n");
+    //    gavl_dictionary_dump(ret, 2);
     }
-
+  else if((ret = album_array_get_album(&t->win_albums, parent_id)) && (ret = gavl_get_track_by_id(ret, id)))
+    {
+    //    fprintf(stderr, "Found win album child\n");
+    }
+  else if((ret = album_array_get_album(&t->exp_albums, parent_id)) && (ret = gavl_get_track_by_id(ret, id)))
+    {
+    //    fprintf(stderr, "Found exp album child\n");
+    }
   free(parent_id);
 
   if(ret)
     return ret;
   
   /* Browse object */
+    //  fprintf(stderr, "Browsing\n");
   
   bg_gtk_mdb_browse_object(t, id);
   return NULL;
@@ -1016,8 +1053,10 @@ static void set_entry_tree(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * dict
      (var = gavl_dictionary_get_string(m, GAVL_META_TITLE)) ||
      (var = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
     gtk_tree_store_set(GTK_TREE_STORE(model), iter, TREE_COLUMN_SEARCH_STRING, var, -1);
-      
 
+  if((var = gavl_dictionary_get_string(m, GAVL_META_TOOLTIP)))
+    gtk_tree_store_set(GTK_TREE_STORE(model), iter, TREE_COLUMN_TOOLTIP, var, -1);
+  
   if(locked)
     {
     GtkTreePath * path = gtk_tree_model_get_path(model, iter);
@@ -1161,12 +1200,13 @@ static void splice_children_tree_internal(bg_gtk_mdb_tree_t * t,
 
   /* Add entries */
   
-  if(is_container(add))
+  if(is_container(add) && (!strcmp(id, "/") || expanded))
     {
     idx_real = tree_transform_idx(dict, idx);
 
     child = gavl_value_get_dictionary(add);
-    //    fprintf(stderr, "INSERT: %s %d %d %d\n", gavl_track_get_id(child), idx, idx_real, offset);
+    
+    fprintf(stderr, "INSERT: %s %d %d %d expanded: %d\n", gavl_track_get_id(child), idx, idx_real, offset, expanded);
     gtk_tree_store_insert(GTK_TREE_STORE(model), &iter, parent, idx_real + offset);
     set_entry_tree(t, child, &iter);
     }
@@ -1250,7 +1290,6 @@ void bg_gtk_mdb_tree_update_node(bg_gtk_mdb_tree_t * t,
     {
     gavl_dictionary_t * dict;
     album_t * a;
-    const gavl_dictionary_t * m;
     char * parent_id = bg_mdb_get_parent_id(ctx_id);
 
     /* Check if the entry is visible (i.e. if the parent container is expanded */
@@ -1259,23 +1298,15 @@ void bg_gtk_mdb_tree_update_node(bg_gtk_mdb_tree_t * t,
        a->a &&
        (dict = gavl_get_track_by_id_nc(a->a, ctx_id)))
       {
-      int num_old = 0;
-      int num_new = 0;
-              
-      m = gavl_track_get_metadata(dict);
-
-      gavl_dictionary_get_int(m, GAVL_META_NUM_CHILDREN, &num_old);
-      
       if(new_dict)
         bg_mdb_object_changed(dict, new_dict); 
-
-      gavl_dictionary_get_int(m, GAVL_META_NUM_CHILDREN, &num_new);
+      
       set_entry_tree(t, dict, &iter);
 
       //      fprintf(stderr, "bg_gtk_mdb_tree_update_node %s %d -> %d\n",
       //              ctx_id, num_old, num_new);
       
-      if(!num_new)
+      if(!gavl_track_get_num_container_children(dict))
         row_set_expanded(t, ctx_id, 0);
       }
     else if(!strcmp(ctx_id, BG_PLAYQUEUE_ID))
@@ -1412,10 +1443,15 @@ static void open_album(bg_gtk_mdb_tree_t * t, const char * id)
   
   /* Allocate list */
 
+  //  fprintf(stderr, "Opening album %s %p\n", id, a);
+
   if(!a)
     a = album_array_splice_nocopy(t, &t->tab_albums, -1, 0, id, NULL);
   else
     album_array_splice_nocopy(t, &t->tab_albums, -1, 0, id, a);
+
+  //  fprintf(stderr, "Opening album\n");
+  
   
   a->list = bg_gtk_mdb_list_create(a);
   
@@ -2055,6 +2091,8 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
                              );
   
   ret->treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+
+  gtk_tree_view_set_tooltip_column(GTK_TREE_VIEW(ret->treeview), TREE_COLUMN_TOOLTIP);
   
   gtk_widget_add_events(ret->treeview, GDK_KEY_PRESS_MASK | GDK_BUTTON_PRESS_MASK);
   

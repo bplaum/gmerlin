@@ -846,7 +846,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
                         evt->xconfigure.height);
           }
         }
-      SET_FLAG(w, FLAG_DRAWING_COORDS_CHANGED);
       SET_FLAG(w, FLAG_NEED_REDRAW);
       }
       break;

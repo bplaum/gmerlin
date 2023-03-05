@@ -1854,29 +1854,24 @@ static int handle_msg_renderer(void * priv, // Must be bg_backend_handle_t
           break;
         case BG_PLAYER_CMD_SET_LOCATION:
           {
-          int idx;
+          char * id;
           gavl_msg_t msg1;
           
           do_stop(be);
           
           gavl_msg_init(&msg1);
 
-          /* After the last track */
-          
-          gavl_msg_set_id_ns(&msg1, BG_CMD_DB_LOAD_URIS, BG_MSG_NS_DB);
-
-          gavl_dictionary_set_string(&msg1.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
-
-          idx = gavl_get_num_tracks(r->tl.cnt);
-          
-          gavl_msg_set_arg_int(&msg1, 0, idx);
-          gavl_msg_set_arg(&msg1, 1, gavl_msg_get_arg_c(msg, 0));
-          
+          bg_mdb_set_load_uri(&msg1, BG_PLAYQUEUE_ID, -1, gavl_msg_get_arg_string_c(msg, 0));
           bg_player_tracklist_handle_message(&r->tl, &msg1);
-          bg_player_tracklist_set_current_by_idx(&r->tl, idx);
-
+          
+          id = bg_player_tracklist_id_from_uri(NULL, gavl_msg_get_arg_string_c(msg, 0));
+          bg_player_tracklist_set_current_by_id(&r->tl, id);
+          free(id);
+          
           if(gavl_msg_get_arg_int(msg, 1))
             do_play(be);
+
+          gavl_msg_free(&msg1);
           }
           break;
 

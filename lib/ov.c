@@ -151,7 +151,8 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
   ov->ovl_str[ov->num_ovl_str] = str;
   
   ov->num_ovl_str++;
- 
+
+#if 0  
   if(!format->image_width || !format->image_height)
     {
     format->image_width = ov->format.image_width;
@@ -159,9 +160,9 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
     format->pixel_width = ov->format.pixel_width;
     format->pixel_height = ov->format.pixel_height;
     gavl_video_format_set_frame_size(format, 0, 0);
-
     }
- 
+#endif
+  
   /* Try hardware overlay */
   LOCK(ov);
   str->sink_int = ov->plugin->add_overlay_stream(ov->priv, format);

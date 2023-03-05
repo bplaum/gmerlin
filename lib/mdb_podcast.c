@@ -24,12 +24,15 @@
 #include <time.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <ctype.h>
+#include <glob.h>
+#include <errno.h>
 
 #include <gmerlin/mdb.h>
 #include <gmerlin/utils.h>
 #include <md5.h>
 #include <gmerlin/bggavl.h>
+#include <gmerlin/http.h>
 
 #include <mdb_private.h>
 #include <gmerlin/xmlutils.h>
@@ -43,11 +46,18 @@
 
 /* Directory structure
 
-   podcasts/subscriptions: Array with just the URIs of the channels
-   podcasts/index:         Children of the root folder (array)
-   podcasts/<md5>:         Items of the channel (array)
-   
+   podcasts/subscriptions:               Array with just the URIs of the channels
+   podcasts/index:                       Children of the root folder (array)
+   podcasts/<md5>:                       Items of the channel (array)
+   podcasts/<md5>-saved/                 Saved items of that channel
+   podcasts/<md5>-saved/index:           Metadata of all saved entries
+   podcasts/<md5>-saved/<md5>-media.mp3: Media
+   podcasts/<md5>-saved/<md5>-image.jpg: Image
 
+   ID:
+   /podcasts/<podcast_id>/<episode_id>
+   /podcasts/<podcast_id>/saved/<episode_id>
+   
  */
 
 typedef struct
@@ -65,7 +75,80 @@ typedef struct
   
   } podcasts_t;
 
+typedef struct
+  {
+  char * podcast_id;
+  char * episode_id;
+  int saved;
+  const char * id;
+  } parsed_id_t;
+
 static int check_update(bg_mdb_backend_t * b);
+
+
+static int parse_id(const char * ctx_id, parsed_id_t * ret)
+  {
+  int result = 0;
+  int idx = 0;
+  char ** str;
+
+  ret->id = ctx_id;
+  
+  ctx_id++; // '/'
+
+  str = gavl_strbreak(ctx_id, '/');
+
+  if(!str)
+    goto end;
+    
+  if(!str[idx])
+    goto end;
+
+  
+  result = 1;
+  
+  idx++;
+  
+  if(!str[idx])
+    goto end; // /podcasts
+  
+  ret->podcast_id = gavl_strdup(str[idx]);
+  idx++;
+
+  if(!str[idx])
+    goto end; // /podcasts/<md5>
+  
+  if(!strcmp(str[idx], "saved"))
+    {
+    idx++;
+    ret->saved = 1;
+    }
+  
+  if(!str[idx])
+    goto end; // /podcasts/<md5>/saved
+
+  ret->episode_id = gavl_strdup(str[idx]);
+
+  
+  
+  end:
+  if(str)
+    gavl_strbreak_free(str);
+  return result;
+  }
+
+static void init_id(parsed_id_t * id)
+  {
+  memset(id, 0, sizeof(*id));
+  }
+
+static void free_id(parsed_id_t * id)
+  {
+  if(id->podcast_id)
+    free(id->podcast_id);
+  if(id->episode_id)
+    free(id->episode_id);
+  }
 
 static void destroy_podcasts(bg_mdb_backend_t * b)
   {
@@ -147,17 +230,88 @@ static char * parse_time(const char * pubDate)
   
   }
 
-static void parse_cdata_description(const char * str, gavl_dictionary_t * m)
+/* Replace non-escaped "&" characters in podcast descriptions */
+static int is_stray_ampersand(const char * pos)
+  {
+  const char * semicolon;
+
+  pos++; // Skip '&'
+  
+  if(!(semicolon = strchr(pos, ';')))
+    return 1;
+  
+  if(isalpha(*pos))  // &amp;
+    {
+    while(pos < semicolon)
+      {
+      if(!isalpha(*pos))
+        return 1;
+      pos++;
+      }
+    return 0;
+    }
+  else if(*pos == '#')   // &#38;
+    {
+    pos++;
+    while(pos < semicolon)
+      {
+      if(!isdigit(*pos))
+        return 1;
+      pos++;
+      }
+    return 0;
+    }
+  else
+    return 1;
+  
+  }
+
+static char * fix_cdata(const char * str)
+  {
+  const char * end;
+  const char * start = str;
+  char * ret = NULL;
+
+  while(1)
+    {
+    end = start;
+    while((*end != '\0') && (*end != '&'))
+      end++;
+
+    if(end > start)
+      ret = gavl_strncat(ret, start, end);
+
+    if(*end == '\0')
+      break;
+
+    else if(*end == '&')
+      {
+      if(is_stray_ampersand(end))
+        ret = gavl_strcat(ret, "&amp;");
+      else
+        ret = gavl_strncat(ret, end, end+1);
+      start = end+1;
+      }
+    
+    }
+  return ret;
+  }
+
+static void parse_cdata_description(const char * str1, gavl_dictionary_t * m)
   {
   char * desc = NULL;
   htmlNodePtr child;
-  htmlDocPtr doc = htmlReadMemory(str, strlen(str), 
+  htmlDocPtr doc;
+  
+  char * str = fix_cdata(str1);
+  
+  doc = htmlReadMemory(str, strlen(str), 
                                   NULL, "utf-8", 
                                   HTML_PARSE_NODEFDTD | HTML_PARSE_RECOVER);
   
   if(!doc)
-    return;
-
+    goto fail;
+  
   //  child = bg_xml_find_doc_child(doc, )  
   child = doc->children;
 
@@ -198,10 +352,52 @@ static void parse_cdata_description(const char * str, gavl_dictionary_t * m)
     gavl_dictionary_set_string(m, GAVL_META_DESCRIPTION,
                                gavl_strip_space(desc));
     }
-
-  xmlFreeDoc(doc);
   
+  fail:
+  free(str);
+  if(doc)
+    xmlFreeDoc(doc);
   }
+
+static int has_saved_episodes(bg_mdb_backend_t * b, const char * podcast)
+  {
+  int ret = 0;
+  char * path;
+  podcasts_t * p = b->priv;
+
+  path = gavl_sprintf("%s/saved/%s/index", p->dir, podcast);
+
+  if(!access(path, R_OK))
+    ret = 1;
+
+  free(path);
+  return ret;
+  }
+
+static int get_num_saved_episodes(bg_mdb_backend_t * b, const char * podcast)
+  {
+  gavl_array_t arr;
+  char * path;
+  int ret = 0;
+  podcasts_t * p = b->priv;
+
+  path = gavl_sprintf("%s/saved/%s/index", p->dir, podcast);
+  
+  if(access(path, R_OK))
+    {
+    free(path);
+    return 0;
+    }
+
+  gavl_array_init(&arr);
+  bg_array_load_xml(&arr, path, "items");
+  ret = arr.num_entries;
+  gavl_array_free(&arr);
+  
+  free(path);
+  return ret;
+  }
+
 
 static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
                       gavl_dictionary_t * channel, gavl_array_t * items)
@@ -210,8 +406,11 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   int idx = 0;
   xmlNodePtr image;
   gavl_dictionary_t * channel_m;
-  
+  gavl_dictionary_t * mdb_dict;
+  int num_containers = 0;
+  const char * category;
   const char * str;
+
   xmlNodePtr node;
   xmlNodePtr item;
   xmlNodePtr child;
@@ -237,7 +436,9 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     goto fail;
 
   channel_m = gavl_dictionary_get_dictionary_create(channel, GAVL_META_METADATA);
-
+  mdb_dict = gavl_dictionary_get_dictionary_create(channel, BG_MDB_DICT);
+  gavl_dictionary_set_string(mdb_dict, GAVL_META_URI, uri);
+  
   gavl_dictionary_set_string(channel_m, GAVL_META_TITLE, str);
   gavl_dictionary_set_string(channel_m, GAVL_META_LABEL, str);
   gavl_dictionary_set_string(channel_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_PODCAST);
@@ -289,6 +490,8 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     gavl_dictionary_set_string(channel_m, GAVL_META_DESCRIPTION, str);
     }
 
+  if((category = bg_xml_node_get_child_content(node, "category")))
+    gavl_dictionary_set_string(channel_m, GAVL_META_GENRE, category);
   
   while((item = bg_xml_find_next_node_child_by_name(node, item, "item")))
     {
@@ -312,6 +515,8 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     gavl_dictionary_set_string(it_m, GAVL_META_TITLE, str);
     gavl_dictionary_set_string(it_m, GAVL_META_LABEL, str);
 
+    if(category)
+      gavl_dictionary_set_string(it_m, GAVL_META_GENRE, category);
     
     if((str = bg_xml_node_get_child_content(item, "author")))
       gavl_dictionary_set_string(it_m, GAVL_META_AUTHOR, str);
@@ -405,17 +610,17 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     //    gavl_dictionary_dump(it, 2);
     
     gavl_array_splice_val_nocopy(items, -1, 0, &it_val);
-
+    
     
     
     idx++;
 
     }
 
-  bg_mdb_set_idx_total(items, 0, items->num_entries);
-  bg_mdb_set_next_previous(items);
+  if(has_saved_episodes(b, md5))
+    num_containers = 1;
   
-  gavl_track_set_num_children(channel, 0, items->num_entries);
+  gavl_track_set_num_children(channel, num_containers, items->num_entries);
   
   ret = 1;
   
@@ -426,12 +631,6 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   return ret;
   }
 
-/* reload xml files */
-static void refresh_subscriptions(bg_mdb_backend_t * b)
-  {
-  
-  }
-
 
 static void load_subscriptions(bg_mdb_backend_t * b)
   {
@@ -439,13 +638,10 @@ static void load_subscriptions(bg_mdb_backend_t * b)
   podcasts_t * priv = b->priv;
   filename = bg_sprintf("%s/%s", priv->dir, "subscriptions");
     
-  if(!access(filename, R_OK) &&
-     bg_array_load_xml(&priv->subscriptions,
-                       filename, "subscriptions"))
-    {
-    refresh_subscriptions(b);
-    }
-    
+  if(!access(filename, R_OK))
+    bg_array_load_xml(&priv->subscriptions,
+                      filename, "subscriptions");
+  
   free(filename);
   }
 
@@ -461,26 +657,39 @@ static void save_subscriptions(bg_mdb_backend_t * b)
   free(filename);
   }
 
-static void subscribe(bg_mdb_backend_t * b, const char * uri)
+static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl_array_t * root_arr)
   {
   gavl_value_t channel_val;
   gavl_dictionary_t * channel;
   char md5[33];
   char * filename;
   gavl_array_t items;
-
-  gavl_msg_t * evt;
-  
+  //  gavl_msg_t * evt;
   podcasts_t * p = b->priv;
+  int ret = 0;
   //  fprintf(stderr, "Subscribe %s\n", uri);
 
+  const char * uri = NULL;
+  const char * klass;
+  const gavl_dictionary_t * dict;
+
+  if(!(dict = gavl_value_get_dictionary(val)) ||
+     !(dict = gavl_track_get_metadata(dict)) ||
+     !(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
+     strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) ||
+     !gavl_metadata_get_src(dict, GAVL_META_SRC, 0, NULL, &uri) ||
+     !uri)
+    {
+    return ret;
+    }
+  
   /* Check if we have this already */
   if(gavl_string_array_indexof(&p->subscriptions, uri) >= 0)
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Already subscribed to %s", uri);
-    return;
+    return ret;
     }
-
+  
   gavl_value_init(&channel_val);
   channel = gavl_value_set_dictionary(&channel_val);
   gavl_array_init(&items);
@@ -489,10 +698,12 @@ static void subscribe(bg_mdb_backend_t * b, const char * uri)
   
   if(load_items(b, uri, md5, channel, &items))
     {
-    gavl_array_t idx;
-    gavl_array_init(&idx);
-
-    gavl_string_array_add(&p->subscriptions, uri);
+    
+    fprintf(stderr, "Loaded podcast 1\n");
+    gavl_value_dump(&channel_val, 2);
+    
+    gavl_string_array_insert_at(&p->subscriptions, i, uri);
+    //    gavl_string_array_add(&p->subscriptions, uri);
     save_subscriptions(b);
     
     /* Save items */
@@ -500,25 +711,17 @@ static void subscribe(bg_mdb_backend_t * b, const char * uri)
     bg_array_save_xml(&items, filename, "items");
     free(filename);
 
-    /* Save root container */
-    filename = bg_sprintf("%s/index", p->dir);
-    
-    if(!access(filename, R_OK))
-      bg_array_load_xml(&idx, filename, "items");
-    
-    gavl_array_splice_val_nocopy(&idx, -1, 0, &channel_val);
-    bg_mdb_set_next_previous(&idx);
-    bg_array_save_xml(&idx, filename, "items");
-    free(filename);
-    
+    gavl_array_splice_val_nocopy(root_arr, i, 0, &channel_val);
+    //    bg_mdb_set_next_previous(&idx);
+    //    bg_array_save_xml(&idx, filename, "items");
+    //    free(filename);
+#if 0
     /* Update root folder */
 
     evt = bg_msg_sink_get(b->ctrl.evt_sink);
     gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
 
     gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_PODCASTS);
-    
-    gavl_track_set_num_children(p->root, idx.num_entries, 0);
     
     gavl_msg_set_arg_dictionary(evt, 0, p->root);
     bg_msg_sink_put(b->ctrl.evt_sink, evt);
@@ -531,13 +734,15 @@ static void subscribe(bg_mdb_backend_t * b, const char * uri)
 
     gavl_msg_set_last(evt, 1);
   
-    gavl_msg_set_arg_int(evt, 0, idx.num_entries - 1); // idx
+    gavl_msg_set_arg_int(evt, 0, i); // idx
     gavl_msg_set_arg_int(evt, 1, 0); // del
     gavl_msg_set_arg(evt, 2, &idx.entries[idx.num_entries - 1]);
     
     bg_msg_sink_put(b->ctrl.evt_sink, evt);
     
     gavl_array_free(&idx);
+#endif
+    ret = 1;
     }
   else
     {
@@ -545,7 +750,7 @@ static void subscribe(bg_mdb_backend_t * b, const char * uri)
     }
 
   gavl_array_free(&items);
-  
+  return ret;
   }
 
 static void unsubscribe(bg_mdb_backend_t * b, int idx, gavl_array_t * index)
@@ -627,6 +832,9 @@ static int check_update(bg_mdb_backend_t * b)
     gavl_array_init(&items_new);
     gavl_dictionary_init(&channel_new);
 
+    if(i >= idx.num_entries)
+      break;
+    
     if(!(channel = gavl_value_get_dictionary_nc(&idx.entries[i])) ||
        !(m = gavl_dictionary_get_dictionary_create(channel, GAVL_META_METADATA)))
       continue;
@@ -743,14 +951,334 @@ static int check_update(bg_mdb_backend_t * b)
   return ret;
   }
 
+static void make_saved_container(gavl_dictionary_t * saved_dict, const parsed_id_t * id, int num_items)
+  {
+  gavl_dictionary_t * saved_m = gavl_dictionary_get_dictionary_create(saved_dict, GAVL_META_METADATA);
+  gavl_dictionary_set_string(saved_m, GAVL_META_LABEL, "Downloaded episodes");
+  gavl_dictionary_set_string(saved_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string_nocopy(saved_m, GAVL_META_ID, gavl_sprintf(BG_MDB_ID_PODCASTS"/%s/saved", id->podcast_id));
 
+  bg_mdb_set_editable(saved_dict);
+  gavl_track_set_num_children(saved_dict, 0, num_items);
+  }
+
+static char * get_index_filename(bg_mdb_backend_t * b, const parsed_id_t * id)
+  {
+  podcasts_t * p = b->priv;
+#if 0
+  if(id->episode_id)
+    return NULL;
+  else
+#endif
+    if(!id->podcast_id) // /podcasts
+    return gavl_sprintf("%s/index", p->dir);
+  else if(id->saved)
+    return gavl_sprintf("%s/saved/%s/index", p->dir, id->podcast_id);
+  else
+    return gavl_sprintf("%s/%s", p->dir, id->podcast_id);
+  }
+
+static int load_array(bg_mdb_backend_t * b, const parsed_id_t * id, gavl_array_t * arr)
+  {
+  int ret = 0;
+  char * filename = NULL;
+  char * podcast_id = NULL;
+  
+  filename = get_index_filename(b, id);
+  
+  if(filename && bg_array_load_xml(arr, filename, "items"))
+    {
+    /* Saved episodes */
+    if(!id->saved && id->podcast_id)
+      {
+      int num_saved;
+      num_saved = get_num_saved_episodes(b, id->podcast_id);
+      if(num_saved)
+        {
+        gavl_value_t saved_val;
+        gavl_dictionary_t * saved_dict;
+        gavl_value_init(&saved_val);
+        saved_dict = gavl_value_set_dictionary(&saved_val);
+        
+        make_saved_container(saved_dict, id, num_saved);
+        gavl_array_splice_val_nocopy(arr, 0, 0, &saved_val);
+        }
+      }
+    
+    bg_mdb_set_next_previous(arr);
+    ret = 1;
+    }
+  
+  if(filename)
+    free(filename);
+  if(podcast_id)
+    free(podcast_id);
+  
+  return ret;
+  }
+
+static void save_array(bg_mdb_backend_t * b, const parsed_id_t * id, gavl_array_t * arr)
+  {
+  char * filename = get_index_filename(b, id);
+  
+  if(filename)
+    {
+    bg_array_save_xml(arr, filename, "items");
+    free(filename);
+    }
+  
+  }
+
+
+static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
+  {
+  char * dirname = NULL;
+  //  fprintf(stderr, "save_local: %s\n", id);
+  gavl_array_t arr;
+  const gavl_dictionary_t * dict_c;
+  gavl_dictionary_t * m;
+  gavl_dictionary_t * src;
+  const char * uri;
+  int num_episodes = 0;
+  
+  podcasts_t * priv = b->priv;
+  int created_local_folder = 0;
+  char * local_filename;
+
+  gavl_value_t entry_val;
+  gavl_dictionary_t * dict;
+  gavl_msg_t * res;
+  char * filename = NULL; 
+
+  gavl_array_init(&arr);
+  gavl_value_init(&entry_val);
+  
+  /* Browse local object */
+
+  if(!load_array(b, id, &arr) ||
+     !(dict_c = gavl_get_track_by_id_arr(&arr, id->id)))
+    goto fail;
+  
+  num_episodes = arr.num_entries;
+  
+  dict = gavl_value_set_dictionary(&entry_val);
+  gavl_dictionary_copy(dict, dict_c);
+  if(!(m = gavl_track_get_metadata_nc(dict)))
+    goto fail;
+
+  gavl_array_reset(&arr);
+  
+  /* Create local directory (if it doesn't exist already) */
+
+  dirname = gavl_sprintf("%s/saved/%s", priv->dir, id->podcast_id);
+  
+  if(!bg_is_directory(dirname, 1))
+    {
+    bg_ensure_directory(dirname, 0);
+    created_local_folder = 1;
+    }
+  
+  /* Load saved index and check if we already have this episode */
+  filename = gavl_sprintf("%s/index", dirname);
+  if(!access(filename, R_OK))
+    bg_array_load_xml(&arr, filename, "items");
+  
+  if(gavl_get_track_by_id_arr(&arr, id->id))
+    goto fail;
+  
+  /* Download remote media */
+  if((uri = gavl_dictionary_get_string(m, GAVL_META_LOGO_URL)))
+    {
+    char * prefix = gavl_sprintf("%s/%s-image", dirname, id->episode_id);
+    local_filename =  bg_http_download(uri, prefix);
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_LOGO_URL, local_filename);
+    free(prefix);
+    }
+
+  if((src = gavl_metadata_get_src_nc(m, GAVL_META_SRC, 0)) &&
+     (uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
+    {
+    char * prefix = gavl_sprintf("%s/%s-media", dirname, id->episode_id);
+    local_filename =  bg_http_download(uri, prefix);
+    gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, local_filename);
+    free(prefix);
+    }
+  
+  gavl_dictionary_set_string_nocopy(m, GAVL_META_ID,
+                                    gavl_sprintf("%s/%s/saved/%s", BG_MDB_ID_PODCASTS,
+                                                 id->podcast_id, id->episode_id));
+  
+  /* Save metadata */
+  
+  gavl_array_splice_val(&arr, -1, 0, &entry_val);
+  bg_mdb_set_next_previous(&arr);
+  bg_array_save_xml(&arr, filename, "items");
+
+  free(filename);
+  filename = NULL;
+  
+  /* Send events */
+
+  if(created_local_folder)
+    {
+    gavl_value_t add;
+    gavl_dictionary_t * dict;
+    gavl_array_t index;
+    
+    /* Set splice event for podcast */
+    gavl_value_init(&add);
+    dict = gavl_value_set_dictionary(&add);
+    
+    make_saved_container(dict, id, 1);
+
+    res = bg_msg_sink_get(b->ctrl.evt_sink);
+    gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+    gavl_dictionary_set_string_nocopy(&res->header, GAVL_MSG_CONTEXT_ID, gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, id->podcast_id));
+
+    gavl_msg_set_last(res, 1);
+  
+    gavl_msg_set_arg_int(res, 0, 0); // idx
+    gavl_msg_set_arg_int(res, 1, 0); // del
+    gavl_msg_set_arg_nocopy(res, 2, &add);
+    
+    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    
+    /* Set change event for podcast */
+    gavl_array_init(&index);
+    filename = gavl_sprintf("%s/index", priv->dir);
+    bg_array_load_xml(&index, filename, "items");
+    
+    res = bg_msg_sink_get(b->ctrl.evt_sink);
+
+    gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+    gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, id->podcast_id));
+
+    dict = gavl_get_track_by_id_arr_nc(&index, gavl_dictionary_get_string(&res->header, GAVL_MSG_CONTEXT_ID));
+    
+    gavl_track_set_num_children(dict, 1, num_episodes);
+    gavl_msg_set_arg_dictionary(res, 0, dict);
+
+    //    fprintf(stderr, "set changed callback\n");
+    //    gavl_dictionary_dump(dict, 2);
+    
+    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_array_save_xml(&index, filename, "items");
+    gavl_array_free(&index);
+    }
+  else
+    {
+    gavl_value_t val;
+    gavl_dictionary_t * dict;
+
+    /* Set splice event for saved */
+    
+    res = bg_msg_sink_get(b->ctrl.evt_sink);
+    gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+    gavl_dictionary_set_string_nocopy(&res->header, GAVL_MSG_CONTEXT_ID,
+                                      gavl_sprintf("%s/%s/saved", BG_MDB_ID_PODCASTS, id->podcast_id));
+    
+    gavl_msg_set_last(res, 1);
+  
+    gavl_msg_set_arg_int(res, 0, arr.num_entries-1); // idx
+    gavl_msg_set_arg_int(res, 1, 0); // del
+    gavl_msg_set_arg(res, 2, &entry_val);
+    
+    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    
+    /* Set change event for saved */
+    res = bg_msg_sink_get(b->ctrl.evt_sink);
+    gavl_value_init(&val);
+    dict = gavl_value_set_dictionary(&val);
+    make_saved_container(dict, id, arr.num_entries);
+    
+    //    fprintf(stderr, "set changed callback\n");
+    //    gavl_dictionary_dump(dict, 2);
+    
+    gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+    gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(dict));
+    gavl_msg_set_arg_dictionary(res, 0, dict);
+    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    gavl_value_free(&val);
+    }
+  
+  fail:
+  
+  gavl_array_free(&arr);
+  gavl_value_free(&entry_val);
+
+  
+  if(filename)
+    free(filename);
+  if(dirname)
+    free(dirname);
+  
+  }
+
+
+static void browse_object(bg_mdb_backend_t * b, gavl_msg_t * msg, const parsed_id_t * id)
+  {
+  podcasts_t * p = b->priv;
+
+  gavl_msg_t * res = NULL;
+  
+  //  fprintf(stderr, "Browse object %s\n", id->id);
+          
+  if(!id->podcast_id)
+    {
+    /* /podcasts */
+    res = bg_msg_sink_get(b->ctrl.evt_sink);
+    bg_mdb_set_browse_obj_response(res, p->root, msg, -1, -1);
+    }
+  else
+    {
+    int idx = -1;
+    gavl_array_t arr;
+
+    char * parent_id;
+    parsed_id_t parent_id_parsed;
+
+    init_id(&parent_id_parsed);
+    parent_id = bg_mdb_get_parent_id(id->id);
+    parse_id(parent_id, &parent_id_parsed);
+    
+    gavl_array_init(&arr);
+    
+    if(load_array(b, id, &arr) &&
+       ((idx = gavl_get_track_idx_by_id_arr(&arr, id->id)) >= 0))
+      {
+      res = bg_msg_sink_get(b->ctrl.evt_sink);
+      bg_mdb_set_browse_obj_response(res, gavl_value_get_dictionary(&arr.entries[idx]), msg, idx, arr.num_entries);
+      }
+    gavl_array_free(&arr);
+    }
+  
+  if(res)
+    {
+    //    fprintf(stderr, "Browse object: Sending response\n");
+    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    }
+  
+  }
+
+  
 static int handle_msg(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * b = priv;
   podcasts_t * p = b->priv;
   
-  fprintf(stderr, "Handle message\n");
+  //  fprintf(stderr, "Handle message\n");
 
+  parsed_id_t id;
+  const char * ctx_id = gavl_dictionary_get_string(&msg->header,
+                                             GAVL_MSG_CONTEXT_ID);
+  init_id(&id);
+
+  if(ctx_id)
+    {
+    if(!parse_id(ctx_id, &id))
+      return 1;
+    }
+  
   switch(msg->NS)
     {
     case BG_MSG_NS_DB:
@@ -758,272 +1286,287 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
       switch(msg->ID)
         {
         case BG_FUNC_DB_BROWSE_OBJECT:
-          {
-          const char * pos;
-          
-          gavl_msg_t * res = NULL;
-          const char * ctx_id = gavl_dictionary_get_string(&msg->header,
-                                                           GAVL_MSG_CONTEXT_ID);
-
-
-          fprintf(stderr, "Browse object %s\n", ctx_id);
-          
-          ctx_id += strlen(BG_MDB_ID_PODCASTS);
-
-          if(*ctx_id == '\0')
-            {
-            /* /podcasts/ */
-            res = bg_msg_sink_get(b->ctrl.evt_sink);
-            bg_mdb_set_browse_obj_response(res, p->root, msg, -1, -1);
-            }
-          else
-            {
-            const gavl_dictionary_t * dict;
-            gavl_array_t arr;
-            char * md5 = NULL;
-            char * filename = NULL;
-            int idx = -1;
-            
-            ctx_id++;
-
-            gavl_array_init(&arr);
-
-            if((pos = strchr(ctx_id, '/')))
-              {
-              /* /podcasts/<md5>/<idx> */
-              
-              md5 = gavl_strndup(ctx_id, pos);
-              
-              filename = bg_sprintf("%s/%s", p->dir, md5);
-              
-              pos++;
-
-              idx = atoi(pos);
-
-              if(bg_array_load_xml(&arr, filename, "items") &&
-                 (idx >= 0) && (idx < arr.num_entries) &&
-                 (dict = gavl_value_get_dictionary(&arr.entries[idx])))
-                {
-                res = bg_msg_sink_get(b->ctrl.evt_sink);
-                bg_mdb_set_browse_obj_response(res, dict, msg, idx, arr.num_entries);
-                }
-              
-              }
-            else
-              {
-              int i;
-              const char * test_id;
-              /* /podcasts/md5 */
-              md5 = gavl_strdup(ctx_id);
-              
-              filename = bg_sprintf("%s/index", p->dir);
-              
-              if(bg_array_load_xml(&arr, filename, "items"))
-                {
-                for(i = 0; i < arr.num_entries; i++)
-                  {
-                  if((dict = gavl_value_get_dictionary(&arr.entries[i])) &&
-                     (test_id = gavl_track_get_id(dict)) &&
-                     (pos = strrchr(test_id, '/')) &&
-                     (!strcmp(pos + 1, md5)))
-                    {
-                    res = bg_msg_sink_get(b->ctrl.evt_sink);
-                    bg_mdb_set_browse_obj_response(res, dict, msg, i, arr.num_entries);
-                    }
-                  }
-                
-                }
-                 
-              }
-
-            if(filename)
-              free(filename);
-
-            if(md5)
-              free(md5);
-            
-            gavl_array_free(&arr);
-            
-            
-            
-            }
-          
-          if(res)
-            {
-            fprintf(stderr, "Browse object: Sending response\n");
-            
-            bg_msg_sink_put(b->ctrl.evt_sink, res);
-            }
-          }
-
-
+          browse_object(b, msg, &id);
+          //          fprintf(stderr, "Browse object %s\n", id.id);
           break;
         case BG_FUNC_DB_BROWSE_CHILDREN:
           {
           gavl_array_t arr;
-          /* Flush messages */
-          gavl_msg_t * res;
-          const char * ctx_id;
           int start, num, total = 0, one_answer;
 
-          char * filename;
+          //          fprintf(stderr, "Browse children %s\n", id.id);
           
-          ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-
-          bg_mdb_get_browse_children_request(msg, &ctx_id, &start, &num, &one_answer);
-          
-          //     fprintf(stderr, "Browse children %s\n", ctx_id);
-          
-          if(!strcmp(ctx_id, BG_MDB_ID_PODCASTS))
-            {
-            filename = bg_sprintf("%s/index", p->dir);
-            }
-          else
-            {
-            ctx_id += strlen(BG_MDB_ID_PODCASTS);
-            filename = bg_sprintf("%s%s", p->dir, ctx_id);
-            }
-
+          bg_mdb_get_browse_children_request(msg, NULL, &start, &num, &one_answer);
           gavl_array_init(&arr);
-          
-          if(!bg_array_load_xml(&arr, filename, "items") ||
-             !bg_mdb_adjust_num(start, &num, arr.num_entries))
-            {
-            free(filename);
-            gavl_array_free(&arr);
-            return 1;
-            }
 
-          res = bg_msg_sink_get(b->ctrl.evt_sink);
-          
-          if(num < arr.num_entries)
+          if(load_array(b, &id, &arr) &&
+             bg_mdb_adjust_num(start, &num, arr.num_entries))
             {
-            int i;
+            gavl_msg_t * res = bg_msg_sink_get(b->ctrl.evt_sink);
             
-            gavl_array_t arr1;
-            gavl_array_init(&arr1);
-
-            for(i = 0; i < num; i++)
-              gavl_array_splice_val(&arr1, i, 0, &arr.entries[i+start]);
-
-            bg_mdb_set_browse_children_response(res, &arr1, msg, &start, 1, total);
-            gavl_array_free(&arr1);
-            }
-          else
-            {
-            bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total);
-            }
-          
-          bg_msg_sink_put(b->ctrl.evt_sink, res);
-          
-          gavl_array_free(&arr);
-
-          }
-          break;
-        case BG_CMD_DB_LOAD_URIS:
-          {
-          const gavl_value_t * loc;
-          
-          fprintf(stderr, "Load URIs\n");
-          
-          // idx = gavl_msg_get_arg_int(msg, 0);
-          loc = gavl_msg_get_arg_c(msg, 1);
-
-          if(loc->type == GAVL_TYPE_STRING)
-            subscribe(b, gavl_value_get_string(loc));
-          else if(loc->type == GAVL_TYPE_ARRAY)
-            {
-            const char * str;
-            int i;
-            const gavl_array_t * arr = gavl_value_get_array(loc);
-            
-            for(i = 0; i < arr->num_entries; i++)
+            if(num < arr.num_entries)
               {
-              if((str = gavl_string_array_get(arr, i)))
-                subscribe(b, str);
+              int i;
+            
+              gavl_array_t arr1;
+              gavl_array_init(&arr1);
+
+              for(i = 0; i < num; i++)
+                gavl_array_splice_val(&arr1, i, 0, &arr.entries[i+start]);
+
+              bg_mdb_set_browse_children_response(res, &arr1, msg, &start, 1, total);
+              gavl_array_free(&arr1);
               }
-            }
+            else
+              {
+              bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total);
+              }
           
+            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            
+            }
+            
+          gavl_array_free(&arr);
           }
+          
           break;
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
           int i;
           gavl_array_t index;
-          char * index_filename;
           
           int last = 0;
           int idx = 0;
           int del = 0;
           gavl_value_t add;
-          const char * ctx_id;
           gavl_msg_t * res;
           
-          
-          ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-
-          if(strcmp(ctx_id, BG_MDB_ID_PODCASTS))
-            break;
-
           gavl_value_init(&add);
           gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
-          
-          /* Load root container */
-          index_filename = bg_sprintf("%s/index", p->dir);
-
           gavl_array_init(&index);
-          bg_array_load_xml(&index, index_filename, "items");
+          
+          if(!strcmp(ctx_id, BG_MDB_ID_PODCASTS))
+            {
+            gavl_value_t added_val;
+            gavl_array_t * added_arr;
 
-          if((idx < 0) || (idx > p->subscriptions.num_entries)) // Append
-            idx = p->subscriptions.num_entries;
-          
-          if((del < 0) || (idx + del > p->subscriptions.num_entries))
-            del = p->subscriptions.num_entries - idx;
+            gavl_value_init(&added_val);
+            added_arr = gavl_value_set_array(&added_val);
 
-          for(i = 0; i < del; i++)
-            unsubscribe(b, idx, &index);
+            /* Load root container */
+            if(!load_array(b, &id, &index))
+              {
+              gavl_value_free(&add);
+              break;
+              }
+            
+            if((idx < 0) || (idx > p->subscriptions.num_entries)) // Append
+              idx = p->subscriptions.num_entries;
           
-          save_subscriptions(b);
-          
-          bg_mdb_set_next_previous(&index);
-          bg_array_save_xml(&index, index_filename, "items");
-          
-          free(index_filename);
-          gavl_array_free(&index);
+            if((del < 0) || (idx + del > p->subscriptions.num_entries))
+              del = p->subscriptions.num_entries - idx;
 
-          /* Signal root container children */
-          
-          res = bg_msg_sink_get(b->ctrl.evt_sink);
+            for(i = 0; i < del; i++)
+              unsubscribe(b, idx, &index);
 
-          gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-          gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, ctx_id);
+            /* TODO: Subscribe */
+            if(add.type == GAVL_TYPE_DICTIONARY)
+              {
+              subscribe(b, idx, &add, added_arr);
+              }
+            else if(add.type == GAVL_TYPE_ARRAY)
+              {
+              const gavl_array_t * add_arr = gavl_value_get_array(&add);
+              
+              for(i = 0; i < add_arr->num_entries; i++)
+                subscribe(b, idx+i, &add_arr->entries[i], added_arr);
+              }
+            
+            save_subscriptions(b);
 
-          gavl_msg_set_last(res, 1);
-  
-          gavl_msg_set_arg_int(res, 0, idx); // idx
-          gavl_msg_set_arg_int(res, 1, del); // del
-          gavl_msg_set_arg(res, 2, NULL);
+            gavl_array_splice_array(&index, idx, 0, added_arr);
+            
+            bg_mdb_set_next_previous(&index);
 
-          bg_msg_sink_put(b->ctrl.evt_sink, res);
+            save_array(b, &id, &index);
+            
+            gavl_array_free(&index);
+
+            /* Signal root container children */
           
-          /* Signal root container */
+            res = bg_msg_sink_get(b->ctrl.evt_sink);
+            gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, idx, del, &added_val);
+            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            
+            /* Signal root container */
           
-          res = bg_msg_sink_get(b->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+            res = bg_msg_sink_get(b->ctrl.evt_sink);
+            gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
           
-          gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_PODCASTS);
+            gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_PODCASTS);
     
-          gavl_track_set_num_children(p->root, p->subscriptions.num_entries, 0);
+            gavl_track_set_num_children(p->root, p->subscriptions.num_entries, 0);
           
-          gavl_msg_set_arg_dictionary(res, 0, p->root);
-          bg_msg_sink_put(b->ctrl.evt_sink, res);
+            gavl_msg_set_arg_dictionary(res, 0, p->root);
+            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            
+            }
+          else if(gavl_string_ends_with(ctx_id, "/saved"))
+            {
+            if(add.type !=  GAVL_TYPE_UNDEFINED)
+              gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot add items to saved folder");
+            
+            /* Remove saved */
+
+            if(del <= 0)
+              break;
+
+            /* Load saved items */
+            if(!load_array(b, &id, &index))
+              {
+              gavl_value_free(&add);
+              break;
+              }
+
+            if(idx == -1)
+              idx = index.num_entries-1;
+
+            if(del < 0)
+              del = index.num_entries - idx;
+
+            if(idx + del > index.num_entries)
+              del = index.num_entries - idx;
+
+            for(i = 0; i < del; i++)
+              {
+              char * pattern;
+              const gavl_dictionary_t * dict;
+              const char * episode_id;
+              
+              /* Delete related media files */
+              if((dict = gavl_value_get_dictionary(&index.entries[idx])) &&
+                 (episode_id = gavl_track_get_id(dict)) &&
+                 (episode_id = strrchr(episode_id, '/')))
+                {
+                glob_t g;
+                int j;
+                
+                episode_id++;
+                
+                pattern = gavl_sprintf("%s/saved/%s/%s*", p->dir, id.podcast_id, episode_id);
+                glob(pattern, 0, NULL /* errfunc */, &g);
+
+                for(j = 0; j < g.gl_pathc; j++)
+                  {
+                  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s", g.gl_pathv[j]);
+                  remove(g.gl_pathv[j]);
+                  }
+                
+                globfree(&g);
+                free(pattern);
+                }
+              }
+
+            gavl_array_splice_val(&index, idx, del, NULL);
+            bg_mdb_set_next_previous(&index);
+            save_array(b, &id, &index);
+            
+            if(!index.num_entries)
+              {
+              parsed_id_t root_id;
+              gavl_array_t root_idx;
+              gavl_dictionary_t * parent_dict;
+              
+              char * tmp_string;
+              /* Was the last entry, remove everything */
+              tmp_string = gavl_sprintf("%s/saved/%s/index", p->dir, id.podcast_id);
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s", tmp_string);
+              
+              if(remove(tmp_string))
+                gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't remove %s: %s", tmp_string, strerror(errno));
+              
+              free(tmp_string);
+              
+              tmp_string = gavl_sprintf("%s/saved/%s", p->dir, id.podcast_id);
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s", tmp_string);
+              if(rmdir(tmp_string))
+                gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't remove %s: %s", tmp_string, strerror(errno));
+
+              free(tmp_string);
+              
+              /* signal parent children */
+
+              // /podcasts/<md5>
+              tmp_string = bg_mdb_get_parent_id(ctx_id);
+              
+              res = bg_msg_sink_get(b->ctrl.evt_sink);
+              
+              gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
+                                                  tmp_string, 1, 0, 1, NULL);
+              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              
+              /* signal parent */
+              gavl_array_init(&root_idx);
+              init_id(&root_id);
+              
+              load_array(b, &root_id, &root_idx);
+              
+              if((parent_dict = gavl_get_track_by_id_arr_nc(&root_idx, tmp_string)))
+                {
+                gavl_track_set_num_children(parent_dict,
+                                            0, gavl_track_get_num_item_children(parent_dict));
+                res = bg_msg_sink_get(b->ctrl.evt_sink);
+
+                gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+                gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, tmp_string);
+                gavl_msg_set_arg_dictionary(res, 0, parent_dict);
+                bg_msg_sink_put(b->ctrl.evt_sink, res);
+                }
+              
+              save_array(b, &root_id, &root_idx);
+              
+              free_id(&root_id);
+              gavl_array_free(&root_idx);
+              free(tmp_string);
+              }
+            else
+              {
+              gavl_dictionary_t saved_dict;
+                
+              
+              /* signal saved children */
+              res = bg_msg_sink_get(b->ctrl.evt_sink);
+              gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, idx, del, NULL);
+              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              
+              /* signal saved */
+              gavl_dictionary_init(&saved_dict);
+              make_saved_container(&saved_dict, &id, index.num_entries);
+              res = bg_msg_sink_get(b->ctrl.evt_sink);
+
+              gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+
+              gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, ctx_id);
+              
+              gavl_msg_set_arg_dictionary(res, 0, &saved_dict);
+              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              
+              gavl_dictionary_free(&saved_dict);
+              }
+            
+            }
           
           }
+          break;
+        case BG_CMD_DB_SAVE_LOCAL:
+          save_local(b, &id);
+          break;
         }
       }
     }
-  
 
+  free_id(&id);
+  
   return 1;
   }
 

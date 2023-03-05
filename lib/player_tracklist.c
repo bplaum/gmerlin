@@ -240,20 +240,6 @@ static int prev_track(int num_tracks, int mode, int * idx_p, int ** shuffle_list
   return real_idx;
   }
 
-#if 0
-static void update_object(bg_player_tracklist_t * l, const gavl_dictionary_t * dict)
-  {
-  gavl_msg_t * evt;
-  evt = bg_msg_sink_get(l->evt_sink);
-
-  gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
-
-  gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(dict));
-    
-  gavl_msg_set_arg_dictionary(evt, 0, dict);
-  bg_msg_sink_put(l->evt_sink, evt);
-  }
-#endif
 
 static void position_changed(bg_player_tracklist_t * l)
   {
@@ -383,9 +369,11 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
         {
         fprintf(stderr, "Track has a src but no location??\n");
         gavl_dictionary_dump(m, 2);
+        return 0;
         }
-      bg_md5_buffer_str(location, strlen(location), md5);
+      bg_get_filename_hash(location, md5);
       gavl_track_set_id(track, md5);
+      client_id = NULL;
       }
     else
       {
@@ -409,6 +397,8 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, new_id);
   return 1;
   }
+
+
 
 static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int del, const char * client_id)
   {
@@ -469,11 +459,21 @@ char * bg_player_tracklist_make_id(const char * client_id, const char * original
     pos++;
     }
 
-  ret = bg_sprintf(BG_PLAYQUEUE_ID"/%s~%s", client_id, track_id);
+  if(client_id)
+    ret = bg_sprintf(BG_PLAYQUEUE_ID"/%s~%s", client_id, track_id);
+  else
+    ret = bg_sprintf(BG_PLAYQUEUE_ID"/%s", track_id);
+  
   free(track_id);
   return ret;
   }
 
+char * bg_player_tracklist_id_from_uri(const char * client_id, const char * location)
+  {
+  char md5[33];
+  bg_get_filename_hash(location, md5);
+  return bg_player_tracklist_make_id(client_id, md5);
+  }
 
 static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
                    gavl_value_t * val, const char * client_id)
@@ -675,7 +675,13 @@ void bg_player_tracklist_set_current_by_idx(bg_player_tracklist_t * l, int idx)
   /* Set track */
   idx_real_new = idx;
   l->idx = idx;
-          
+
+  if((idx < 0) || (idx >= list->num_entries))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "bg_player_tracklist_set_current_by_idx: idx %d out of range (0 %d)", idx, list->num_entries-1);
+    return;
+    }
+  
   if(l->mode == BG_PLAYER_MODE_SHUFFLE)
     {
     int i;
@@ -778,57 +784,36 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
           {
           int idx, del, last;
           const char * id;
-          gavl_value_t val;
-
+          gavl_value_t add;
+          
+          gavl_value_t add_arr_val;
+          gavl_array_t * add_arr;
+          gavl_value_init(&add);
+          gavl_value_init(&add_arr_val);
           
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           if(!id || strcmp(id, BG_PLAYQUEUE_ID))
             break;
-          
-          last = gavl_msg_get_last(msg);
 
-          gavl_value_init(&val);
+          add_arr = gavl_value_set_array(&add_arr_val);
           
-          idx = gavl_msg_get_arg_int(msg, 0);
-          del = gavl_msg_get_arg_int(msg, 1);
-          gavl_msg_get_arg(msg, 2, &val);
+          gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
+
+          //          fprintf(stderr, "SPLICE %d %d %d\n", idx, del, last);
+          //          gavl_value_dump(&add, 2);
           
+          bg_tracks_resolve_locations(&add, add_arr, BG_INPUT_FLAG_GET_FORMAT);
           
+          splice(l, idx, del, last, &add_arr_val, client_id);
           
-          splice(l, idx, del, last, &val, client_id);
-          
-          // fprintf(stderr, "SPLICE %d %d %d\n", idx, del, last);
-          //          gavl_value_dump(&val, 2);
           
           l->has_next = 0;
 
           if(l->list_changed)
             delete_shuffle_list(l);
           ret = 1;
-          gavl_value_free(&val);
-          break;
-          }
-        case BG_CMD_DB_LOAD_URIS:
-          {
-          gavl_array_t * arr;
-          gavl_value_t val;
-          const gavl_value_t * arg;
-          int idx;
-          gavl_value_init(&val);
-
-          arr = gavl_value_set_array(&val);
-
-          idx = gavl_msg_get_arg_int(msg, 0);
-          arg = gavl_msg_get_arg_c(msg, 1);
-          
-          bg_plugin_registry_tracks_from_locations(bg_plugin_reg, arg, 0, arr);
-          
-          if(arr->num_entries)
-            {
-            splice(l, idx, 0, 1, &val, client_id);
-            }
-          gavl_value_free(&val);
-          ret = 1;
+          gavl_value_free(&add);
+          gavl_value_free(&add_arr_val);
           break;
           }
         case BG_FUNC_DB_BROWSE_CHILDREN:

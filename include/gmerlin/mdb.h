@@ -91,6 +91,9 @@ void bg_mdb_set_browse_children_request(gavl_msg_t * req, const char * id,
 
 /* Utilities */
 
+void bg_mdb_set_load_uri(gavl_msg_t * msg, const char * id, int idx, const char * uri);
+void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl_array_t * arr);
+
 char * bg_mdb_get_parent_id(const char * id);
 
 const char * bg_mdb_get_child_class(const gavl_dictionary_t * track);

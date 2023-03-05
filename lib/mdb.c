@@ -74,7 +74,6 @@ static int get_klass_idx(const char * klass);
 static void finalize(gavl_dictionary_t * dict, int idx, int total);
 
 
-
 static bg_mdb_backend_t * be_from_name(bg_mdb_t * db, const char * name)
   {
   int i;
@@ -462,6 +461,23 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             }
           }
           break;
+        case BG_CMD_DB_SAVE_LOCAL:
+          {
+          const char * ctx_id;
+          
+          if(!(ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID)))
+            return 1;
+
+          if(!(obj = container_by_id(db, ctx_id, &real_id)))
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Object %s not found", ctx_id);
+          else
+            {
+            if((be_name = bg_mdb_container_get_backend(obj)))
+              be = be_from_name(db, be_name);
+            }
+          
+          }
+          break;
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
           const char * ctx_id;
@@ -481,7 +497,6 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
           }
           break;
         case BG_CMD_DB_SORT:
-        case BG_CMD_DB_LOAD_URIS:
           {
           const char * ctx_id;
 
@@ -2178,8 +2193,9 @@ static const struct
   {
   const char * klass;
   const char * child_class;
+  const char * tooltip;
   }
-child_classes[] =
+classes[] =
   {
   
   /* Container values */
@@ -2207,15 +2223,18 @@ child_classes[] =
   { GAVL_META_MEDIA_CLASS_ROOT_SONGS,       GAVL_META_MEDIA_CLASS_CONTAINER  },
   { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,      GAVL_META_MEDIA_CLASS_CONTAINER },
   { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,    GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_ROOT_STREAMS,     GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES, GAVL_META_MEDIA_CLASS_DIRECTORY },
-  { GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,    GAVL_META_MEDIA_CLASS_PODCAST },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS },
+  { GAVL_META_MEDIA_CLASS_ROOT_STREAMS,     GAVL_META_MEDIA_CLASS_CONTAINER, "Add http(s) urls for Radio- or TV channels in m3u format.\nUse radiobrowser:// to import the database from radio-browser.info.\nUse iptv-org:// to import the database from https://iptv-org.github.io/" },
+  { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES, GAVL_META_MEDIA_CLASS_DIRECTORY, "Add directories, which will be scanned recursively for media files" },
+  { GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,    GAVL_META_MEDIA_CLASS_PODCAST,
+    "Add urls for podcast feeds (in RSS xml format)" },
+  //  { GAVL_META_MEDIA_CLASS_PODCAST,  },
+  
+  { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS, NULL, "Add directories, which will be scanned recursively for photo albums" },
 
   //  { GAVL_META_MEDIA_CLASS_ROOT_INCOMING },
   //  { GAVL_META_MEDIA_CLASS_ROOT_FAVORITES },
   //  { GAVL_META_MEDIA_CLASS_ROOT_BOOKMARKS  },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY },
+  { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY, NULL, "Add generic containers, playlists or TV- or Radio channel lists" },
   //  { GAVL_META_MEDIA_CLASS_ROOT_NETWORK },
  
   //  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE },
@@ -2248,15 +2267,16 @@ const char * bg_mdb_get_child_class(const gavl_dictionary_t * dict)
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
     return NULL;
   
-  while(child_classes[idx].klass)
+  while(classes[idx].klass)
     {
-    if(!strcmp(child_classes[idx].klass, klass))
-      return child_classes[idx].child_class;
+    if(!strcmp(classes[idx].klass, klass))
+      return classes[idx].child_class;
     idx++;
     }
   return NULL;
   }
 
+  
 static void finalize(gavl_dictionary_t * track, int idx, int total)
   {
   const char * klass;
@@ -2272,20 +2292,18 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
   if(!(m = gavl_track_get_metadata_nc(track)))
     return;
 
-  if(!gavl_dictionary_get_string(m, GAVL_META_CHILD_CLASS))
-    {
-    if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
-      return;
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+    return;
   
-    while(child_classes[i].klass)
+  while(classes[i].klass)
+    {
+    if(!strcmp(classes[i].klass, klass))
       {
-      if(!strcmp(child_classes[i].klass, klass))
-        {
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_classes[i].child_class);
-        break;
-        }
-      i++;
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, classes[i].child_class);
+      gavl_dictionary_set_string(m, GAVL_META_TOOLTIP, classes[i].tooltip);
+      break;
       }
+    i++;
     }
   
   if(idx >= 0)
@@ -2576,3 +2594,46 @@ void bg_mdb_track_lock(bg_mdb_backend_t * b, int lock, gavl_dictionary_t * obj)
   gavl_msg_set_arg_dictionary(msg, 0, obj);
   bg_msg_sink_put(b->ctrl.evt_sink, msg);
   }
+
+
+void bg_mdb_set_load_uri(gavl_msg_t * msg, const char * id, int idx, const char * uri)
+  {
+  gavl_value_t add_val;
+  gavl_dictionary_t * dict;
+  
+  gavl_value_init(&add_val);
+  dict = gavl_value_set_dictionary(&add_val);
+
+  gavl_track_from_location(dict, uri);
+  
+  gavl_msg_set_splice_children_nocopy(msg, BG_MSG_NS_DB, BG_CMD_DB_SPLICE_CHILDREN, id, 1, idx, 0, &add_val);
+  }
+
+void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl_array_t * arr)
+  {
+  int i;
+  gavl_value_t add_val;
+  gavl_array_t * add_arr;
+
+  //  fprintf(stderr, "bg_mdb_set_load_uris\n");
+  
+  gavl_value_init(&add_val);
+  add_arr = gavl_value_set_array(&add_val);
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    gavl_value_t dict_val;
+    gavl_dictionary_t * dict;
+    
+    gavl_value_init(&dict_val);
+    dict = gavl_value_set_dictionary(&dict_val);
+
+    gavl_track_from_location(dict, gavl_string_array_get(arr, i));
+    gavl_array_splice_val_nocopy(add_arr, -1, 0, &dict_val);
+    }
+  //  fprintf(stderr, "bg_mdb_set_load_uris 1\n");
+  //  gavl_array_dump(add_arr, 2);
+  bg_msg_set_splice_children(msg, BG_CMD_DB_SPLICE_CHILDREN, id, 1, idx, 0, &add_val);
+  gavl_value_free(&add_val);
+  }
+

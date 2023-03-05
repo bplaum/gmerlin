@@ -82,6 +82,9 @@ typedef struct
   //  GtkWidget * cut_item;
   GtkWidget * paste_item;
   GtkWidget * delete_item;
+
+  /* Only for podcast episodes */
+  GtkWidget * download_item;
   } track_menu_t;
 
 typedef struct
