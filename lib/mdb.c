@@ -2059,6 +2059,18 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
 
   }
 
+void bg_mdb_add_http_uris_arr(bg_mdb_t * mdb, gavl_array_t * arr)
+  {
+  int i;
+  gavl_dictionary_t * dict;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary_nc(&arr->entries[i])))
+      bg_mdb_add_http_uris(mdb, dict);
+    }
+  }
+
+
 static void delete_http_uris(gavl_dictionary_t * dict, const char * name)
   {
   const gavl_dictionary_t * local_dict;

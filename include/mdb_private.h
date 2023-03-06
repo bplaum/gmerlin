@@ -161,6 +161,8 @@ const char * bg_mdb_get_klass_from_id(const char * id);
 
 
 void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict);
+void bg_mdb_add_http_uris_arr(bg_mdb_t * mdb, gavl_array_t * arr);
+
 void bg_mdb_delete_http_uris(gavl_dictionary_t * dict);
 
 
