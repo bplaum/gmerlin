@@ -665,7 +665,8 @@ static int id_to_iter(GtkTreeView *treeview, const char * id, GtkTreeIter * ret)
 
   if(!gtk_tree_model_iter_children(model, &child_iter, NULL))
     {
-    fprintf(stderr, "id_to_iter(%s) Couldn't initialize child_iter\n", id);
+    if(strcmp(id, BG_PLAYQUEUE_ID))
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "id_to_iter(%s) Couldn't initialize child_iter", id);
     return 0;
     }
   

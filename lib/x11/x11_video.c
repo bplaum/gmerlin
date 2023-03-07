@@ -473,7 +473,7 @@ void bg_x11_window_check_redraw(bg_x11_window_t* win)
   
   if(win->current_driver)
     {
-    fprintf(stderr, "Redraw\n");
+    //    fprintf(stderr, "Redraw\n");
     win->current_driver->driver->put_frame(win->current_driver);
     }
   
