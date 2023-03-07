@@ -105,9 +105,9 @@ static void set_editable(const char * id, gavl_dictionary_t * dict)
     bg_mdb_add_can_add(dict, "item.video*");
     bg_mdb_add_can_add(dict, "item.image*");
     bg_mdb_add_can_add(dict, "item.location");
+    bg_mdb_add_can_add(dict, "item.broadcast");
     }
   }
-
 
 static void item_to_storage(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
   {
@@ -125,7 +125,7 @@ static void item_to_storage(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
   //  gavl_dictionary_set(m, GAVL_META_NUM_CHILDREN, NULL);
   //  gavl_dictionary_set(m, GAVL_META_NUM_ITEM_CHILDREN, NULL);
   //  gavl_dictionary_set(m, GAVL_META_NUM_CONTAINER_CHILDREN, NULL);
-  
+
   }
 
 static void item_from_storage(bg_mdb_backend_t * b,

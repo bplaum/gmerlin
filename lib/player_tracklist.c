@@ -355,6 +355,9 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
   if(!(track = gavl_value_get_dictionary_nc(track_val)) ||
      !(m = gavl_track_get_metadata_nc(track)))
     return 0;
+
+  //  fprintf(stderr, "set_id\n");
+  //  gavl_dictionary_dump(track, 2);
   
   if(!(track_id = gavl_track_get_id(track)))
     {

@@ -1176,8 +1176,8 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             }
           else if(!strcmp(ctx, BG_STATE_CTX_OV))
             {
-            //            fprintf(stderr, "set_state OV %s %p %d\n", var, player->video_stream.ov_ctrl, val.type);
-            //            gavl_value_dump(&val, 2);
+            //  fprintf(stderr, "set_state OV %s %p %d\n", var, player->video_stream.ov_ctrl, val.type);
+            //  gavl_value_dump(&val, 2);
             
             if(player->video_stream.ov_ctrl)
               {

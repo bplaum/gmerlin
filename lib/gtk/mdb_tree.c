@@ -1206,7 +1206,7 @@ static void splice_children_tree_internal(bg_gtk_mdb_tree_t * t,
 
     child = gavl_value_get_dictionary(add);
     
-    fprintf(stderr, "INSERT: %s %d %d %d expanded: %d\n", gavl_track_get_id(child), idx, idx_real, offset, expanded);
+    // fprintf(stderr, "INSERT: %s %d %d %d expanded: %d\n", gavl_track_get_id(child), idx, idx_real, offset, expanded);
     gtk_tree_store_insert(GTK_TREE_STORE(model), &iter, parent, idx_real + offset);
     set_entry_tree(t, child, &iter);
     }

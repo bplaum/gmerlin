@@ -42,7 +42,6 @@ typedef struct
   gavl_video_format_t format;
     
   gavl_video_sink_t * sink_int;
-  gavl_video_sink_t * sink_ext;
   } ovl_stream_t;
 
 struct bg_ov_s
@@ -122,6 +121,10 @@ int bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect)
     ov->sink_int = ov->plugin->get_sink(ov->priv);
   UNLOCK(ov);
 
+  gavl_video_sink_set_lock_funcs(ov->sink_int,
+                                 bg_plugin_lock, bg_plugin_unlock,
+                                 ov->h);
+  
   if(!ret)
     return ret;
   

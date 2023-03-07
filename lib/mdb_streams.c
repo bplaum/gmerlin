@@ -416,7 +416,7 @@ browse_station_callback(void * data, int argc, char **argv, char **azColName)
                                    GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST);
       else
         gavl_dictionary_set_string(b->m, GAVL_META_MEDIA_CLASS,
-                                   GAVL_META_MEDIA_CLASS_LOCATION);
+                                   GAVL_META_MEDIA_CLASS_BROADCAST);
       }
     }
   

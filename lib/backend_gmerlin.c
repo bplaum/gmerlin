@@ -140,7 +140,7 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
   pos = strstr(addr, "://");
   uri = bg_sprintf("http%s/info", pos);
 
-  fprintf(stderr, "Getting node info for %s (info URI: %s)\n", addr, uri);
+  // fprintf(stderr, "Getting node info for %s (info URI: %s)\n", addr, uri);
 
   if(!(obj = bg_json_from_url(uri, NULL)))
     goto fail;

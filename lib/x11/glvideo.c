@@ -771,26 +771,12 @@ static void update_vertex_buffer(driver_data_t * d,
       mat[1][0] =  -1.0;
       mat[1][1] =  0.0;
       break;
-      
     }
   
   transform_vertex(mat, llx, lly, v[0].pos);
   transform_vertex(mat, llx, ury, v[1].pos);
   transform_vertex(mat, urx, lly, v[2].pos);
   transform_vertex(mat, urx, ury, v[3].pos);
-  
-  //  v[0].pos[0] = llx;
-  //  v[0].pos[1] = lly;
-  
-  //  v[1].pos[0] = llx;
-  //  v[1].pos[1] = ury;
-  
-  //  v[2].pos[0] = urx;
-  //  v[2].pos[1] = lly;
-  
-  //  v[3].pos[0] = urx;
-  //  v[3].pos[1] = ury;
-
   
   v[0].pos[2] = 0.0;
   v[1].pos[2] = 0.0;
@@ -808,8 +794,6 @@ static void update_vertex_buffer(driver_data_t * d,
   
   glBindBuffer(GL_ARRAY_BUFFER, priv->vbo);  
   
-  //  glBufferData(GL_ARRAY_BUFFER, sizeof(v), v, GL_DYNAMIC_DRAW);
-
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(v), v);
 
   /* Index 0: Position */
@@ -837,8 +821,8 @@ static int open_gl(driver_data_t * d)
   
   //  priv->texture_target = GL_TEXTURE_2D;
 
-  fprintf(stderr, "Open GL\n");
-  gavl_video_format_dump(&w->video_format);
+  //  fprintf(stderr, "Open GL\n");
+  //  gavl_video_format_dump(&w->video_format);
   
   if(w->video_format.hwctx)
     {

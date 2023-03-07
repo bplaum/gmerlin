@@ -506,6 +506,7 @@ void * bg_player_ov_thread(void * data)
 
       sink = bg_ov_get_sink(s->ov);
       //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
+      
       gavl_video_sink_put_frame(sink, frame);
       s->skip = 0;
       
