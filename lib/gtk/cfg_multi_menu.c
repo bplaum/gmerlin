@@ -55,19 +55,26 @@ static void get_value(bg_gtk_widget_t * w)
   
   if(w->info->multi_names)
     {
-    int i = 0;
     const char * name = bg_multi_menu_get_selected_name(&w->value);
-    
-    while(w->info->multi_names[i])
+
+    if(!name)
+      gtk_combo_box_set_active(GTK_COMBO_BOX(priv->combo), 0);
+    else
       {
-      if(!strcmp(name, w->info->multi_names[i]))
+      int i = 0;
+
+      while(w->info->multi_names[i])
         {
-        gtk_combo_box_set_active(GTK_COMBO_BOX(priv->combo), i);
-        //        fprintf(stderr, "Get value %d\n", i);
-        break;
+        if(!strcmp(name, w->info->multi_names[i]))
+          {
+          gtk_combo_box_set_active(GTK_COMBO_BOX(priv->combo), i);
+          //        fprintf(stderr, "Get value %d\n", i);
+          break;
+          }
+        i++;
         }
-      i++;
       }
+    
     }
   
   }

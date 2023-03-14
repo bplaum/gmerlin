@@ -385,6 +385,9 @@ void bg_multi_menu_update(gavl_value_t * val,
                           const bg_parameter_info_t * info);
 
 int bg_multi_menu_get_num(const gavl_value_t * val);
+const char * bg_multi_menu_get_name(gavl_value_t * val, int idx);
+int bg_multi_menu_has_name(const gavl_value_t * val, const char * name);
+void bg_multi_menu_remove(gavl_value_t * val, int idx);
 
 
 /** @}

@@ -771,6 +771,13 @@ static void update_vertex_buffer(driver_data_t * d,
       mat[1][0] =  -1.0;
       mat[1][1] =  0.0;
       break;
+    default: // Keeps gcc quiet
+      mat[0][0] = 1.0;
+      mat[0][1] = 0.0;
+      mat[1][0] = 0.0;
+      mat[1][1] = 1.0;
+      break;
+      
     }
   
   transform_vertex(mat, llx, lly, v[0].pos);
@@ -890,7 +897,8 @@ static int open_gl(driver_data_t * d)
   switch(priv->mode)
     {
     case MODE_TEXTURE_DIRECT:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (direct)", (src_type == GAVL_HW_EGL_GL_X11) ? "" : "ES");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (direct)",
+               (src_type == GAVL_HW_EGL_GL_X11) ? "" : "ES");
       break;
     case MODE_TEXTURE_COPY:
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (indirect)",
@@ -905,7 +913,6 @@ static int open_gl(driver_data_t * d)
   
   w->normal.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->normal.win);
   w->fullscreen.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->fullscreen.win);
-
   
   //  bg_x11_window_start_gl(w);
   /* Get the format */

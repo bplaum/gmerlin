@@ -251,7 +251,7 @@ static void put_frame_vaapi(driver_data_t * d)
   bg_x11_window_t * w = d->win;
   VAStatus status;
   unsigned int flags = 0;
-  VASurfaceID surf;  
+  //  VASurfaceID surf;  
   
   priv = d->priv;
   
@@ -322,7 +322,7 @@ static void put_frame_vaapi(driver_data_t * d)
       continue;
     status = vaDeassociateSubpicture(priv->dpy,
                                      gavl_vaapi_get_subpicture_id(w->overlay_streams[i]->ovl),
-                                     &surf,
+                                     &priv->cur_frame,
                                      1);
     }
   }

@@ -27,7 +27,8 @@
 #include <config.h>
 
 #include <gavl/gavlsocket.h>
-
+#include <gavl/log.h>
+#define LOG_DOMAIN "transcoder_window"
 #include <gmerlin/translation.h>
 
 #include <gmerlin/pluginregistry.h>
@@ -692,6 +693,42 @@ static void logwindow_close_callback(bg_gtk_log_window_t*w, void*data)
   }
 #endif
 
+static void remove_missing_encoders_sub(gavl_dictionary_t * dst, const gavl_dictionary_t * src, const char * name)
+  {
+  int i, num;
+  const char * str;
+  const gavl_value_t * src_val;
+  gavl_value_t * dst_val;
+  
+  if(!(dst_val = gavl_dictionary_get_nc(dst, name)) ||
+     !(src_val = gavl_dictionary_get(src, name)))
+    return;
+
+  num = bg_multi_menu_get_num(dst_val);
+  i = 0;
+  while(i < num)
+    {
+    if((str = bg_multi_menu_get_name(dst_val, i)) &&
+       !bg_multi_menu_has_name(src_val, str))
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing entry %s", str);
+      bg_multi_menu_remove(dst_val, i);
+      num--;
+      }
+    else
+      i++;
+    }
+  
+  }
+  
+static void remove_missing_encoders(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
+  {
+  remove_missing_encoders_sub(dst, src, "ae");
+  remove_missing_encoders_sub(dst, src, "te");
+  remove_missing_encoders_sub(dst, src, "oe");
+  remove_missing_encoders_sub(dst, src, "ve");
+  }
+
 transcoder_window_t * transcoder_window_create()
   {
   GtkWidget * menuitem;
@@ -739,6 +776,11 @@ transcoder_window_t * transcoder_window_create()
   //  bg_cfg_section_dump(enc_section, "encoders_2.xml");
   
   gavl_dictionary_merge2(ret->encoder_section, enc_section);
+
+  /* remove unsupported */
+  remove_missing_encoders(ret->encoder_section, enc_section);
+  
+
   bg_cfg_section_destroy(enc_section);
   
   //  bg_cfg_section_dump(ret->encoder_section, "encoders_3.xml");

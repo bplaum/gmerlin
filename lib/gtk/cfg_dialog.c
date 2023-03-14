@@ -567,6 +567,9 @@ static GtkWidget * create_section(dialog_section_t * section,
   GtkWidget * action_box = NULL;
   GtkWidget * vbox;
   GtkWidget * restore_button;
+
+  //  fprintf(stderr, "create_section\n");
+  //  gavl_dictionary_dump(s, 2);
   
   /* If info == NULL, we create a label, which
      tell the user, that there is nothing to do */

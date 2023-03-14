@@ -562,7 +562,7 @@ void bg_multi_menu_set_selected_idx(gavl_value_t * val, int idx)
 
   if(!(dict = gavl_value_get_dictionary_nc(val)))
     return;
-  
+
   gavl_dictionary_set_int(dict, BG_CFG_TAG_IDX, idx);
   }
 
@@ -620,6 +620,65 @@ void bg_multi_menu_set_selected_name(gavl_value_t * val, const char * name)
     }
   }
 
+const char * bg_multi_menu_get_name(gavl_value_t * val, int idx)
+  {
+  gavl_array_t      * arr;
+  gavl_dictionary_t * dict;
+  const gavl_dictionary_t * child;
+
+  if(!(dict = gavl_value_get_dictionary_nc(val)) ||
+     !(arr = gavl_dictionary_get_array_nc(dict, BG_CFG_TAG_CHILDREN)))
+    {
+    return NULL;
+    }
+
+  if((idx < 0) || (idx >= arr->num_entries))
+    return NULL;
+  
+  if((child = gavl_value_get_dictionary(&arr->entries[idx])))
+    return gavl_dictionary_get_string(child, BG_CFG_TAG_NAME);
+  else
+    return NULL;
+  }
+
+int bg_multi_menu_has_name(const gavl_value_t * val, const char * name)
+  {
+  int i;
+  const gavl_array_t      * arr;
+  const gavl_dictionary_t * dict;
+
+  if(!(dict = gavl_value_get_dictionary(val)) ||
+     !(arr = gavl_dictionary_get_array(dict, BG_CFG_TAG_CHILDREN)))
+    {
+    return 0;
+    }
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    const gavl_dictionary_t * child;
+    const char * child_name;
+    
+    if((child = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (child_name = gavl_dictionary_get_string(child, BG_CFG_TAG_NAME)) &&
+       !strcmp(name, child_name))
+      return 1;
+    }
+  return 0;
+  }
+
+void bg_multi_menu_remove(gavl_value_t * val, int idx)
+  {
+  gavl_array_t      * arr;
+  gavl_dictionary_t * dict;
+  
+  if(!(dict = gavl_value_get_dictionary_nc(val)) ||
+     !(arr = gavl_dictionary_get_array_nc(dict, BG_CFG_TAG_CHILDREN)))
+    {
+    return;
+    }
+  gavl_array_splice_val(arr, idx, 1, NULL);
+  }
+
 void bg_multi_menu_set_selected(gavl_value_t * val, const gavl_dictionary_t * src)
   {
   int i;
@@ -647,8 +706,6 @@ void bg_multi_menu_set_selected(gavl_value_t * val, const gavl_dictionary_t * sr
       gavl_dictionary_init(child);
       gavl_dictionary_copy(child, src);
 
-      //      fprintf(stderr, "bg_multi_menu_set_selected: %d\n", i);
-      
       bg_multi_menu_set_selected_idx(val, i);
       break;
       }
