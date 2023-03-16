@@ -584,34 +584,38 @@ static void set_track(bg_transcoder_track_t * track,
   }
 
 gavl_array_t *
-bg_transcoder_track_create(const gavl_dictionary_t * m,
+bg_transcoder_track_create(const char * url,
                            bg_cfg_section_t * track_defaults_section,
                            bg_cfg_section_t * encoder_section)
   {
-  // const char * name
-  const char * url;
-  
-  int i, j;
+  int i;
   
   int num_tracks;
   gavl_dictionary_t * media_info;
-
+  const gavl_dictionary_t * edl;
+  const gavl_dictionary_t * dict;
+  
   gavl_array_t * ret = NULL;
 
   /* Load the plugin */
 
-  gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &url);
+  if(!(media_info = bg_plugin_registry_load_media_info(bg_plugin_reg, url, 0)))
+    return NULL;
 
-  if((media_info = bg_plugin_registry_load_media_info(bg_plugin_reg, url, 0)) &&
-     (num_tracks = gavl_get_num_tracks(media_info)))
+  if((edl = gavl_dictionary_get_dictionary(media_info, GAVL_META_EDL)))
+    dict = edl;
+  else
+    dict = media_info;
+  
+  if((num_tracks = gavl_get_num_tracks(dict)))
     {
     gavl_value_t val;
     gavl_dictionary_t * t;
-    gavl_dictionary_t * tm;
+    //    gavl_dictionary_t * tm;
 
-    int cover_w, cover_h;
-    const char * cover_uri;
-    const char * cover_mimetype;
+    //    int cover_w, cover_h;
+    //    const char * cover_uri;
+    //    const char * cover_mimetype;
     
     ret = gavl_array_create();
     
@@ -621,16 +625,17 @@ bg_transcoder_track_create(const gavl_dictionary_t * m,
       
       t = gavl_value_set_dictionary(&val);
       
-      set_track(t, media_info, i, track_defaults_section, 
+      set_track(t, dict, i, track_defaults_section, 
                 encoder_section);
-
-      tm = gavl_track_get_metadata_nc(t);
       
+#if 0      
+      tm = gavl_track_get_metadata_nc(t);
       /* Copy cover thumbnails, we cannot regenerate them right now */
       j = 0;
       
-      while((cover_uri = gavl_dictionary_get_string_image_uri(m, GAVL_META_COVER_URL, j, &cover_w, &cover_h, &cover_mimetype)))
+      while((cover_uri = gavl_dictionary_get_string_image_uri(tm, GAVL_META_COVER_URL, j, &cover_w, &cover_h, &cover_mimetype)))
         {
+
         fprintf(stderr, "got cover: %s\n", cover_uri);
         
         if(!gavl_string_starts_with(cover_uri, "http://") &&
@@ -642,6 +647,7 @@ bg_transcoder_track_create(const gavl_dictionary_t * m,
         
         j++;
         }
+#endif
       
       gavl_array_splice_val_nocopy(ret, ret->num_entries, 0, &val);
             
@@ -679,11 +685,7 @@ bg_transcoder_track_create_from_urilist(const char * list,
 
   while(uri_list[i])
     {
-    gavl_dictionary_t m;
-    gavl_dictionary_init(&m);
-    gavl_metadata_add_src(&m, GAVL_META_SRC, NULL, uri_list[i]);
-    
-    if((arr = bg_transcoder_track_create(&m, track_defaults_section, 
+    if((arr = bg_transcoder_track_create(uri_list[i], track_defaults_section, 
                                          encoder_section)))
       {
       if(!ret)
@@ -691,7 +693,6 @@ bg_transcoder_track_create_from_urilist(const char * list,
       gavl_array_splice_array(ret, ret->num_entries, 0, arr);
       gavl_array_destroy(arr);
       }
-    gavl_dictionary_free(&m);
     i++;
     }
   bg_urilist_free(uri_list);

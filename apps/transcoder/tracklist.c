@@ -633,15 +633,10 @@ static void add_file_callback(char ** files, void * data)
   
   while(files[i])
     {
-    gavl_dictionary_t dict;
-    gavl_dictionary_init(&dict);
-    gavl_metadata_add_src(&dict, GAVL_META_SRC, NULL, files[i]);
-    
     new_tracks =
-      bg_transcoder_track_create(&dict, l->track_defaults_section,
+      bg_transcoder_track_create(files[i], l->track_defaults_section,
                                  l->encoder_section);
-    gavl_dictionary_free(&dict);
-
+    
     if(new_tracks)
       gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
 
@@ -1306,17 +1301,11 @@ static gboolean button_press_callback(GtkWidget * w, GdkEventButton * evt,
 
 void track_list_add_url(track_list_t * l, char * url)
   {
-  gavl_dictionary_t dict;
   gavl_array_t * new_tracks;
 
-  gavl_dictionary_init(&dict);
-  gavl_metadata_add_src(&dict, GAVL_META_SRC, NULL, url);
-  
   new_tracks =
-    bg_transcoder_track_create(&dict, l->track_defaults_section,
+    bg_transcoder_track_create(url, l->track_defaults_section,
                                l->encoder_section);
-  gavl_dictionary_free(&dict);
-  
   gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
   gavl_array_destroy(new_tracks);
   track_list_update(l);  
@@ -1365,7 +1354,6 @@ static void drag_received_callback(GtkWidget *widget,
     int i;
     gavl_dictionary_t dict;
     const gavl_array_t * gmerlin_tracks;
-    const gavl_dictionary_t * m;
     
     gavl_dictionary_init(&dict);
     bg_tracks_from_string(&dict, BG_TRACK_FORMAT_GMERLIN, (char*)data_buf, data_len);
@@ -1374,11 +1362,14 @@ static void drag_received_callback(GtkWidget *widget,
 
     for(i = 0; i < gmerlin_tracks->num_entries; i++)
       {
-      if((m = gavl_get_track(&dict, i)) &&
-         (m = gavl_track_get_metadata(m)))
+      const gavl_dictionary_t * track;
+      const char * uri;
+      
+      if((track = gavl_get_track(&dict, i)) &&
+         gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
         {
         new_tracks = 
-          bg_transcoder_track_create(m, l->track_defaults_section,
+          bg_transcoder_track_create(uri, l->track_defaults_section,
                                      l->encoder_section);
         
 

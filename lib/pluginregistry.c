@@ -4793,36 +4793,6 @@ static void load_location(const char * str, int flags,
   gavl_dictionary_destroy(mi);
   }
 
-#if 0
-/* Value can be either a single string or a string array */
-void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
-                                              const gavl_value_t * val,
-                                              int flags,
-                                              gavl_array_t * ret)
-  {
-  const char * uri;
-  
-  if(val->type == GAVL_TYPE_STRING)
-    {
-    uri = gavl_value_get_string(val);
-    load_location(uri, flags, ret);
-    }
-  else if(val->type == GAVL_TYPE_ARRAY)
-    {
-    int i;
-    const gavl_array_t * arr = gavl_value_get_array(val);
-    
-    for(i = 0; i < arr->num_entries; i++)
-      {
-      if((uri = gavl_string_array_get(arr, i)))
-        {
-        load_location(uri, flags, ret);
-        }
-      }
-    }
-  }
-#endif
-
 static int resolve_location(const gavl_dictionary_t * dict, gavl_array_t * dst, int flags)
   {
   const gavl_dictionary_t * m;

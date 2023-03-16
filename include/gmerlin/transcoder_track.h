@@ -80,7 +80,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
                                       const bg_cfg_section_t * encoder_section);
 
 gavl_array_t *
-bg_transcoder_track_create(const gavl_dictionary_t * track,
+bg_transcoder_track_create(const char * location,
                            bg_cfg_section_t * section,
                            bg_cfg_section_t * encoder_section);
 
@@ -89,11 +89,6 @@ bg_transcoder_track_create_from_urilist(const char * list,
                                         int len,
                                         bg_cfg_section_t * section,
                                         bg_cfg_section_t * encoder_section);
-
-gavl_array_t *
-bg_transcoder_track_create_from_albumentries(const char * xml_string,
-                                             bg_cfg_section_t * section,
-                                             bg_cfg_section_t * encoder_section);
 
 
 /* For putting informations into the track list */
