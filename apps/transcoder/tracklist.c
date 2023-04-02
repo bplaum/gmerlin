@@ -1767,14 +1767,13 @@ void track_list_load(track_list_t * t, const char * filename)
   
   if(bg_dictionary_load_xml(&dict, filename, BG_TRANSCODER_TRACK_XML_ROOT))
     {
-    gavl_array_t * children = gavl_get_tracks_nc(&dict);
+    const gavl_array_t * children;
 
-    if((children = gavl_get_tracks_nc(&dict)) && children->num_entries)
+    if((children = gavl_get_tracks(&dict)) && children->num_entries)
       {
-      gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&t->t), -1, 0, children);
+      gavl_array_splice_array(gavl_get_tracks_nc(&t->t), -1, 0, children);
       track_list_update(t);  
       }
-    gavl_array_destroy(children);
     }
   
   gavl_dictionary_free(&dict);

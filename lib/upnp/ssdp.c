@@ -65,7 +65,6 @@ typedef struct
   char * st;
   gavl_socket_address_t * addr;
   gavl_time_t time; // GAVL_TIME_UNDEFINED means empty
-  //  int times_sent;
   } queue_element_t;
 
 struct bg_ssdp_s
@@ -96,9 +95,6 @@ struct bg_ssdp_s
   int search_count;
   
   bg_msg_hub_t * event_hub;
-  
-  //  bg_ssdp_callback_t cb;
-  //  void * cb_data;
   };
 
 bg_msg_hub_t * bg_ssdp_get_event_hub(bg_ssdp_t * s)
@@ -1129,6 +1125,9 @@ int bg_ssdp_update(bg_ssdp_t * s)
        !gavl_dictionary_get_long(dev, BG_SSDP_META_EXPIRE_TIME, &expire_time) ||  
        (expire_time < current_time))
       {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s (expired)", 
+               gavl_dictionary_get_string(dev, GAVL_META_URI));
+      
       del_remote_dev(s, i);
       //      fprintf(stderr, "Expired\n");
       }

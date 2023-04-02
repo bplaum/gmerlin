@@ -338,10 +338,12 @@ void bg_video_filter_chain_reset(bg_video_filter_chain_t * ch)
 
 gavl_video_source_t *
 bg_video_filter_chain_connect(bg_video_filter_chain_t * ch,
-                              gavl_video_source_t * src)
+                              gavl_video_source_t * src_orig)
   {
   int i;
 
+  gavl_video_source_t * src = src_orig;
+  
   if(ch->need_rebuild)
     bg_video_filter_chain_rebuild(ch);
   
@@ -357,10 +359,12 @@ bg_video_filter_chain_connect(bg_video_filter_chain_t * ch,
     }
   
   ch->out_src = src;
-  gavl_video_source_set_lock_funcs(ch->out_src,
-                                   bg_video_filter_chain_lock,
-                                   bg_video_filter_chain_unlock,
-                                   ch);
+
+  if(ch->out_src != src_orig)
+    gavl_video_source_set_lock_funcs(ch->out_src,
+                                     bg_video_filter_chain_lock,
+                                     bg_video_filter_chain_unlock,
+                                     ch);
   
   return ch->out_src;
   }

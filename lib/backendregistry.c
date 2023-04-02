@@ -61,11 +61,14 @@ bg_backend_registry_t * bg_backend_reg = NULL;
 
 static void backend_registry_lock()
   {
+  //  fprintf(stderr, "backend_registry_lock...");
   pthread_mutex_lock(&bg_backend_reg->mutex);
+  //  fprintf(stderr, "done\n");
   }
 
 static void backend_registry_unlock()
   {
+  //  fprintf(stderr, "backend_registry_unlock\n");
   pthread_mutex_unlock(&bg_backend_reg->mutex);
   }
 
@@ -75,16 +78,15 @@ bg_msg_hub_t * bg_backend_registry_get_evt_hub()
   return reg->evt_hub;
   }
 
-static int dev_by_url(const bg_backend_registry_t * reg,
-                      const char * url)
+static int dev_by_url(const char * url)
   {
   int i;
   const gavl_dictionary_t * dict;
   const char * str;
   
-  for(i = 0; i < reg->devs.num_entries; i++)
+  for(i = 0; i < bg_backend_reg->devs.num_entries; i++)
     {
-    if((dict = gavl_value_get_dictionary(&reg->devs.entries[i])) &&
+    if((dict = gavl_value_get_dictionary(&bg_backend_reg->devs.entries[i])) &&
        (str = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
        !strcmp(url, str))
       return i;
@@ -97,8 +99,6 @@ static int dev_by_url(const bg_backend_registry_t * reg,
 
 static int handle_message(void * data, gavl_msg_t * msg)
   {
-  bg_backend_registry_t * reg = data;
-  
   switch(msg->NS)
     {
     case BG_MSG_NS_BACKEND:
@@ -108,7 +108,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
         case BG_MSG_ADD_BACKEND:
           {
           const char * uri;
-          int idx = -1;
+          // int idx = -1;
           
           gavl_value_t val;
           gavl_dictionary_t * dict;
@@ -121,7 +121,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
           /* No URI given or entry already there */
              
           if(!(uri = gavl_dictionary_get_string(dict, GAVL_META_URI)) ||
-             ((idx = dev_by_url(reg, uri)) >= 0))
+             (dev_by_url(uri) >= 0))
             {
             gavl_value_free(&val);
             break;
@@ -131,7 +131,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Adding device %s [%s]", uri,
                  gavl_dictionary_get_string(dict, BG_BACKEND_PROTOCOL));
           
-          gavl_array_splice_val_nocopy(&reg->devs, -1, 0, &val);
+          gavl_array_splice_val_nocopy(&bg_backend_reg->devs, -1, 0, &val);
           }
           break;
         case BG_MSG_DEL_BACKEND:
@@ -142,10 +142,10 @@ static int handle_message(void * data, gavl_msg_t * msg)
           if(!(uri = gavl_msg_get_arg_string_c(msg, 0)))
             break;
           
-          if((idx = dev_by_url(reg, uri)) >= 0)
+          if((idx = dev_by_url(uri)) >= 0)
             {
             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleting device %s", uri);
-            gavl_array_splice_val(&reg->devs, idx, 1, NULL);
+            gavl_array_splice_val(&bg_backend_reg->devs, idx, 1, NULL);
             }
           else
             {
@@ -410,7 +410,7 @@ void bg_backend_register_local(const gavl_dictionary_t * dev)
 
   backend_registry_lock();
   gavl_array_splice_val_nocopy(&reg->local_devs, -1, 0, &val);
-  pthread_mutex_unlock(&reg->mutex);
+  backend_registry_unlock();
   }
 
 int bg_backend_is_local(const char * uri,
@@ -425,8 +425,6 @@ int bg_backend_is_local(const char * uri,
   
   reg = bg_get_backend_registry();
   
-  //  pthread_mutex_lock(&reg->mutex);
-
   for(i = 0; i < reg->local_devs.num_entries; i++)
     {
     if((d = gavl_value_get_dictionary(&reg->local_devs.entries[i])) &&
@@ -439,8 +437,6 @@ int bg_backend_is_local(const char * uri,
       }
     }
   
-  //  pthread_mutex_unlock(&reg->mutex);
-
   return ret;
   }
 

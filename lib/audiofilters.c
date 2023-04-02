@@ -341,10 +341,11 @@ void bg_audio_filter_chain_reset(bg_audio_filter_chain_t * ch)
 
 gavl_audio_source_t *
 bg_audio_filter_chain_connect(bg_audio_filter_chain_t * ch,
-                              gavl_audio_source_t * src)
+                              gavl_audio_source_t * src_orig)
   {
   int i;
-
+  gavl_audio_source_t * src = src_orig;
+  
   if(ch->need_rebuild)
     bg_audio_filter_chain_rebuild(ch);
   
@@ -360,10 +361,12 @@ bg_audio_filter_chain_connect(bg_audio_filter_chain_t * ch,
     }
   
   ch->out_src = src;
-  gavl_audio_source_set_lock_funcs(ch->out_src,
-                                   bg_audio_filter_chain_lock,
-                                   bg_audio_filter_chain_unlock,
-                                   ch);
+
+  if(ch->out_src != src_orig)
+    gavl_audio_source_set_lock_funcs(ch->out_src,
+                                     bg_audio_filter_chain_lock,
+                                     bg_audio_filter_chain_unlock,
+                                     ch);
   return ch->out_src;
   }
 

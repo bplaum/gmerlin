@@ -91,20 +91,6 @@ void bg_media_source_drain(bg_media_source_t * src)
   
   }
 
-void bg_media_source_drain_nolock(bg_media_source_t * src)
-  {
-  int i;
-  for(i = 0; i < src->num_streams; i++)
-    {
-    if(src->streams[i]->psrc)
-      gavl_packet_source_drain_nolock(src->streams[i]->psrc);
-    
-    if(src->streams[i]->asrc)
-      gavl_audio_source_drain_nolock(src->streams[i]->asrc);
-    if(src->streams[i]->vsrc)
-      gavl_video_source_drain_nolock(src->streams[i]->vsrc);
-    }
-  }
 
 #if 0
 void bg_media_source_set_eof(bg_media_source_t * src, int eof)

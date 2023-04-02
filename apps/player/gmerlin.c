@@ -694,8 +694,8 @@ void gmerlin_destroy(gmerlin_t * g)
   
   pthread_mutex_destroy(&g->stop_mutex);
 
-  main_menu_destroy(g->main_menu);
-  
+  if(g->main_menu)
+    main_menu_destroy(g->main_menu);
   
   free(g);
   
