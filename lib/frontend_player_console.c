@@ -101,6 +101,9 @@ static int handle_player_message(void * data,
                   break;
                 case BG_PLAYER_STATUS_PAUSED:
                   break;
+                case BG_PLAYER_STATUS_QUIT:
+                  fe->flags |= BG_FRONTEND_FLAG_FINISHED;
+                  break;
                 }
               
               break;

@@ -30,4 +30,7 @@ bg_frontend_t * bg_frontend_create_player_gmerlin(bg_http_server_t * srv, bg_con
 void bg_frontend_destroy(bg_frontend_t *);
 int bg_frontend_ping(bg_frontend_t *, gavl_time_t current_time);
 
+
+int bg_frontend_finished(bg_frontend_t *);
+
 #endif // BG_FRONTEND_H_INCLUDED

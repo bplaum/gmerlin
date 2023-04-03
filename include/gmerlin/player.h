@@ -129,6 +129,9 @@ bg_player_tracklist_get_next(bg_player_tracklist_t * l);
 
 bg_player_t * bg_player_create(void);
 
+/* What to do when the queue is empty */
+void bg_player_set_empty_mode(bg_player_t *, int do_quit);
+
 void bg_player_set_window_config(bg_player_t *, const char * display_string);
 
 /** \ingroup player

@@ -31,3 +31,8 @@ int bg_frontend_ping(bg_frontend_t * f, gavl_time_t current_time)
   
   return ret;
   }
+
+int bg_frontend_finished(bg_frontend_t * f)
+  {
+  return !!(f->flags & BG_FRONTEND_FLAG_FINISHED);
+  }

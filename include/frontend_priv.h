@@ -1,6 +1,7 @@
 #ifndef FRONTEND_PRIV_H_INCLUDED
 #define FRONTEND_PRIV_H_INCLUDED
 
+#define BG_FRONTEND_FLAG_FINISHED (1<<0)
 
 struct bg_frontend_s
   {
@@ -13,6 +14,8 @@ struct bg_frontend_s
   
   // Initialized by backend
   bg_control_t ctrl;
+
+  int flags;
   };
 
 bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable);

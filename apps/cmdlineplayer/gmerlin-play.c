@@ -387,6 +387,9 @@ int main(int argc, char ** argv)
   bg_plugins_init();
   
   player = bg_player_create();
+  /* Quit when playqueue is empty */
+  bg_player_set_empty_mode(player, 1);
+  
   cfg = bg_cfg_ctx_copy_array(bg_player_get_cfg(player));
 
   player_ctrl = bg_player_get_controllable(player);
@@ -462,9 +465,15 @@ int main(int argc, char ** argv)
 #ifndef INFO_WINDOW
   while(1)
     {
+    int result;
     gavl_time_t delay_time = GAVL_TIME_SCALE / 100;
 
-    if(!bg_frontend_ping(frontend, gavl_timer_get(timer)))
+    result = bg_frontend_ping(frontend, gavl_timer_get(timer));
+
+    if(bg_frontend_finished(frontend))
+      break;
+
+    if(!result)
       gavl_time_delay(&delay_time);
     }
 #else

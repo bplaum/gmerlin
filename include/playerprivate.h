@@ -64,6 +64,12 @@ typedef enum
     BG_PLAYER_FINISH_PAUSE,
   } bg_player_finish_mode_t;
 
+typedef enum
+  {
+    BG_PLAYER_EMPTY_IDLE = 0,
+    BG_PLAYER_EMPTY_QUIT,
+  } bg_player_empty_mode_t;
+
 /* Stream structures */
 
 typedef struct
@@ -430,6 +436,8 @@ struct bg_player_s
   bg_player_time_update_mode_t time_update_mode;
   
   bg_player_finish_mode_t finish_mode;
+  bg_player_empty_mode_t empty_mode;
+
   gavl_time_t wait_time;
 
   bg_cfg_ctx_t cfg[BG_PLAYER_CFG_NUM+1];

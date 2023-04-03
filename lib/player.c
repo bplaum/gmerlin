@@ -753,3 +753,11 @@ void bg_player_state_set(bg_player_t * p,
                val,
                p->ctrl.cmd_sink, BG_CMD_SET_STATE);
   }
+
+void bg_player_set_empty_mode(bg_player_t * p, int do_quit)
+  {
+  if(do_quit)
+    p->empty_mode = BG_PLAYER_EMPTY_QUIT;
+  else
+    p->empty_mode = BG_PLAYER_EMPTY_IDLE;
+  }

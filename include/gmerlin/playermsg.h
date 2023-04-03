@@ -91,6 +91,7 @@
 #define BG_PLAYER_STATUS_PAUSED          5 //!< Paused
 #define BG_PLAYER_STATUS_STARTING        7 //!< Starting playback
 #define BG_PLAYER_STATUS_ERROR           8 //!< Error
+#define BG_PLAYER_STATUS_QUIT            9 //!< Mail loop done (commandline player after tracklist got empty)
 
 #define BG_PLAYER_MODE_NORMAL            0 //!< Normal playback
 #define BG_PLAYER_MODE_REPEAT            1 //!< Repeat current album

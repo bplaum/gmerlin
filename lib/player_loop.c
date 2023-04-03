@@ -1579,6 +1579,10 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                 bg_visualizer_stop(player->visualizer);
                 }
               bg_player_ov_standby(&player->video_stream);
+
+              /* Check whether to quit */
+              if(player->empty_mode == BG_PLAYER_EMPTY_QUIT)
+                bg_player_set_status(player, BG_PLAYER_STATUS_QUIT);
               }
             }
           else

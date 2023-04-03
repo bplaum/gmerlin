@@ -368,8 +368,16 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
               {
               if(!gavl_value_get_int(&val, &p->status))
                 return 1;
+
+              if(p->status == BG_PLAYER_STATUS_QUIT)
+                {
+                fe->flags |= BG_FRONTEND_FLAG_FINISHED;
+                return 1;
+                }
               
               draw_status(fe);
+
+              
               
               break;
               }
