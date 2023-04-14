@@ -4466,7 +4466,7 @@ static int handle_msg_seek(void * data, gavl_msg_t * msg)
   }
 #endif
 
-void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t * time, int scale)
+void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   {
   gavl_msg_t * cmd;
 
@@ -4474,7 +4474,7 @@ void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t * time, int scale)
   
   cmd = bg_msg_sink_get(h->control.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SEEK, GAVL_MSG_NS_SRC);
-  gavl_msg_set_arg_long(cmd, 0, *time);
+  gavl_msg_set_arg_long(cmd, 0, time);
   gavl_msg_set_arg_int(cmd, 1, scale);
   
   bg_msg_sink_put(h->control.cmd_sink, cmd);

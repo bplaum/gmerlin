@@ -205,7 +205,7 @@ static int handle_msg_out(void * priv, gavl_msg_t * msg)
           scale = gavl_msg_get_arg_int(msg, 1);
 
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Seek: %"PRId64" %d", t, scale);
-          bg_input_plugin_seek(h, &t, scale);
+          bg_input_plugin_seek(h, t, scale);
           gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Seek done");
           }
           break;

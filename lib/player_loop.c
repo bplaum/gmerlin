@@ -112,12 +112,6 @@ static void interrupt_cmd(bg_player_t * p, int new_state)
     p->flags |= PLAYER_FREEZE_FRAME;
   }
 
-/* Preload fifos */
-
-static void preload(bg_player_t * p)
-  {
-  /* TODO */
-  }
 
 /* Start playback */
 
@@ -171,7 +165,6 @@ static void pause_cmd(bg_player_t * p)
     {
     bg_input_plugin_resume(p->src->input_handle);
     
-    preload(p);
     start_playback(p);
     }
   }
@@ -348,8 +341,8 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
 
   if((time > 0) && (p->can_seek))
     {
-    bg_player_input_seek(p, &time, GAVL_TIME_SCALE);
-    bg_player_time_set(p, time);
+    bg_player_input_seek(p, time, GAVL_TIME_SCALE);
+    bg_player_time_sync(p);
     }
   else
     {
@@ -361,7 +354,6 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
     }
 
   bg_threads_init(p->threads, PLAYER_MAX_THREADS);
-  preload(p);
   
   if(state == BG_PLAYER_STATUS_PAUSED)
     {
@@ -652,7 +644,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   
   int old_state;
   
-  // fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
+  fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
   
   old_state = bg_player_get_status(player);
 
@@ -663,7 +655,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   interrupt_cmd(player, BG_PLAYER_STATUS_SEEKING);
   
   if(player->can_seek)
-    bg_player_input_seek(player, &sync_time, scale);
+    bg_player_input_seek(player, sync_time, scale);
 
   //  fprintf(stderr, "seek_cmd 2: %"PRId64" %d (%f)\n", sync_time, scale, (double)t / (double)scale);
   
@@ -677,13 +669,8 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
 
   /* Resync */
   
-  preload(player);
+  bg_player_time_sync(player);
   
-  if(player->can_seek)
-    bg_player_time_set(player, sync_time);
-  else
-    bg_player_time_set(player, 0);
-
   //  fprintf(stderr, "seek_cmd: %f %f\n", (double)t / (double)scale, gavl_time_to_seconds(sync_time));
   
   if(DO_VIDEO(player->flags))
@@ -1094,6 +1081,8 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                     
                     pthread_mutex_unlock(&player->seek_window_mutex);
                     }
+
+                  t += player->display_time_offset;
                   
                   seek_cmd(player, t, GAVL_TIME_SCALE);
                   bg_osd_show_time(player->video_stream.osd);
@@ -1894,8 +1883,6 @@ int bg_player_advance_gapless(bg_player_t * player)
   
   player->audio_stream.in_src_int = player->src->audio_src;
 
-  // bg_player_time_set(player, 0);
-  
   /* */
   
   player->can_seek = !!(player->src->flags & SRC_CAN_SEEK);

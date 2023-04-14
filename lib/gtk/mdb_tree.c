@@ -937,9 +937,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
     markup = append_meta_tag(markup, tmp_string, BG_ICON_TALK);
     free(tmp_string);
     }
-
   
-
   if((var = gavl_dictionary_get_arr(m, GAVL_META_GENRE, 0)))
     {
     tmp_string = gavl_metadata_join_arr(m, GAVL_META_GENRE, ", ");
@@ -947,6 +945,10 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
     free(tmp_string);
     }
 
+  if((var = gavl_dictionary_get_string(m, GAVL_META_PODCAST)) &&
+     (!parent_klass || (strcmp(parent_klass, GAVL_META_MEDIA_CLASS_PODCAST))))
+    markup = append_meta_tag(markup, var, BG_ICON_RSS);
+  
   if((var = gavl_dictionary_get_arr(m, GAVL_META_TAG, 0)))
     {
     tmp_string = gavl_metadata_join_arr(m, GAVL_META_TAG, ", ");

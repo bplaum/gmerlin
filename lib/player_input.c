@@ -426,7 +426,7 @@ int bg_player_input_get_video_format(bg_player_t * p)
 
 
 void bg_player_input_seek(bg_player_t * p,
-                          gavl_time_t * time, int scale)
+                          gavl_time_t time, int scale)
   {
   int do_audio, do_video, do_subtitle;
 
@@ -449,7 +449,7 @@ void bg_player_input_seek(bg_player_t * p,
   if(DO_SUBTITLE_ONLY(p->flags))
     vs->frames_read =
       gavl_time_to_frames(vs->output_format.timescale, vs->output_format.frame_duration,
-                          *time);
+                          time);
   
   
   // Clear EOF states
@@ -675,8 +675,7 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
   
   src->duration = gavl_track_get_duration(src->track_info);
   
-  if(gavl_track_can_seek(src->track_info) &&
-     (src->duration != GAVL_TIME_UNDEFINED))
+  if(gavl_track_can_seek(src->track_info))
     src->flags |= SRC_CAN_SEEK;
   
   if(gavl_track_can_pause(src->track_info))

@@ -91,6 +91,23 @@ void bg_player_time_reset(bg_player_t * player)
   bg_player_time_set(player, 0);
   }
 
+/* Set player time from stream timestamps */
+void bg_player_time_sync(bg_player_t * p)
+  {
+  gavl_time_t t = GAVL_TIME_UNDEFINED;
+  
+  if(DO_AUDIO(p->flags))
+    t = bg_player_oa_resync(p);
+  else if(DO_VIDEO(p->flags))
+    t = bg_player_ov_resync(p);
+  else
+    t = 0;
+
+  fprintf(stderr, "bg_player_time_sync: %f\n", gavl_time_to_seconds(t));
+  
+  bg_player_time_set(p, t);
+  }
+  
 /* Get the current time */
 
 void bg_player_time_get(bg_player_t * player, int exact,

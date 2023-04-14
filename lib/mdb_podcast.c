@@ -427,6 +427,7 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   int num_containers = 0;
   const char * category;
   const char * str;
+  const char * podcast;
 
   xmlNodePtr node;
   xmlNodePtr item;
@@ -449,15 +450,15 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     goto fail;
     }
   
-  if(!(str = bg_xml_node_get_child_content(node, "title")))
+  if(!(podcast = bg_xml_node_get_child_content(node, "title")))
     goto fail;
 
   channel_m = gavl_dictionary_get_dictionary_create(channel, GAVL_META_METADATA);
   mdb_dict = gavl_dictionary_get_dictionary_create(channel, BG_MDB_DICT);
   gavl_dictionary_set_string(mdb_dict, GAVL_META_URI, uri);
   
-  gavl_dictionary_set_string(channel_m, GAVL_META_TITLE, str);
-  gavl_dictionary_set_string(channel_m, GAVL_META_LABEL, str);
+  gavl_dictionary_set_string(channel_m, GAVL_META_TITLE, podcast);
+  gavl_dictionary_set_string(channel_m, GAVL_META_LABEL, podcast);
   gavl_dictionary_set_string(channel_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_PODCAST);
   
   if((str = bg_xml_node_get_child_content(node, "pubDate")))
@@ -532,7 +533,8 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
     
     gavl_dictionary_set_string(it_m, GAVL_META_TITLE, str);
     gavl_dictionary_set_string(it_m, GAVL_META_LABEL, str);
-
+    gavl_dictionary_set_string(it_m, GAVL_META_PODCAST, podcast);
+    
     if(category)
       gavl_dictionary_set_string(it_m, GAVL_META_GENRE, category);
     

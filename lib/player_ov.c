@@ -37,6 +37,10 @@
 
 #define NOSKIP
 
+#define STATE_READ  1  // Try to read frame
+#define STATE_WAIT  2  // Wait to show frame
+#define STATE_STILL 3 // Show still image
+#define STATE_SHOW  4 // Show frame
 
 static int handle_message(void * data, gavl_msg_t * msg)
   {
@@ -148,51 +152,6 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   
   bg_player_stream_change_init(player);
   
-
-#if 0
-  if(plugin->set_window_options && ctx->window_options)
-    {
-    gavl_video_frame_t * icon = NULL;
-    gavl_video_format_t icon_format;
-    char * icon_path = NULL;
-    char ** opt;
-    
-    opt = gavl_strbreak(ctx->window_options, ',');
-    
-    memset(&icon_format, 0, sizeof(icon_format));
-    
-    /* Load icon */
-
-    if(*(opt[2]) != '/')
-      {
-      icon_path = bg_search_file_read("icons", opt[2]);
-      if(icon_path)
-        {
-        icon = 
-          bg_plugin_registry_load_image(bg_plugin_reg,
-                                        icon_path,
-                                        &icon_format,
-                                        NULL);
-        }
-      }
-    else
-      icon = 
-        bg_plugin_registry_load_image(bg_plugin_reg,
-                                      opt[2],
-                                      &icon_format,
-                                      NULL);
-    
-    plugin->set_window_options(handle->priv,
-                               opt[0], opt[1],
-                               icon, &icon_format);
-    if(icon)
-      gavl_video_frame_destroy(icon);
-    if(icon_path)
-      free(icon_path);
-    gavl_strbreak_free(opt);
-    }
-#endif
-  
   if(ctx->ov)
     {
     bg_ov_destroy(ctx->ov);
@@ -215,6 +174,19 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
     }
   //  bg_player_stream_change_done(player);
   return 1;
+  }
+
+gavl_time_t bg_player_ov_resync(bg_player_t * p)
+  {
+  bg_player_video_stream_t * s = &p->video_stream;
+
+  if(gavl_video_source_read_frame(s->src, &s->frame) != GAVL_SOURCE_OK)
+    return GAVL_TIME_UNDEFINED;
+  else
+    {
+    s->state = STATE_READ;
+    return gavl_time_unscale(s->output_format.timescale, s->frame->timestamp);
+    }
   }
 
 void bg_player_ov_destroy(bg_player_t * player)
@@ -341,30 +313,29 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   }
 
 
-#define STATE_READ  1  // Try to read frame
-#define STATE_WAIT  2  // Wait to show frame
-#define STATE_STILL 3 // Show still image
-#define STATE_SHOW  4 // Show frame
 
 void * bg_player_ov_thread(void * data)
   {
   bg_player_video_stream_t * s;
   bg_player_t * p = data;
-  gavl_video_frame_t * frame = NULL;
+  //  gavl_video_frame_t * frame = NULL;
   gavl_video_sink_t * sink;
   gavl_timer_t * timer = gavl_timer_create();
   gavl_source_status_t st = GAVL_SOURCE_OK;
   int warn_wait = 0;
-  int state = STATE_READ;
   int done = 0;
   int still_shown = 0;
-  
+
   s = &p->video_stream;
+
+  s->state = STATE_READ;
   
   bg_thread_wait_for_start(s->th);
   
   s->frame_time = GAVL_TIME_UNDEFINED;
   s->skip = 0;
+
+  s->frame = NULL;
   
   while(!done)
     {
@@ -376,13 +347,13 @@ void * bg_player_ov_thread(void * data)
 
     /* Check whether to read a frame */
 
-    if(state == STATE_READ)
+    if(s->state == STATE_READ)
       {
       gavl_time_t frame_time;
 
       //    fprintf(stderr, "do read\n");
       
-      if((st = gavl_video_source_read_frame(s->src, &frame)) != GAVL_SOURCE_OK)
+      if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
         {
         bg_player_video_set_eof(p);
         if(!bg_thread_wait_for_start(s->th))
@@ -393,7 +364,7 @@ void * bg_player_ov_thread(void * data)
       //      fprintf(stderr, "do read done\n");
 
       frame_time = gavl_time_unscale(s->output_format.timescale,
-                                     frame->timestamp);
+                                     s->frame->timestamp);
 
       pthread_mutex_lock(&p->config_mutex);
       frame_time += p->sync_offset; // Passed by user
@@ -405,19 +376,19 @@ void * bg_player_ov_thread(void * data)
       s->frame_time = frame_time;
 
       if(DO_STILL(p->flags))
-        state = STATE_STILL;
+        s->state = STATE_STILL;
       else
         {
         /* Subtitle handling */
         if(DO_SUBTITLE(p->flags))
-          bg_subtitle_handler_update(s->sh, frame->timestamp);
+          bg_subtitle_handler_update(s->sh, s->frame->timestamp);
       
-        state = STATE_WAIT;
+        s->state = STATE_WAIT;
         warn_wait = 0;
         }
       }
 
-    if(state == STATE_WAIT)
+    if(s->state == STATE_WAIT)
       {
       gavl_time_t diff_time;
       gavl_time_t current_time;
@@ -441,7 +412,7 @@ void * bg_player_ov_thread(void * data)
       else if(diff_time > 0)
         {
         gavl_time_delay(&diff_time);
-        state = STATE_SHOW;
+        s->state = STATE_SHOW;
         }
 #ifndef NOSKIP
       /* Drop frame */
@@ -449,31 +420,31 @@ void * bg_player_ov_thread(void * data)
         {
         gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
         s->skip++;
-        state = STATE_READ;
+        s->state = STATE_READ;
         continue;
         }
 #endif
       else
-        state = STATE_SHOW;
+        s->state = STATE_SHOW;
       }
     
-    if(state == STATE_STILL)
+    if(s->state == STATE_STILL)
       {
       gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
       
-      if(!frame)
+      if(!s->frame)
         {
-        if((st = gavl_video_source_read_frame(s->src, &frame)) != GAVL_SOURCE_OK)
-          frame = NULL;
+        if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
+          s->frame = NULL;
         }
       
-      if(frame)
+      if(s->frame)
         {
         gavl_time_t current_time;
         
         if(!still_shown)
           {
-          state = STATE_SHOW;
+          s->state = STATE_SHOW;
           still_shown = 1;
           continue;
           }
@@ -481,7 +452,7 @@ void * bg_player_ov_thread(void * data)
         bg_player_time_get(p, 1, &current_time);
         if(s->frame_time <= current_time)
           {
-          state = STATE_SHOW;
+          s->state = STATE_SHOW;
           still_shown = 1;
           continue;
           }
@@ -493,7 +464,7 @@ void * bg_player_ov_thread(void * data)
       gavl_time_delay(&delay_time);
       }
     
-    if(state == STATE_SHOW)
+    if(s->state == STATE_SHOW)
       {
       bg_osd_update(s->osd);
 
@@ -507,15 +478,15 @@ void * bg_player_ov_thread(void * data)
       sink = bg_ov_get_sink(s->ov);
       //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
       
-      gavl_video_sink_put_frame(sink, frame);
+      gavl_video_sink_put_frame(sink, s->frame);
       s->skip = 0;
       
-      frame = NULL;
+      s->frame = NULL;
       
       if(DO_STILL(p->flags))
-        state = STATE_STILL;
+        s->state = STATE_STILL;
       else
-        state = STATE_READ;
+        s->state = STATE_READ;
       }
     
 #if 0    

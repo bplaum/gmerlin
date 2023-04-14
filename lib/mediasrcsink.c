@@ -74,6 +74,20 @@ void bg_media_source_cleanup(bg_media_source_t * src)
     gavl_dictionary_destroy(src->track_priv);
   }
 
+void bg_media_source_reset(bg_media_source_t * src)
+  {
+  int i;
+  for(i = 0; i < src->num_streams; i++)
+    {
+    if(src->streams[i]->asrc)
+      gavl_audio_source_reset(src->streams[i]->asrc);
+    if(src->streams[i]->vsrc)
+      gavl_video_source_reset(src->streams[i]->vsrc);
+    if(src->streams[i]->psrc)
+      gavl_packet_source_reset(src->streams[i]->psrc);
+    }
+  }
+
 void bg_media_source_drain(bg_media_source_t * src)
   {
   int i;

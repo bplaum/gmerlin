@@ -2298,7 +2298,7 @@ static int start_input(bg_transcoder_t * ret)
       goto fail;
       }
 
-    bg_input_plugin_seek(ret->in_handle, &ret->start_time, GAVL_TIME_SCALE);
+    bg_input_plugin_seek(ret->in_handle, ret->start_time, GAVL_TIME_SCALE);
     
     /* This happens, if the decoder reached EOF during the seek */
 

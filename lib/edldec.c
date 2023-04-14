@@ -402,7 +402,7 @@ static source_t * get_source(edldec_t * dec, gavl_stream_type_t type,
     }
 
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeking to %"PRId64, src_time);
-  bg_input_plugin_seek(ret->h, &src_time, seg->timescale);
+  bg_input_plugin_seek(ret->h, src_time, seg->timescale);
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Seeked to %"PRId64, src_time);
   
   return ret;  
@@ -1135,6 +1135,8 @@ static void seek_edl(void * priv, int64_t * time, int scale)
       }
     s->pts = time_scaled;
     }
+
+  bg_media_source_reset(&ed->src);
   
   }
 

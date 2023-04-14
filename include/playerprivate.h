@@ -84,6 +84,7 @@ typedef struct
   bg_audio_filter_chain_t * fc;
   
   gavl_audio_frame_t * mute_frame;
+  gavl_audio_frame_t * frame;
   
   pthread_mutex_t config_mutex;
   bg_gavl_audio_options_t options;
@@ -223,9 +224,11 @@ typedef struct
   bg_msg_sink_t * ov_evt_sink;
   
   gavl_time_t last_time;
-
+  
+  gavl_video_frame_t * frame;
+  
+  int state;
   } bg_player_video_stream_t;
-
 
 typedef struct
   {
@@ -498,6 +501,9 @@ void bg_player_time_reset(bg_player_t * player);
 void bg_player_time_set(bg_player_t * player, gavl_time_t time);
 void bg_player_broadcast_time(bg_player_t * player, gavl_time_t time);
 
+/* Set player time from stream timestamps */
+void bg_player_time_sync(bg_player_t * player);
+
 /* player_input.c */
 
 void bg_player_input_destroy(bg_player_t * player);
@@ -528,7 +534,7 @@ int
 bg_player_input_get_subtitle_format(bg_player_t * ctx);
 
 void bg_player_input_seek(bg_player_t * ctx,
-                          gavl_time_t * time, int scale);
+                          gavl_time_t time, int scale);
 
 
 // void bg_player_source_set(bg_player_t * player, bg_player_source_t * src,
@@ -577,7 +583,7 @@ void bg_player_ov_set_subtitle_format(bg_player_video_stream_t * ctx);
  *  This call will let the video plugin adjust the playertime from the
  *  next frame to be displayed
  */
-void bg_player_ov_sync(bg_player_t * p);
+gavl_time_t bg_player_ov_resync(bg_player_t * p);
 
 /* player_video.c */
 
@@ -595,6 +601,8 @@ void bg_player_video_set_eof(bg_player_t * p);
 int bg_player_oa_init(bg_player_audio_stream_t * ctx);
 int bg_player_oa_start(bg_player_audio_stream_t * ctx);
 void bg_player_oa_stop(bg_player_audio_stream_t * ctx);
+
+gavl_time_t bg_player_oa_resync(bg_player_t * p);
 
 void bg_player_oa_cleanup(bg_player_audio_stream_t * ctx);
 void * bg_player_oa_thread(void *);

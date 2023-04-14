@@ -102,6 +102,7 @@ typedef struct
 
 /* Drop everything until EOF */
 void bg_media_source_drain(bg_media_source_t * src);
+void bg_media_source_reset(bg_media_source_t * src);
 
 //void bg_media_source_set_eof(bg_media_source_t * src, int eof);
 

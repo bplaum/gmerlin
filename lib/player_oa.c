@@ -145,6 +145,44 @@ static void process_frame(bg_player_t * p, gavl_audio_frame_t * frame)
     }
   }
 
+static int read_frame(bg_player_audio_stream_t * s)
+  {
+  s->frame = gavl_audio_sink_get_frame(s->sink);
+    
+  if(s->send_silence)
+    {
+    if(!s->frame)
+      {
+      if(!s->mute_frame)
+        s->mute_frame = gavl_audio_frame_create(&s->output_format);
+      s->frame = s->mute_frame;
+      }
+    gavl_audio_frame_mute(s->frame, &s->output_format);
+    }
+  else
+    {
+    if(gavl_audio_source_read_frame(s->src, &s->frame) != GAVL_SOURCE_OK)
+      return 0;
+    }
+  return 1;
+  }
+
+gavl_time_t bg_player_oa_resync(bg_player_t * p)
+  {
+  bg_player_audio_stream_t * s;
+  s = &p->audio_stream;
+
+  gavl_audio_source_reset(p->audio_stream.in_src);
+  
+  if(!read_frame(s))
+    return GAVL_TIME_UNDEFINED;
+
+  fprintf(stderr, "bg_player_oa_resync %d %"PRId64"\n",
+          s->output_format.samplerate, s->frame->timestamp);
+
+  return gavl_time_unscale(s->output_format.samplerate, s->frame->timestamp);
+  }
+
 void * bg_player_oa_thread(void * data)
   {
   bg_player_audio_stream_t * s;
@@ -152,7 +190,7 @@ void * bg_player_oa_thread(void * data)
 
   bg_player_t * p = data;
 
-  gavl_audio_frame_t * f;
+  //  gavl_audio_frame_t * f;
   
   s = &p->audio_stream;
   
@@ -165,21 +203,32 @@ void * bg_player_oa_thread(void * data)
     if(!bg_thread_check(s->th))
       break;
 
-    f = gavl_audio_sink_get_frame(s->sink);
-        
+    if(!s->frame && !read_frame(s))
+      {
+      if(bg_player_audio_set_eof(p))
+        {
+        /* Stop here (don't send silence) */
+        if(!bg_thread_wait_for_start(s->th))
+          break;
+        }
+      continue;
+      }
+#if 0    
+    s->frame = gavl_audio_sink_get_frame(s->sink);
+    
     if(s->send_silence)
       {
-      if(!f)
+      if(!s->frame)
         {
         if(!s->mute_frame)
           s->mute_frame = gavl_audio_frame_create(&s->output_format);
-        f = s->mute_frame;
+        s->frame = s->mute_frame;
         }
-      gavl_audio_frame_mute(f, &s->output_format);
+      gavl_audio_frame_mute(s->frame, &s->output_format);
       }
     else
       {
-      if(gavl_audio_source_read_frame(s->src, &f) != GAVL_SOURCE_OK)
+      if(gavl_audio_source_read_frame(s->src, &s->frame) != GAVL_SOURCE_OK)
         {
         if(bg_player_audio_set_eof(p))
           {
@@ -190,15 +239,16 @@ void * bg_player_oa_thread(void * data)
         continue;
         }
       }
+#endif
     
-    process_frame(p, f);
+    process_frame(p, s->frame);
     
-    if(f->valid_samples)
+    if(s->frame->valid_samples)
       {
       // fprintf(stderr, "Sending frame\n");
       // gavl_hexdump((void*)f->samples.s_16, 32, 16);
       
-      if(gavl_audio_sink_put_frame(s->sink, f) != GAVL_SINK_OK)
+      if(gavl_audio_sink_put_frame(s->sink, s->frame) != GAVL_SINK_OK)
         {
         if(bg_player_audio_set_eof(p))
           {
@@ -209,15 +259,17 @@ void * bg_player_oa_thread(void * data)
         }
       
       pthread_mutex_lock(&s->time_mutex);
-      s->samples_written += f->valid_samples;
+      s->samples_written += s->frame->valid_samples;
       pthread_mutex_unlock(&s->time_mutex);
       
       /* Now, wait a while to give other threads a chance to access the
          player time */
       wait_time =
         gavl_samples_to_time(s->output_format.samplerate,
-                             f->valid_samples)/2;
+                             s->frame->valid_samples)/2;
       }
+    
+    s->frame = NULL;
     
     if(wait_time != GAVL_TIME_UNDEFINED)
       gavl_time_delay(&wait_time);

@@ -380,7 +380,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
 
     //    fprintf(stderr, "LPCM seek 1: %"PRId64"\n", seek_time);
     
-    bg_input_plugin_seek(handle, &seek_time, out_rate);
+    bg_input_plugin_seek(handle, seek_time, out_rate);
     
     //    fprintf(stderr, "LPCM seek 2: %"PRId64"\n", seek_time);
     }
