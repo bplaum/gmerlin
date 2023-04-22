@@ -4441,30 +4441,6 @@ int bg_input_plugin_get_track(bg_plugin_handle_t * h)
   return gavl_get_current_track(mi);
   }
 
-#if 0
-typedef struct
-  {
-  int scale;
-  int64_t * time;
-  } seek_t;
-
-static int handle_msg_seek(void * data, gavl_msg_t * msg)
-  {
-  seek_t * s = data;
-
-  if((msg->NS == GAVL_MSG_NS_SRC) && 
-     (msg->ID == GAVL_MSG_SRC_RESYNC_1))
-    {
-    int64_t msg_time = gavl_msg_get_arg_long(msg, 0);
-    int msg_scale    = gavl_msg_get_arg_int(msg, 1);
-
-    fprintf(stderr, "Got seek resync\n");
-    
-    *s->time = gavl_time_rescale(msg_scale, s->scale, msg_time);
-    }
-  return 1;
-  }
-#endif
 
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   {

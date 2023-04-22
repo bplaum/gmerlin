@@ -49,10 +49,10 @@
    podcasts/subscriptions:               Array with just the URIs of the channels
    podcasts/index:                       Children of the root folder (array)
    podcasts/<md5>:                       Items of the channel (array)
-   podcasts/<md5>-saved/                 Saved items of that channel
-   podcasts/<md5>-saved/index:           Metadata of all saved entries
-   podcasts/<md5>-saved/<md5>-media.mp3: Media
-   podcasts/<md5>-saved/<md5>-image.jpg: Image
+   podcasts/saved/<md5>                 Saved items of that channel
+   podcasts/saved/<md5>/index:           Metadata of all saved entries
+   podcasts/saved/<md5>/<md5>-media.mp3: Media
+   podcasts/saved/<md5>/<md5>-image.jpg: Image
 
    ID:
    /podcasts/<podcast_id>/<episode_id>
@@ -1593,6 +1593,49 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
         case BG_CMD_DB_SAVE_LOCAL:
           save_local(b, &id);
           break;
+        case BG_CMD_DB_SORT:
+          {
+          if(!strcmp(ctx_id, BG_MDB_ID_PODCASTS))
+            {
+            int i;
+            const gavl_dictionary_t * dict;
+            gavl_value_t idx_val;
+            gavl_array_t * idx;
+            gavl_msg_t * res;
+            char * filename;
+            const char * uri;
+            fprintf(stderr, "Sort podcasts %s\n", ctx_id);
+            
+            gavl_value_init(&idx_val);
+            idx = gavl_value_set_array(&idx_val);
+            filename = bg_sprintf("%s/index", p->dir);
+            bg_array_load_xml(idx, filename, "items");
+            gavl_sort_tracks_by_label(idx);
+            bg_array_save_xml(idx, filename, "items");
+            free(filename);
+
+            gavl_array_splice_val(&p->subscriptions, 0, -1, NULL);
+
+            for(i = 0; i < idx->num_entries; i++)
+              {
+              if((dict = gavl_value_get_dictionary(&idx->entries[i])) &&
+                 (dict = gavl_dictionary_get_dictionary(dict, BG_MDB_DICT)) &&
+                 (uri = gavl_dictionary_get_string(dict, GAVL_META_URI)))
+                gavl_string_array_add(&p->subscriptions, uri);
+              }
+
+            save_subscriptions(b);
+
+            res = bg_msg_sink_get(b->ctrl.evt_sink);
+            gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, 0,
+                                                idx->num_entries, &idx_val);
+            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            
+            gavl_value_free(&idx_val);
+            // gavl_sort_tracks_by_label(gavl_array_t * arr)
+            
+            }
+          }
         }
       }
     }

@@ -177,8 +177,8 @@ gavl_time_t bg_player_oa_resync(bg_player_t * p)
   if(!read_frame(s))
     return GAVL_TIME_UNDEFINED;
 
-  fprintf(stderr, "bg_player_oa_resync %d %"PRId64"\n",
-          s->output_format.samplerate, s->frame->timestamp);
+  //  fprintf(stderr, "bg_player_oa_resync %d %"PRId64"\n",
+  //          s->output_format.samplerate, s->frame->timestamp);
 
   return gavl_time_unscale(s->output_format.samplerate, s->frame->timestamp);
   }

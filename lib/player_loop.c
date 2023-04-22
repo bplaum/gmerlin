@@ -644,7 +644,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   
   int old_state;
   
-  fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
+  //  fprintf(stderr, "seek_cmd 1: %"PRId64" %d (%f)\n", t, scale, (double)t / (double)scale );
   
   old_state = bg_player_get_status(player);
 
@@ -656,7 +656,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
   
   if(player->can_seek)
     bg_player_input_seek(player, sync_time, scale);
-
+  
   //  fprintf(stderr, "seek_cmd 2: %"PRId64" %d (%f)\n", sync_time, scale, (double)t / (double)scale);
   
   /* Clear fifos and filter chains */

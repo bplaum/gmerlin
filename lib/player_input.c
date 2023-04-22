@@ -107,10 +107,6 @@ int bg_player_input_start(bg_player_t * p)
   int num_overlay_streams;
   const gavl_value_t * v;
 
-  int64_t clock_time_pts = GAVL_TIME_UNDEFINED;
-  int clock_time_scale = 0;
-  gavl_time_t clock_time = GAVL_TIME_UNDEFINED;
-  
   bg_media_source_t * ms;
   bg_media_source_stream_t * s = NULL;
   
@@ -246,25 +242,7 @@ int bg_player_input_start(bg_player_t * p)
   p->display_time_offset = gavl_track_get_display_time_offset(p->src->track_info);
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->display_time_offset);
 
-  if(gavl_track_get_clock_time_map(p->src->track_info,
-                                   &clock_time_pts, &clock_time_scale, &clock_time))
-    {
-
-    // display_time = pts_time - display_time_offset
-    // pts_time = display_time + display_time_offset
-
-    // Clock time = pts_time - clock_time_pts(map) + clock_time(map) =
-    //            = display_time + display_time_offset - clock_time_pts(map) + clock_time(map)
-
-    // clock_time_offset = display_time_offset - clock_time_pts(map) + clock_time(map)
-    
-    p->clock_time_offset =
-      p->display_time_offset
-      - gavl_time_unscale(clock_time_scale, clock_time_pts)
-      + clock_time;
-    }
-  else
-    p->clock_time_offset = GAVL_TIME_UNDEFINED;
+  p->clock_time_offset = gavl_track_get_pts_to_clock_time(p->src->track_info);
   
   return 1;
   }

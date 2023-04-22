@@ -103,7 +103,7 @@ void bg_player_time_sync(bg_player_t * p)
   else
     t = 0;
 
-  fprintf(stderr, "bg_player_time_sync: %f\n", gavl_time_to_seconds(t));
+  //  fprintf(stderr, "bg_player_time_sync: %f\n", gavl_time_to_seconds(t));
   
   bg_player_time_set(p, t);
   }
