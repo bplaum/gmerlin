@@ -174,7 +174,9 @@ connect_samplerate(void * priv,
                      const gavl_audio_options_t * opt)
   {
   gavl_audio_format_t format;
+  int old_rate;
   samplerate_priv_t * vp = priv;
+  
   vp->in_src = src;
   if(vp->out_src)
     gavl_audio_source_destroy(vp->out_src);
@@ -182,7 +184,16 @@ connect_samplerate(void * priv,
   vp->samplerate_current = get_samplerate(vp);
   
   gavl_audio_format_copy(&format, gavl_audio_source_get_src_format(vp->in_src));
+  old_rate = format.samplerate;
   format.samplerate = vp->samplerate_current;
+
+  if(format.samplerate != old_rate)
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resampling %f kHz to %f kHz",
+             (float)old_rate / 1000.0, (float)format.samplerate / 1000.0);
+    if(format.sample_format != GAVL_SAMPLE_DOUBLE)
+      format.sample_format = GAVL_SAMPLE_FLOAT;
+    }
   gavl_audio_source_set_dst(vp->in_src, 0, &format);
   vp->out_src = gavl_audio_source_create_source(read_func, vp, 0, vp->in_src);
   return vp->out_src;

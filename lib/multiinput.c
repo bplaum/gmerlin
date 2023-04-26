@@ -57,7 +57,7 @@ static void start_multi(void * priv)
   int i;
   multi_t * m = priv;
   const char * uri;
-  int can_seek = 0, can_pause = 0;
+  int can_seek = 0, can_seek_clock = 0, can_pause = 0;
   const gavl_dictionary_t * track;
   gavl_dictionary_t * metadata = NULL;
   bg_media_source_stream_t * stream;
@@ -82,6 +82,11 @@ static void start_multi(void * priv)
     gavl_dictionary_merge2(gavl_track_get_metadata_nc(m->ti),
                            gavl_track_get_metadata(track));
 
+    gavl_dictionary_set(gavl_track_get_metadata_nc(m->ti),
+                        GAVL_META_CAN_SEEK, NULL);
+    gavl_dictionary_set(gavl_track_get_metadata_nc(m->ti),
+                        GAVL_META_CAN_SEEK_CLOCK, NULL);
+    
     if(pts_to_clock_time == GAVL_TIME_UNDEFINED)
       pts_to_clock_time = gavl_track_get_pts_to_clock_time(track);
     }
@@ -152,19 +157,14 @@ static void start_multi(void * priv)
     {
     track = bg_input_plugin_get_track_info(m->h, -1);
     can_seek = gavl_track_can_seek(track);
+    can_seek_clock = gavl_track_can_seek_clock(track);
     can_pause = gavl_track_can_pause(track);
-
-    if(!can_seek &&
-       (pts_to_clock_time != GAVL_TIME_UNDEFINED) &&
-       gavl_track_can_seek_clock(track))
-      {
-      can_seek = 1;
-      }
     }
   else
     {
-    can_seek = 1;
-    can_pause = 1;
+    can_seek       = 1;
+    can_seek_clock = 1;
+    can_pause      = 1;
     }
 
   for(i = 0; i < m->src.num_streams; i++)
@@ -175,20 +175,115 @@ static void start_multi(void * priv)
 
     track = bg_input_plugin_get_track_info(m->src.streams[i]->user_data, -1);
     
-    if(can_seek && (!gavl_track_can_seek(track) &&
-                    ((pts_to_clock_time != GAVL_TIME_UNDEFINED) ||
-                     !gavl_track_can_seek_clock(track))))
+    if(can_seek && !gavl_track_can_seek(track))
       can_seek = 0;
+    if(can_seek_clock && !gavl_track_can_seek_clock(track))
+      can_seek_clock = 0;
     if(can_pause && !gavl_track_can_pause(track))
       can_pause = 0;
     }
-
+  
   if(can_seek)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
+  if(can_seek_clock)
+    {
+    gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK_CLOCK, 1);
+    if(!can_seek && (pts_to_clock_time != GAVL_TIME_UNDEFINED))
+      gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
+    }
+  
   if(can_pause)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_PAUSE, 1);
   
   }
+
+static void forward_seek(multi_t * priv,
+                         bg_plugin_handle_t * h,
+                         int64_t time, int scale, gavl_src_seek_unit_t unit)
+  {
+  gavl_time_t offset;
+  gavl_msg_t forward;
+  const gavl_dictionary_t * track;
+
+  track = bg_input_plugin_get_track_info(h, -1);
+
+  gavl_msg_init(&forward);
+  
+  switch(unit)
+    {
+    case GAVL_SRC_SEEK_PTS:
+      if(gavl_track_can_seek(track))
+        {
+        gavl_msg_set_msg_src_seek(&forward, time, scale, unit);
+        }
+      else if(gavl_track_can_seek_clock(track))
+        {
+        if((offset = gavl_track_get_pts_to_clock_time(priv->ti)) == GAVL_TIME_UNDEFINED)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot convert PTS time to clock time for seeking");
+          goto fail;
+          }
+        else
+          {
+          gavl_msg_set_msg_src_seek(&forward, gavl_time_unscale(scale, time) + offset, GAVL_TIME_SCALE,
+                                    GAVL_SRC_SEEK_PTS);
+          }
+        }
+      break;
+    case GAVL_SRC_SEEK_CLOCK:
+      if(gavl_track_can_seek(track))
+        {
+        if((offset = gavl_track_get_pts_to_clock_time(priv->ti)) == GAVL_TIME_UNDEFINED)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot convert clock time to PTS time for seeking");
+          goto fail;
+          }
+        else
+          {
+          gavl_msg_set_msg_src_seek(&forward, gavl_time_unscale(scale, time) - offset, GAVL_TIME_SCALE,
+                                    GAVL_SRC_SEEK_PTS);
+          }
+        
+        }
+      else if(gavl_track_can_seek_clock(track))
+        {
+        gavl_msg_set_msg_src_seek(&forward, time, scale, unit);
+        }
+      break;
+    case GAVL_SRC_SEEK_START:
+      break;
+    }
+  
+  bg_msg_sink_put(h->control.cmd_sink, &forward);
+
+  fail:
+  gavl_msg_free(&forward);
+  
+  }
+
+static void seek_multi(multi_t * priv, gavl_msg_t * msg)
+  {
+  int i;
+  int scale = 0;
+  int64_t time = 0;
+  gavl_src_seek_unit_t unit = 0;
+  gavl_msg_get_msg_src_seek(msg, &time, &scale, &unit);
+  
+  if(priv->h)
+    {
+    forward_seek(priv, priv->h, time, scale, unit);
+    }
+    
+  for(i = 0; i < priv->src.num_streams; i++)
+    {
+    if(priv->src.streams[i]->user_data)
+      {
+      bg_plugin_handle_t * h = priv->src.streams[i]->user_data;
+      forward_seek(priv, h, time, scale, unit);
+      }
+    }
+  }
+
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
   {
@@ -212,6 +307,8 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           start_multi(data);
           break;
         case GAVL_CMD_SRC_SEEK:
+          seek_multi(priv, msg);
+          break;
         case GAVL_CMD_SRC_PAUSE:
         case GAVL_CMD_SRC_RESUME:
           {

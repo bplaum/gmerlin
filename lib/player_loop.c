@@ -253,6 +253,7 @@ static void player_cleanup(bg_player_t * player)
   bg_player_input_cleanup(player);
   
   player->clock_time_offset = GAVL_TIME_UNDEFINED;
+  player->display_time_offset = 0;
   
   bg_player_broadcast_time(player, 0);
   }
@@ -370,7 +371,7 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
   
   /* Set start time to zero */
 
-  bg_player_broadcast_time(p, time - p->display_time_offset);
+  bg_player_broadcast_time(p, time);
 
   return 1;
   }
@@ -703,9 +704,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale)
     bg_player_set_status(player, BG_PLAYER_STATUS_PAUSED);
 
     /* Need to update slider and time for seeking case */
-    pthread_mutex_lock(&player->display_time_offset_mutex);
-    bg_player_broadcast_time(player, sync_time - player->display_time_offset);
-    pthread_mutex_unlock(&player->display_time_offset_mutex);
+    bg_player_broadcast_time(player, sync_time);
     
     if(DO_VIDEO(player->flags))
       bg_player_ov_update_still(player);
@@ -1672,10 +1671,6 @@ static void * player_thread(void * data)
         pthread_mutex_lock(&player->src_mutex);
         bg_player_time_get(player, 1, &time);
 
-        pthread_mutex_lock(&player->display_time_offset_mutex);
-        time -= player->display_time_offset;
-        pthread_mutex_unlock(&player->display_time_offset_mutex);
-        
         if(player->time_update_mode == TIME_UPDATE_SECOND)
           {
           seconds = time / GAVL_TIME_SCALE;
@@ -1729,7 +1724,7 @@ static void * player_thread(void * data)
   return NULL;
   }
 
-void bg_player_broadcast_time(bg_player_t * player, gavl_time_t t)
+void bg_player_broadcast_time(bg_player_t * player, gavl_time_t pts_time)
   {
   gavl_value_t val;
 
@@ -1738,32 +1733,54 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t t)
   gavl_time_t t_rem_abs;
   double percentage = -1.0;
   gavl_dictionary_t * dict;
+
+  gavl_time_t t;
+  gavl_time_t perc_time;
   
   gavl_value_init(&val);
   dict = gavl_value_set_dictionary(&val);
   
+  pthread_mutex_lock(&player->display_time_offset_mutex);
+  t = pts_time - player->display_time_offset;
+  pthread_mutex_unlock(&player->display_time_offset_mutex);
+    
   bg_player_tracklist_get_times(&player->tl, t, &t_abs, &t_rem, &t_rem_abs, &percentage);
 
   //  fprintf(stderr, "Got perc 1: %f\n", percentage);
 
   if((percentage < 0.0) && (player->flags & PLAYER_SEEK_WINDOW))
     {
+    perc_time = pts_time;
+
+    if(player->seek_window_unit == GAVL_SRC_SEEK_CLOCK)
+      perc_time += player->clock_time_offset;
+    
     pthread_mutex_lock(&player->seek_window_mutex);
     
-    percentage = gavl_time_to_seconds(t - player->seek_window_start) /
+    percentage = gavl_time_to_seconds(perc_time - player->seek_window_start) /
       gavl_time_to_seconds(player->seek_window_end - player->seek_window_start);
-
-    //    fprintf(stderr, "Got perc 2: %f %"PRId64" %"PRId64"\n", percentage, player->seek_window_start,
-    //            player->seek_window_end);
-    
+#if 0
+    fprintf(stderr, "Got perc 2: %f %"PRId64" %"PRId64" %"PRId64" %"PRId64"\n",
+            percentage,
+            pts_time, perc_time,
+            player->seek_window_start,
+            player->seek_window_end);
+#endif
     pthread_mutex_unlock(&player->seek_window_mutex);
     }
   
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME, t);
 
   if(player->clock_time_offset != GAVL_TIME_UNDEFINED)
-    gavl_dictionary_set_long(dict, BG_PLAYER_TIME_CLOCK, t + player->clock_time_offset);
-  
+    {
+    //  char str[GAVL_TIME_STRING_LEN];
+    
+    gavl_dictionary_set_long(dict, BG_PLAYER_TIME_CLOCK, pts_time + player->clock_time_offset);
+
+    //    gavl_time_prettyprint_local(pts_time + player->clock_time_offset, str);
+    //    fprintf(stderr, "Clock time: %s pts time: %"PRId64" display_time_offset: %"PRId64"\n", str, pts_time,
+    //            player->display_time_offset);
+    }
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_ABS, t_abs);
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM, t_rem);
   gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM_ABS, t_rem_abs);

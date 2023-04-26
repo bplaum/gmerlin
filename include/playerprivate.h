@@ -422,7 +422,8 @@ struct bg_player_s
   /* Seek window */
   gavl_time_t seek_window_start; // Time offset for the current source (e.g. live streams)
   gavl_time_t seek_window_end;
-  gavl_time_t seek_window_start_absolute; // Absolute start time of seek window (if available)
+  gavl_src_seek_unit_t seek_window_unit;
+  
   pthread_mutex_t seek_window_mutex;
     
   

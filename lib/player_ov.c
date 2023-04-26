@@ -471,7 +471,7 @@ void * bg_player_ov_thread(void * data)
       if(p->time_update_mode == TIME_UPDATE_FRAME)
         {
         pthread_mutex_lock(&p->display_time_offset_mutex);
-        bg_player_broadcast_time(p, s->frame_time - p->display_time_offset);
+        bg_player_broadcast_time(p, s->frame_time);
         pthread_mutex_unlock(&p->display_time_offset_mutex);
         }
 

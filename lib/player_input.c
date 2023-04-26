@@ -65,6 +65,7 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
 
   if((d = gavl_value_get_dictionary(val)))
     {
+    int unit;
     gavl_time_t start = 0;
     gavl_time_t end = 0;
 #ifdef DUMP_SEEK_WINDOW
@@ -75,6 +76,7 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
     gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
     //       gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START_ABSOLUTE, &start_absolute);
     gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
+    gavl_dictionary_get_int(d, GAVL_STATE_SRC_SEEK_WINDOW_UNIT, &unit);
 
 #if DUMP_SEEK_WINDOW
     gavl_time_prettyprint(start, start_str);
@@ -93,6 +95,7 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
     pthread_mutex_lock(&p->seek_window_mutex);
     p->seek_window_start = start;
     p->seek_window_end = end;
+    p->seek_window_unit = unit;
     pthread_mutex_unlock(&p->seek_window_mutex);
     }
   
@@ -243,6 +246,9 @@ int bg_player_input_start(bg_player_t * p)
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->display_time_offset);
 
   p->clock_time_offset = gavl_track_get_pts_to_clock_time(p->src->track_info);
+
+  if(p->clock_time_offset > 0)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got clock time offset: %"PRId64, p->clock_time_offset);
   
   return 1;
   }
