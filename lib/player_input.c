@@ -65,42 +65,32 @@ static void set_seek_window(bg_player_t * p, const gavl_value_t * val)
 
   if((d = gavl_value_get_dictionary(val)))
     {
-    int unit;
-    gavl_time_t start = 0;
-    gavl_time_t end = 0;
-#ifdef DUMP_SEEK_WINDOW
-    gavl_time_t start_absolute = 0;
-    char start_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
-    char end_str[GAVL_TIME_STRING_LEN_ABSOLUTE];
-#endif
-    gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START, &start);
-    //       gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_START_ABSOLUTE, &start_absolute);
-    gavl_dictionary_get_long(d, GAVL_STATE_SRC_SEEK_WINDOW_END, &end);
-    gavl_dictionary_get_int(d, GAVL_STATE_SRC_SEEK_WINDOW_UNIT, &unit);
+    pthread_mutex_lock(&p->seek_window_mutex);
+    gavl_dictionary_reset(&p->seek_window);
+    gavl_dictionary_copy(&p->seek_window, d);
+    pthread_mutex_unlock(&p->seek_window_mutex);
 
 #if DUMP_SEEK_WINDOW
-    gavl_time_prettyprint(start, start_str);
-    gavl_time_prettyprint(end, end_str);
-    fprintf(stderr, "Got seek window %s -> %s ", start_str, end_str);
-    if(start_absolute > 0)
-      {
-      gavl_time_prettyprint_absolute(start + start_absolute, start_str, 1);
-      gavl_time_prettyprint_absolute(end + start_absolute, end_str, 1);
-      fprintf(stderr, "[%s -> %s]\n", start_str, end_str);
-      }
-    else
-      fprintf(stderr, "\n");
+    fprintf(stderr, "Got seek window\n");
+    gavl_dictionary_dump(d, 2);
 #endif
-    
-    pthread_mutex_lock(&p->seek_window_mutex);
-    p->seek_window_start = start;
-    p->seek_window_end = end;
-    p->seek_window_unit = unit;
-    pthread_mutex_unlock(&p->seek_window_mutex);
     }
-  
   }
 
+int bg_player_get_seek_window(bg_player_t * p, gavl_time_t * start, gavl_time_t * end)
+  {
+  int ret = 1;
+
+  pthread_mutex_lock(&p->seek_window_mutex);
+
+  if(!gavl_dictionary_get_long(&p->seek_window, GAVL_STATE_SRC_SEEK_WINDOW_START, start) ||
+     !gavl_dictionary_get_long(&p->seek_window, GAVL_STATE_SRC_SEEK_WINDOW_END, end))
+    ret = 0;
+  pthread_mutex_unlock(&p->seek_window_mutex);
+  
+  return ret;
+  }
+  
 
 int bg_player_input_start(bg_player_t * p)
   {
@@ -229,26 +219,13 @@ int bg_player_input_start(bg_player_t * p)
     set_seek_window(p, v);
     p->flags |= PLAYER_SEEK_WINDOW;
     }
-  else 
-    {
-    pthread_mutex_lock(&p->seek_window_mutex);
 
-    if(p->tl.duration != GAVL_TIME_UNDEFINED)
-      {
-      p->seek_window_start = 0;
-      p->seek_window_end = p->tl.duration;
-      }
-    
-    pthread_mutex_unlock(&p->seek_window_mutex);
-    }
+  p->dpy_time_offset = gavl_track_get_pts_to_clock_time(p->src->track_info);
 
-  p->display_time_offset = gavl_track_get_display_time_offset(p->src->track_info);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->display_time_offset);
+  if(p->dpy_time_offset == GAVL_TIME_UNDEFINED)
+    p->dpy_time_offset = -gavl_track_get_start_time(p->src->track_info);
 
-  p->clock_time_offset = gavl_track_get_pts_to_clock_time(p->src->track_info);
-
-  if(p->clock_time_offset > 0)
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got clock time offset: %"PRId64, p->clock_time_offset);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->dpy_time_offset);
   
   return 1;
   }
@@ -410,7 +387,7 @@ int bg_player_input_get_video_format(bg_player_t * p)
 
 
 void bg_player_input_seek(bg_player_t * p,
-                          gavl_time_t time, int scale)
+                          gavl_time_t time, int scale, double percentage)
   {
   int do_audio, do_video, do_subtitle;
 
@@ -424,11 +401,13 @@ void bg_player_input_seek(bg_player_t * p,
 
   //  bg_plugin_lock(p->input_handle);
 
-  bg_input_plugin_seek(p->src->input_handle, time, scale);
+  if(time != GAVL_TIME_UNDEFINED)
+    bg_input_plugin_seek(p->src->input_handle, time, scale);
+  else
+    bg_input_plugin_seek_percentage(p->src->input_handle, percentage);
   //  bg_plugin_unlock(p->input_handle);
 
   //  fprintf(stderr, " %ld\n", *time);
-  
   
   if(DO_SUBTITLE_ONLY(p->flags))
     vs->frames_read =

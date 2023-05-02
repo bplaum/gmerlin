@@ -412,20 +412,18 @@ struct bg_player_s
 
   // Display offset for the current source (e.g. live streams)
   // Definition: Display time = Time (of stream PTSes) - display_time_offset
-  
-  gavl_time_t display_time_offset; 
-  pthread_mutex_t display_time_offset_mutex;
 
-  // clock_time = Display time + clock_time_offset
-  gavl_time_t clock_time_offset;
+  /*
+   *  Displayed time = pts_time + dpy_time_offset
+   *  Time values larger than 365*24*3600 seconds are considered to be
+   *  clock times (includig date as in time_t)
+   */
   
-  /* Seek window */
-  gavl_time_t seek_window_start; // Time offset for the current source (e.g. live streams)
-  gavl_time_t seek_window_end;
-  gavl_src_seek_unit_t seek_window_unit;
-  
-  pthread_mutex_t seek_window_mutex;
+  gavl_time_t dpy_time_offset; 
+  pthread_mutex_t dpy_time_offset_mutex; 
     
+  // clock_time = Display time + clock_time_offset
+  //  gavl_time_t clock_time_offset;
   
   /* Stuff for synchronous stopping and starting of the playback */
   
@@ -454,11 +452,9 @@ struct bg_player_s
 
   int state_init;
 
-  /* Resync */
-
-  //  int64_t resync_time;
-  //  int     resync_scale;
-  //  pthread_mutex_t resync_mutex;
+  /* Seek window */
+  gavl_dictionary_t seek_window;
+  pthread_mutex_t seek_window_mutex;
   
   int visualization_mode;
 
@@ -482,6 +478,7 @@ void bg_player_set_status(bg_player_t * player, int status);
 int  bg_player_get_restart(bg_player_t * player);
 void bg_player_set_restart(bg_player_t * player, int restart);
 
+int bg_player_get_seek_window(bg_player_t * p, gavl_time_t * start, gavl_time_t * end);
 
 int bg_player_handle_input_message(void * priv, gavl_msg_t * msg);
 
@@ -503,7 +500,7 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time);
 void bg_player_broadcast_time(bg_player_t * player, gavl_time_t time);
 
 /* Set player time from stream timestamps */
-void bg_player_time_sync(bg_player_t * player);
+gavl_time_t bg_player_time_sync(bg_player_t * player);
 
 /* player_input.c */
 
@@ -535,7 +532,7 @@ int
 bg_player_input_get_subtitle_format(bg_player_t * ctx);
 
 void bg_player_input_seek(bg_player_t * ctx,
-                          gavl_time_t time, int scale);
+                          gavl_time_t time, int scale, double percentage);
 
 
 // void bg_player_source_set(bg_player_t * player, bg_player_source_t * src,

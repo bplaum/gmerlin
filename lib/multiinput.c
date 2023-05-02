@@ -57,7 +57,7 @@ static void start_multi(void * priv)
   int i;
   multi_t * m = priv;
   const char * uri;
-  int can_seek = 0, can_seek_clock = 0, can_pause = 0;
+  int can_seek = 0, can_pause = 0;
   const gavl_dictionary_t * track;
   gavl_dictionary_t * metadata = NULL;
   bg_media_source_stream_t * stream;
@@ -84,8 +84,6 @@ static void start_multi(void * priv)
 
     gavl_dictionary_set(gavl_track_get_metadata_nc(m->ti),
                         GAVL_META_CAN_SEEK, NULL);
-    gavl_dictionary_set(gavl_track_get_metadata_nc(m->ti),
-                        GAVL_META_CAN_SEEK_CLOCK, NULL);
     
     if(pts_to_clock_time == GAVL_TIME_UNDEFINED)
       pts_to_clock_time = gavl_track_get_pts_to_clock_time(track);
@@ -157,13 +155,11 @@ static void start_multi(void * priv)
     {
     track = bg_input_plugin_get_track_info(m->h, -1);
     can_seek = gavl_track_can_seek(track);
-    can_seek_clock = gavl_track_can_seek_clock(track);
     can_pause = gavl_track_can_pause(track);
     }
   else
     {
     can_seek       = 1;
-    can_seek_clock = 1;
     can_pause      = 1;
     }
 
@@ -177,29 +173,22 @@ static void start_multi(void * priv)
     
     if(can_seek && !gavl_track_can_seek(track))
       can_seek = 0;
-    if(can_seek_clock && !gavl_track_can_seek_clock(track))
-      can_seek_clock = 0;
     if(can_pause && !gavl_track_can_pause(track))
       can_pause = 0;
     }
   
   if(can_seek)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
-  if(can_seek_clock)
-    {
-    gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK_CLOCK, 1);
-    if(!can_seek && (pts_to_clock_time != GAVL_TIME_UNDEFINED))
-      gavl_dictionary_set_int(metadata, GAVL_META_CAN_SEEK, 1);
-    }
   
   if(can_pause)
     gavl_dictionary_set_int(metadata, GAVL_META_CAN_PAUSE, 1);
   
   }
 
+#if 0
 static void forward_seek(multi_t * priv,
                          bg_plugin_handle_t * h,
-                         int64_t time, int scale, gavl_src_seek_unit_t unit)
+                         int64_t time, int scale)
   {
   gavl_time_t offset;
   gavl_msg_t forward;
@@ -208,6 +197,8 @@ static void forward_seek(multi_t * priv,
   track = bg_input_plugin_get_track_info(h, -1);
 
   gavl_msg_init(&forward);
+
+  fprintf(stderr, "forward_seek %"PRId64" %d %d\n", time, scale, unit);
   
   switch(unit)
     {
@@ -266,8 +257,7 @@ static void seek_multi(multi_t * priv, gavl_msg_t * msg)
   int i;
   int scale = 0;
   int64_t time = 0;
-  gavl_src_seek_unit_t unit = 0;
-  gavl_msg_get_msg_src_seek(msg, &time, &scale, &unit);
+  gavl_msg_get_msg_src_seek(msg, &time, &scale);
   
   if(priv->h)
     {
@@ -283,6 +273,7 @@ static void seek_multi(multi_t * priv, gavl_msg_t * msg)
       }
     }
   }
+#endif
 
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
@@ -307,8 +298,8 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           start_multi(data);
           break;
         case GAVL_CMD_SRC_SEEK:
-          seek_multi(priv, msg);
-          break;
+          // seek_multi(priv, msg);
+          // break;
         case GAVL_CMD_SRC_PAUSE:
         case GAVL_CMD_SRC_RESUME:
           {

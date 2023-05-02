@@ -469,12 +469,8 @@ void * bg_player_ov_thread(void * data)
       bg_osd_update(s->osd);
 
       if(p->time_update_mode == TIME_UPDATE_FRAME)
-        {
-        pthread_mutex_lock(&p->display_time_offset_mutex);
         bg_player_broadcast_time(p, s->frame_time);
-        pthread_mutex_unlock(&p->display_time_offset_mutex);
-        }
-
+      
       sink = bg_ov_get_sink(s->ov);
       //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
       

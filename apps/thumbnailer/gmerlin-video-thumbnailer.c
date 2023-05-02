@@ -287,7 +287,7 @@ int main(int argc, char ** argv)
   
   if(gavl_track_can_seek(info))
     {
-    bg_input_plugin_seek(input_handle, &seek_time, GAVL_TIME_SCALE);
+    bg_input_plugin_seek(input_handle, seek_time, GAVL_TIME_SCALE);
 
     // input_plugin->seek(input_handle->priv, &seek_time, GAVL_TIME_SCALE);
 

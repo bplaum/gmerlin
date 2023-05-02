@@ -61,7 +61,7 @@ void bg_player_time_start(bg_player_t * player)
   if(ctx->sync_mode == SYNC_SOFTWARE)
     {
     pthread_mutex_lock(&ctx->time_mutex);
-    gavl_timer_set(ctx->timer, player->display_time_offset);
+    gavl_timer_set(ctx->timer, gavl_track_get_start_time(player->src->track_info));
     gavl_timer_start(ctx->timer);
     pthread_mutex_unlock(&ctx->time_mutex);
     }
@@ -92,7 +92,7 @@ void bg_player_time_reset(bg_player_t * player)
   }
 
 /* Set player time from stream timestamps */
-void bg_player_time_sync(bg_player_t * p)
+gavl_time_t bg_player_time_sync(bg_player_t * p)
   {
   gavl_time_t t = GAVL_TIME_UNDEFINED;
   
@@ -106,6 +106,7 @@ void bg_player_time_sync(bg_player_t * p)
   //  fprintf(stderr, "bg_player_time_sync: %f\n", gavl_time_to_seconds(t));
   
   bg_player_time_set(p, t);
+  return t;
   }
   
 /* Get the current time */
@@ -173,9 +174,9 @@ void bg_player_time_set(bg_player_t * player, gavl_time_t time)
   if(player->flags & PLAYER_GAPLESS)
     {
     player->flags &= ~PLAYER_GAPLESS;
-    pthread_mutex_lock(&player->display_time_offset_mutex);
-    player->display_time_offset = 0;
-    pthread_mutex_unlock(&player->display_time_offset_mutex);
+    pthread_mutex_lock(&player->dpy_time_offset_mutex);
+    player->dpy_time_offset = 0;
+    pthread_mutex_unlock(&player->dpy_time_offset_mutex);
     }
   
   ctx->current_time = time;

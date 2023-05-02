@@ -955,6 +955,8 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track);
 int bg_input_plugin_get_track(bg_plugin_handle_t * h);
 
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale);
+void bg_input_plugin_seek_percentage(bg_plugin_handle_t * h, double percentage);
+
 void bg_input_plugin_start(bg_plugin_handle_t * h);
 
 void bg_input_plugin_pause(bg_plugin_handle_t * h);

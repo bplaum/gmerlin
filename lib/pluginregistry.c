@@ -4457,6 +4457,55 @@ void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   //  fprintf(stderr, "bg_input_plugin_seek done\n");
   }
 
+void bg_input_plugin_seek_percentage(bg_plugin_handle_t * h, double percentage)
+  {
+  gavl_time_t duration;
+  gavl_time_t t;
+  gavl_dictionary_t * track =
+    bg_input_plugin_get_track_info(h, -1);
+  
+  duration = gavl_track_get_duration(track);
+  if(duration > 0)
+    {
+    t = gavl_seconds_to_time(gavl_time_to_seconds(duration)*percentage);
+    t += gavl_track_get_start_time(track);
+    }
+  else
+    {
+    gavl_value_t val;
+    const gavl_dictionary_t * dict;
+    
+    const gavl_dictionary_t * seek_window;
+    gavl_time_t start = 0;
+    gavl_time_t end = 0;
+    
+    if(!(dict = gavl_track_get_metadata(track)) ||
+       !(seek_window = gavl_dictionary_get_dictionary(dict, GAVL_STATE_SRC_SEEK_WINDOW)))
+      {
+      /* Error */
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Percentage seeking not possible: Neither seek window nor duration given");
+      return;
+      }
+
+    gavl_value_init(&val);
+    
+    if(bg_plugin_handle_get_state(h, GAVL_STATE_CTX_SRC, GAVL_STATE_SRC_SEEK_WINDOW, &val))
+      dict = gavl_value_get_dictionary(&val);
+    
+    if(!gavl_dictionary_get_long(dict, GAVL_STATE_SRC_SEEK_WINDOW_START, &start) ||
+       !gavl_dictionary_get_long(dict, GAVL_STATE_SRC_SEEK_WINDOW_END, &end))
+      {
+      /* Error */
+      gavl_value_free(&val);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Percentage seeking not possible: Invalid seek window");
+      return;
+      }
+    
+    t = start + gavl_seconds_to_time(gavl_time_to_seconds(end - start) * percentage);
+    }
+  bg_input_plugin_seek(h, t, GAVL_TIME_SCALE);
+  }
+
 void bg_input_plugin_start(bg_plugin_handle_t * h)
   {
   gavl_msg_t * cmd;
@@ -6001,5 +6050,4 @@ static void cleanup_plugin_registry()
   }
 
 #endif
-
 

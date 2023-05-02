@@ -418,13 +418,13 @@ bg_player_t * bg_player_create()
   ret->threads[0] = ret->audio_stream.th;
   ret->threads[1] = ret->video_stream.th;
   
+  pthread_mutex_init(&ret->seek_window_mutex, NULL);
   pthread_mutex_init(&ret->state_mutex, NULL);
   pthread_mutex_init(&ret->restart_mutex, NULL);
 
   pthread_mutex_init(&ret->config_mutex, NULL);
   pthread_mutex_init(&ret->src_mutex, NULL);
-  pthread_mutex_init(&ret->display_time_offset_mutex, NULL);
-  pthread_mutex_init(&ret->seek_window_mutex, NULL);
+  pthread_mutex_init(&ret->dpy_time_offset_mutex, NULL);
 
   /* Subtitles are off by default */
   ret->subtitle_stream_user = -1;
@@ -534,13 +534,13 @@ void bg_player_destroy(bg_player_t * player)
   if(player->src_msg_sink)
     bg_msg_sink_destroy(player->src_msg_sink);
   
+  pthread_mutex_destroy(&player->seek_window_mutex);
   pthread_mutex_destroy(&player->state_mutex);
   pthread_mutex_destroy(&player->restart_mutex);
 
   pthread_mutex_destroy(&player->config_mutex);
   pthread_mutex_destroy(&player->src_mutex);
-  pthread_mutex_destroy(&player->display_time_offset_mutex);
-  pthread_mutex_destroy(&player->seek_window_mutex);
+  pthread_mutex_destroy(&player->dpy_time_offset_mutex);
   
   bg_thread_common_destroy(player->thread_common);
 
@@ -550,6 +550,7 @@ void bg_player_destroy(bg_player_t * player)
   bg_player_tracklist_free(&player->tl);
 
   gavl_dictionary_free(&player->state);
+  gavl_dictionary_free(&player->seek_window);
   
   free(player);
   }
