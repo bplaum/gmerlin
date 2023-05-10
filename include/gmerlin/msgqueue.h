@@ -362,6 +362,8 @@ bg_msg_hub_t * bg_msg_hub_create(int sync);
 void bg_msg_hub_connect_sink(bg_msg_hub_t *, bg_msg_sink_t *);
 void bg_msg_hub_disconnect_sink(bg_msg_hub_t *, bg_msg_sink_t *);
 
+const gavl_dictionary_t * bg_msg_hub_get_state(bg_msg_hub_t * h);
+
 bg_msg_sink_t * bg_msg_hub_get_sink(bg_msg_hub_t *);
 
 void bg_msg_hub_send_cb(bg_msg_hub_t * h,

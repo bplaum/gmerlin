@@ -328,6 +328,12 @@ struct bg_msg_hub_s
   gavl_dictionary_t state;
   };
 
+const gavl_dictionary_t * bg_msg_hub_get_state(bg_msg_hub_t * h)
+  {
+  return &h->state;
+  }
+
+
 void bg_msg_hub_set_connect_cb(bg_msg_hub_t * h,
                                void (*cb)(bg_msg_sink_t * s,
                                           void * data),

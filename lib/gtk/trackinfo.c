@@ -235,7 +235,9 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   const char * format;
   int idx = 0;
   int num_links = 0;
-  
+
+  fprintf(stderr, "Create markup\n");
+  gavl_dictionary_dump(dict, 2);
   
   buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(info->textview));
 
@@ -339,7 +341,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   markup = NULL;
   
   while(gavl_metadata_get_src(dict, GAVL_META_SRC, idx++,
-                                &mimetype, &location))
+                              &mimetype, &location) && location)
     {
     //    fprintf(stderr, "Append link %s %s\n", mimetype, location);
 

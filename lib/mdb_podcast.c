@@ -1068,7 +1068,8 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
   gavl_dictionary_t * dict;
   gavl_msg_t * res;
   char * filename = NULL; 
-
+  int ret = 0;
+  
   gavl_array_init(&arr);
   gavl_value_init(&entry_val);
   
@@ -1103,14 +1104,23 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     bg_array_load_xml(&arr, filename, "items");
   
   if(gavl_get_track_by_id_arr(&arr, id->id))
+    {
+    fprintf(stderr, "Err 1\n");
     goto fail;
-  
+    }
   /* Download remote media */
   if((src = gavl_metadata_get_src_nc(m, GAVL_META_POSTER_URL, 0)) &&
      (uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
     {
     char * prefix = gavl_sprintf("%s/%s-image", dirname, id->episode_id);
-    local_filename =  bg_http_download(uri, prefix);
+    
+    if(!(local_filename =  bg_http_download(uri, prefix)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Dowloading poster %s failed", uri);
+      goto fail;
+      }
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved poster %s to %s", uri, local_filename);
+    
     gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, local_filename);
     free(prefix);
     }
@@ -1119,7 +1129,14 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
      (uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
     {
     char * prefix = gavl_sprintf("%s/%s-media", dirname, id->episode_id);
-    local_filename =  bg_http_download(uri, prefix);
+
+    if(!(local_filename = bg_http_download(uri, prefix)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Dowloading media %s failed", uri);
+      goto fail;
+      }
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved media %s to %s", uri, local_filename);
+    
     gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, local_filename);
     free(prefix);
     }
@@ -1220,8 +1237,13 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     bg_msg_sink_put(b->ctrl.evt_sink, res);
     gavl_value_free(&val);
     }
+
+  ret = 1;
   
   fail:
+
+  if(!ret)
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Saving podcast episode failed");
   
   gavl_array_free(&arr);
   gavl_value_free(&entry_val);
@@ -1623,7 +1645,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
                  (uri = gavl_dictionary_get_string(dict, GAVL_META_URI)))
                 gavl_string_array_add(&p->subscriptions, uri);
               }
-
+            
             save_subscriptions(b);
 
             res = bg_msg_sink_get(b->ctrl.evt_sink);

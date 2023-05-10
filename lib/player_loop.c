@@ -653,10 +653,8 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
   interrupt_cmd(player, BG_PLAYER_STATUS_SEEKING);
   
   if(player->can_seek)
-    {
-    if(t != GAVL_TIME_UNDEFINED)
-      bg_player_input_seek(player, t, scale, percentage);
-    }
+    bg_player_input_seek(player, t, scale, percentage);
+  
   //  fprintf(stderr, "seek_cmd 2: %"PRId64" %d (%f)\n", sync_time, scale, (double)t / (double)scale);
   
   /* Clear fifos and filter chains */
@@ -696,7 +694,6 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
       gavl_value_reset(&val);
       }
     }
-
   
   if(old_state == BG_PLAYER_STATUS_PAUSED)
     {

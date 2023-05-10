@@ -86,7 +86,7 @@ int bg_state_set(gavl_dictionary_t * state,
                  bg_msg_sink_t * sink, int id);
 
 
-const gavl_value_t * bg_state_get(gavl_dictionary_t * state,
+const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
                                   const char * ctx,
                                   const char * var);
 

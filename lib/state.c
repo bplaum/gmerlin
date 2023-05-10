@@ -194,6 +194,32 @@ static gavl_dictionary_t * get_val_dict(gavl_dictionary_t * state, const char * 
   return ret;
   }
 
+static const gavl_dictionary_t * get_val_dict_c(const gavl_dictionary_t * state, const char * ctx)
+  {
+  const gavl_dictionary_t * ret = NULL;
+  char ** path;
+  int idx = 0;
+  
+  if(!strchr(ctx, '/')) // Shortcut
+    return gavl_dictionary_get_dictionary(state, ctx);
+  
+  path = gavl_strbreak(ctx, '/');
+  ret = state;
+  
+  while(path[idx])
+    {
+    ret = gavl_dictionary_get_dictionary(ret, path[idx]);
+
+    if(!ret)
+      break;
+    
+    idx++;
+    }
+  
+  gavl_strbreak_free(path);
+  return ret;
+  }
+
 int bg_state_set(gavl_dictionary_t * state,
                   int last,
                   const char * ctx,
@@ -221,13 +247,13 @@ int bg_state_set(gavl_dictionary_t * state,
   return changed;
   }
 
-const gavl_value_t * bg_state_get(gavl_dictionary_t * state,
+const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
                                   const char * ctx,
                                   const char * var)
   {
   gavl_dictionary_t * child;
 
-  if(!(child = get_val_dict(state, ctx)))
+  if(!(child = get_val_dict_c(state, ctx)))
     {
     fprintf(stderr, "No such ctx %s\n", ctx);
     return NULL;
