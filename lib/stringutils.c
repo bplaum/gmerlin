@@ -425,7 +425,7 @@ int bg_url_get_track(const char * path)
   gavl_dictionary_t vars;
   gavl_dictionary_init(&vars);
   gavl_url_get_vars_c(path, &vars);
-  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &ret))
+  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &ret))
     ret--;
   
   gavl_dictionary_free(&vars);
@@ -440,10 +440,10 @@ int bg_url_extract_track(char ** path)
 
   gavl_url_get_vars(*path, &vars);
 
-  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &ret))
+  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &ret))
     {
     ret--;
-    gavl_dictionary_set(&vars, BG_URL_VAR_TRACK, NULL);
+    gavl_dictionary_set(&vars, GAVL_URL_VAR_TRACK, NULL);
     }
   
   *path = bg_url_append_vars(*path, &vars);
@@ -1115,3 +1115,4 @@ char * bg_uri_to_uuid(const char * uri, char ret[37])
   uuid_unparse(uuid, ret);
   return ret;
   }
+

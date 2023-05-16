@@ -57,11 +57,14 @@ static void start_multi(void * priv)
   int i;
   multi_t * m = priv;
   const char * uri;
+  char * real_uri;
+  
   int can_seek = 0, can_pause = 0;
   const gavl_dictionary_t * track;
   gavl_dictionary_t * metadata = NULL;
   bg_media_source_stream_t * stream;
   gavl_time_t pts_to_clock_time = GAVL_TIME_UNDEFINED;
+  gavl_time_t clock_time_start  = GAVL_TIME_UNDEFINED;
   
   for(i = 0; i < m->src.num_streams; i++)
     {

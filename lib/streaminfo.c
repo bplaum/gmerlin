@@ -94,7 +94,7 @@ char * bg_get_track_name_default(const char * location)
   gavl_dictionary_init(&url_vars);
   gavl_url_get_vars_c(location, &url_vars);
   
-  if(gavl_dictionary_get_int(&url_vars, BG_URL_VAR_TRACK, &track))
+  if(gavl_dictionary_get_int(&url_vars, GAVL_URL_VAR_TRACK, &track))
     {
     ret = bg_sprintf("%s [%d]", tmp_string, track);
     free(tmp_string);

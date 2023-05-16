@@ -3241,9 +3241,8 @@ int bg_file_is_blacklisted(const char * url)
 
 static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   {
-  gavl_dictionary_set(vars, BG_URL_VAR_TRACK,   NULL);
-  gavl_dictionary_set(vars, BG_URL_VAR_VARIANT, NULL);
-  gavl_dictionary_set(vars, BG_URL_VAR_SEEK,    NULL);
+  gavl_dictionary_set(vars, GAVL_URL_VAR_TRACK,   NULL);
+  gavl_dictionary_set(vars, GAVL_URL_VAR_VARIANT, NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_PLUGIN,  NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
   }
@@ -3282,7 +3281,7 @@ static void set_locations(gavl_dictionary_t * dict, const char * location)
       gavl_dictionary_init(&vars);
       
       gavl_url_get_vars(new_location, &vars);
-      gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, i+1);
+      gavl_dictionary_set_int(&vars, GAVL_URL_VAR_TRACK, i+1);
       new_location = bg_url_append_vars(new_location, &vars);
       gavl_dictionary_reset(&vars);
       }
@@ -3368,10 +3367,10 @@ static int input_plugin_load_full(bg_plugin_registry_t * reg,
   gavl_dictionary_init(&vars);
   gavl_url_get_vars_c(location, &vars);
 
-  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
+  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
     track_index--;
   
-  gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
+  gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
   
   gavl_dictionary_free(&vars);
   
@@ -4938,9 +4937,9 @@ int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dic
   gavl_url_get_vars(next_url_priv, &next_vars);
 
   if(!strcmp(cur_url_priv, next_url_priv) &&
-     gavl_dictionary_get_int(&cur_vars, BG_URL_VAR_TRACK, &cur_track) &&
+     gavl_dictionary_get_int(&cur_vars, GAVL_URL_VAR_TRACK, &cur_track) &&
      (cur_track >= 0) &&
-     gavl_dictionary_get_int(&next_vars, BG_URL_VAR_TRACK, &next_track) &&
+     gavl_dictionary_get_int(&next_vars, GAVL_URL_VAR_TRACK, &next_track) &&
      (next_track >= 0))
     {
     ret = 1;
@@ -5732,10 +5731,10 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
   
   gavl_url_get_vars_c(location, &vars);
 
-  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
+  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
     track_index--;
   
-  gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
+  gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
   
   gavl_dictionary_free(&vars);
   
@@ -5878,9 +5877,9 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       gavl_dictionary_init(&vars);
       gavl_url_get_vars_c(location, &vars);
       
-      if(gavl_dictionary_get_int(&vars, BG_URL_VAR_TRACK, &track_index))
+      if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
         track_index--;
-      // gavl_dictionary_get_int(&vars, BG_URL_VAR_VARIANT, &variant);
+      // gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
       gavl_dictionary_free(&vars);
       
       if(!(ret = bg_input_plugin_load(location)))

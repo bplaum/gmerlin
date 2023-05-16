@@ -44,6 +44,7 @@
 
 #include <gavl/metatags.h>
 #include <gavl/http.h>
+#include <gavl/utils.h>
 
 #define EXTFS_ID_PREFIX "/extfs"
 
@@ -572,7 +573,7 @@ static char * id_to_path(const bg_mdb_backend_t * be, const char * id)
               gavl_dictionary_t vars;
               gavl_dictionary_init(&vars);
 
-              gavl_dictionary_set_int(&vars, BG_URL_VAR_TRACK, track);
+              gavl_dictionary_set_int(&vars, GAVL_URL_VAR_TRACK, track);
               ret = bg_url_append_vars(gavl_strdup(uri), &vars);
               gavl_dictionary_free(&vars);
               return ret;
@@ -653,7 +654,7 @@ static char * path_to_id(const bg_mdb_backend_t * be, const char * path)
         gavl_dictionary_init(&url_vars);
 
         gavl_url_get_vars_c(path, &url_vars);
-        if(gavl_dictionary_get_int(&url_vars, BG_URL_VAR_TRACK, &track) && (track > 0))
+        if(gavl_dictionary_get_int(&url_vars, GAVL_URL_VAR_TRACK, &track) && (track > 0))
           ret = bg_sprintf("%s/%d", gavl_dictionary_get_string(d, GAVL_META_ID), track);
         else
           ret = gavl_strdup(gavl_dictionary_get_string(d, GAVL_META_ID));
@@ -780,7 +781,7 @@ static int browse_object_internal(bg_mdb_backend_t * be,
     
     /* Find volume */
     
-    if(gavl_dictionary_get_int(&url_vars, BG_URL_VAR_TRACK, &track))
+    if(gavl_dictionary_get_int(&url_vars, GAVL_URL_VAR_TRACK, &track))
       {
       track--;
       gavl_dictionary_copy(ret, gavl_get_track(container, track));

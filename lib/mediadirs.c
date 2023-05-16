@@ -363,7 +363,7 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
   gavl_dictionary_init(&vars);
   gavl_url_get_vars_c(path, &vars);
 
-  if(gavl_dictionary_get(&vars, BG_URL_VAR_TRACK))
+  if(gavl_dictionary_get(&vars, GAVL_URL_VAR_TRACK))
     {
     gavl_dictionary_free(&vars);
     return NULL;
