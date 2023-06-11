@@ -371,7 +371,7 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     gavl_dictionary_set_string_nocopy(&conn->res, "X-Content-Duration",
                                       bg_sprintf("%f", gavl_time_to_seconds(duration)));
   
-  gavl_dictionary_set_string(&conn->res, "Server", bg_upnp_get_server_string());
+  gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
   bg_http_header_set_date(&conn->res, "Date");
   gavl_dictionary_set_string(&conn->res, "Accept-Ranges", "bytes");
   gavl_dictionary_set_string(&conn->res, "Content-Type", mimetype);

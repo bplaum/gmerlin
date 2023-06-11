@@ -948,11 +948,14 @@ static int create_player_mpris2(bg_frontend_t * fe,
                                 const char * desktop_file)
   {
   gavl_array_t * arr;
-  
   mpris2_t * priv;
+  char id[BG_BACKEND_ID_LEN+1];
+
   priv = calloc(1, sizeof(*priv));
 
-  priv->bus_name = gavl_strdup(bus_name);
+  bg_make_backend_id(BG_BACKEND_RENDERER, id);
+  
+  priv->bus_name = gavl_sprintf("%s-%s", bus_name, id);
   
   priv->conn = bg_dbus_connection_get(DBUS_BUS_SESSION);
   

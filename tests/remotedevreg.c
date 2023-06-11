@@ -32,14 +32,14 @@
 
 static int handle_msg(void * data, gavl_msg_t * msg)
   {
-  //  fprintf(stderr, "Handle backend message\n");
-  //  gavl_msg_dump(msg, 2);
+  fprintf(stderr, "Handle backend message\n");
+  gavl_msg_dump(msg, 2);
   return 1;
   }
 
 int main(int argc, char ** argv)
   {
-  //  gavl_array_t * info;
+  gavl_array_t * info;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50;
   int i;
 
@@ -60,9 +60,9 @@ int main(int argc, char ** argv)
 
   bg_msg_hub_disconnect_sink(bg_backend_registry_get_evt_hub(), sink);
     
-  //  info = bg_backend_registry_get();
-  //  gavl_array_dump(info, 0);
-  //  gavl_array_destroy(info);
+  info = bg_backend_registry_get();
+  gavl_array_dump(info, 0);
+  gavl_array_destroy(info);
 
   bg_msg_sink_destroy(sink);
   

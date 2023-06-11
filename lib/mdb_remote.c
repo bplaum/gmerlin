@@ -662,6 +662,9 @@ static void remove_server(bg_mdb_backend_t * be, const char * url)
   const char * var;
   remote_priv_t * p = be->priv;
   
+  if(!url)
+    return;
+  
   for(i = 0; i < p->num_servers; i++)
     {
     if(!(var = gavl_dictionary_get_string(&p->servers[i].dev, GAVL_META_URI)) ||

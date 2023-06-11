@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
@@ -31,9 +32,11 @@
 
 #include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/upnp/upnputils.h>
+#include <gmerlin/upnp/devicedesc.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/http.h>
+#include <backend_priv.h>
 
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "ssdp"
@@ -42,1020 +45,463 @@
 
 #include <unistd.h>
 
-// #define DUMP_UDP
-// #define DUMP_DEVS
-// #define DUMP_HEADERS
+
+/*
+ *    Multicast:
+ *    NOTIFY * HTTP/
+ *    HOST: 239.255.255.250:1900
+ *    CACHE-CONTROL: max-age=1800
+ *    LOCATION: URL for UPnP description for root device
+ *    **
+ *    NT: upnp:rootdevice
+ *    **
+ *    NT: uuid:4061d726-017e-11ee-8d72-473073271d81
+ 
+ *    **
+ *  
+ *    Multicast:
+ *    M-SEARCH * HTTP/1.1
+ *
+ *    HTTP/1.1 200 OK
+ */
 
 #define UDP_BUFFER_SIZE 2048
 
-#define QUEUE_SIZE 128
+#define META_ID "GMERLIN-ID"
 
-#define NOTIFY_INTERVAL_LONG  (900*GAVL_TIME_SCALE) // max-age / 2
-#define NOTIFY_INTERVAL_SHORT (GAVL_TIME_SCALE/2)
-#define NOTIFY_NUM 5 // Number of notify messages sent in shorter intervals
+#define QUEUE_TIME "t" // Time when this should be sent
+#define QUEUE_ADDR "a" // Socket address (as string)
+#define QUEUE_MSG  "m" // Message (as string)
 
-#define SEARCH_INTERVAL (GAVL_TIME_SCALE/2)
-#define SEARCH_NUM      5
+/* Added to the device description */
 
-// #define DUMP_RECEIVED_SEARCH_REQUESTS
-// #define DUMP_SENT_SEARCH_RESPONSES
+#define NEXT_NOTIFY_TIME "NNT"
+#define EXPIRE_TIME      "ET"
+#define MAX_AGE          1800
 
-typedef struct
-  {
-  char * st;
-  gavl_socket_address_t * addr;
-  gavl_time_t time; // GAVL_TIME_UNDEFINED means empty
-  } queue_element_t;
+#define UPNP_SERVER_NT_PREFIX      "urn:schemas-upnp-org:device:MediaServer:"
+#define UPNP_RENDERER_NT_PREFIX    "urn:schemas-upnp-org:device:MediaRenderer:"
 
-struct bg_ssdp_s
+#define UPNP_SERVER_NT      UPNP_SERVER_NT_PREFIX"1"
+#define UPNP_RENDERER_NT    UPNP_RENDERER_NT_PREFIX"1"
+
+#define GMERLIN_SERVER_NT   "urn:gmerlin-sourceforge-net:device:MediaServer:"
+#define GMERLIN_RENDERER_NT "urn:gmerlin-sourceforge-net:device:MediaRenderer:"
+
+
+struct  bg_ssdp_s
   {
   int mcast_fd;
   int ucast_fd;
   gavl_timer_t * timer;
-  gavl_socket_address_t * sender_addr;
-  gavl_socket_address_t * local_addr;
+  gavl_socket_address_t * addr;
   gavl_socket_address_t * mcast_addr;
+  
   uint8_t buf[UDP_BUFFER_SIZE];
 
-  const bg_ssdp_root_device_t * local_dev;
+  gavl_array_t unicast_queue;
+  gavl_array_t multicast_queue;
 
-  gavl_array_t remote_devs;
-  
-  
-  queue_element_t queue[QUEUE_SIZE];
+  /* Updated once each call to bg_ssdp_update() */
+  gavl_time_t cur_time;
+  gavl_time_t next_search_time;
 
-#ifdef DUMP_DEVS
-  gavl_time_t last_dump_time;
-#endif
+  /* Reduce the frequency of multicast packets */
+  gavl_time_t next_mcast_time;
 
-  gavl_time_t last_notify_time;
   int notify_count;
-
-  gavl_time_t last_search_time;
-  int search_count;
   
-  bg_msg_hub_t * event_hub;
   };
 
-bg_msg_hub_t * bg_ssdp_get_event_hub(bg_ssdp_t * s)
+static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive);
+
+
+static int get_max_age(const gavl_dictionary_t * m)
   {
-  if(!s->event_hub)
-    s->event_hub = bg_msg_hub_create(1);
-  return s->event_hub;
-  }
-
-void bg_ssdp_msg_set_add(gavl_msg_t * msg,
-                         const char * protocol,
-                         const char * type,
-                         int version,
-                         const char * desc_url)
-  {
-  const char * pos;
-  char * real_url = NULL;
-
-  //  fprintf(stderr, "bg_ssdp_msg_set_add: %s %s %d %s\n", protocol, type, version, desc_url);
-  
-  gavl_msg_set_id_ns(msg, BG_SSDP_MSG_ADD_DEVICE, BG_MSG_NS_SSDP);
-
-  if(!strcmp(protocol, "upnp") && (pos = strstr(desc_url, "://")))
-    {
-    if(!strcmp(type, "MediaServer"))
-      {
-      real_url = bg_sprintf(BG_BACKEND_URI_SCHEME_UPNP_SERVER"%s", pos);
-      }
-    else if(!strcmp(type, "MediaRenderer"))
-      {
-      real_url = bg_sprintf(BG_BACKEND_URI_SCHEME_UPNP_RENDERER"%s", pos);
-      }
-    }
-
-  if(real_url)
-    desc_url = real_url;
-
-  //  fprintf(stderr, "URL %s\n", desc_url);
-  
-  gavl_msg_set_arg_string(msg, 0, protocol);
-  gavl_msg_set_arg_string(msg, 1, type);
-  gavl_msg_set_arg_int(msg, 2, version);
-  gavl_msg_set_arg_string(msg, 3, desc_url);
-
-  if(real_url)
-    free(real_url);
-  
-  }
-
-void bg_ssdp_msg_get_add(const gavl_msg_t * msg,
-                         const char ** protocol,
-                         const char ** type,
-                         int * version,
-                         const char ** desc_url)
-  {
-  if(protocol)
-    *protocol = gavl_msg_get_arg_string_c(msg, 0);
-  
-  if(type)
-    *type = gavl_msg_get_arg_string_c(msg, 1);
-  if(version)
-    *version = gavl_msg_get_arg_int(msg, 2);
-  if(desc_url)
-    *desc_url = gavl_msg_get_arg_string_c(msg, 3);
-  }
-
-void bg_ssdp_msg_set_del(gavl_msg_t * msg,
-                         const char * desc_url)
-  {
-  gavl_msg_set_id_ns(msg, BG_SSDP_MSG_DEL_DEVICE, BG_MSG_NS_SSDP);
-  gavl_msg_set_arg_string(msg, 0, desc_url);
-  }
-
-void bg_ssdp_msg_get_del(gavl_msg_t * msg,
-                         const char ** desc_url)
-  {
-  if(desc_url)
-    *desc_url = gavl_msg_get_arg_string_c(msg, 0);
-  }
-  
-
-// TYPE:VERSION
-
-static int extract_type_version(const char * str, gavl_dictionary_t * ret)
-  {
-  const char * pos;
-  
-  pos = strchr(str, ':');
-  if(!pos)
+  const char * str;
+  if(!(str = gavl_dictionary_get_string_i(m, "CACHE-CONTROL")) ||
+     !gavl_string_starts_with(str, "max-age") ||
+     !(str = strchr(str, '=')))
     return 0;
-  
-  gavl_dictionary_set_string_nocopy(ret, BG_SSDP_META_TYPE, gavl_strndup(str, pos));
-  
-  pos++;
-  if(*pos == '\0')
-    return 0;
-  
-  gavl_dictionary_set_int(ret, BG_SSDP_META_VERSION, atoi(pos));
-  return 1;
+  str++;
+  return atoi(str);
   }
 
-static int 
-find_root_dev_by_location(bg_ssdp_t * s, const char * loc)
+static int rand_long(int64_t min, int64_t max)
   {
-  int i;
-  const char * str;
-  const gavl_dictionary_t * dev;
-  
-  for(i = 0; i < s->remote_devs.num_entries; i++)
-    {
-    if((dev = gavl_value_get_dictionary(&s->remote_devs.entries[i])) &&
-       (str = gavl_dictionary_get_string(dev, GAVL_META_URI)) &&
-       !strcmp(str, loc))
-      return i;
-    }
-  return -1;
+  return min + (int64_t)((double)rand() / (double)RAND_MAX * (double)(max-min));
   }
 
-static int 
-find_embedded_dev_by_uuid(const bg_ssdp_root_device_t * dev, const char * uuid)
-  {
-  int i;
-  const char * str;
-  const gavl_dictionary_t * embedded_dev;
-  const gavl_array_t * arr = gavl_dictionary_get_array(dev, BG_SSDP_META_DEVICES);
-
-  if(!arr)
-    return -1;
-  
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if((embedded_dev = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(embedded_dev, BG_SSDP_META_UUID)) &&
-       !strcmp(str, uuid))
-      return i;
-    }
-  return -1;
-  }
-
-static const char * is_device_type(const char * str)
-  {
-  if(gavl_string_starts_with_i(str, "urn:schemas-upnp-org:device:"))
-    return str + 28;
-  return NULL;
-  }
-
-static const char * is_service_type(const char * str)
-  {
-  if(gavl_string_starts_with_i(str, "urn:schemas-upnp-org:service:"))
-    return str + 29;
-  return NULL;
-  }
-
-static const bg_ssdp_service_t * find_service(const gavl_array_t * arr, const char * type)
-  {
-  int i;
-  int len;
-  const char * pos;
-  const char * str;
-  const gavl_dictionary_t * dict;
-  
-  if((pos = strchr(type, ':')))
-    len = pos - type;
-  else
-    len = strlen(type);
-
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(dict, BG_SSDP_META_TYPE)) &&
-       (strlen(str) == len) &&
-       !strncmp(str, type, len))
-      return dict;
-    }
-  return NULL;
-  }
-
-static const bg_ssdp_service_t * device_find_service(const gavl_dictionary_t * dev, const char * type)
-  {
-  const gavl_array_t * services;
-  
-  if(!(services = gavl_dictionary_get_array(dev, BG_SSDP_META_SERVICES)))
-    return NULL;
-  
-  return find_service(services, type);
-  }
-
-static bg_ssdp_service_t * device_add_service(bg_ssdp_device_t * dev)
-  {
-  gavl_value_t val;
-  gavl_array_t * services;
-  
-  services = gavl_dictionary_get_array_create(dev, BG_SSDP_META_SERVICES);
-  
-  gavl_value_init(&val);
-  gavl_value_set_dictionary(&val);
-  gavl_array_splice_val_nocopy(services, -1, 0, &val);
-  return gavl_value_get_dictionary_nc(&services->entries[services->num_entries-1]);
-  }
-
-
-static bg_ssdp_root_device_t *
-add_root_dev(bg_ssdp_t * s, const char * loc, const char * uuid)
-  {
-  gavl_value_t val;
-  gavl_dictionary_t * dev;
-  
-  //  bg_ssdp_root_device_t * ret;
-
-  gavl_value_init(&val);
-  dev = gavl_value_set_dictionary(&val);
-  gavl_dictionary_set_string(dev, GAVL_META_URI, loc);
-  gavl_dictionary_set_string(dev, GAVL_META_UUID, uuid);
-
-  gavl_array_splice_val_nocopy(&s->remote_devs, -1, 0, &val);
-  return gavl_value_get_dictionary_nc(&s->remote_devs.entries[s->remote_devs.num_entries-1]);
-  }
-
-static void
-del_remote_dev(bg_ssdp_t * s, int idx)
-  {
-  int i;
-  const char * uri;
-  const char * protocol;
-  const char * type;
-  
-  gavl_dictionary_t * dev = gavl_value_get_dictionary_nc(&s->remote_devs.entries[idx]);
-
-  //  fprintf(stderr, "SSDP: Deleting remote device: %d\n", idx);
-    
-  if((uri = gavl_dictionary_get_string(dev, GAVL_META_URI)) &&
-     (protocol = gavl_dictionary_get_string(dev, BG_SSDP_META_PROTOCOL)) &&
-     (type = gavl_dictionary_get_string(dev, BG_SSDP_META_TYPE)))
-    {
-    char * real_url = NULL;
-    char * pos = NULL;
-    const gavl_array_t * embedded_devs;
-    const gavl_dictionary_t * embedded_dev;
-    gavl_msg_t * msg;
-    bg_msg_sink_t * sink = bg_msg_hub_get_sink(s->event_hub);
-
-    //    fprintf(stderr, "SSDP: Deleting remote device: %s\n", uri);
-    //    gavl_dictionary_dump(dev, 2);
-
-    if(!strcmp(protocol, "upnp") && (pos = strstr(uri, "://")))
-      {
-      if(!strcmp(type, "MediaServer"))
-        {
-        real_url = bg_sprintf(BG_BACKEND_URI_SCHEME_UPNP_SERVER"%s", pos);
-        }
-      else if(!strcmp(type, "MediaRenderer"))
-        {
-        real_url = bg_sprintf(BG_BACKEND_URI_SCHEME_UPNP_RENDERER"%s", pos);
-        }
-      }
-
-    if(real_url)
-      uri = real_url;
-    
-    if((embedded_devs = gavl_dictionary_get_array(dev, BG_SSDP_META_DEVICES)))
-      {
-      for(i = 0; i < embedded_devs->num_entries; i++)
-        {
-
-        if(!(embedded_dev = gavl_value_get_dictionary(&embedded_devs->entries[i])))
-          continue;
-
-        //        fprintf(stderr, "Got embedded dev\n");
-        //        gavl_dictionary_dump(embedded_dev, 2);
-        
-        msg = bg_msg_sink_get(sink);
-
-        
-        bg_ssdp_msg_set_del(msg, uri);
-        
-        bg_msg_sink_put(sink, msg);
-        }
-      
-      }
-
-    msg = bg_msg_sink_get(sink);
-
-    
-    
-    bg_ssdp_msg_set_del(msg, uri);
-    
-    bg_msg_sink_put(sink, msg);
-
-    if(real_url)
-      free(real_url);
-      
-    }
-#if 0
-  else
-    {
-    fprintf(stderr, "Couldn't delete device\n");
-    gavl_dictionary_dump(dev, 2);
-    }
-#endif
-  
-  gavl_array_splice_val(&s->remote_devs, idx, 1, NULL);
-  }
-
-static char * search_string =
-"M-SEARCH * HTTP/1.1\r\n"
-"Host:239.255.255.250:1900\r\n"
-"ST: ssdp:all\r\n"
-"Man:\"ssdp:discover\"\r\n"
-"MX:3\r\n\r\n";
-
-bg_ssdp_t * bg_ssdp_create(bg_ssdp_root_device_t * local_dev)
-  {
-  const char * local_uri;
-  char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
-  bg_ssdp_t * ret = calloc(1, sizeof(*ret));
-
-  
-  ret->local_dev = local_dev;
-  
-  ret->last_notify_time = GAVL_TIME_UNDEFINED;
-  ret->last_search_time = GAVL_TIME_UNDEFINED;
-  
-#ifdef DUMP_DEVS
-  if(ret->local_dev)
-    {
-    gavl_dprintf("Local root device:\n");
-    gavl_dictionary_dump(ret->local_dev, 2);
-    }
-#endif
-  
-  ret->sender_addr = gavl_socket_address_create();
-  ret->local_addr  = gavl_socket_address_create();
-  ret->mcast_addr  = gavl_socket_address_create();
-
-  if(ret->local_dev && (local_uri = gavl_dictionary_get_string(ret->local_dev, GAVL_META_URI)))
-    {
-    /* If we advertise a device, we need to bind onto the same interface */
-    char * host = NULL;
-    bg_url_split(local_uri,
-                 NULL,
-                 NULL,
-                 NULL,
-                 &host,
-                 NULL,
-                 NULL);
-    gavl_socket_address_set(ret->local_addr, host, 0, SOCK_DGRAM);
-    free(host);
-    }
-  else if(!gavl_socket_address_set_local(ret->local_addr, 0, NULL))
-    goto fail;
-
-  if(!gavl_socket_address_set(ret->mcast_addr, "239.255.255.250", 1900, SOCK_DGRAM))
-    goto fail;
-
-  ret->mcast_fd = gavl_udp_socket_create_multicast(ret->mcast_addr);
-  ret->ucast_fd = gavl_udp_socket_create(ret->local_addr);
-  
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Unicast socket bound at %s", 
-         gavl_socket_address_to_string(ret->local_addr, addr_str));
-  
-
-  ret->timer = gavl_timer_create(ret->timer);
-  gavl_timer_start(ret->timer);
-
-  /* Create send queue */
-  if(ret->local_dev)
-    {
-    int i;
-    for(i = 0; i < QUEUE_SIZE; i++)
-      {
-      ret->queue[i].addr = gavl_socket_address_create();
-      ret->queue[i].time = GAVL_TIME_UNDEFINED;
-      }
-    }
-  return ret;
-
-  fail:
-  bg_ssdp_destroy(ret);
-  return NULL;
-  }
-
-static char * uuid_from_usn(const char * usn)
-  {
-  const char * pos;
-  if(gavl_string_starts_with(usn, "uuid:"))
-    {
-    pos = strchr(usn+5, ':');
-    if(!pos)
-      pos = usn + 5 + strlen(usn + 5);
-    return gavl_strndup(usn+5, pos);
-    }
-  return NULL;
-  }
-
-static void update_device(bg_ssdp_t * s, const char * type,
-                          gavl_dictionary_t * m)
-  {
-  int idx;
-  int max_age = 0;
-  const char * loc;
-  const char * usn;
-  const char * cc; 
-  const char * pos;
-  char * uuid;
-  const char * type_version;
-  const char * dev_uuid;
-  
-  bg_ssdp_root_device_t * dev;
-  bg_ssdp_device_t * edev;
-
-  bg_backend_type_t bt;
-  
-  //  fprintf(stderr, "Got ssdp packet:\n");
-  //  gavl_dictionary_dump(m, 2);
-  
-  loc = gavl_dictionary_get_string_i(m, "LOCATION");
-  if(!loc)
-    return;
-
-  /* Get max age */
-  cc = gavl_dictionary_get_string_i(m, "CACHE-CONTROL");
-  if(!cc || 
-     !gavl_string_starts_with(cc, "max-age") ||
-     !(pos = strchr(cc, '=')))
-    return;
-  pos++;
-  max_age = atoi(pos);
-
-  /* Get UUID */
-  usn = gavl_dictionary_get_string_i(m, "USN");
-  if(!usn)
-    return;
-
-  if(!(uuid = uuid_from_usn(usn)))
-    return;
-  
-
-  /* For gmerlin it is quite simple */
-
-  if((bt = bg_ssdp_is_gmerlin_nt(type)))
-    {
-    //    fprintf(stderr, "Found gmerlin %s at %s\n", bg_backend_type_to_string(bt),
-    //            loc);
-    
-    idx = find_root_dev_by_location(s, loc);
-    
-    if(idx >= 0) // Update expire time
-      {
-      
-      dev = gavl_value_get_dictionary_nc(&s->remote_devs.entries[idx]);
-      
-      gavl_dictionary_set_long(dev, BG_SSDP_META_EXPIRE_TIME,
-                               gavl_timer_get(s->timer) + GAVL_TIME_SCALE * max_age);
-      }
-    else
-      {
-      gavl_msg_t * msg;
-      bg_msg_sink_t * sink = bg_msg_hub_get_sink(s->event_hub);
-      
-      //      gavl_array_dump(&s->remote_devs, 2);
-
-      type_version = bg_backend_type_to_string(bt);
-      
-      
-      dev = add_root_dev(s, loc, uuid);
-
-      gavl_dictionary_set_string(dev, BG_SSDP_META_PROTOCOL, "gmerlin");
-      gavl_dictionary_set_string(dev, BG_SSDP_META_TYPE,     "type_version");
-      
-      gavl_dictionary_set_long(dev, BG_SSDP_META_EXPIRE_TIME,
-                               gavl_timer_get(s->timer) + GAVL_TIME_SCALE * max_age);
-      
-      msg = bg_msg_sink_get(sink);
-      
-      bg_ssdp_msg_set_add(msg, "gmerlin", type_version, 0, loc);
-      
-      bg_msg_sink_put(sink, msg);
-      
-      //      fprintf(stderr, "New Array\n");
-      //      gavl_array_dump(&s->remote_devs, 2);
-      
-      //      gavl_dictionary_dump(dev, 2);
-      
-      }
-    goto end;
-    }
-
-  idx = find_root_dev_by_location(s, loc);
-  
-  if(idx >= 0)
-    dev = gavl_value_get_dictionary_nc(&s->remote_devs.entries[idx]);
-  else
-    {
-    dev = add_root_dev(s, loc, uuid);
-    gavl_dictionary_set_string(dev, BG_SSDP_META_PROTOCOL, "upnp");
-    }
-  
-  gavl_dictionary_set_long(dev, BG_SSDP_META_EXPIRE_TIME,
-                           gavl_timer_get(s->timer) + GAVL_TIME_SCALE * max_age);
-
-  dev_uuid = gavl_dictionary_get_string(dev, BG_SSDP_META_UUID);
-
-  
-  if(!strcasecmp(type, "upnp:rootdevice"))
-    {
-    /* Set root uuid if not known already */
-    if(!dev_uuid)
-      {
-      gavl_dictionary_set_string(dev, BG_SSDP_META_UUID, uuid);
-      dev_uuid = uuid;
-      }
-    goto end;
-    }
-  
-  /* If we have no uuid of the root device yet, we can't do much more */
-  if(!dev_uuid)
-    goto end;
-
-  if(gavl_string_starts_with_i(type, "uuid:"))
-    {
-    /* Can't do much here */
-    goto end;
-    }
-
-  if(!strcmp(uuid, dev_uuid))
-    {
-    /* Message is for root device */
-    edev = NULL;
-    }
-  else
-    {
-    idx = find_embedded_dev_by_uuid(dev, uuid);
-    if(idx >= 0)
-      {
-      gavl_array_t * arr = gavl_dictionary_get_array_nc(dev, BG_SSDP_META_DEVICES);
-      edev = gavl_value_get_dictionary_nc(&arr->entries[idx]);
-      }
-    else
-      edev = bg_ssdp_device_add_device(dev, uuid);
-    }
-
-  if((type_version = is_device_type(type)))
-    {
-    int version = 0;
-    gavl_msg_t * msg;
-    bg_msg_sink_t * sink = bg_msg_hub_get_sink(s->event_hub);
-    
-    if(edev)
-      {
-      if(!gavl_dictionary_get(edev, BG_SSDP_META_TYPE))
-        {
-        extract_type_version(type_version, edev);
-        gavl_dictionary_set_string(edev, BG_SSDP_META_PROTOCOL, "upnp");
-        
-        msg = bg_msg_sink_get(sink);
-        gavl_dictionary_get_int(edev, BG_SSDP_META_VERSION, &version);
-        
-        bg_ssdp_msg_set_add(msg,
-                            "upnp",
-                            gavl_dictionary_get_string(edev, BG_SSDP_META_TYPE),
-                            version,
-                            loc);
-        
-        bg_msg_sink_put(sink, msg);
-        }
-      }
-    else if(!gavl_dictionary_get(dev, BG_SSDP_META_TYPE))
-      {
-      extract_type_version(type_version, dev);
-      gavl_dictionary_set_string(dev, BG_SSDP_META_PROTOCOL, "upnp");
-      
-      msg = bg_msg_sink_get(sink);
-      gavl_dictionary_get_int(dev, BG_SSDP_META_VERSION, &version);
-      
-      bg_ssdp_msg_set_add(msg, "upnp",
-                          gavl_dictionary_get_string(dev, BG_SSDP_META_TYPE),
-                          version,
-                          loc);
-      
-      bg_msg_sink_put(sink, msg);
-      }
-    }
-  else if((type_version = is_service_type(type)))
-    {
-    bg_ssdp_service_t * s = NULL;
-    
-    if(edev)
-      {
-      if(!device_find_service(edev, type_version))
-        s = device_add_service(edev);
-      }
-    else
-      {
-      if(!device_find_service(dev, type_version))
-        s = device_add_service(dev);
-      }    
-    if(s)
-      extract_type_version(type_version, s);
-    }
-  end:
-  if(uuid)
-    free(uuid);  
-  }
-
-static void schedule_reply(bg_ssdp_t * s, const char * st,
-                           const gavl_socket_address_t * sender,
-                           gavl_time_t current_time, int mx)
-  {
-  int i, idx = -1;
-  for(i = 0; i < QUEUE_SIZE; i++)
-    {
-    if(!s->queue[i].st)
-      {
-      idx = i;
-      break;
-      }
-    }
-  if(idx == -1)
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cannot schedule search reply, queue full");
-    return;
-    }
-  s->queue[idx].st = gavl_strdup(st);
-
-  s->queue[idx].time = current_time;
-  s->queue[idx].time += (int64_t)((double)rand() / (double)RAND_MAX * (double)(mx * GAVL_TIME_SCALE));
-  gavl_socket_address_copy(s->queue[idx].addr, sender);
-  }
-
-// static void setup_header(bg_ssdp_root_device_t * dev, 
-
-static void flush_reply_packet(bg_ssdp_t * s, const gavl_dictionary_t * h,
-                               gavl_socket_address_t * sender)
-  {
-  int len = 0;
-#ifdef DUMP_SENT_SEARCH_RESPONSES
-  char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
-#endif
-  
-  char * str = gavl_http_response_to_string(h, &len);
-
-  gavl_udp_socket_send(s->ucast_fd, (uint8_t*)str, len, sender);
-
-#ifdef DUMP_SENT_SEARCH_RESPONSES
-  fprintf(stderr, "Sending search reply to %s:\n%s\n",
-          gavl_socket_address_to_string(sender, addr_string), str);
-#endif
-  free(str);
-  }
-                               
-static void flush_reply(bg_ssdp_t * s, queue_element_t * q)
-  {
-  const char * type_version;
-  gavl_dictionary_t h;
-  int i;
-  gavl_dictionary_init(&h);
-  gavl_http_response_init(&h, "HTTP/1.1", 200, "OK");
-  gavl_dictionary_set_string(&h, "CACHE-CONTROL", "max-age=1800");
-  bg_http_header_set_empty_var(&h, "EXT");
-  gavl_dictionary_set_string(&h, "LOCATION", gavl_dictionary_get_string(s->local_dev, GAVL_META_URI));
-  gavl_dictionary_set_string(&h, "SERVER", bg_upnp_get_server_string());
-  
-  if(!strcasecmp(q->st, "ssdp:all"))
-    {
-    const char * protocol;
-    const gavl_array_t * arr;
-    
-    /*
-     *  uuid:device-UUID::upnp:rootdevice
-     *  uuid:device-UUID (for each root- and embedded dev)
-     *  uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:v (for each root- and embedded dev)
-     *  uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:v  (for each service)
-     */
-
-    protocol = gavl_dictionary_get_string(s->local_dev, BG_SSDP_META_PROTOCOL);
-    
-    /* Root device */
-    gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_root_usn(s->local_dev));
-    gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_root_nt(s->local_dev));
-    flush_reply_packet(s, &h, q->addr);
-
-    if(!strcmp(protocol, "upnp"))
-      {
-      /* Device UUID */
-      gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_device_uuid_usn(s->local_dev, -1));
-      gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_device_uuid_nt(s->local_dev, -1));
-      flush_reply_packet(s, &h, q->addr);
-  
-      /* TODO: Embedded devices would come here */
-
-      /* Device Type */
-      gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_device_type_usn(s->local_dev, -1));
-      gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_device_type_nt(s->local_dev, -1));
-      flush_reply_packet(s, &h, q->addr);
-      /* TODO: Embedded devices would come here */
-
-      if((arr = gavl_dictionary_get_array(s->local_dev, BG_SSDP_META_SERVICES)))
-        {
-        for(i = 0; i < arr->num_entries; i++)
-          {
-          gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_service_type_usn(s->local_dev, -1, i));
-          gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_service_type_nt(s->local_dev, -1, i));
-          flush_reply_packet(s, &h, q->addr);
-          }
-        }
-      }
-    
-    gavl_dictionary_free(&h);
-    gavl_dictionary_init(&h);
-    }
-  else if(!strcasecmp(q->st, "upnp:rootdevice"))
-    {
-    /* Root device */
-    gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_root_usn(s->local_dev));
-    gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_root_nt(s->local_dev));
-    flush_reply_packet(s, &h, q->addr);
-    }
-  else if(gavl_string_starts_with_i(q->st, "uuid:"))
-    {
-    int dev = find_embedded_dev_by_uuid(s->local_dev, q->st+5);
-    gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_device_uuid_usn(s->local_dev, dev));
-    gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_device_uuid_nt(s->local_dev, dev));
-    flush_reply_packet(s, &h, q->addr);
-    }
-  else if((type_version = is_device_type(q->st)))
-    {
-    int dev;
-    bg_ssdp_has_device_str(s->local_dev, type_version, &dev);
-    gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_device_type_usn(s->local_dev, dev));
-    gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_device_type_nt(s->local_dev, dev));
-    flush_reply_packet(s, &h, q->addr);
-    }
-  else if((type_version = is_service_type(q->st)))
-    {
-    int dev, srv;
-    bg_ssdp_has_service_str(s->local_dev, type_version, &dev, &srv);
-    gavl_dictionary_set_string_nocopy(&h, "USN", bg_ssdp_get_service_type_usn(s->local_dev, dev, srv));
-    gavl_dictionary_set_string_nocopy(&h, "ST",  bg_ssdp_get_service_type_nt(s->local_dev, dev, srv));
-    flush_reply_packet(s, &h, q->addr);
-    }
-  free(q->st);
-  q->st = NULL;
-  gavl_dictionary_free(&h);
-  }
-
-static int flush_queue(bg_ssdp_t * s, gavl_time_t current_time)
+static int flush_multicast(bg_ssdp_t * ssdp, int force)
   {
   int ret = 0;
-  int i;
-  for(i = 0; i < QUEUE_SIZE; i++)
-    {
-    if(!s->queue[i].st || (s->queue[i].time > current_time))
-      continue;
+  const gavl_dictionary_t * msg;
+  char * msg_str = NULL;
+  int msg_len = 0;
+  
+  const gavl_dictionary_t * dict;
 
-    flush_reply(s, &s->queue[i]);
-    ret++;
+  //  fprintf(stderr, "Flush multicast 1 %d %"PRId64" %"PRId64"\n", ssdp->multicast_queue.num_entries,
+  //          gavl_timer_get(ssdp->timer), ssdp->next_mcast_time);
+  
+  if(!ssdp->multicast_queue.num_entries  ||
+     (!force && (gavl_timer_get(ssdp->timer) < ssdp->next_mcast_time)))
+    return 0;
+
+  //  fprintf(stderr, "Flush multicast 2\n");
+  
+  
+  if(!(dict = gavl_value_get_dictionary(&ssdp->multicast_queue.entries[0])))
+    {
+    gavl_array_splice_val(&ssdp->multicast_queue, 0, 1, NULL);
+    return 1;
+    }
+
+  // fprintf(stderr, "Flush multicast 3\n");
+  
+  msg = gavl_dictionary_get_dictionary(dict, QUEUE_MSG);
+  msg_str = gavl_http_request_to_string(msg, &msg_len);
+                              
+  gavl_udp_socket_send(ssdp->ucast_fd, (uint8_t*)msg_str, msg_len, ssdp->mcast_addr);
+
+  //  fprintf(stderr, "Flush multicast:\n%s\n", msg_str);
+  //  gavl_hexdump((uint8_t*)msg_str, msg_len, 16);
+  
+  free(msg_str);
+  
+  
+  gavl_array_splice_val(&ssdp->multicast_queue, 0, 1, NULL);
+  ret = 1;
+
+  if(!force)
+    ssdp->next_mcast_time = gavl_timer_get(ssdp->timer) + rand_long(GAVL_TIME_SCALE / 100, GAVL_TIME_SCALE / 10);
+  return ret;
+  }
+
+static void flush_multicast_force(bg_ssdp_t * ssdp)
+  {
+  while(ssdp->multicast_queue.num_entries)
+    flush_multicast(ssdp, 1);
+  
+  }
+
+static int flush_unicast(bg_ssdp_t * ssdp)
+  {
+  int ret = 0;
+  int i = 0;
+  gavl_time_t t = 0;
+  const gavl_dictionary_t * dict;
+
+  while(i < ssdp->unicast_queue.num_entries)
+    {
+    const char * addr;
+    const gavl_dictionary_t * msg;
+    
+    if(!(dict = gavl_value_get_dictionary(&ssdp->unicast_queue.entries[i])))
+      {
+      gavl_array_splice_val(&ssdp->unicast_queue, i, 1, NULL);
+      continue;
+      }
+    
+    if((!gavl_dictionary_get_long(dict, QUEUE_TIME, &t) ||
+        (ssdp->cur_time >= t)) &&
+        (msg = gavl_dictionary_get_dictionary(dict, QUEUE_MSG)) &&
+       (addr = gavl_dictionary_get_string(dict, QUEUE_ADDR)) &&
+       gavl_socket_address_from_string(ssdp->addr, addr))
+      {
+      char * msg_str;
+      int msg_len;
+      msg_str = gavl_http_response_to_string(msg, &msg_len);
+
+      //      fprintf(stderr, "Flush unicast %s\n%s", addr, msg_str);
+      
+      if(gavl_udp_socket_send(ssdp->mcast_fd, (uint8_t*)msg_str, msg_len, ssdp->addr) < 0)
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Flush unicast failed: %s", strerror(errno));
+      
+      gavl_array_splice_val(&ssdp->unicast_queue, i, 1, NULL);
+      ret++;
+      free(msg_str);
+      }
+    else
+      i++;
+    
     }
   return ret;
   }
 
-
-static void handle_multicast(bg_ssdp_t * s, const char * buffer,
-                             gavl_socket_address_t * sender, gavl_time_t current_time)
+static void queue_unicast(bg_ssdp_t * ssdp,
+                          const gavl_dictionary_t * msg,
+                          const gavl_socket_address_t * addr,
+                          gavl_time_t delay)
   {
-  const char * var;
-  gavl_dictionary_t m;
-  gavl_dictionary_init(&m);
-   
-  if(!gavl_http_request_from_string(&m, buffer))
-    goto fail;
-#ifdef DUMP_HEADERS
-  gavl_dprintf("handle_multicast\n"); 
-  gavl_dictionary_dump(&m, 2);
-#endif
+  char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
+
+  gavl_dictionary_t * dict;
+  gavl_value_t val;
+  gavl_value_init(&val);
+  dict = gavl_value_set_dictionary(&val);
+
+  gavl_dictionary_set_dictionary(dict, QUEUE_MSG, msg);
   
-  var = gavl_http_request_get_method(&m);
+  gavl_socket_address_to_string(addr, addr_str);
+  gavl_dictionary_set_string(dict, QUEUE_ADDR, addr_str);
   
-  if(!var)
-    goto fail;
+  if(delay != GAVL_TIME_UNDEFINED)
+    gavl_dictionary_set_long(dict, QUEUE_TIME, ssdp->cur_time + delay);
 
-  if(!strcasecmp(var, "M-SEARCH"))
-    {
-    int mx;
-    const char * type_version;
-#ifdef DUMP_RECEIVED_SEARCH_REQUESTS
-    char addr_string[GAVL_SOCKET_ADDR_STR_LEN];
-#endif
+  gavl_array_splice_val_nocopy(&ssdp->unicast_queue, -1, 0, &val);
   
-    /* Got search request */
-    if(!s->local_dev)
-      goto fail;
+  } 
 
-#ifdef DUMP_RECEIVED_SEARCH_REQUESTS
-    fprintf(stderr, "Got search request from %s\n", gavl_socket_address_to_string(sender, addr_string));
-    gavl_dictionary_dump(&m, 0);
-#endif
-    
-    if(!gavl_dictionary_get_int_i(&m, "MX", &mx))
-      goto fail;
-    
-    var = gavl_dictionary_get_string_i(&m, "ST");
-    
-    if(!strcasecmp(var, "ssdp:all"))
-      {
-      schedule_reply(s, var, sender,
-                     current_time, mx);
-      }
-    else if(!strcasecmp(var, "upnp:rootdevice"))
-      {
-      schedule_reply(s, var, sender,
-                     current_time, mx);
-      }
-    else if(gavl_string_starts_with_i(var, "uuid:"))
-      {
-      if(!strcmp(var + 5, gavl_dictionary_get_string(s->local_dev, BG_SSDP_META_UUID)) ||
-         find_embedded_dev_by_uuid(s->local_dev, var + 5))
-        schedule_reply(s, var, sender,
-                       current_time, mx);
-      }
-    else if((type_version = is_device_type(var)))
-      {
-      if(bg_ssdp_has_device_str(s->local_dev, type_version, NULL))
-        schedule_reply(s, var, sender,
-                       current_time, mx);
-      }
-    else if((type_version = is_service_type(var)))
-      {
-      //      fprintf(stderr, "Got service search\n");
-      if(bg_ssdp_has_service_str(s->local_dev, type_version, NULL, NULL))
-        schedule_reply(s, var, sender,
-                       current_time, mx);
-      }
-    
-    /*
-     *  Ignoring
-     *  urn:domain-name:device:deviceType:v 
-     *  and
-     *  urn:domain-name:service:serviceType:v
-     */
-    
-    }
-  else if(!strcasecmp(var, "NOTIFY"))
-    {
-    const char * nt;
-    const char * nts;
-    /* Got notify request */
-
-    if(!s->event_hub)
-      goto fail;
-    
-    nts = gavl_dictionary_get_string_i(&m, "NTS");
-    
-    if(!strcmp(nts, "ssdp:alive"))
-      {
-      if(!(nt = gavl_dictionary_get_string_i(&m, "NT")))
-        goto fail;
-      
-      update_device(s, nt, &m);
-      }
-    else if(!strcmp(nts, "ssdp:byebye"))
-      {
-      /* We delete the entire root device */
-      char * uuid;
-      const char * usn;
-      int i;
-
-      //      fprintf(stderr, "Got byebye message\n");
-      //      gavl_dictionary_dump(&m, 2);
-      
-      if(!(usn = gavl_dictionary_get_string(&m, "USN")) ||
-         !(uuid = uuid_from_usn(usn)))
-        {
-        //        fprintf(stderr, "Got no uuid from usn %s\n", usn);
-        goto fail;
-        }
-
-      //  fprintf(stderr, "Deleting uuid %s\n", uuid);
-      
-      i = 0; 
-      
-      while(i < s->remote_devs.num_entries)
-        {
-        const char * dev_uuid;
-        const gavl_dictionary_t * remote_dev;
-
-        //        fprintf(stderr, "Device: %s\n", gavl_dictionary_get_string(gavl_value_get_dictionary(&s->remote_devs.entries[i]), BG_SSDP_META_UUID));
-        
-        //        gavl_dictionary_dump(gavl_value_get_dictionary(&s->remote_devs.entries[i]), 2);
-        
-        if((remote_dev = gavl_value_get_dictionary(&s->remote_devs.entries[i])) &&
-           (((dev_uuid = gavl_dictionary_get_string(remote_dev, BG_SSDP_META_UUID)) &&
-             !strcmp(dev_uuid, uuid)) ||
-            (find_embedded_dev_by_uuid(remote_dev, uuid) >= 0)))
-          {
-          del_remote_dev(s, i);
-          break;
-          }
-        else
-          i++;
-        }
-      
-      free(uuid);
-      }
-    }
-  
-  fail:
-  gavl_dictionary_free(&m);
+static void queue_multicast(bg_ssdp_t * ssdp, const gavl_dictionary_t * msg)
+  {
+  gavl_dictionary_t * dict;
+  gavl_value_t val;
+  gavl_value_init(&val);
+  dict = gavl_value_set_dictionary(&val);
+  gavl_dictionary_set_dictionary(dict, QUEUE_MSG, msg);
+  gavl_array_splice_val_nocopy(&ssdp->multicast_queue, -1, 0, &val);
   }
 
-static void handle_unicast(bg_ssdp_t * s, const char * buffer,
-                           gavl_socket_address_t * sender)
+
+bg_ssdp_t * bg_ssdp_create(void)
   {
-  const char * st;
-  gavl_dictionary_t m;
-  gavl_dictionary_init(&m);
-
-  if(!gavl_http_response_from_string(&m, buffer))
-    goto fail;
-
-#ifdef DUMP_HEADERS
-  gavl_dprintf("handle_unicast\n");
-  gavl_dictionary_dump(&m, 2);
-#endif
+  char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
   
-  if(!(st = gavl_dictionary_get_string_i(&m, "ST")))
-    goto fail;
+  bg_ssdp_t * ret = calloc(1, sizeof(*ret));
 
-  if(s->event_hub)
-    update_device(s, st, &m);
+  ret->timer = gavl_timer_create();
+  gavl_timer_start(ret->timer);
+  ret->addr = gavl_socket_address_create();
+  ret->mcast_addr = gavl_socket_address_create();
   
-  fail:
-  gavl_dictionary_free(&m);
+  /* Create multicast socket */
+  gavl_socket_address_set(ret->mcast_addr, "239.255.255.250", 1900, SOCK_DGRAM);
+  ret->mcast_fd = gavl_udp_socket_create_multicast(ret->mcast_addr);
+
+  gavl_socket_address_set(ret->addr, "0.0.0.0", 0, SOCK_DGRAM);
+  
+  ret->ucast_fd = gavl_udp_socket_create(ret->addr);
+  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Unicast socket bound at %s", 
+           gavl_socket_address_to_string(ret->addr, addr_str));
+  
+  ret->next_search_time = gavl_timer_get(ret->timer);
+  
+  ret->next_mcast_time = gavl_timer_get(ret->timer) + rand_long(GAVL_TIME_SCALE / 10, GAVL_TIME_SCALE / 5);
+  
+  return ret;
   }
 
-static void flush_notify(bg_ssdp_t * s, const gavl_dictionary_t * h)
+static gavl_dictionary_t * get_next_dev(int * idx, int local)
   {
-  int len = 0;
-  char * str = gavl_http_request_to_string(h, &len);
-  gavl_udp_socket_send(s->ucast_fd, (uint8_t*)str, len, s->mcast_addr);
-  //  fprintf(stderr, "Notify:\n%s", str);
-  free(str);
-  }
-
-static void notify(bg_ssdp_t * s, int alive)
-  {
-  int i;
-  const gavl_array_t * arr;
-  gavl_dictionary_t m;
   const char * protocol;
+  gavl_dictionary_t * dict;
+  bg_backend_registry_t * reg = bg_get_backend_registry();
+  gavl_array_t * arr = local ? &reg->local_devs : &reg->devs;
+  
+  if(*idx >= arr->num_entries)
+    return NULL;
+
+  while(*idx < arr->num_entries)
+    {
+    if((dict = gavl_value_get_dictionary_nc(&arr->entries[*idx])) &&
+       (protocol = gavl_dictionary_get_string(dict, BG_BACKEND_PROTOCOL)) &&
+       (!strcmp(protocol, "gmerlin") ||
+        !strcmp(protocol, "upnp")))
+      {
+      return dict;
+      }
+    (*idx)++;
+    }
+  
+  return NULL;
+  }
+
+void bg_ssdp_destroy(bg_ssdp_t * s)
+  {
+  /* Send final messages */
+  int i = 0;
+  const gavl_dictionary_t * dev;
+
+  gavl_array_reset(&s->multicast_queue);
+
+  while((dev = get_next_dev(&i, 1)))
+    {
+    notify_dev(s, dev, 0);
+    i++;
+    }
+  flush_multicast_force(s);
+  
+  gavl_array_free(&s->unicast_queue);
+  gavl_array_free(&s->multicast_queue);
+  
+  
+  gavl_timer_destroy(s->timer);
+  gavl_socket_address_destroy(s->addr);
+  gavl_socket_address_destroy(s->mcast_addr);
+
+  if(s->mcast_fd > 0)
+    gavl_socket_close(s->mcast_fd);
+  if(s->ucast_fd > 0)
+    gavl_socket_close(s->ucast_fd);
+
+  
+  
+    
+  
+  free(s);
+  }
+
+
+static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary_t * header)
+  {
+  gavl_dictionary_t * dict;
+  
+  char * real_uri = NULL;
+  int is_upnp = 0;
+  int max_age = 0;
+  const char * nt;
+  const char * uri;
+  gavl_value_t new_val;
+  char ** str = NULL;
+  int idx = 0;
+  int type = BG_BACKEND_NONE;
+  
+  gavl_value_init(&new_val);
+  
+  if(!(nt = gavl_dictionary_get_string_i(header, "NT")) &&
+     !(nt = gavl_dictionary_get_string_i(header, "ST")))
+    return;
+
+  if(!(uri = gavl_dictionary_get_string_i(header, "LOCATION")))
+    return;
+
+  if(alive && ((max_age = get_max_age(header)) <= 0))
+    return;
+  
+  if(gavl_string_starts_with_i(nt, UPNP_SERVER_NT_PREFIX))
+    {
+    is_upnp = 1;
+    real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, strstr(uri, "://"));
+    type = BG_BACKEND_MEDIASERVER;
+    }
+  else if(gavl_string_starts_with_i(nt, UPNP_RENDERER_NT_PREFIX))
+    {
+    real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, strstr(uri, "://"));
+    type = BG_BACKEND_RENDERER;
+
+    is_upnp = 1;
+    }
+  else if(!strcasecmp(nt, GMERLIN_SERVER_NT))
+    {
+    real_uri = gavl_strdup(uri);
+    type = BG_BACKEND_MEDIASERVER;
+    }
+  else if(!strcasecmp(nt, GMERLIN_RENDERER_NT))
+    {
+    real_uri = gavl_strdup(uri);
+    type = BG_BACKEND_RENDERER;
+    }
+  else
+    goto end;
+  
+  /* Ignore local devices */
+  if(bg_backend_by_str(GAVL_META_URI, real_uri, 1, NULL))
+    goto end;
+
+  dict = bg_backend_by_str(GAVL_META_URI, real_uri, 0, &idx);
+  
+  if(!alive)
+    {
+    if(!dict)
+      goto end;
+      
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s: Got ssdp bye", uri);
+    bg_backend_del_remote(uri);
+    goto end;
+    }
+  
+  if(!dict)
+    {
+    //    fprintf(stderr, "New device:\n");
+    //    gavl_dictionary_dump(header, 2);
+
+    /* Create new */
+    dict = gavl_value_set_dictionary(&new_val);
+    gavl_dictionary_set_string(dict, GAVL_META_URI, real_uri);
+    
+    gavl_dictionary_set_int(dict, BG_BACKEND_TYPE, type);
+    gavl_dictionary_set_string(dict, GAVL_META_ID, gavl_dictionary_get_string(header, META_ID));
+    
+    if(is_upnp)
+      gavl_dictionary_set_string(dict, BG_BACKEND_PROTOCOL, "upnp");
+    else
+      gavl_dictionary_set_string(dict, BG_BACKEND_PROTOCOL, "gmerlin");
+    
+    if(is_upnp)
+      {
+      // "urn:schemas-upnp-org:device:MediaServer:1" 
+      
+      str = gavl_strbreak(nt, ':');
+
+      if(str[4] && !bg_upnp_device_get_node_info(dict, str[3], atoi(str[4])))
+        goto end;
+      
+      }
+    else // gmerlin
+      {
+      if(!bg_backend_get_node_info(dict))
+        goto end;
+      
+      }
+
+    gavl_dictionary_set_long(dict, EXPIRE_TIME,
+                             gavl_timer_get(s->timer) + max_age * GAVL_TIME_SCALE);
+    
+    /* Got new Device */
+    bg_backend_add_remote(dict);
+    }
+  else
+    {
+    gavl_dictionary_set_long(dict, EXPIRE_TIME,
+                             gavl_timer_get(s->timer) + max_age * GAVL_TIME_SCALE);
+    }
+  end:
+
+  if(real_uri)
+    free(real_uri);
+  
+  if(str)
+    gavl_strbreak_free(str);
+
+  gavl_value_free(&new_val);
+  }
+
+
+
+/* Notify */
+
+
+static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive)
+  {
+  int type = 0;
+  
+  gavl_dictionary_t m;
+  const char * uri;
+  char uuid[37];
+  const char * id = gavl_dictionary_get_string(dev, GAVL_META_ID);
   
   gavl_dictionary_init(&m);
 
-  protocol = gavl_dictionary_get_string(s->local_dev, BG_SSDP_META_PROTOCOL);
   
   /* Common fields */
   gavl_http_request_init(&m, "NOTIFY", "*", "HTTP/1.1");
   gavl_dictionary_set_string(&m, "HOST", "239.255.255.250:1900");
-
+  
   if(alive)
     {
-    gavl_dictionary_set_string(&m, "CACHE-CONTROL", "max-age=1800");
+    gavl_dictionary_set_string_nocopy(&m, "CACHE-CONTROL", gavl_sprintf("max-age=%d", MAX_AGE));
     gavl_dictionary_set_string(&m, "NTS", "ssdp:alive");
     }
   else
@@ -1063,320 +509,507 @@ static void notify(bg_ssdp_t * s, int alive)
     gavl_dictionary_set_string(&m, "NTS", "ssdp:byebye");
     }
   
-  gavl_dictionary_set_string(&m, "SERVER", bg_upnp_get_server_string());
-  gavl_dictionary_set_string(&m, "LOCATION", gavl_dictionary_get_string(s->local_dev, GAVL_META_URI));
-  
-  /* Root device */
-  gavl_dictionary_set_string_nocopy(&m, "USN", bg_ssdp_get_root_usn(s->local_dev));
-  gavl_dictionary_set_string_nocopy(&m, "NT",  bg_ssdp_get_root_nt(s->local_dev));
-  flush_notify(s, &m);
-  
-  if(!strcmp(protocol, "upnp"))
-    {
-    
-    /* Device UUID */
-    gavl_dictionary_set_string_nocopy(&m, "USN", bg_ssdp_get_device_uuid_usn(s->local_dev, -1));
-    gavl_dictionary_set_string_nocopy(&m, "NT",  bg_ssdp_get_device_uuid_nt(s->local_dev, -1));
-    flush_notify(s, &m);
-  
-    /* TODO: Embedded devices would come here */
+  gavl_dictionary_set_string_nocopy(&m, "SERVER", bg_upnp_make_server_string());
 
-    /* Device Type */
-    gavl_dictionary_set_string_nocopy(&m, "USN", bg_ssdp_get_device_type_usn(s->local_dev, -1));
-    gavl_dictionary_set_string_nocopy(&m, "NT",  bg_ssdp_get_device_type_nt(s->local_dev, -1));
-    flush_notify(s, &m);
-    /* TODO: Embedded devices would come here */
+  uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
+  bg_uri_to_uuid(uri, uuid);
   
-    if((arr = gavl_dictionary_get_array(s->local_dev, BG_SSDP_META_SERVICES)))
+  gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type);
+  
+  if(gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_RENDERER) ||
+     gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_SERVER))
+    {
+    gavl_dictionary_set_string_nocopy(&m, "LOCATION", gavl_sprintf("http%s", strstr(uri, "://")));
+
+    gavl_dictionary_set_string(&m, "NT", "upnp:rootdevice");
+    gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::upnp:rootdevice", uuid));
+    queue_multicast(ssdp, &m);
+
+    gavl_dictionary_set_string_nocopy(&m, "NT", gavl_sprintf("uuid:%s", uuid));
+    gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s", uuid));
+    queue_multicast(ssdp, &m);
+    
+    switch(type)
       {
-      for(i = 0; i < arr->num_entries; i++)
-        {
-        gavl_dictionary_set_string_nocopy(&m, "USN", bg_ssdp_get_service_type_usn(s->local_dev, -1, i));
-        gavl_dictionary_set_string_nocopy(&m, "NT",  bg_ssdp_get_service_type_nt(s->local_dev, -1, i));
-        flush_notify(s, &m);
-        }
+      case BG_BACKEND_MEDIASERVER:
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaServer:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
+        gavl_dictionary_set_string(&m, META_ID, id);
+        queue_multicast(ssdp, &m);
+        gavl_dictionary_set_string(&m, META_ID, NULL);
+        
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ContentDirectory:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
+        queue_multicast(ssdp, &m);
+        
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+        queue_multicast(ssdp, &m);
+        
+        break;
+      case BG_BACKEND_RENDERER:
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaRenderer:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
+        gavl_dictionary_set_string(&m, META_ID, id);
+        queue_multicast(ssdp, &m);
+        gavl_dictionary_set_string(&m, META_ID, NULL);
+        
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+        queue_multicast(ssdp, &m);
+
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:RenderingControl:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
+        queue_multicast(ssdp, &m);
+
+        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:AVTransport:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
+        queue_multicast(ssdp, &m);
+        
+        break;
       }
 
-    
     }
-  
+  else
+    {
+    gavl_dictionary_set_string(&m, "LOCATION", uri);
+    
+    switch(type)
+      {
+      case BG_BACKEND_MEDIASERVER:
+        gavl_dictionary_set_string(&m, "NT", GMERLIN_SERVER_NT);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
+        gavl_dictionary_set_string(&m, META_ID, id);
+        queue_multicast(ssdp, &m);
+        break;
+      case BG_BACKEND_RENDERER:
+        gavl_dictionary_set_string(&m, "NT", GMERLIN_RENDERER_NT);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
+        gavl_dictionary_set_string(&m, META_ID, id);
+        queue_multicast(ssdp, &m);
+        break;
+      }
+
+    }
   gavl_dictionary_free(&m);
   }
 
-int bg_ssdp_update(bg_ssdp_t * s)
+static int notify(bg_ssdp_t * ssdp)
   {
-  int len;
   int i;
-  gavl_time_t current_time;
-#ifdef DUMP_UDP
-  char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
-#endif
   int ret = 0;
-  
-  /* Delete expired devices */
-  current_time = gavl_timer_get(s->timer);
-  i = 0;  
-  while(i < s->remote_devs.num_entries)
-    {
-    gavl_time_t expire_time;
-    const gavl_dictionary_t * dev;
+  gavl_dictionary_t * dev;
+  int64_t t = 0;
 
-    if(!(dev = gavl_value_get_dictionary(&s->remote_devs.entries[i])) ||
-       !gavl_dictionary_get_long(dev, BG_SSDP_META_EXPIRE_TIME, &expire_time) ||  
-       (expire_time < current_time))
+  i = 0;
+
+  while((dev = get_next_dev(&i, 1)))
+    {
+    if(!gavl_dictionary_get_long(dev, NEXT_NOTIFY_TIME, &t))
       {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s (expired)", 
-               gavl_dictionary_get_string(dev, GAVL_META_URI));
+      gavl_dictionary_set_long(dev, NEXT_NOTIFY_TIME, gavl_timer_get(ssdp->timer) +
+                               rand_long(GAVL_TIME_SCALE / 100, GAVL_TIME_SCALE / 10));
+      i++;
+      continue;
+      }
+    else if(t < ssdp->cur_time)
+      {
+      for(i = 0; i < 5; i++)
+        notify_dev(ssdp, dev, 1);
       
-      del_remote_dev(s, i);
-      //      fprintf(stderr, "Expired\n");
+      gavl_dictionary_set_long(dev, NEXT_NOTIFY_TIME, gavl_timer_get(ssdp->timer) +
+                               rand_long(GAVL_TIME_SCALE * 100, GAVL_TIME_SCALE * 900));
+      ret++;
+      }
+    i++;
+    }
+  return ret;
+  }
+
+static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const gavl_dictionary_t * dev,
+                              gavl_socket_address_t * sender)
+  {
+  gavl_dictionary_t m;
+  const char * uri;
+  char uuid[37];
+  int type = 0;
+  int is_upnp = 0;
+  
+  gavl_dictionary_init(&m);
+
+  gavl_http_response_init(&m, "HTTP/1.1", 200, "OK");
+  gavl_dictionary_set_string(&m, "CACHE-CONTROL", gavl_sprintf("max-age=%d", MAX_AGE));
+  //  gavl_http_header_set_date(&m, "DATE");
+
+  
+  if(!(uri = gavl_dictionary_get_string(dev, GAVL_META_URI)))
+    return;
+
+  bg_uri_to_uuid(uri, uuid);
+
+  gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type);
+
+  /* Upnp */
+  if(gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_RENDERER) ||
+     gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_SERVER))
+    is_upnp = 1;
+
+  bg_http_header_set_empty_var(&m, "EXT");
+  
+  if(is_upnp)
+    gavl_dictionary_set_string_nocopy(&m, "LOCATION", gavl_sprintf("http%s", strstr(uri, "://")));
+  else
+    gavl_dictionary_set_string(&m, "LOCATION", uri);
+  
+  gavl_dictionary_set_string_nocopy(&m, "SERVER", bg_upnp_make_server_string());
+  
+  if(!strcasecmp(st, "ssdp:all"))
+    {
+    if(is_upnp)
+      {
+      gavl_dictionary_set_string(&m, "ST", "upnp:rootdevice");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::upnp:rootdevice", uuid));
+      queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+
+      gavl_dictionary_set_string_nocopy(&m, "ST", gavl_sprintf("uuid:%s", uuid));
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s", uuid));
+      queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+      
+      switch(type)
+        {
+        case BG_BACKEND_MEDIASERVER:
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaServer:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
+          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+          gavl_dictionary_set_string(&m, META_ID, NULL);
+          
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ContentDirectory:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
+          break;
+        case BG_BACKEND_RENDERER:
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaRenderer:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
+          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+          gavl_dictionary_set_string(&m, META_ID, NULL);
+          
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:RenderingControl:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+
+          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:AVTransport:1");
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+          
+          break;
+        }
+      
+      }
+    else
+      {
+      gavl_dictionary_set_string(&m, "LOCATION", uri);
+      switch(type)
+        {
+        case BG_BACKEND_MEDIASERVER:
+          gavl_dictionary_set_string(&m, "ST", GMERLIN_SERVER_NT);
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
+          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+          break;
+        case BG_BACKEND_RENDERER:
+          gavl_dictionary_set_string(&m, "ST", GMERLIN_RENDERER_NT);
+          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
+          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
+          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+          break;
+        }
+      }
+    }
+  else if(!strcasecmp(st, "upnp:rootdevice"))
+    {
+    if(is_upnp)
+      {
+      gavl_dictionary_set_string(&m, "ST", st);
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::upnp:rootdevice", uuid));
+      queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+      //      fprintf(stderr, "handling upnp:rootdevice");
+      //      gavl_dictionary_dump(&m, 2);
+      }
+    }
+  else if(gavl_string_starts_with_i(st, "uuid:"))
+    {
+    if(is_upnp && !strcmp(st + 5, uuid))
+      {
+      gavl_dictionary_set_string(&m, "ST", st);
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s", uuid));
+      queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+      }
+    }
+  else if(gavl_string_starts_with_i(st, "urn:schemas-upnp-org:device:"))
+    {
+    if(is_upnp)
+      {
+      char ** str;
+      str = gavl_strbreak(st, ':');
+
+      switch(type)
+        {
+        case BG_BACKEND_MEDIASERVER:
+          if(str[3] && !strcmp(str[3], "MediaServer"))
+            {
+            gavl_dictionary_set_string(&m, "ST", st);
+            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+            }
+          break;
+        case BG_BACKEND_RENDERER:
+          if(str[3] && !strcmp(str[3], "MediaRenderer"))
+            {
+            gavl_dictionary_set_string(&m, "ST", st);
+            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+            }
+          break;
+        }
+      
+      gavl_strbreak_free(str);
+      }
+    }
+  else if(gavl_string_starts_with_i(st, "urn:schemas-upnp-org:service:"))
+    {
+    if(is_upnp)
+      {
+      char ** str;
+      str = gavl_strbreak(st, ':');
+
+      switch(type)
+        {
+        case BG_BACKEND_MEDIASERVER:
+          if(str[3] && (!strcmp(str[3], "ContentDirectory") || !strcmp(str[3], "ConnectionManager")))
+            {
+            gavl_dictionary_set_string(&m, "ST", st);
+            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+            }
+          break;
+        case BG_BACKEND_RENDERER:
+          if(str[3] && (!strcmp(str[3], "RenderingControl") || !strcmp(str[3], "ConnectionManager") || !strcmp(str[3], "AVTransport")))
+            {
+            gavl_dictionary_set_string(&m, "ST", st);
+            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+            }
+          break;
+        }
+      
+      gavl_strbreak_free(str);
+      }
+    }
+  gavl_dictionary_free(&m);
+  }
+
+static void handle_search(bg_ssdp_t * s, const char * st, int mx, gavl_socket_address_t * sender)
+  {
+  int i = 0;
+  const gavl_dictionary_t * dev;
+  
+  //  fprintf(stderr, "handle_search: %s\n", st);
+  
+  while((dev = get_next_dev(&i, 1)))
+    {
+    handle_search_dev(s, st, mx, dev, sender);
+    i++;
+    }
+  }
+
+static int handle_multicast(bg_ssdp_t * s)
+  {
+  int ret = 0;
+  int len;
+  gavl_dictionary_t h;
+  const char * method;
+  while(gavl_socket_can_read(s->mcast_fd, 0))
+    {
+    len = gavl_udp_socket_receive(s->mcast_fd, s->buf, UDP_BUFFER_SIZE, s->addr);
+    if(len <= 0)
+      continue;
+    s->buf[len] = '\0';
+
+    gavl_dictionary_init(&h);
+    
+    if(!gavl_http_request_from_string(&h, (const char*)s->buf))
+      {
+      gavl_dictionary_free(&h);
+      continue;
+      }
+
+    method = gavl_http_request_get_method(&h);
+  
+    if(!method)
+      {
+      gavl_dictionary_free(&h);
+      continue;
+      }
+    
+    if(!strcasecmp(method, "M-SEARCH"))
+      {
+      const char * st;
+      const char * mx;
+      
+      if(!(st = gavl_dictionary_get_string_i(&h, "ST"))||
+         !(mx = gavl_dictionary_get_string_i(&h, "MX")))
+        {
+        gavl_dictionary_free(&h);
+        continue;
+        }
+
+      handle_search(s, st, atoi(mx), s->addr);
+      ret++;
+      }
+    else if(!strcasecmp(method, "NOTIFY"))
+      {
+      /* We ignore everything except the device type specific ones */
+      const char * nt;
+      const char * uri;
+      const char * nts;
+      int alive = 0;
+      
+      if(!(nt = gavl_dictionary_get_string_i(&h, "NT")) ||
+         !(uri = gavl_dictionary_get_string_i(&h, "LOCATION")) ||
+         !(nts = gavl_dictionary_get_string_i(&h, "NTS")))
+        {
+        gavl_dictionary_free(&h);
+        continue;
+        }
+
+      if(!strcmp(nts, "ssdp:alive"))
+        alive = 1;
+      
+      update_remote_device(s, alive, &h);
+      ret++;
+      }
+    
+    gavl_dictionary_free(&h);
+    }
+  return ret;
+  }
+
+static int handle_unicast(bg_ssdp_t * s)
+  {
+  int ret = 0;
+  int len;
+  gavl_dictionary_t m;
+  const char * uri;
+  const char * st;
+  
+  gavl_dictionary_init(&m);
+  
+  while(gavl_socket_can_read(s->ucast_fd, 0))
+    {
+    len = gavl_udp_socket_receive(s->ucast_fd, s->buf, UDP_BUFFER_SIZE, s->addr);
+    if(len <= 0)
+      continue;
+    s->buf[len] = '\0';
+
+    if(!gavl_http_response_from_string(&m, (char*)s->buf))
+      continue;
+
+    //    gavl_dprintf("handle_unicast\n");
+    //    gavl_dictionary_dump(&m, 2);
+    
+    if((gavl_http_response_get_status_int(&m) != 200) ||
+       !(st = gavl_dictionary_get_string_i(&m, "ST")) ||
+       !(uri = gavl_dictionary_get_string_i(&m, "LOCATION")))
+      {
+      gavl_dictionary_reset(&m);
+      continue;
+      }
+    
+    update_remote_device(s, 1, &m);
+    ret++;
+    gavl_dictionary_reset(&m);
+    }
+  return ret;
+  
+  }
+
+static int check_expired(bg_ssdp_t * s)
+  {
+  int ret = 0;
+  int i = 0;
+  const gavl_dictionary_t * dict;
+  gavl_time_t expire_time;
+  const char * uri;
+
+  while((dict = get_next_dev(&i, 0)))
+    {
+    if(gavl_dictionary_get_long(dict, EXPIRE_TIME, &expire_time) &&
+       (expire_time < s->cur_time))
+      {
+      uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s: Expired", uri);
+      bg_backend_del_remote(uri);
+      ret++;
       }
     else
       i++;
     }
-
-  /* Read multicast messages */
-  while(gavl_socket_can_read(s->mcast_fd, 0))
-    {
-    len = gavl_udp_socket_receive(s->mcast_fd, s->buf, UDP_BUFFER_SIZE, s->sender_addr);
-    if(len <= 0)
-      continue;
-    s->buf[len] = '\0';
-    handle_multicast(s, (const char *)s->buf, s->sender_addr, current_time);
-#ifdef DUMP_UDP
-    fprintf(stderr, "Got SSDP multicast message from %s\n%s",
-            gavl_socket_address_to_string(s->sender_addr, addr_str), (char*)s->buf);
-#endif
-    ret++;
-    }
-
-  /* Read unicast messages */
-  while(gavl_socket_can_read(s->ucast_fd, 0))
-    {
-    len = gavl_udp_socket_receive(s->ucast_fd, s->buf, UDP_BUFFER_SIZE, s->sender_addr);
-    if(len <= 0)
-      continue;
-    s->buf[len] = '\0';
-    handle_unicast(s, (const char *)s->buf, s->sender_addr);
-#ifdef DUMP_UDP
-    fprintf(stderr, "Got SSDP unicast message from %s\n%s",
-            gavl_socket_address_to_string(s->sender_addr, addr_str), (char*)s->buf);
-#endif
-    ret++;
-    }
-
-#ifdef DUMP_DEVS
-  if((current_time - s->last_dump_time > 10 * GAVL_TIME_SCALE) && s->discover_remote)
-    {
-    gavl_dprintf("Root devices: %d\n", s->num_remote_devs);
-    for(i = 0; i < s->num_remote_devs; i++)
-      bg_ssdp_root_device_dump(&s->remote_devs[i]);
-    s->last_dump_time = current_time;
-    }
-#endif
-
-  ret += flush_queue(s, current_time);
-
-  if(s->local_dev)
-    {
-    if((s->last_notify_time == GAVL_TIME_UNDEFINED) ||
-       (!s->notify_count && (current_time - s->last_notify_time > NOTIFY_INTERVAL_LONG)) ||
-       (s->notify_count && (current_time - s->last_notify_time > NOTIFY_INTERVAL_SHORT)))
-      {
-      notify(s, 1);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent notify packet");
-      s->last_notify_time = current_time;
-      
-      s->notify_count++;
-      if(s->notify_count > NOTIFY_NUM)
-        s->notify_count = 0;
-
-      ret++;
-      }
-    }
-
-  if(s->event_hub)
-    {
-    if((s->last_search_time == GAVL_TIME_UNDEFINED) ||
-       ((s->search_count < SEARCH_NUM) && (current_time - s->last_search_time >= SEARCH_INTERVAL)))
-      {
-      /* Send search packet */
-      gavl_udp_socket_send(s->ucast_fd, (uint8_t*)search_string,
-                           strlen(search_string), s->mcast_addr);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent discovery packet");
-      s->search_count++;
-      s->last_search_time = current_time;
-      ret++;
-      }
-
-    }
-  
   
   return ret;
   }
 
-void bg_ssdp_destroy(bg_ssdp_t * s)
+static int do_search(bg_ssdp_t * s)
   {
-  int i;
-  /* If we advertised a local device, unadvertise it */
-  if(s->local_dev)
+  if(s->next_search_time <= s->cur_time)
     {
-    notify(s, 0);
+    /* Send search packet */
+    
+    gavl_dictionary_t h;
+    gavl_dictionary_init(&h);
+    gavl_http_request_init(&h, "M-SEARCH", "*", "HTTP/1.1");
+    gavl_dictionary_set_string(&h, "HOST", "239.255.255.250:1900");
+    gavl_dictionary_set_string(&h, "MAN", "\"ssdp:discover\"");
+    gavl_dictionary_set_string(&h, "MX", "3");
+    gavl_dictionary_set_string(&h, "ST", "ssdp:all");
+    queue_multicast(s, &h);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent search packet");
+    s->next_search_time = gavl_timer_get(s->timer) + rand_long(500 * GAVL_TIME_SCALE, 1000 * GAVL_TIME_SCALE);
+    gavl_dictionary_free(&h);
+    return 1;
     }
-  for(i = 0; i < QUEUE_SIZE; i++)
-    {
-    if(s->queue[i].addr)
-      gavl_socket_address_destroy(s->queue[i].addr);
-    if(s->queue[i].st)
-      free(s->queue[i].st);
-    }
-  
-  gavl_array_free(&s->remote_devs);
-  
-  gavl_socket_close(s->ucast_fd);
-  gavl_socket_close(s->mcast_fd);
-  
-  if(s->local_addr) 
-    gavl_socket_address_destroy(s->local_addr);
-  if(s->mcast_addr) 
-    gavl_socket_address_destroy(s->mcast_addr);
-  if(s->sender_addr) 
-    gavl_socket_address_destroy(s->sender_addr);
-
-  if(s->timer)
-    gavl_timer_destroy(s->timer);
-
-  if(s->event_hub)
-    bg_msg_hub_destroy(s->event_hub);
-  
-  free(s);
+  else
+    return 0;
   }
 
-#if 0
-void bg_ssdp_browse(bg_ssdp_t * s, bg_msg_sink_t * sink)
+int bg_ssdp_update(bg_ssdp_t * s)
   {
-  const char * type;
-  const char * uri;
-  gavl_msg_t * msg;
-  int i, j;
-  const gavl_array_t * arr;
+  int ret = 0;
   
-  for(i = 0; i < s->remote_devs.num_entries; i++)
-    {
-    const gavl_dictionary_t * dev;
+  s->cur_time = gavl_timer_get(s->timer);
+  
+  /* Handle multicast messages */
+  ret += handle_multicast(s);
+  ret += handle_unicast(s);
+  ret += flush_multicast(s, 0);
+  ret += flush_unicast(s);
+  ret += check_expired(s);
+  ret += do_search(s);
+  
+  ret += notify(s);
 
-    if(!(dev = gavl_value_get_dictionary(&s->remote_devs.entries[i])))
-      continue;
-
-    uri  = gavl_dictionary_get_string(dev, GAVL_META_URI);
-
-    
-    
-    if((type = gavl_dictionary_get_string(dev, BG_SSDP_META_TYPE)))
-      {
-      int version = 0;
-      
-      msg = bg_msg_sink_get(sink);
-
-      gavl_dictionary_get_int(dev, BG_SSDP_META_VERSION, &version);
-      
-      bg_ssdp_msg_set_add(msg, "upnp",
-                      type, version,
-                      uri);
-      
-      bg_msg_sink_put(sink, msg);
-      
-      }
-
-    if((arr = gavl_dictionary_get_array(dev, BG_SSDP_META_DEVICES)))
-      {
-      for(j = 0; j < arr->num_entries; j++)
-        {
-        if(!(dev = gavl_value_get_dictionary(&arr->entries[i])))
-          continue;
-
-        if((type = gavl_dictionary_get_string(dev, BG_SSDP_META_TYPE)))
-          {
-          int version = 0;
-      
-          msg = bg_msg_sink_get(sink);
-
-          gavl_dictionary_get_int(dev, BG_SSDP_META_VERSION, &version);
-        
-          bg_ssdp_msg_set_add(msg, "upnp", 
-                              type, version, uri);
-
-          bg_msg_sink_put(sink, msg);
-          }
-        }
-
-      }
-
-
-    
-    }
+  //  fprintf(stderr, "bg_ssdp_update %d\n", ret);
+  
+  return ret;
   }
-#endif
 
-/* Create device info */
-void bg_create_ssdp_device(gavl_dictionary_t * desc, bg_backend_type_t type,
-                           const char * uri, const char * protocol)
-  {
-  gavl_dictionary_t * service;
-
-  char uuid[37];
-
-  bg_uri_to_uuid(uri, uuid);
-  
-  /* Create ssdp device description */
-
-  gavl_dictionary_set_string(desc, BG_SSDP_META_UUID, uuid);
-
-  gavl_dictionary_set_string(desc, BG_SSDP_META_PROTOCOL, protocol);
-  
-  gavl_dictionary_set_string(desc, GAVL_META_URI, uri);
-
-  if(!strcmp(protocol, "upnp"))
-    {
-    switch(type)
-      {
-      case BG_BACKEND_MEDIASERVER:
-        gavl_dictionary_set_string(desc, BG_SSDP_META_TYPE, "MediaServer");
-        gavl_dictionary_set_int(desc,    BG_SSDP_META_VERSION, 1);
-
-        service = device_add_service(desc);
-        gavl_dictionary_set_string(service, BG_SSDP_META_TYPE, "ContentDirectory");
-        gavl_dictionary_set_int(service, BG_SSDP_META_VERSION, 1);
-
-        service = device_add_service(desc);
-        gavl_dictionary_set_string(service, BG_SSDP_META_TYPE, "ConnectionManager");
-        gavl_dictionary_set_int(service, BG_SSDP_META_VERSION, 1);
-      
-        break;
-      case BG_BACKEND_RENDERER:
-        gavl_dictionary_set_string(desc, BG_SSDP_META_TYPE, "MediaRenderer");
-        gavl_dictionary_set_int(desc,    BG_SSDP_META_VERSION, 1);
-      
-        service = device_add_service(desc);
-        gavl_dictionary_set_string(service, BG_SSDP_META_TYPE, "ConnectionManager");
-        gavl_dictionary_set_int(service, BG_SSDP_META_VERSION, 1);
-      
-        service = device_add_service(desc);
-        gavl_dictionary_set_string(service, BG_SSDP_META_TYPE, "RenderingControl");
-        gavl_dictionary_set_int(service, BG_SSDP_META_VERSION, 1);
-
-        service = device_add_service(desc);
-        gavl_dictionary_set_string(service, BG_SSDP_META_TYPE, "AVTransport");
-        gavl_dictionary_set_int(service, BG_SSDP_META_VERSION, 1);
-
-        break;
-      case BG_BACKEND_NONE:
-      case BG_BACKEND_STATE:
-        break;
-      }
-    }
-  else if(!strcmp(protocol, "gmerlin"))
-    {
-    gavl_dictionary_set_string(desc, BG_SSDP_META_TYPE, bg_backend_type_to_string(type));
-    }
-  }

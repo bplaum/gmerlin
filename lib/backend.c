@@ -22,6 +22,7 @@
 #include <string.h>
 #include <config.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include <gavl/metatags.h>
 
@@ -39,6 +40,7 @@
 
 #include <backend_priv.h>
 
+#define MAX_HOSTNAME 253
 
 #ifdef HAVE_DBUS
 extern const bg_remote_dev_backend_t bg_remote_dev_backend_mpris2_player;
@@ -80,20 +82,6 @@ void bg_msg_get_backend_info(gavl_msg_t * msg,
   gavl_msg_get_arg_dictionary(msg, 0, info);
   }
 
-void bg_backend_info_get_id(const gavl_dictionary_t * info,
-                            char * ret)
-  {
-  bg_get_filename_hash(gavl_dictionary_get_string(info, GAVL_META_URI), ret);
-  }
-
-void bg_backend_info_init(gavl_dictionary_t * info)
-  {
-  char buf[BG_BACKEND_ID_LEN+1];
-
-  bg_get_filename_hash(gavl_dictionary_get_string(info, GAVL_META_URI), buf);
-  gavl_dictionary_set_string(info, GAVL_META_ID, buf);
-
-  }
 
 static const struct
   {
@@ -350,3 +338,31 @@ void bg_backend_handle_start(bg_backend_handle_t * be)
   be->thread_running = 1;
   }
 
+char * bg_make_backend_id(int type, char id[BG_BACKEND_ID_LEN+1])
+  {
+  char * str;
+  char hostname[MAX_HOSTNAME+1];
+
+  gethostname(hostname, MAX_HOSTNAME+1);
+  /* The unique ID of a backend is: md5 of hostname-pid-type */
+  
+
+  str = gavl_sprintf("%s-%d-%d", hostname, getpid(), type);
+  bg_get_filename_hash(str, id);
+  free(str);
+
+  
+  return id;
+  }
+
+void bg_set_backend_id(gavl_dictionary_t * dict)
+  {
+  int type = 0;
+  char id[BG_BACKEND_ID_LEN+1];
+
+  gavl_dictionary_get_int(dict, BG_BACKEND_TYPE, &type);
+
+  bg_make_backend_id(type, id);
+  
+  gavl_dictionary_set_string(dict, GAVL_META_ID, id);
+  }

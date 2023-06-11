@@ -47,7 +47,8 @@ typedef gavl_dictionary_t bg_ssdp_root_device_t;
  * arg2: desc_url (string)
  * arg3: uuid     (string)
  */
-   
+
+#if 0
 #define BG_SSDP_MSG_ADD_DEVICE 1
 #define BG_SSDP_MSG_DEL_DEVICE 2
 
@@ -68,7 +69,7 @@ void bg_ssdp_msg_set_del(gavl_msg_t * msg,
 
 void bg_ssdp_msg_get_del(gavl_msg_t * msg,
                          const char ** desc_url);
-
+#endif
 
 
 
@@ -78,9 +79,7 @@ bg_ssdp_device_add_device(bg_ssdp_root_device_t*, const char * uuid);
 typedef struct bg_ssdp_s bg_ssdp_t;
 
 bg_ssdp_t *
-bg_ssdp_create(bg_ssdp_root_device_t * local_dev);
-
-bg_msg_hub_t * bg_ssdp_get_event_hub(bg_ssdp_t * s);
+bg_ssdp_create(void);
 
 int
 bg_ssdp_has_device(const bg_ssdp_root_device_t *,

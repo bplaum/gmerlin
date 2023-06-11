@@ -33,7 +33,7 @@
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
-#define LOG_DOMAIN "backend_dbus"
+#define LOG_DOMAIN "dbus_detector"
 
 #include <backend_priv.h>
 
@@ -52,7 +52,7 @@
      AVAHI_PROTO_UNSPEC = -1  
  };
 
-typedef struct
+struct bg_dbus_detector_s
   {
   bg_msg_sink_t * sink;
   
@@ -67,19 +67,19 @@ typedef struct
   gavl_array_t mpd_labels;
   gavl_array_t mpd_uris;
   
-  } dbus_detector_t;
+  } ;
 
-
-static void add_dev(dbus_detector_t * d, const char * addr, const char * name,
+static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name,
                     const char * protocol, bg_backend_type_t type)
   {
   gavl_dictionary_t info;
-  gavl_msg_t * msg;
   
   memset(&info, 0, sizeof(info));
   
   gavl_dictionary_set_string(&info, BG_BACKEND_PROTOCOL, protocol);
   gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, type);
+
+  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
   
   if(!strcmp(protocol, "mpris2"))
     {
@@ -87,12 +87,19 @@ static void add_dev(dbus_detector_t * d, const char * addr, const char * name,
     char * str;
     char * real_name = NULL;
     char * uri = NULL;
+
+    if(gavl_string_starts_with(name, "gmerlin-"))
+      {
+      const char * pos = strrchr(name, '-');
+      if(pos && (strlen(pos + 1) == BG_BACKEND_ID_LEN))
+        gavl_dictionary_set_string(&info, GAVL_META_ID, pos+1);
+      }
     
     real_name = bg_sprintf("%s%s", MPRIS2_NAME_PREFIX, name);
 
     uri = bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, real_name + MPRIS2_NAME_PREFIX_LEN);
-    
-    if(!bg_backend_is_local(uri, &info))
+
+    if(!bg_backend_by_str(GAVL_META_URI, uri, 1, NULL))
       {
       if(!addr)
         {
@@ -143,7 +150,7 @@ static void add_dev(dbus_detector_t * d, const char * addr, const char * name,
         }
       
       gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, BG_BACKEND_RENDERER);
-      bg_backend_info_init(&info);
+      bg_backend_add_remote(&info);
       }
     
     if(addr_priv)
@@ -157,19 +164,11 @@ static void add_dev(dbus_detector_t * d, const char * addr, const char * name,
     
     }
   
-  msg = bg_msg_sink_get(d->sink);
-
-  bg_msg_set_backend_info(msg, BG_MSG_ADD_BACKEND, &info);
-  bg_msg_sink_put(d->sink, msg);
-  
   gavl_dictionary_free(&info);
-
-
   return;
-  
   }
 
-static void del_dev(dbus_detector_t * d, const char * addr)
+static void del_dev(bg_dbus_detector_t * d, const char * addr)
   {
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(d->sink);
@@ -183,7 +182,7 @@ static void del_dev(dbus_detector_t * d, const char * addr)
 
 static int msg_callback_detector(void * priv, gavl_msg_t * msg)
   {
-  dbus_detector_t * d = priv;
+  bg_dbus_detector_t * d = priv;
 
   switch(msg->NS)
     {
@@ -318,8 +317,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
                                         -1, -1,
                                         "image/png",
                                         "https://www.musicpd.org/logo.png");
-            bg_backend_info_init(&info);
-
+            
             msg1 = bg_msg_sink_get(d->sink);
 
             bg_msg_set_backend_info(msg1, BG_MSG_ADD_BACKEND, &info);
@@ -359,7 +357,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static void detector_init_dbus(void * priv)
+static void detector_init_dbus(bg_dbus_detector_t * ret)
   {
   DBusMessage * req;
   gavl_msg_t * res1;
@@ -367,9 +365,7 @@ static void detector_init_dbus(void * priv)
   const gavl_array_t * arr;
   int i;
   const char * str;
-
-  dbus_detector_t * ret = priv;
-
+  
   if(ret->session_conn)
     {
     
@@ -466,10 +462,18 @@ static void detector_init_dbus(void * priv)
   
   }
 
-static void * detector_create_dbus()
+int bg_dbus_detector_update(bg_dbus_detector_t * d)
+  {
+  int ret;
+  bg_msg_sink_iteration(d->dbus_sink);
+  ret = bg_msg_sink_get_num(d->dbus_sink);
+  return ret;
+  }
+
+bg_dbus_detector_t * bg_dbus_detector_create()
   {
   
-  dbus_detector_t * ret;
+  bg_dbus_detector_t * ret;
   
   ret = calloc(1, sizeof(*ret));
   ret->sink = bg_backend_reg->evt_sink;
@@ -479,7 +483,7 @@ static void * detector_create_dbus()
   
   ret->session_conn = bg_dbus_connection_get(DBUS_BUS_SESSION);
   
-  ret->dbus_sink = bg_msg_sink_create(msg_callback_detector, ret, 1);
+  ret->dbus_sink = bg_msg_sink_create(msg_callback_detector, ret, 0);
 
   if(ret->session_conn)
     bg_dbus_connection_add_listener(ret->session_conn,
@@ -489,14 +493,15 @@ static void * detector_create_dbus()
                                     "arg0namespace='org.mpris.MediaPlayer2'",
                                     ret->dbus_sink,
                                     BG_MSG_NS_PRIVATE, MSG_ID_NAME_OWNER_CHANGED);
+
+  detector_init_dbus(ret);
   
   return ret;
   }
 
 
-static void detector_destroy_dbus(void * priv)
+void bg_dbus_detector_destroy(bg_dbus_detector_t * d)
   {
-  dbus_detector_t * d = priv;
   DBusMessage * req;
   gavl_msg_t * res;
     
@@ -537,10 +542,10 @@ static void detector_destroy_dbus(void * priv)
   gavl_array_free(&d->mpd_labels);
   gavl_array_free(&d->mpd_uris);
   
-  
-  free(priv);
+  free(d);
   }
 
+#if 0
 bg_remote_dev_detector_t bg_remote_dev_detector_dbus = 
   {
     .create  = detector_create_dbus,
@@ -548,5 +553,5 @@ bg_remote_dev_detector_t bg_remote_dev_detector_dbus =
     .init    = detector_init_dbus,
 
   };
-
+#endif
 

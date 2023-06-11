@@ -432,7 +432,7 @@ static int add_subscription(gavl_dictionary_t * dict,
   gavl_dictionary_set_string_nocopy(s, GAVL_META_URI, gavl_strndup(start, end));
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
-  gavl_dictionary_set_string(&conn->res, "SERVER", bg_upnp_get_server_string());
+  gavl_dictionary_set_string_nocopy(&conn->res, "SERVER", bg_upnp_make_server_string());
   gavl_dictionary_set_string_nocopy(&conn->res, "SID", bg_sprintf("uuid:%s", uuid_str));
   gavl_dictionary_set_string_nocopy(&conn->res, "TIMEOUT", bg_sprintf("Second-%d", seconds));
 

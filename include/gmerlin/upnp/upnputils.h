@@ -7,9 +7,7 @@ char * bg_upnp_id_from_upnp(const char * id);
 char * bg_upnp_id_to_upnp(const char * id);
 char * bg_upnp_parent_id_to_upnp(const char * id);
 
-void bg_upnp_init_server_string();
-const char * bg_upnp_get_server_string();
-void bg_upnp_free_server_string();
+char * bg_upnp_make_server_string();
 
 /* Send a description */
 void bg_upnp_send_description(bg_http_connection_t * conn,

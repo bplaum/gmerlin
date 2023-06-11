@@ -23,6 +23,8 @@ else
 gtk_programs =
 endif
 
+bin_PROGRAMS = gmerlin-mediadump
+
 noinst_PROGRAMS = audioplayer1 \
 videoplayer1 \
 fvtest \
@@ -108,6 +110,9 @@ gmerlin_ssim_LDADD = ../lib/libgmerlin.la -ldl
 
 gmerlin_vpsnr_SOURCES = gmerlin_vpsnr.c
 gmerlin_vpsnr_LDADD = ../lib/libgmerlin.la -ldl
+
+gmerlin_mediadump_SOURCES = gmerlin-mediadump.c
+gmerlin_mediadump_LDADD = ../lib/libgmerlin.la -ldl
 
 gmerlin_vanalyze_SOURCES = gmerlin_vanalyze.c
 gmerlin_vanalyze_LDADD = ../lib/libgmerlin.la -ldl

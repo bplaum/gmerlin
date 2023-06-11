@@ -45,6 +45,9 @@ static const char * cd_desc;
 /* ConnectionManager */
 static const char * cm_desc;
 
+#define FLAG_HAVE_NODE  (1<<0)
+#define FLAG_REGISTERED (1<<1)
+
 typedef struct 
   {
   char * desc;
@@ -56,13 +59,10 @@ typedef struct
 
   bg_http_server_t * srv;
 
-  /* ssdp stuff */
-  bg_ssdp_t * ssdp;
-  gavl_dictionary_t ssdp_dev;
 
   gavl_dictionary_t state;
   
-  int have_node;
+  int flags;
   } bg_mdb_frontend_upnp_t;
 
 
@@ -426,7 +426,7 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
           gavl_value_free(&val);
           
           if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
-            p->have_node = 1;
+            p->flags |= FLAG_HAVE_NODE;
 
           
           }
@@ -451,9 +451,6 @@ static void cleanup_mdb_upnp(void * priv)
   gavl_dictionary_free(&p->cm_evt);
   gavl_array_free(&p->requests);
 
-  if(p->ssdp)
-    bg_ssdp_destroy(p->ssdp);
-  gavl_dictionary_free(&p->ssdp_dev);
   gavl_dictionary_free(&p->state);
   
   free(p);
@@ -464,7 +461,8 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
   int ret = 0;
   
   bg_mdb_frontend_upnp_t * p = fe->priv;
-  if(!p->ssdp && p->have_node)
+
+  if((p->flags & FLAG_HAVE_NODE) && !(p->flags & FLAG_REGISTERED))
     {
     const gavl_value_t * val;
     const gavl_array_t * icon_arr = NULL;
@@ -478,9 +476,6 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
 
     gavl_dictionary_init(&local_dev);
     
-    bg_create_ssdp_device(&p->ssdp_dev, BG_BACKEND_MEDIASERVER, uri, "upnp");
-    
-
     if(!(val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_LABEL)) ||
        !(server_label = gavl_value_get_string(val)))
       return 0;
@@ -493,8 +488,6 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
       }
     else
       icons = gavl_strdup("");
-
-    p->ssdp = bg_ssdp_create(&p->ssdp_dev);
 
     /* Register local device */
 
@@ -509,7 +502,7 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     
     bg_backend_register_local(&local_dev);
     
-    bg_uri_to_uuid(uri, uuid_str);
+    bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
     
     p->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
     free(icons);
@@ -517,14 +510,14 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
 
     gavl_dictionary_free(&local_dev);
 
+    p->flags |= FLAG_REGISTERED;
+    
     ret++;
     }
   
   bg_msg_sink_iteration(fe->ctrl.evt_sink);
   ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
 
-  if(p->ssdp)
-    ret += bg_ssdp_update(p->ssdp);
   return ret;
   }
 
@@ -566,7 +559,7 @@ bg_frontend_create_mdb_upnp(bg_http_server_t * srv,
 /* Descriptions */
 
 static const char * dev_desc =
-"<?xml version=\"1.0\"?>"
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 "<root xmlns=\"urn:schemas-upnp-org:device-1-0\" "
 "      xmlns:dlna=\"urn:schemas-dlna-org:device-1-0\" "
 "      xmlns:sec=\"http://www.sec.co.kr/dlna\">"

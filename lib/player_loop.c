@@ -43,8 +43,8 @@
 
 static void stop_cmd(bg_player_t * player, int new_state);
 static int play_source(bg_player_t * p, int flags);
-static void load_next_track(bg_player_t * player, int advance);
 
+static void load_next_track(bg_player_t * player, int advance);
 
 static void msg_gapless(gavl_msg_t * msg,
                         const void * data)
@@ -246,7 +246,6 @@ static void cleanup_streams(bg_player_t * player)
 
 static void player_cleanup(bg_player_t * player)
   {
-  bg_player_set_restart(player, 0);
   cleanup_streams(player);
 
   // Input must be cleaned up at the end because it may contain hardware handles also used by the output.
@@ -1468,18 +1467,47 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           if(player->finish_mode == BG_PLAYER_FINISH_CHANGE)
             {
             int advance = 1;
-            int restart = bg_player_get_restart(player);
+            int restart = 0; // bg_player_get_restart(player);
+            
+            // gavl_time_t last_clock_time = GAVL_TIME_UNDEFINED;
+            gavl_time_t last_time = GAVL_TIME_UNDEFINED;
             
             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected EOF");
-            bg_threads_join(player->threads, PLAYER_MAX_THREADS);
 
+            if(gavl_track_get_duration(player->src->track_info) == GAVL_TIME_UNDEFINED)
+              {
+              gavl_time_t pts_to_clock_time;
+
+              bg_player_time_get(player, 0, &last_time);
+              
+              // bg_player_get_time
+              
+              /* Live streams */
+              restart = 1;
+
+              pts_to_clock_time = gavl_track_get_pts_to_clock_time(player->src->track_info);
+
+              if(pts_to_clock_time != GAVL_TIME_UNDEFINED)
+                {
+                player->initial_seek_time = last_time + pts_to_clock_time;
+                gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting live stream, clock_time: %"PRId64,
+                         player->initial_seek_time);
+                
+                }
+              else
+                gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting live stream");
+              }
+            /* TODO: seekable http sources */
+            
+            bg_threads_join(player->threads, PLAYER_MAX_THREADS);
+            
             if(restart)
               {
               bg_player_source_cleanup(player->src_next);
-              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting playback");
+              // gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting playback");
               advance = 0;
               }
-
+            
             /* Initialize new source from the current one if we re-use the plugin */
             if(player->src->next_track >= 0)
               {
@@ -1772,9 +1800,6 @@ int bg_player_advance_gapless(bg_player_t * player)
   int ret = 0;
   gavl_time_t time;
   
-  if(bg_player_get_restart(player))
-    return 0;
-  
   // gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Trying gapless transition");
   
   pthread_mutex_lock(&player->src_mutex);
@@ -1807,13 +1832,13 @@ int bg_player_advance_gapless(bg_player_t * player)
     
     if(player->src->duration != GAVL_TIME_UNDEFINED)
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
-             "Gapless transition failed: Next track not loaded (unexpected EOF cur: %f, dur: %f)",
-             gavl_time_to_seconds(time),
-             gavl_time_to_seconds(player->src->duration)
-             );
+               "Gapless transition failed: Next track not loaded (unexpected EOF cur: %f, dur: %f)",
+               gavl_time_to_seconds(time),
+               gavl_time_to_seconds(player->src->duration)
+               );
     else
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
-             "Gapless transition failed: Next track not loaded");
+               "Gapless transition failed: Next track not loaded");
     
     goto fail;
     }
@@ -1824,7 +1849,8 @@ int bg_player_advance_gapless(bg_player_t * player)
      !player->src_next->audio_src ||
      (player->finish_mode != BG_PLAYER_FINISH_CHANGE))
     {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Gapless transition failed: Invalid streams for next track");
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+             "Gapless transition failed: Invalid streams for next track");
     goto fail;
     }
   
@@ -1838,7 +1864,8 @@ int bg_player_advance_gapless(bg_player_t * player)
   if((old_fmt.samplerate != new_fmt->samplerate) ||
      (old_fmt.num_channels != new_fmt->num_channels))
     {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Gapless transition failed: format mismatch %d Hz, %d ch != %d Hz, %d ch",
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+             "Gapless transition failed: format mismatch %d Hz, %d ch != %d Hz, %d ch",
            old_fmt.samplerate, old_fmt.num_channels, new_fmt->samplerate, new_fmt->num_channels);
     goto fail;
     }

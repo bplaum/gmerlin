@@ -5873,20 +5873,28 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       {
       /* Get url vars */
       gavl_dictionary_t vars;
+      char * real_location = gavl_strdup(location);
+      
       track_index = 0;
       gavl_dictionary_init(&vars);
-      gavl_url_get_vars_c(location, &vars);
+
+      gavl_url_get_vars(real_location, &vars);
       
       if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
         track_index--;
-      // gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
-      gavl_dictionary_free(&vars);
+
+      real_location = gavl_url_append_vars(real_location, &vars);
       
-      if(!(ret = bg_input_plugin_load(location)))
+      gavl_dictionary_free(&vars);
+
+      
+      if(!(ret = bg_input_plugin_load(real_location)))
         {
+        free(real_location);
         src_idx++;
         continue;
         }
+      free(real_location);
       break;
       }
 

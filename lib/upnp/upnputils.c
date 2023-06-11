@@ -30,12 +30,15 @@
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
 #include <gavl/metatags.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "upnputils"
 
 #include <gmerlin/upnp/devicedesc.h>
 #include <gmerlin/upnp/upnputils.h>
 #include <gmerlin/upnp/soap.h>
 #include <gmerlin/mdb.h>
 #include <gmerlin/utils.h>
+#include <gmerlin/http.h>
 
 char * bg_upnp_id_from_upnp(const char * id)
   {
@@ -69,56 +72,50 @@ char * bg_upnp_parent_id_to_upnp(const char * id)
   return ret;
   }
 
-static char * upnp_server_string = NULL;
-
-static char * make_server_string(void)
+char * bg_upnp_make_server_string(void)
   {
   struct utsname os_info;
   uname(&os_info);
-  return bg_sprintf("%s/%s, UPnP/1.0, "PACKAGE"/"VERSION,
+  return bg_sprintf("%s/%s UPnP/1.0 "PACKAGE"/"VERSION,
                     os_info.sysname, os_info.release);
-  }
-
-void bg_upnp_init_server_string()
-  {
-  upnp_server_string = make_server_string();
-  }
-
-const char * bg_upnp_get_server_string()
-  {
-  return upnp_server_string;
-  }
-
-void bg_upnp_free_server_string()
-  {
-  free(upnp_server_string);
   }
 
 void bg_upnp_send_description(bg_http_connection_t * conn,
                               const char * desc1)
   {
   int len;
+  int result;
 
   len = strlen(desc1);
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
-  gavl_dictionary_set_int(&conn->res, "CONTENT-LENGTH", len);
-  gavl_dictionary_set_string(&conn->res, "CONTENT-TYPE", "text/xml; charset=UTF-8");
-  gavl_dictionary_set_string(&conn->res, "SERVER", bg_upnp_get_server_string());
+  gavl_dictionary_set_int(&conn->res, "Content-Length", len);
+  gavl_dictionary_set_string(&conn->res, "Content-Type", "text/xml; charset=UTF-8");
+  gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
+  bg_http_header_set_date(&conn->res, "Date");
 
-  bg_http_connection_check_keepalive(conn);
-  //  gavl_dictionary_set_string(&res, "CONNECTION", "close");
-
-#if 0  
+#if 0
   fprintf(stderr, "Send description\n");
-  gavl_dictionary_dump(&res, 2);
-  fprintf(stderr, "%s\n", desc);
+  fprintf(stderr, "Req:\n");
+  gavl_dictionary_dump(&conn->req, 2);
+  fprintf(stderr, "Res:\n");
+  gavl_dictionary_dump(&conn->res, 2);
+  fprintf(stderr, "%s\n", desc1);
 #endif
   
   if(!bg_http_connection_write_res(conn))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot send upnp description: Writing response failed");
     return;
-
+    }
   if(strcmp(conn->method, "HEAD"))
-    gavl_socket_write_data(conn->fd, (const uint8_t*)desc1, len);
+    {
+    if((result = gavl_socket_write_data(conn->fd, (const uint8_t*)desc1, len)) < len)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot send upnp description: Sent %d of %d bytes", result, len);
+      return;
+      }
+    }
+  bg_http_connection_check_keepalive(conn);
   }
 
 void bg_upnp_finish_soap_request(gavl_dictionary_t * soap,

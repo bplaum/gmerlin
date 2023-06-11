@@ -57,7 +57,6 @@ static void start_multi(void * priv)
   int i;
   multi_t * m = priv;
   const char * uri;
-  char * real_uri;
   
   int can_seek = 0, can_pause = 0;
   const gavl_dictionary_t * track;
@@ -89,7 +88,10 @@ static void start_multi(void * priv)
                         GAVL_META_CAN_SEEK, NULL);
     
     if(pts_to_clock_time == GAVL_TIME_UNDEFINED)
+      {
       pts_to_clock_time = gavl_track_get_pts_to_clock_time(track);
+      clock_time_start = gavl_track_get_start_time(track) + pts_to_clock_time;
+      }
     }
   
   for(i = 0; i < m->src.num_streams; i++)
@@ -106,6 +108,19 @@ static void start_multi(void * priv)
     else
       {
       bg_plugin_handle_t * h;
+      char * real_uri = NULL;
+
+      /* Set start time */
+      if(clock_time_start != GAVL_TIME_UNDEFINED)
+        {
+        real_uri = gavl_strdup(uri);
+
+        /* Go 100 ms later to ensure that we have the same segments even if clock_time_start
+           if rounded down to values smaller than the segment start time */
+        real_uri = gavl_url_add_var_long(real_uri, GAVL_URL_VAR_CLOCK_TIME,
+                                         clock_time_start + GAVL_TIME_SCALE / 10);
+        uri = real_uri;
+        }
       
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading external uri: %s", uri);
       h = bg_input_plugin_load(uri);
@@ -125,7 +140,12 @@ static void start_multi(void * priv)
       
       if(pts_to_clock_time == GAVL_TIME_UNDEFINED)
         pts_to_clock_time = gavl_track_get_pts_to_clock_time(track);
-      
+
+      if(real_uri)
+        {
+        free(real_uri);
+        real_uri = NULL;
+        }
       uri = NULL;
       }
     

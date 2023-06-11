@@ -134,9 +134,6 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
   
   gavl_dictionary_init(&dict);
   
-  if(bg_backend_is_local(addr, ret))
-    return 1;
-  
   pos = strstr(addr, "://");
   uri = bg_sprintf("http%s/info", pos);
 
@@ -161,70 +158,6 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
   if(uri)
     free(uri);
   return result;
-  
-#if 0
-  bg_msg_sink_t * sink = NULL;
-  bg_controllable_t * ctrl;
-  get_node_info_t ni;
-  bg_backend_handle_t * h = NULL;
-  gavl_time_t delay_time = GAVL_TIME_SCALE/20; // 50 ms
-  int result;
-  int num = 0;
-
-  const char * addr = gavl_dictionary_get_string(ret, GAVL_META_URI);
-  
-  if(bg_backend_is_local(addr, ret))
-    {
-    return 1;
-    }
-
-  ni.dict = ret;
-  ni.done = 0;
-  
-  if(!(h = bg_backend_handle_create(ret, NULL)))
-    goto fail;
-  
-  ctrl = bg_backend_handle_get_controllable(h);
-  
-  
-  sink = bg_msg_sink_create(handle_msg_get_node_info, &ni, 1);
-
-  bg_msg_hub_connect_sink(ctrl->evt_hub, sink);
-
-  //  bg_backend_handle_start(h);
-  
-  while(!ni.done)
-    {
-    result = bg_backend_handle_ping(h);
-    
-    if(ni.done)
-      break;
-    
-    if(result)
-      break;
-    
-    gavl_time_delay(&delay_time);
-    num++;
-    if(num > 100)
-      break;
-    }
-
-  //  bg_backend_handle_stop(h);
-
-  if(!ni.done)
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't get Node info for %s", addr);
-
-  fail:
-
-  if(h)
-    bg_backend_handle_destroy(h);
-
-  if(sink)
-    bg_msg_sink_destroy(sink);
-  
-  return ni.done;
-#endif
-
   
 
   }

@@ -76,6 +76,7 @@ static GtkWidget * item_by_id(bg_gtk_backend_menu_t * m, const char * uri)
   item_by_uri_t d;
   memset(&d, 0, sizeof(d));
   d.uri = uri;
+  //  fprintf(stderr, "item_by_id: %s\n", uri);
   gtk_container_foreach(GTK_CONTAINER(m->menu), item_by_id_cb, &d);
   return d.ret;
   }
@@ -130,7 +131,7 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
     if(m->evt_sink)
       {
       gavl_msg_t * msg = bg_msg_sink_get(m->evt_sink);
-      bg_msg_set_backend_info(msg, BG_MSG_SET_BACKEND, dev);
+      bg_msg_set_backend_info(msg, BG_CMD_SET_BACKEND, dev);
       bg_msg_sink_put(m->evt_sink, msg);
       }
     
@@ -286,7 +287,6 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(bg_backend_type_t type,
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL,     "Local");
     gavl_dictionary_set_int(&local_dev,    BG_BACKEND_TYPE,     type);
     gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "gmerlin");
-    bg_backend_info_init(&local_dev);
     
     add_item(ret, &local_dev);
     

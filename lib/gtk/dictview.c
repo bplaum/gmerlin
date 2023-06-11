@@ -27,6 +27,8 @@
 #include <gmerlin/iconfont.h>
 
 #include <gui_gtk/gtkutils.h>
+#include <gavl/utils.h>
+
 
 enum
   {

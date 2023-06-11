@@ -21,11 +21,12 @@
 
 #ifndef BACKEND_PRIV_H_INCLUDED
 #define BACKEND_PRIV_H_INCLUDED
+#include <config.h>
 
+#include <gmerlin/upnp/ssdp.h>
 #include <pthread.h>
 
 typedef struct bg_remote_dev_backend_s bg_remote_dev_backend_t;
-typedef struct bg_remote_dev_detector_s bg_remote_dev_detector_t;
 
 extern bg_backend_registry_t * bg_backend_reg;
 
@@ -79,14 +80,18 @@ struct bg_remote_dev_backend_s
   void (*destroy)(bg_backend_handle_t * dev);
   };
 
-struct bg_remote_dev_detector_s
-  {
-  /* Detector for remote devices (e.g. ssdp) */
-  void * (*create)(void);
-  void (*destroy)(void*);
-  int  (*update)(void*);
-  void (*init)(void*); // Called just once but from the main thread
-  };
+#ifdef HAVE_DBUS
+/* Dbus detector (mpris2 and mpd via avahi) */
+typedef struct bg_dbus_detector_s bg_dbus_detector_t;
+
+bg_dbus_detector_t * bg_dbus_detector_create();
+void bg_dbus_detector_destroy(bg_dbus_detector_t *);
+
+int bg_dbus_detector_update(bg_dbus_detector_t *);
+#endif
+
+/* Backend ID */
+#define BACKEND_ID "BackendID"
 
 /*
  *  Remote device registry
@@ -99,8 +104,6 @@ struct bg_backend_registry_s
   gavl_array_t devs;
   gavl_array_t local_devs;
   
-  bg_msg_sink_t * evt_handler;
-
   bg_msg_sink_t * evt_sink;
   bg_msg_hub_t * evt_hub;
   
@@ -108,16 +111,19 @@ struct bg_backend_registry_s
   pthread_t th;
   
   gavl_array_t arr;
-  
-  struct
-    {
-    void * priv;
-    const bg_remote_dev_detector_t * d;
-    } * detectors;
-  
+  bg_ssdp_t * ssdp;
+#ifdef HAVE_DBUS
+  bg_dbus_detector_t * dbus;
+#endif  
   };
 
-int bg_backend_is_local(const char * uri,
-                        gavl_dictionary_t * dev);
+
+gavl_dictionary_t * bg_backend_by_str(const char * key, const char * label, int local, int * idx);
+
+void bg_backend_add_remote(const gavl_dictionary_t * b);
+void bg_backend_del_remote(const char * uri);
+
+void bg_set_backend_id(gavl_dictionary_t * dict);
+
 
 #endif // BACKEND_PRIV_H_INCLUDED

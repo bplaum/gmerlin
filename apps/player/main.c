@@ -41,6 +41,7 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #include <gmerlin/bggavl.h>
+#include <gmerlin/upnp/upnputils.h>
 
 #include <gmerlin/iconfont.h>
 #include <gmerlin/application.h>

@@ -104,8 +104,6 @@ int main(int argc, char ** argv)
 
   bg_app_init("gmerlin-renderer", TRS("Gmerlin media renderer"));
   
-  bg_upnp_init_server_string();
-  
   bg_handle_sigint();
   bg_iconfont_init();
   
@@ -148,8 +146,6 @@ int main(int argc, char ** argv)
   /* TODO: Save state */
   
   renderer_cleanup(&s);
-
-  bg_upnp_free_server_string();
 
   return ret;
   }

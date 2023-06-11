@@ -758,7 +758,7 @@ static int handle_player_message(void * data, gavl_msg_t * msg)
     case BG_MSG_NS_BACKEND:
       switch(msg->ID)
         {
-        case BG_MSG_SET_BACKEND:
+        case BG_CMD_SET_BACKEND:
           {
           int type;
           const char * uri;

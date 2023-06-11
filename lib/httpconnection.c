@@ -124,7 +124,7 @@ int bg_http_connection_check_keepalive(bg_http_connection_t * c)
   
   if(!strcmp(c->protocol, "HTTP/1.1"))
     {
-    if((var = gavl_dictionary_get_string(&c->req, "Connection")) &&
+    if((var = gavl_dictionary_get_string_i(&c->req, "Connection")) &&
        !strcasecmp(var, "close"))
       return 0;
     
@@ -132,7 +132,7 @@ int bg_http_connection_check_keepalive(bg_http_connection_t * c)
     return 1;
     }
   
-  if((var = gavl_dictionary_get_string(&c->req, "Connection")) &&
+  if((var = gavl_dictionary_get_string_i(&c->req, "Connection")) &&
      !strcasecmp(var, "Keep-Alive"))
     {
     c->flags |= BG_HTTP_REQ_KEEPALIVE;

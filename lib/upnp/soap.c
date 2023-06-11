@@ -287,7 +287,7 @@ int bg_soap_request_write_res(gavl_dictionary_t * s, bg_http_connection_t * conn
   bg_http_connection_check_keepalive(conn);
   bg_http_header_set_date(&conn->res, "DATE");
   bg_http_header_set_empty_var(&conn->res, "EXT");
-  gavl_dictionary_set_string(&conn->res, "SERVER", bg_upnp_get_server_string());
+  gavl_dictionary_set_string_nocopy(&conn->res, "SERVER", bg_upnp_make_server_string());
 
 #ifdef DUMP_SOAP
   fprintf(stderr, "Sending SOAP response\n");

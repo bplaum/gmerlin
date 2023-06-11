@@ -31,11 +31,11 @@
 
 // BG_MSG_NS_BACKEND
 
-#define BG_MSG_ADD_BACKEND        1
-#define BG_MSG_DEL_BACKEND        2
-#define BG_MSG_BACKEND_CHANGED    3
+#define BG_MSG_ADD_BACKEND            1
+#define BG_MSG_DEL_BACKEND            2
 
-#define BG_MSG_SET_BACKEND        4
+#define BG_CMD_BACKEND_REGISTER_LOCAL 3
+#define BG_CMD_SET_BACKEND            4
 
 /* Proxy URL scheme
  *
@@ -88,12 +88,6 @@ void bg_msg_set_backend_info(gavl_msg_t * msg,
 void bg_msg_get_backend_info(gavl_msg_t * msg,
                              gavl_dictionary_t * info);
 
-/* Ret must point to at least BG_BACKEND_ID_LEN+1 bytes */
-void bg_backend_info_get_id(const gavl_dictionary_t * info,
-                            char * ret);
-
-void bg_backend_info_init(gavl_dictionary_t * info);
-
 
 
 /* */
@@ -126,15 +120,10 @@ typedef struct bg_backend_registry_s bg_backend_registry_t;
 bg_backend_registry_t * bg_get_backend_registry(void);
   
 
-void bg_backend_registry_set_proxy_prefix(bg_backend_registry_t * ret, const char * proxy_prefix);
+void bg_backend_registry_set_proxy_prefix(const char * proxy_prefix);
 
 /* Returned arrays must be destroyed with bg_backend_info_destroy_array() */
 gavl_array_t * bg_backend_registry_get(void);
-
-gavl_array_t *
-bg_backend_registry_get_type(bg_backend_type_t type);
-
-gavl_dictionary_t * bg_backend_registry_get_by_id(const char * id);
 
 bg_msg_hub_t * bg_backend_registry_get_evt_hub();
 
@@ -146,6 +135,7 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret);
 
 void bg_backend_register_local(const gavl_dictionary_t * dev);
 
+char * bg_make_backend_id(int type, char id[BG_BACKEND_ID_LEN+1]);
 
 #endif //  BG_REMOTEDEV_H_INCLUDED
 

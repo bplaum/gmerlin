@@ -11,11 +11,11 @@
 
 #include <frontend_priv.h>
 
+#define FLAG_HAVE_NODE  (1<<0)
+#define FLAG_REGISTERED (1<<1)
+
 typedef struct
   {
-  bg_ssdp_t * ssdp;
-  gavl_dictionary_t ssdp_dev;
-  
   bg_websocket_context_t * ws;
 
   bg_http_server_t * srv;
@@ -23,7 +23,7 @@ typedef struct
   
   bg_msg_sink_t * msink;
 
-  int have_node;
+  int flags;
 
   gavl_dictionary_t state;
 
@@ -37,7 +37,7 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
   if(p->msink)
     bg_msg_sink_iteration(p->msink);
   
-  if(!p->ssdp && p->have_node)
+  if((p->flags & FLAG_HAVE_NODE) && !(p->flags & FLAG_REGISTERED))
     {
     gavl_dictionary_t local_dev;
     
@@ -72,8 +72,6 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
     root_uri = bg_http_server_get_root_url(p->srv);
     uri = bg_sprintf("%s%s/ws/%s", uri_scheme, root_uri + 4 /* ://..." */, bg_backend_type_to_string(p->type));
     
-    bg_create_ssdp_device(&p->ssdp_dev, p->type, uri, "gmerlin");
-
     /* Create local device */
 
     if(!(val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_LABEL)) ||
@@ -98,20 +96,17 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
 
     bg_backend_register_local(&local_dev);
     
-    p->ssdp = bg_ssdp_create(&p->ssdp_dev);
-
     gavl_dictionary_free(&local_dev);
     
     ret++;
     
     free(uri);
+    p->flags |= FLAG_REGISTERED;
+    
     }
   
   ret += bg_websocket_context_iteration(p->ws);
 
-  if(p->ssdp)
-    ret += bg_ssdp_update(p->ssdp);
-  
   return ret;
   }
 
@@ -119,15 +114,10 @@ static void frontend_cleanup_gmerlin(void * priv)
   {
   frontend_priv_t * p = priv;
 
-  if(p->ssdp)
-    bg_ssdp_destroy(p->ssdp);
-    
   bg_websocket_context_destroy(p->ws);
 
   gavl_dictionary_free(&p->state);
 
-  gavl_dictionary_free(&p->ssdp_dev);
-  
   free(p);
   }
 
@@ -155,7 +145,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           
           if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
             {
-            p->have_node = 1;
+            p->flags = FLAG_HAVE_NODE;
             //            fprintf(stderr, "Got network node:\n");
             //            gavl_value_dump(&val, 2);
             }

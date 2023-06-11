@@ -24,6 +24,7 @@
 #include <gavl/metatags.h>
 
 #include <gmerlin/upnp/devicedesc.h>
+#include <gmerlin/backend.h>
 
 
 #include <gmerlin/utils.h>
@@ -705,4 +706,57 @@ bg_upnp_device_description_get_icon_urls(xmlNodePtr dev_node, gavl_array_t * ret
   
   
   
+  }
+
+int bg_upnp_device_get_node_info(gavl_dictionary_t * dev, const char * device, int version)
+  {
+  int ret = 0;
+  char * real_uri = NULL;
+  const char * uri;
+  const char * pos;
+  xmlDocPtr doc = NULL;
+  
+  xmlNodePtr dev_node;
+  gavl_value_t val;
+  gavl_array_t * icons;
+  char * uri_base = NULL;
+  
+  if(!(uri = gavl_dictionary_get_string(dev, GAVL_META_URI)))
+    return 0;
+  
+  if((pos = strstr(uri, "://")))
+    real_uri = bg_sprintf("http%s", pos);
+  else
+    real_uri = gavl_strdup(uri);
+
+  if(!(doc = bg_xml_from_url(real_uri, NULL)))
+    goto fail;
+
+  uri_base = bg_upnp_device_description_get_url_base(real_uri, doc);
+  
+  if(!(dev_node = bg_upnp_device_description_get_device_node(doc, device, version)))
+    goto fail;
+
+  gavl_dictionary_set_string(dev, GAVL_META_LABEL, bg_upnp_device_description_get_label(dev_node));
+
+  gavl_value_init(&val);
+  icons = gavl_value_set_array(&val);
+  bg_upnp_device_description_get_icon_urls(dev_node, icons, uri_base);
+  
+  gavl_dictionary_set_nocopy(dev, GAVL_META_ICON_URL, &val);
+  gavl_dictionary_set_string(dev, BG_BACKEND_PROTOCOL, "upnp");
+  
+  ret = 1;
+  fail:
+
+  if(real_uri)
+    free(real_uri);
+
+  if(uri_base)
+    free(uri_base);
+  
+  if(doc)
+    xmlFreeDoc(doc);
+  
+  return ret;
   }

@@ -119,7 +119,7 @@ static void thread_func_plug(bg_http_connection_t * conn, void * priv)
 
   bg_http_connection_init_res(conn, BG_PLUG_PROTOCOL, 200, "OK");
 
-  gavl_dictionary_set_string(&conn->res, "Server", bg_upnp_get_server_string());
+  gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
   bg_http_header_set_date(&conn->res, "Date");
   
   //  gavl_dictionary_set_string(&conn->res, "Content-Type", bg_plug_mimetype);

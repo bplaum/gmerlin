@@ -100,7 +100,6 @@ int bg_player_input_start(bg_player_t * p)
   int num_overlay_streams;
   const gavl_value_t * v;
 
-  bg_media_source_t * ms;
   bg_media_source_stream_t * s = NULL;
   
   bg_player_audio_stream_t * as = &p->audio_stream;
@@ -193,8 +192,7 @@ int bg_player_input_start(bg_player_t * p)
     if(video_format->framerate_mode == GAVL_FRAMERATE_STILL)
       p->flags |= PLAYER_DO_STILL;
     }
-  if((ms = p->src->input_plugin->get_src(p->src->input_handle->priv)) &&
-     (s = bg_media_source_get_stream_by_id(ms, GAVL_META_STREAM_ID_MSG_PROGRAM)) &&
+  if((s = bg_media_source_get_stream_by_id(p->src->input_handle->src, GAVL_META_STREAM_ID_MSG_PROGRAM)) &&
      (s->msghub))
     {
     bg_msg_hub_connect_sink(s->msghub, p->src_msg_sink);
@@ -226,6 +224,13 @@ int bg_player_input_start(bg_player_t * p)
     p->dpy_time_offset = -gavl_track_get_start_time(p->src->track_info);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->dpy_time_offset);
+
+  if(p->initial_seek_time > 0)
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Doing initial seek: %"PRId64, p->initial_seek_time);
+    bg_player_input_seek(p, p->initial_seek_time, GAVL_TIME_SCALE, -1.0);
+    p->initial_seek_time = 0;
+    }
   
   return 1;
   }
@@ -743,7 +748,7 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
     case GAVL_MSG_NS_SRC:
       switch(msg->ID)
         {
-#if 1
+#if 0
         case GAVL_MSG_SRC_RESTART:
           bg_player_set_restart(p, gavl_msg_get_arg_int(msg, 0));
 #endif

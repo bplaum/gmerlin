@@ -72,8 +72,6 @@ int main(int argc, char ** argv)
   /* Make strcasecmp work */
   setlocale(LC_COLLATE, "");
   
-  bg_upnp_init_server_string();
-  
   bg_handle_sigint();
   signal(SIGPIPE, SIG_IGN);
 
@@ -110,8 +108,6 @@ int main(int argc, char ** argv)
   /* TODO: Save state */
   
   server_cleanup(&s);
-
-  bg_upnp_free_server_string();
 
   return ret;
   }

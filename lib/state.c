@@ -251,7 +251,7 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
                                   const char * ctx,
                                   const char * var)
   {
-  gavl_dictionary_t * child;
+  const gavl_dictionary_t * child;
 
   if(!(child = get_val_dict_c(state, ctx)))
     {

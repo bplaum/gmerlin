@@ -456,13 +456,12 @@ struct bg_player_s
   gavl_dictionary_t seek_window;
   pthread_mutex_t seek_window_mutex;
   
+  gavl_time_t initial_seek_time;
+  
   int visualization_mode;
-
-  /* Restart mode */
-  int restart;
-  pthread_mutex_t restart_mutex;
   
   int64_t last_seconds;
+  
   };
 
 // void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
@@ -474,9 +473,6 @@ void bg_player_underrun(bg_msg_sink_t * sink);
 
 int  bg_player_get_status(bg_player_t * player);
 void bg_player_set_status(bg_player_t * player, int status);
-
-int  bg_player_get_restart(bg_player_t * player);
-void bg_player_set_restart(bg_player_t * player, int restart);
 
 int bg_player_get_seek_window(bg_player_t * p, gavl_time_t * start, gavl_time_t * end);
 

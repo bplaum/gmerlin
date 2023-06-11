@@ -396,7 +396,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
     bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
     }
   
-  gavl_dictionary_set_string(&conn->res, "Server", bg_upnp_get_server_string());
+  gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
   bg_http_header_set_date(&conn->res, "Date");
 
   if(format == FORMAT_LPCM)

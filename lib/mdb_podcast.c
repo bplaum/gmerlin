@@ -1048,7 +1048,6 @@ static void save_array(bg_mdb_backend_t * b, const parsed_id_t * id, gavl_array_
   
   }
 
-
 static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
   {
   char * dirname = NULL;
