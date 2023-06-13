@@ -2021,8 +2021,6 @@ static int create_server(bg_backend_handle_t * dev, const char * uri_1, const ch
 
   dev->priv = server;
   
-  fprintf(stderr, "create_server\n");
-  
   if((pos = strstr(uri_1, "://")))
     uri = bg_sprintf("http%s", pos);
   else
@@ -2048,8 +2046,7 @@ static int create_server(bg_backend_handle_t * dev, const char * uri_1, const ch
     goto fail;
   server->cd_control_url = bg_upnp_device_description_make_url(var, url_base);
 
-  fprintf(stderr, "Got control URI: %s\n", server->cd_control_url);
-
+  //  fprintf(stderr, "Got control URI: %s\n", server->cd_control_url);
   
   ret = 1;
   

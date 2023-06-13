@@ -79,7 +79,7 @@ static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name
   gavl_dictionary_set_string(&info, BG_BACKEND_PROTOCOL, protocol);
   gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, type);
 
-  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
+  //  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
   
   if(!strcmp(protocol, "mpris2"))
     {

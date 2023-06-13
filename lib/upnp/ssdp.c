@@ -45,26 +45,6 @@
 
 #include <unistd.h>
 
-
-/*
- *    Multicast:
- *    NOTIFY * HTTP/
- *    HOST: 239.255.255.250:1900
- *    CACHE-CONTROL: max-age=1800
- *    LOCATION: URL for UPnP description for root device
- *    **
- *    NT: upnp:rootdevice
- *    **
- *    NT: uuid:4061d726-017e-11ee-8d72-473073271d81
- 
- *    **
- *  
- *    Multicast:
- *    M-SEARCH * HTTP/1.1
- *
- *    HTTP/1.1 200 OK
- */
-
 #define UDP_BUFFER_SIZE 2048
 
 #define META_ID "GMERLIN-ID"
@@ -76,6 +56,8 @@
 /* Added to the device description */
 
 #define NEXT_NOTIFY_TIME "NNT"
+#define NOTIFY_COUNT     "NC"
+
 #define EXPIRE_TIME      "ET"
 #define MAX_AGE          1800
 
@@ -109,7 +91,7 @@ struct  bg_ssdp_s
   /* Reduce the frequency of multicast packets */
   gavl_time_t next_mcast_time;
 
-  int notify_count;
+  int search_count;
   
   };
 
@@ -417,8 +399,8 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     if(!dict)
       goto end;
       
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s: Got ssdp bye", uri);
-    bg_backend_del_remote(uri);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s: Got ssdp bye", real_uri);
+    bg_backend_del_remote(real_uri);
     goto end;
     }
   
@@ -600,7 +582,6 @@ static int notify(bg_ssdp_t * ssdp)
   int ret = 0;
   gavl_dictionary_t * dev;
   int64_t t = 0;
-
   i = 0;
 
   while((dev = get_next_dev(&i, 1)))
@@ -614,11 +595,24 @@ static int notify(bg_ssdp_t * ssdp)
       }
     else if(t < ssdp->cur_time)
       {
-      for(i = 0; i < 5; i++)
-        notify_dev(ssdp, dev, 1);
+      int count = 0;
+      gavl_dictionary_get_int(dev, NOTIFY_COUNT, &count);
+
+      if(count < 3)
+        {
+        gavl_dictionary_set_long(dev, NEXT_NOTIFY_TIME, gavl_timer_get(ssdp->timer) +
+                                 rand_long(GAVL_TIME_SCALE * 1, GAVL_TIME_SCALE * 3));
+        count++;
+        }
+      else
+        {
+        gavl_dictionary_set_long(dev, NEXT_NOTIFY_TIME, gavl_timer_get(ssdp->timer) +
+                                 rand_long(GAVL_TIME_SCALE * 100, GAVL_TIME_SCALE * 900));
+        count = 0;
+        }
       
-      gavl_dictionary_set_long(dev, NEXT_NOTIFY_TIME, gavl_timer_get(ssdp->timer) +
-                               rand_long(GAVL_TIME_SCALE * 100, GAVL_TIME_SCALE * 900));
+      gavl_dictionary_set_int(dev, NOTIFY_COUNT, count);
+      
       ret++;
       }
     i++;
@@ -984,7 +978,20 @@ static int do_search(bg_ssdp_t * s)
     gavl_dictionary_set_string(&h, "ST", "ssdp:all");
     queue_multicast(s, &h);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent search packet");
-    s->next_search_time = gavl_timer_get(s->timer) + rand_long(500 * GAVL_TIME_SCALE, 1000 * GAVL_TIME_SCALE);
+
+    if(s->search_count < 3)
+      {
+      s->next_search_time = gavl_timer_get(s->timer) +
+        rand_long(GAVL_TIME_SCALE * 1, GAVL_TIME_SCALE * 3);
+      s->search_count++;
+      }
+    else
+      {
+      s->next_search_time = gavl_timer_get(s->timer) +
+        rand_long(500 * GAVL_TIME_SCALE, 1000 * GAVL_TIME_SCALE);
+      s->search_count = 0;
+      }
+
     gavl_dictionary_free(&h);
     return 1;
     }

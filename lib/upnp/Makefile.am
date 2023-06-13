@@ -19,7 +19,6 @@ event.c \
 eventlistener.c \
 soap.c \
 ssdp.c \
-ssdp_device.c \
 upnputils.c
 
 
