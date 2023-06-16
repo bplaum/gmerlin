@@ -475,7 +475,9 @@ static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int aliv
   const char * id = gavl_dictionary_get_string(dev, GAVL_META_ID);
   
   gavl_dictionary_init(&m);
+  uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sending notification for %s", uri);
   
   /* Common fields */
   gavl_http_request_init(&m, "NOTIFY", "*", "HTTP/1.1");
@@ -493,7 +495,6 @@ static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int aliv
   
   gavl_dictionary_set_string_nocopy(&m, "SERVER", bg_upnp_make_server_string());
 
-  uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
   bg_uri_to_uuid(uri, uuid);
   
   gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type);
@@ -610,9 +611,9 @@ static int notify(bg_ssdp_t * ssdp)
                                  rand_long(GAVL_TIME_SCALE * 100, GAVL_TIME_SCALE * 900));
         count = 0;
         }
+      notify_dev(ssdp, dev, 1);
       
       gavl_dictionary_set_int(dev, NOTIFY_COUNT, count);
-      
       ret++;
       }
     i++;
