@@ -25,6 +25,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include <netinet/ip.h>
+
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
 #include <gavl/metatags.h>
@@ -249,9 +251,9 @@ static void queue_multicast(bg_ssdp_t * ssdp, const gavl_dictionary_t * msg)
 bg_ssdp_t * bg_ssdp_create(void)
   {
   char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
-  
   bg_ssdp_t * ret = calloc(1, sizeof(*ret));
-
+  int ttl;
+  
   ret->timer = gavl_timer_create();
   gavl_timer_start(ret->timer);
   ret->addr = gavl_socket_address_create();
@@ -264,6 +266,10 @@ bg_ssdp_t * bg_ssdp_create(void)
   gavl_socket_address_set(ret->addr, "0.0.0.0", 0, SOCK_DGRAM);
   
   ret->ucast_fd = gavl_udp_socket_create(ret->addr);
+  
+  /* Set multicast TTL */
+  ttl = 4;
+  setsockopt(ret->ucast_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
   
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Unicast socket bound at %s", 
            gavl_socket_address_to_string(ret->addr, addr_str));
@@ -367,6 +373,7 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     is_upnp = 1;
     real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, strstr(uri, "://"));
     type = BG_BACKEND_MEDIASERVER;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for upnp server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(gavl_string_starts_with_i(nt, UPNP_RENDERER_NT_PREFIX))
     {
@@ -374,16 +381,19 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     type = BG_BACKEND_RENDERER;
 
     is_upnp = 1;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for upnp renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(!strcasecmp(nt, GMERLIN_SERVER_NT))
     {
     real_uri = gavl_strdup(uri);
     type = BG_BACKEND_MEDIASERVER;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for gmerlin server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(!strcasecmp(nt, GMERLIN_RENDERER_NT))
     {
     real_uri = gavl_strdup(uri);
     type = BG_BACKEND_RENDERER;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for gmerlin renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else
     goto end;
