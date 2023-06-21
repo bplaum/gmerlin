@@ -722,8 +722,8 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
             {
             gavl_msg_t * msg1;
             
-            if(msg->ID == BG_CMD_DB_SAVE_LOCAL)
-              fprintf(stderr, "BG_CMD_DB_SAVE_LOCAL l: %s r: %s\n", local_id, remote_id);
+            //            if(msg->ID == BG_CMD_DB_SAVE_LOCAL)
+            //              fprintf(stderr, "BG_CMD_DB_SAVE_LOCAL l: %s r: %s\n", local_id, remote_id);
             
             //            if(msg->ID == BG_FUNC_DB_BROWSE_CHILDREN)
             //              fprintf(stderr, "BG_FUNC_DB_BROWSE_CHILDREN l: %s r: %s\n", local_id, remote_id);

@@ -2021,7 +2021,7 @@ static int create_server(bg_backend_handle_t * dev, const char * uri_1, const ch
 
   dev->priv = server;
   
-  if((pos = strstr(uri_1, "://")))
+    if((pos = strstr(uri_1, "://")))
     uri = bg_sprintf("http%s", pos);
   else
     uri = gavl_strdup(uri_1);

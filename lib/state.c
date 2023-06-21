@@ -255,7 +255,7 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
 
   if(!(child = get_val_dict_c(state, ctx)))
     {
-    fprintf(stderr, "No such ctx %s\n", ctx);
+    //    fprintf(stderr, "No such ctx %s\n", ctx);
     return NULL;
     }
 

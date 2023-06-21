@@ -111,12 +111,7 @@ int main(int argc, char ** argv)
     {
     st =  bg_media_source_get_audio_stream(h->src, i);
     gavl_audio_source_set_dst(st->asrc, 0, NULL);
-
-    for(j = 0; j < num_frames; j++)
-      {
-      
-      }
-
+    
     }
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_VIDEO);
   for(i = 0; i < num_streams; i++)
@@ -144,7 +139,7 @@ int main(int argc, char ** argv)
     
     fprintf(stderr, "Reading frame from audio stream %d...", i+1);
     
-    if(gavl_audio_source_read_frame(st->asrc, &af) != GAVL_SOURCE_OK)
+    if(gavl_audio_source_read_frame(st->asrc, &af) == GAVL_SOURCE_OK)
       {
       
       fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %d\n",
@@ -168,7 +163,7 @@ int main(int argc, char ** argv)
 
     fprintf(stderr, "Reading frame from video stream %d...", i+1);
     
-    if(gavl_video_source_read_frame(st->vsrc, &vf) != GAVL_SOURCE_OK)
+    if(gavl_video_source_read_frame(st->vsrc, &vf) == GAVL_SOURCE_OK)
       {
       fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %"PRId64"\n",
               vf->timestamp, gavl_time_unscale(fmt->timescale, vf->timestamp),
@@ -194,7 +189,7 @@ int main(int argc, char ** argv)
 
     fprintf(stderr, "Reading frame from text stream %d...", i+1);
     
-    if(gavl_packet_source_read_packet(st->psrc, &pkt) != GAVL_SOURCE_OK)
+    if(gavl_packet_source_read_packet(st->psrc, &pkt) == GAVL_SOURCE_OK)
       {
       fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %"PRId64"\n",
               pkt->pts, gavl_time_unscale(timescale, pkt->pts),
@@ -218,7 +213,7 @@ int main(int argc, char ** argv)
     fprintf(stderr, "Reading frame from overlay stream %d...", i+1);
     
 
-    if(gavl_video_source_read_frame(st->vsrc, &vf) != GAVL_SOURCE_OK)
+    if(gavl_video_source_read_frame(st->vsrc, &vf) == GAVL_SOURCE_OK)
       {
       fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %"PRId64"\n",
               vf->timestamp, gavl_time_unscale(fmt->timescale, vf->timestamp),

@@ -175,7 +175,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
         id = bg_upnp_id_from_upnp(ObjectID);
         
-        fprintf(stderr, "UPNP: browse children %s %d %d\n", id, start, num);
+        //        fprintf(stderr, "UPNP: browse children %s %d %d\n", id, start, num);
 
         //bg_mdb_set_browse_children_request
         bg_mdb_set_browse_children_request(msg, id, start, num, 1);
