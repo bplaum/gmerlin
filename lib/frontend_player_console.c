@@ -37,8 +37,8 @@ static void print_time(bg_frontend_t * fe, gavl_time_t time)
   }
 #endif
 
-static int handle_player_message(void * data,
-                                 gavl_msg_t * msg)
+static int handle_player_message_console(void * data,
+                                         gavl_msg_t * msg)
   {
   bg_frontend_t * fe = data;
   bg_player_frontend_console_t * priv = fe->priv;
@@ -216,7 +216,7 @@ bg_frontend_create_player_console(bg_controllable_t * ctrl, int display_time)
 
   /* Initialize state variables */
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message, ret, 0));
+  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message_console, ret, 0));
   
   bg_frontend_init(ret);
 

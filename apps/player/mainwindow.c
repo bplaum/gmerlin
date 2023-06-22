@@ -474,7 +474,7 @@ static gboolean do_configure(gpointer data)
   return FALSE;
   }
 
-static int handle_player_message(void * data, gavl_msg_t * msg)
+static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
   {
   main_window_t * w = data;
   switch(msg->NS)
@@ -1191,7 +1191,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   gtk_widget_show(main_grid);
   gtk_container_add(GTK_CONTAINER(ret->win), main_grid);
 
-  bg_control_init(&ret->player_ctrl, bg_msg_sink_create(handle_player_message, ret, 0));
+  bg_control_init(&ret->player_ctrl, bg_msg_sink_create(handle_player_message_gmerlin, ret, 0));
   
   g_timeout_add(DELAY_TIME, idle_callback, (gpointer)ret);
   set_display_mode(ret);  

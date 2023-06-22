@@ -662,7 +662,7 @@ static void add_track(bg_frontend_t * fe, const gavl_dictionary_t * track, int i
   }
 
 
-static int handle_player_message(void * priv, gavl_msg_t * msg)
+static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
   {
   bg_frontend_t * fe = priv;
   mpris2_t * p = fe->priv;
@@ -959,7 +959,7 @@ static int create_player_mpris2(bg_frontend_t * fe,
   
   priv->conn = bg_dbus_connection_get(DBUS_BUS_SESSION);
   
-  bg_control_init(&fe->ctrl, bg_msg_sink_create(handle_player_message, fe, 0));
+  bg_control_init(&fe->ctrl, bg_msg_sink_create(handle_player_message_mpris, fe, 0));
   
   fe->priv = priv;
   

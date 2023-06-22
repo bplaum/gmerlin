@@ -315,7 +315,7 @@ static void cleanup_player_ncurses(void * priv)
   
   }
 
-static int handle_player_message(void * priv, gavl_msg_t * msg)
+static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
   {
   bg_frontend_t * fe = priv;
   bg_player_frontend_ncurses_t * p = fe->priv;
@@ -805,7 +805,7 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   //  scrollok(priv->tracks_win, TRUE);
   //  idlok(priv->tracks_win, TRUE);
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message, ret, 0));
+  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message_ncurses, ret, 0));
 
   priv->ncurses_sink = bg_msg_sink_create(handle_ncurses_message, ret, 1);
   

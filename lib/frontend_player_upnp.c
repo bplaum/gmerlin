@@ -347,7 +347,7 @@ static int player_mode_to_gmerlin(const char * upnp_mode)
   return -1;
   }
 
-static int handle_player_message(void * priv, gavl_msg_t * msg)
+static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
   {
   bg_frontend_t * fe = priv;
   bg_renderer_frontend_upnp_t * p = fe->priv;
@@ -1263,7 +1263,7 @@ bg_frontend_create_player_upnp(bg_http_server_t * srv,
   uuid_generate(control_uuid);
   uuid_unparse(control_uuid, priv->control_id);
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message, ret, 0));
+  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message_upnp, ret, 0));
 
   /* Add the event handlers first */
 
