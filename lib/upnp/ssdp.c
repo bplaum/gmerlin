@@ -72,6 +72,9 @@
 #define GMERLIN_SERVER_NT   "urn:gmerlin-sourceforge-net:device:MediaServer:"
 #define GMERLIN_RENDERER_NT "urn:gmerlin-sourceforge-net:device:MediaRenderer:"
 
+// Log level for ssdp messages (typically GAVL_LOG_DEBUG because they 
+// are quite noisy)
+#define LOG_LEVEL_MSG GAVL_LOG_DEBUG 
 
 struct  bg_ssdp_s
   {
@@ -373,7 +376,7 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     is_upnp = 1;
     real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, strstr(uri, "://"));
     type = BG_BACKEND_MEDIASERVER;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for upnp server: %s", (alive ? "alive" : "bye"), real_uri);
+    gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(gavl_string_starts_with_i(nt, UPNP_RENDERER_NT_PREFIX))
     {
@@ -381,19 +384,19 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     type = BG_BACKEND_RENDERER;
 
     is_upnp = 1;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for upnp renderer: %s", (alive ? "alive" : "bye"), real_uri);
+    gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(!strcasecmp(nt, GMERLIN_SERVER_NT))
     {
     real_uri = gavl_strdup(uri);
     type = BG_BACKEND_MEDIASERVER;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for gmerlin server: %s", (alive ? "alive" : "bye"), real_uri);
+    gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for gmerlin server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(!strcasecmp(nt, GMERLIN_RENDERER_NT))
     {
     real_uri = gavl_strdup(uri);
     type = BG_BACKEND_RENDERER;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s for gmerlin renderer: %s", (alive ? "alive" : "bye"), real_uri);
+    gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for gmerlin renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else
     goto end;
@@ -487,7 +490,7 @@ static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int aliv
   gavl_dictionary_init(&m);
   uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sending notification for %s", uri);
+  gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Sending notification for %s", uri);
   
   /* Common fields */
   gavl_http_request_init(&m, "NOTIFY", "*", "HTTP/1.1");
@@ -988,7 +991,7 @@ static int do_search(bg_ssdp_t * s)
     gavl_dictionary_set_string(&h, "MX", "3");
     gavl_dictionary_set_string(&h, "ST", "ssdp:all");
     queue_multicast(s, &h);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sent search packet");
+    gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Sent search packet");
 
     if(s->search_count < 3)
       {

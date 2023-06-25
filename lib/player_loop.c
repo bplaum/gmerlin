@@ -1497,7 +1497,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               else
                 gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting live stream");
               }
-            /* TODO: seekable http sources */
             
             bg_threads_join(player->threads, PLAYER_MAX_THREADS);
             

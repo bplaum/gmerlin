@@ -275,7 +275,7 @@ void bg_player_video_set_eof(bg_player_t * p)
 
   p->video_stream.eof = 1;
   
-  if(p->audio_stream.eof)
+  if(p->audio_stream.eof  || (gavl_track_get_duration(p->src->track_info) == GAVL_TIME_UNDEFINED))
     bg_player_set_eof(p);
   
   pthread_mutex_unlock(&p->audio_stream.eof_mutex);

@@ -1190,7 +1190,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   
   gtk_widget_show(main_grid);
   gtk_container_add(GTK_CONTAINER(ret->win), main_grid);
-
+  
   bg_control_init(&ret->player_ctrl, bg_msg_sink_create(handle_player_message_gmerlin, ret, 0));
   
   g_timeout_add(DELAY_TIME, idle_callback, (gpointer)ret);

@@ -297,7 +297,7 @@ int bg_player_audio_set_eof(bg_player_t * p)
 
   p->audio_stream.eof = 1;
   
-  if(p->video_stream.eof)
+  if(p->video_stream.eof || (gavl_track_get_duration(p->src->track_info) == GAVL_TIME_UNDEFINED))
     {
     bg_player_set_eof(p);
     }

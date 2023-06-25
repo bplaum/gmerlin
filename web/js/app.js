@@ -2748,9 +2748,7 @@ function create_browser()
         this.b.select_entry(this.b.div.childNodes[0].dataset.id);
         break;
       case "Enter":
-        if(evt.shiftKey)
-	  playqueue_add_album(this.b.container, true, true)
-        else if(app_state.sel_id)
+        if(app_state.sel_id)
           this.b.entry_fire(app_state.sel_id);
         break;
       case "A":
@@ -3418,7 +3416,15 @@ function create_browser()
 	push_state();
         }
       else
-        playqueue_add_entry(obj, 0, 1);
+	{
+	  //          playqueue_add_entry(obj, 0, 1);
+	// replace playqueue
+        playqueue_add_album(this.container, true, false);
+	  
+        msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
+        msg_set_arg_string(msg, 0, obj_make_playqueue_id(obj));
+        player.handle_command(msg);
+	}
       }
 	
     };
