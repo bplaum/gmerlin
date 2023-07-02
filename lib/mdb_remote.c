@@ -737,10 +737,10 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
 
               bg_mdb_get_browse_children_request(msg, NULL, &start, &num, &one_answer);
               
-              msg1 = bg_msg_sink_get(be->ctrl.evt_sink);           
-
               if(!bg_mdb_adjust_num(start, &num, arr->num_entries))
                 return 1;
+
+              msg1 = bg_msg_sink_get(be->ctrl.evt_sink);           
               
               if(num < arr->num_entries)
                 {

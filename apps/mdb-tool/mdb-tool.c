@@ -3,6 +3,9 @@
 
 #include <config.h>
 
+#include <gavl/log.h>
+#define LOG_DOMAIN "mdb-tool"
+
 #include <gmerlin/mdb.h>
 
 #include <gmerlin/cfg_registry.h>
@@ -13,6 +16,7 @@
 #include <gmerlin/cmdline.h>
 #include <gmerlin/translation.h>
 #include <gmerlin/application.h>
+#include <gmerlin/websocket.h>
 
 static int do_create = 0;
 static int do_monitor = 0;
@@ -22,6 +26,8 @@ char * path = NULL;
 bg_mdb_t * mdb = NULL;
 bg_controllable_t * mdb_ctrl;
 bg_control_t ctrl;
+bg_websocket_connection_t * conn = NULL;
+
 
 static void opt_create(void * data, int * argc, char *** _argv, int arg)
   {
@@ -59,7 +65,7 @@ static bg_cmdline_arg_t global_options[] =
     {
       .arg =         "-db",
       .help_arg =    "<path>",
-      .help_string = "DB path",
+      .help_string = "DB path or websocket address",
       .callback =    opt_db,
     },
     {
@@ -69,7 +75,20 @@ static bg_cmdline_arg_t global_options[] =
 
 static void opt_rescan(void * data, int * argc, char *** _argv, int arg)
   {
-  bg_mdb_rescan_sync(mdb);
+  if(mdb)
+    bg_mdb_rescan_sync(mdb_ctrl);
+  else // Call asynchronous
+    {
+    gavl_time_t t = GAVL_TIME_SCALE / 50;
+    bg_mdb_rescan(mdb_ctrl);
+
+    while(bg_websocket_connection_iteration(conn))
+      {
+      if(!bg_msg_sink_get_num(ctrl.evt_sink))
+        gavl_time_delay(&t);
+      };
+    }
+  
   }
 
 
@@ -128,8 +147,7 @@ static bg_cmdline_arg_t commands[] =
       .help_string = "Browse children",
       .callback =    browse_children,
     },
-    /* TODO: add db dir, delete db dir, add media dir, delete media dir */
-  
+    /* TODO: add more */
     {
       /* End */
     }
@@ -149,12 +167,13 @@ const bg_cmdline_app_data_t app_data =
 static int handle_msg(void * data, gavl_msg_t * msg)
   {
   gavl_msg_dump(msg, 0);
+  if((msg->NS == BG_MSG_NS_DB) && (msg->ID == BG_MSG_DB_RESCAN_DONE))
+    return 0;
   return 1;
   }
 
 int main(int argc, char ** argv)
   {
-  
   gavl_time_t t = GAVL_TIME_SCALE / 20;
 
   bg_app_init("mdb-tool", TRS("Manipulate Media DB"));
@@ -169,11 +188,23 @@ int main(int argc, char ** argv)
 
   bg_plugins_init("generic");
   
-  if(!(mdb = bg_mdb_create(path, do_create, NULL)))
-    return EXIT_FAILURE;
-
-  mdb_ctrl =  bg_mdb_get_controllable(mdb);
-
+  if(gavl_string_starts_with(path, "gmerlin-mdb://"))
+    {
+    if(!(conn = bg_websocket_connection_create(path, 3000, NULL)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't connect to %s", path);
+      return EXIT_FAILURE;
+      }
+    mdb_ctrl = bg_websocket_connection_get_controllable(conn);
+    }
+  else
+    {
+    if(!(mdb = bg_mdb_create(path, do_create, NULL)))
+      return EXIT_FAILURE;
+    
+    mdb_ctrl =  bg_mdb_get_controllable(mdb);
+    }
+  
   bg_controllable_connect(mdb_ctrl, &ctrl);
   
   bg_cmdline_parse(commands, &argc, &argv, NULL);
@@ -193,9 +224,15 @@ int main(int argc, char ** argv)
       }
     }
 
-  bg_mdb_stop(mdb);
-  bg_mdb_destroy(mdb);
+  if(mdb)
+    {
+    bg_mdb_stop(mdb);
+    bg_mdb_destroy(mdb);
+    }
 
+  if(conn)
+    bg_websocket_connection_destroy(conn);
+  
   bg_control_cleanup(&ctrl);
   
   return EXIT_SUCCESS;

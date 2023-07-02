@@ -844,17 +844,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           res = bg_msg_sink_get(b->ctrl.evt_sink);
 
           bg_mdb_set_browse_obj_response(res, dict, msg, item_idx, total);
-
-#if 0          
-          gavl_msg_set_id_ns(res, BG_RESP_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
-          gavl_msg_set_client_id(res, gavl_msg_get_client_id(msg));
-          gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, ctx_id);
-          
-          gavl_msg_set_arg_nocopy(res, 0, &val);
-#endif
           bg_msg_sink_put(b->ctrl.evt_sink, res);
-
-          
           }
           break;
         case BG_FUNC_DB_BROWSE_CHILDREN:

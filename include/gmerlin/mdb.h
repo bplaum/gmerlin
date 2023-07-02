@@ -59,8 +59,8 @@ void bg_mdb_stop(bg_mdb_t * db);
 
 bg_controllable_t * bg_mdb_get_controllable(bg_mdb_t * db);
 
-void bg_mdb_rescan(bg_mdb_t * db);
-void bg_mdb_rescan_sync(bg_mdb_t * db);
+void bg_mdb_rescan(bg_controllable_t * db);
+void bg_mdb_rescan_sync(bg_controllable_t * db);
 
 
 void bg_mdb_add_uris(bg_mdb_t * mdb, const char * parent_id, int idx,

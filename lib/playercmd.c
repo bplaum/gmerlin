@@ -95,7 +95,6 @@ void bg_player_stop(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_stop_m(msg);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_STOP, BG_MSG_NS_PLAYER);
   bg_msg_sink_put(sink, msg);
   }
 

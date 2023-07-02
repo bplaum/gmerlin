@@ -550,13 +550,15 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             if(!be) // Children are in the root tree 
               {
               const gavl_array_t * arr = gavl_get_tracks(obj);
-              gavl_msg_t * res = bg_msg_sink_get(db->ctrl.evt_sink);
+              gavl_msg_t * res;
 
               //              fprintf(stderr, "mdb: Got no backend\n");
               //              gavl_dictionary_dump(obj, 2);
               
               if(!bg_mdb_adjust_num(start, &num, arr->num_entries))
                 return 1;
+
+              res = bg_msg_sink_get(db->ctrl.evt_sink);
               
               if(num < arr->num_entries)
                 {
@@ -747,7 +749,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             else if(!strcmp(name, "rescan"))
               {
               //              fprintf(stderr, "** Rescan **\n");
-              bg_mdb_rescan(db);
+              bg_mdb_rescan(&db->ctrl);
               }
             else
               return 1;
@@ -1474,11 +1476,11 @@ void bg_mdb_destroy(bg_mdb_t * db)
   free(db);
   }
 
-void bg_mdb_rescan(bg_mdb_t * db)
+void bg_mdb_rescan(bg_controllable_t * db)
   {
-  gavl_msg_t * msg = bg_msg_sink_get(db->ctrl.cmd_sink);
+  gavl_msg_t * msg = bg_msg_sink_get(db->cmd_sink);
   gavl_msg_set_id_ns(msg, BG_CMD_DB_RESCAN, BG_MSG_NS_DB);
-  bg_msg_sink_put(db->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(db->cmd_sink, msg);
   }
 
 static int handle_message_rescan(void * data, gavl_msg_t * msg)
@@ -1491,13 +1493,13 @@ static int handle_message_rescan(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-void bg_mdb_rescan_sync(bg_mdb_t * db)
+void bg_mdb_rescan_sync(bg_controllable_t * db)
   {
   gavl_time_t delay_time = GAVL_TIME_SCALE/20; // 50 ms
   int done = 0;
   bg_msg_sink_t * sink = bg_msg_sink_create(handle_message_rescan, &done, 0);
 
-  bg_msg_hub_connect_sink(db->ctrl.evt_hub, sink);
+  bg_msg_hub_connect_sink(db->evt_hub, sink);
 
   bg_mdb_rescan(db);
   
@@ -1512,7 +1514,7 @@ void bg_mdb_rescan_sync(bg_mdb_t * db)
       gavl_time_delay(&delay_time);
     }
   
-  bg_msg_hub_disconnect_sink(db->ctrl.evt_hub, sink);
+  bg_msg_hub_disconnect_sink(db->evt_hub, sink);
   
   }
 

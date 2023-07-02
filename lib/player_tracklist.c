@@ -835,12 +835,11 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
              !(arr = gavl_get_tracks_nc(l->cnt)) ||
              !arr->num_entries)
             break;
-
           
-          resp = bg_msg_sink_get(l->evt_sink);
-
           if(!bg_mdb_adjust_num(start, &num, arr->num_entries))
             break;
+
+          resp = bg_msg_sink_get(l->evt_sink);
           
           if(num < arr->num_entries)
             {

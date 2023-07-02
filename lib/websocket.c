@@ -655,7 +655,9 @@ bg_websocket_connection_create(const char * url, int timeout,
   if(!path)
     path = gavl_strdup("/");
   
-  if(strcmp(protocol, "ws"))
+  if(strcmp(protocol, "ws") &&
+     strcmp(protocol, BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER) &&
+     strcmp(protocol, BG_BACKEND_URI_SCHEME_GMERLIN_MDB))
     goto fail;
   
   addr = gavl_socket_address_create();

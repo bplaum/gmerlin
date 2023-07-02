@@ -163,10 +163,9 @@ static void report_window_size(bg_msg_sink_t * sink)
   int w, h;
   gavl_msg_t * msg;
 
-  msg = bg_msg_sink_get(sink);
-  
   getmaxyx(stdscr, h, w);
   
+  msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, GAVL_MSG_GUI_WINDOW_COORDS, GAVL_MSG_NS_GUI);
       
   gavl_msg_set_arg_int(msg, 0, 0);
