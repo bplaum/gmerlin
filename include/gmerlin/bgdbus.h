@@ -60,7 +60,7 @@ void bg_dbus_connection_unlock(bg_dbus_connection_t *);
 
 /* ... or start and stop the thread so you don't have to care */
 
-void bg_dbus_connection_unref(bg_dbus_connection_t *);
+// void bg_dbus_connection_unref(bg_dbus_connection_t *);
 
 void
 bg_dbus_connection_add_listener(bg_dbus_connection_t * conn,

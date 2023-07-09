@@ -715,9 +715,6 @@ void bg_volume_manager_destroy(bg_volume_manager_t * man)
   if(man->hub)
     bg_msg_hub_destroy(man->hub);
 
-  if(man->conn)
-    bg_dbus_connection_unref(man->conn);
-
   if(man->dbus_sink)
     bg_msg_sink_destroy(man->dbus_sink);
   

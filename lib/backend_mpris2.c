@@ -909,8 +909,6 @@ static void destroy_mpris2(bg_backend_handle_t * dev)
 
   gavl_timer_destroy(p->timer);
   
-  if(p->conn)
-    bg_dbus_connection_unref(p->conn);
 
   if(p->dbus_sink)
     bg_msg_sink_destroy(p->dbus_sink);

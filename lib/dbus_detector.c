@@ -525,10 +525,6 @@ void bg_dbus_detector_destroy(bg_dbus_detector_t * d)
     if(d->system_conn)
       bg_dbus_connection_del_listeners(d->system_conn, d->dbus_sink);
     }
-  if(d->session_conn)
-    bg_dbus_connection_unref(d->session_conn);
-  if(d->system_conn)
-    bg_dbus_connection_unref(d->system_conn);
   
   if(d->dbus_sink)
     bg_msg_sink_destroy(d->dbus_sink);

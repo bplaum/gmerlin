@@ -1075,14 +1075,10 @@ static int ping_player_mpris2(bg_frontend_t * fe, gavl_time_t current_time)
 static void cleanup_player_mpris2(void * data)
   {
   mpris2_t * priv = data;
-
   
   if(priv->conn)
-    {
     bg_dbus_unregister_object(priv->conn, OBJ_PATH, priv->dbus_sink);
-    bg_dbus_connection_unref(priv->conn);
-    }
-
+  
   if(priv->dbus_sink)
     bg_msg_sink_destroy(priv->dbus_sink);
 

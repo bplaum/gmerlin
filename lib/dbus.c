@@ -128,8 +128,6 @@ struct bg_dbus_connection_s
   int num_listeners;
   int listeners_alloc;
 
-  int refcount;
-  
   pthread_mutex_t mutex;
 
   gavl_dictionary_t obj_tree;
@@ -139,7 +137,7 @@ static bg_dbus_connection_t * session_conn = NULL;
 static bg_dbus_connection_t * system_conn = NULL;
 
 static pthread_t dbus_thread;
-
+static int do_join = 0;
 
 static pthread_mutex_t conn_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -674,45 +672,45 @@ static int bg_dbus_connection_update(bg_dbus_connection_t * conn)
 static void * dbus_thread_func(void * data)
   {
   int ret = 0;
-  int no_connections;
-
-  //  bg_dbus_connection_t * system_conn_local;
-  //  bg_dbus_connection_t * session_conn_local;
+  bg_dbus_connection_t * system_conn_local;
+  bg_dbus_connection_t * session_conn_local;
   
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   
   while(1)
     {
-    no_connections = 0;
     ret = 0;
 
     //    fprintf(stderr, "dbus_thread_func 1\n");
     
     dbus_lock();
-    //    system_conn_local = system_conn;
-    //    session_conn_local = session_conn;
+    system_conn_local = system_conn;
+    session_conn_local = session_conn;
+
+    if(do_join)
+      {
+      dbus_unlock();
+      break;
+      }
+
+    dbus_unlock();
     
     //    fprintf(stderr, "dbus_thread_func 2\n");
 
-    if(system_conn)
-      ret += bg_dbus_connection_update(system_conn);
+    if(system_conn_local)
+      ret += bg_dbus_connection_update(system_conn_local);
 
     //    fprintf(stderr, "dbus_thread_func 3\n");
     
-    if(session_conn)
-      ret += bg_dbus_connection_update(session_conn);
+    if(session_conn_local)
+      ret += bg_dbus_connection_update(session_conn_local);
     
     //    fprintf(stderr, "dbus_thread_func 4\n");
     
-    if(!session_conn && !system_conn)
-      no_connections = 1;
-    
-    dbus_unlock();
+    if(!session_conn_local && !system_conn_local)
+      break;
     
     //    fprintf(stderr, "dbus_thread_func 5\n");
-    
-    if(no_connections)
-      break;
     
     if(!ret)
       gavl_time_delay(&delay_time);
@@ -765,58 +763,8 @@ bg_dbus_connection_t * bg_dbus_connection_get(DBusBusType type)
     pthread_create(&dbus_thread, NULL, dbus_thread_func, NULL);  
     }
 
-  if(ret)
-    {
-    bg_dbus_connection_lock(ret);
-    ret->refcount++;
-    bg_dbus_connection_unlock(ret);
-    }
-  
   
   return ret;
-  }
-
-
-void bg_dbus_connection_unref(bg_dbus_connection_t * conn)
-  {
-  int join_thread = 0;
-  int destroy = 0;
-
-  bg_dbus_connection_lock(conn);
-
-  dbus_lock();
-  
-
-  conn->refcount--;
-  if(!conn->refcount)
-    destroy = 1;
-
-  //  fprintf(stderr, "*** bg_dbus_connection_unref: %d\n", conn->refcount);
-  
-  
-  if(destroy)
-    {
-    if(conn == system_conn)
-      system_conn = NULL;
-    else if(conn == session_conn)
-      session_conn = NULL;
-    
-    if(!session_conn && !system_conn)
-      join_thread = 1;
-    }
-
-  dbus_unlock();
-  bg_dbus_connection_unlock(conn);
-  
-  if(join_thread)
-    {
-    //    fprintf(stderr, "Joining dbus thread\n");
-    pthread_join(dbus_thread, NULL);
-    }
-
-  
-  if(destroy)
-    bg_dbus_connection_destroy(conn);
   }
 
 void
@@ -1536,4 +1484,26 @@ void bg_dbus_set_property_local(bg_dbus_connection_t * conn,
     }
 
   }
+
+#if defined(__GNUC__)
+
+static void cleanup_dbus() __attribute__ ((destructor));
+
+static void cleanup_dbus()
+  {
+  dbus_lock();
+  do_join = 1;
+  dbus_unlock();
+  
+  pthread_join(dbus_thread, NULL);
+
+  if(session_conn)
+    bg_dbus_connection_destroy(session_conn);
+  
+  if(system_conn)
+    bg_dbus_connection_destroy(system_conn);
+  
+  }
+
+#endif
 
