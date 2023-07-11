@@ -75,7 +75,6 @@ struct bg_object_cache_s
 
 static void cache_delete_nolock(bg_object_cache_t * cache, const char * id);
 
-
 static const gavl_value_t * object_cache_put_nocopy(bg_object_cache_t * cache,
                                                     const char * id, gavl_value_t * val);
 

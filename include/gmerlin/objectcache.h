@@ -46,4 +46,19 @@ void bg_object_cache_destroy(bg_object_cache_t * cache);
 
 void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv);
 
+/* TODO: Local store for long tracklists */
+
+typedef struct bg_list_store_s bg_list_store_t;
+
+bg_list_store_t * bg_array_store_create(const char * directory);
+
+void bg_list_store_destroy(bg_list_store_t * st);
+int bg_list_store_get_num(bg_list_store_t * st);
+const gavl_dictionary_t * bg_list_store_get(bg_list_store_t * st, int idx);
+
+/* val can be array or dictionary */
+void bg_list_store_splice(bg_list_store_t * st, int idx, int del, gavl_value_t * val);
+
+
+
 #endif // BG_OBJCACHE_H_INCLUDED

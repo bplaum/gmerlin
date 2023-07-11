@@ -1413,6 +1413,12 @@ function msg_is_last(msg)
     return 1;
   }
 
+function msg_set_last(msg, last)
+  {
+  if(!last)
+    dict_set_int(msg.header, GAVL_MSG_NOT_LAST, 1);
+  }
+
 function msg_set_arg_val(msg, arg, val)
   {
   if(arg >= 8)

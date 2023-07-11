@@ -2301,6 +2301,11 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
   //  gavl_dictionary_dump(track, 2);
   
   gavl_dictionary_set(track, GAVL_META_CHILDREN, NULL);
+  gavl_dictionary_set(track, GAVL_META_STREAMS, NULL);
+  gavl_dictionary_set(track, "astreams", NULL);
+  gavl_dictionary_set(track, "vstreams", NULL);
+  gavl_dictionary_set(track, "tstreams", NULL);
+  
   gavl_track_finalize(track);
   
   if(!(m = gavl_track_get_metadata_nc(track)))

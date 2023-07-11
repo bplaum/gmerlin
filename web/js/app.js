@@ -268,10 +268,52 @@ function playqueue_add_entry(obj, replace, play)
     
   }
 
+const TRACKS_TO_SEND = 50;
+
+function send_add_album_message(idx, arr, replace, last)
+  {
+  var msg;
+
+  msg = msg_create(BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+  dict_set_string(msg.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
+  dict_set_string(msg.header, GAVL_MSG_CLIENT_ID, client_id);
+
+  if(!idx)
+    {
+    if(replace)
+      {
+      msg_set_arg_int(msg, 0, 0); // idx
+      msg_set_arg_int(msg, 1, -1); // delete
+      }
+    else
+      {
+      msg_set_arg_int(msg, 0, -1); // idx
+      msg_set_arg_int(msg, 1, 0); // delete
+      }
+    }
+  else
+    {
+    msg_set_arg_int(msg, 0, idx); // idx
+    msg_set_arg_int(msg, 1, 0); // delete
+    }
+    
+  msg_set_arg_array(msg, 2, arr); // children
+  player.handle_command(msg);
+  
+  
+  }
+  
+
 function playqueue_add_album(container, replace, play)
   {
   var msg;
   var children;
+  var start;
+  var end;
+  var added = 0;
+  var i;
+  var klass;
+  var arr = null;
 
   if((widgets.browser != current_widget) ||
      (app_state.id == BG_PLAYQUEUE_ID))
@@ -281,26 +323,36 @@ function playqueue_add_album(container, replace, play)
   var num_items = dict_get_int(m, GAVL_META_NUM_ITEM_CHILDREN);
   var num_containers = dict_get_int(m, GAVL_META_NUM_CONTAINER_CHILDREN);
 
-  if(!num_items || num_containers)
+  if(!num_items)
     return 0;
-    
-  msg = msg_create(BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-  dict_set_string(msg.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
-  dict_set_string(msg.header, GAVL_MSG_CLIENT_ID, client_id);
 
-  if(replace)
-    {
-    msg_set_arg_int(msg, 0, 0); // idx
-    msg_set_arg_int(msg, 1, -1); // delete
-    }
-  else
-    {
-    msg_set_arg_int(msg, 0, -1); // idx
-    msg_set_arg_int(msg, 1, -1); // delete
-    }
   children = dict_get_array(container, GAVL_META_CHILDREN);
-  msg_set_arg_array(msg, 2, clone_object(children, false)); // children
-  player.handle_command(msg);
+
+  for(i = 0; i < children.length; i++)
+    {
+//    console.log("Add album " + JSON.stringify(children[i]));
+      
+    klass = obj_get_string(children[i].v, GAVL_META_MEDIA_CLASS);
+    if(!klass || !klass.startsWith("item"))
+      continue;
+    
+    if(arr && (arr.length >= TRACKS_TO_SEND))
+      {
+      // Send previous stuff
+      send_add_album_message(added, arr, replace, false);
+      added += arr.length;
+      arr = null;
+      }
+    
+    if(!arr)
+      arr = new Array();
+
+    arr.push(children[i]);
+    }
+
+  if(arr)
+    send_add_album_message(added, arr, replace, true);
+
   
   if(play && (children.length > 0))
     {
@@ -310,16 +362,6 @@ function playqueue_add_album(container, replace, play)
     }
   
   }
-
-/* TODO */
-
-/*
-function playqueue_add_selected(container, replace, play)
-  {
-
-  }
-*/
- 
 
 function my_get_metadata(id)
   {
@@ -1228,36 +1270,6 @@ function set_text_field(id, text)
   append_dom_text(el, text);
   }
 
-function obj_plays_as_item(obj)
-  {
-  var m = dict_get_dictionary(obj, GAVL_META_METADATA);
-  var klass = dict_get_string(m, GAVL_META_MEDIA_CLASS);
-      
-  if((klass == GAVL_META_MEDIA_CLASS_SONG) ||
-     (klass == GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-     (klass == GAVL_META_MEDIA_CLASS_TV_EPISODE) ||
-     ((klass == GAVL_META_MEDIA_CLASS_MOVIE) && !dict_get_int(m, GAVL_META_NUM_CHILDREN)))
-    {
-    return true;
-    }
-  return false;
-  }
-
-function obj_plays_as_container(obj)
-  {
-  var m = dict_get_dictionary(obj, GAVL_META_METADATA);
-  var klass = dict_get_string(m, GAVL_META_MEDIA_CLASS);
-
-  if((klass == GAVL_META_MEDIA_CLASS_MUSICALBUM) ||
-     (klass == GAVL_META_MEDIA_CLASS_PLAYLIST) ||
-     (klass == GAVL_META_MEDIA_CLASS_TV_SEASON) || 
-     ((klass == GAVL_META_MEDIA_CLASS_MOVIE) &&
-      dict_get_int(m, GAVL_META_NUM_CHILDREN)))
-    {
-    return true;
-    }
-  return false;
-  }
 
 function append_meta_info_internal(parent, obj, tag, parent_container)
   {
