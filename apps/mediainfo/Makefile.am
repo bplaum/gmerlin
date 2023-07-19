@@ -11,9 +11,14 @@ AM_LDFLAGS = @GMERLIN_EXE_LDFLAGS@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 bin_PROGRAMS = gmerlin-mediainfo
-man_MANS = gmerlin-mediainfo.1
 
-CLEANFILES = $(man_MANS)
+manpages = gmerlin-mediainfo.1
+man_MANS =
+if CROSSBUILD
+else
+man_MANS += $(manpages)
+endif
+CLEANFILES = $(manpages)
 
 
 gmerlin-mediainfo.1: gmerlin-mediainfo

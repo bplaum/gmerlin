@@ -30,7 +30,7 @@ gavf-recompress \
 gavf-tee \
 gavf-visualize
 
-man_MANS = \
+manpages = \
 gavf-read.1 \
 gavf-demux.1 \
 gavf-encode.1 \
@@ -41,8 +41,12 @@ gavf-recompress.1 \
 gavf-tee.1 \
 gavf-visualize.1
 
-
-CLEANFILES = $(man_MANS)
+man_MANS =
+if CROSSBUILD
+else
+man_MANS += $(manpages)
+endif
+CLEANFILES = $(manpages)
 
 %.1: %
 	$(builddir)/$< -help-man > $(builddir)/$@

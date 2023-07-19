@@ -16,15 +16,19 @@ Desktop_DATA = gmerlin-transcoder.desktop
 
 bin_PROGRAMS = gmerlin-transcoder
 
-man_MANS = gmerlin-transcoder.1
+manpages = gmerlin-transcoder.1
+man_MANS =
+if CROSSBUILD
+else
+man_MANS += $(manpages)
+endif
+CLEANFILES = $(manpages)
 
 gmerlin_transcoder_SOURCES = \
 main.c \
 transcoder_window.c \
 trackdialog.c \
 tracklist.c
-
-CLEANFILES = $(man_MANS)
 
 gmerlin-transcoder.1: gmerlin-transcoder
 	$(builddir)/gmerlin-transcoder -help-man > $(builddir)/gmerlin-transcoder.1

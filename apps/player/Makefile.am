@@ -15,7 +15,14 @@ Desktopdir = $(datadir)/applications
 Desktop_DATA = gmerlin-player.desktop
 
 bin_PROGRAMS = gmerlin
-dist_man_MANS = gmerlin.1
+
+manpages = gmerlin.1
+dist_man_MANS =
+if CROSSBUILD
+else
+dist_man_MANS += $(manpages)
+endif
+#CLEANFILES = $(manpages)
 
 bin_SCRIPTS = gmerlin_launcher
 

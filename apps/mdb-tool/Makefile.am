@@ -11,10 +11,14 @@ AM_LDFLAGS = @GMERLIN_EXE_LDFLAGS@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 bin_PROGRAMS = mdb-tool
-man_MANS = mdb-tool.1
 
-CLEANFILES = $(man_MANS)
-
+manpages = mdb-tool.1
+man_MANS =
+if CROSSBUILD
+else
+man_MANS += $(manpages)
+endif
+CLEANFILES = $(manpages)
 
 mdb-tool.1: mdb-tool
 	$(builddir)/mdb-tool -help-man > $(builddir)/mdb-tool.1
