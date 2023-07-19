@@ -16,9 +16,13 @@ gmerlin_server_SOURCES = \
 server.c \
 gmerlin-server.c
 
-man_MANS = gmerlin-server.1
-
-CLEANFILES = $(man_MANS)
+manpages = gmerlin-server.1
+man_MANS =
+if CROSSBUILD
+else
+man_MANS += $(manpages)
+endif
+CLEANFILES = $(manpages)
 
 gmerlin-server.1: gmerlin-server
 	$(builddir)/gmerlin-server -help-man > $(builddir)/gmerlin-server.1
