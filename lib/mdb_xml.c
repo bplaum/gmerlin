@@ -916,6 +916,9 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_msg_get_splice_children(msg, &last, &idx, &del, &add);
 
           bg_tracks_resolve_locations(&add, &add_arr, BG_INPUT_FLAG_GET_FORMAT);
+
+          //          fprintf(stderr, "Resolve children\n");
+          //          gavl_array_dump(&add_arr, 2 );
           
           splice(b, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), last, idx, del, &add_arr);
           gavl_value_free(&add);

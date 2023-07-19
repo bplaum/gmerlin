@@ -4795,16 +4795,16 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
   return ret;
   }
 
-static void load_location(const char * str, int flags,
-                          gavl_array_t * ret)
+static int load_location(const char * str, int flags, gavl_array_t * ret, int idx)
   {
+  int result = 0;
   const gavl_dictionary_t * edl;
-
+  
   const gavl_array_t * tracks;
   gavl_dictionary_t * mi = bg_plugin_registry_load_media_info(bg_plugin_reg, str, flags);
 
   if(!mi)
-    return;
+    return 0;
 
   /* Take EDL instead */
   if((edl = gavl_dictionary_get_dictionary(mi, GAVL_META_EDL)))
@@ -4812,13 +4812,14 @@ static void load_location(const char * str, int flags,
   else
     tracks = gavl_get_tracks(mi);
   
-  if(tracks &&
-     (tracks->num_entries > 0))
-    gavl_array_splice_array(ret, -1, 0, tracks);
+  if(tracks && ((result = tracks->num_entries) > 0))
+    gavl_array_splice_array(ret, idx, 1, tracks);
   
   gavl_dictionary_destroy(mi);
+  return result;
   }
 
+#if 0
 static int resolve_location(const gavl_dictionary_t * dict, gavl_array_t * dst, int flags)
   {
   const gavl_dictionary_t * m;
@@ -4836,30 +4837,65 @@ static int resolve_location(const gavl_dictionary_t * dict, gavl_array_t * dst, 
   else
     return 0;
   }
+#endif
+
+static int resolve_locations(gavl_array_t * dst, int flags)
+  {
+  int ret = 0;
+  int i = 0;
+  int num_added;
+  const gavl_dictionary_t * m;
+  const gavl_dictionary_t * dict;
+  const char * klass;
+  const char * uri;
+  
+  
+  while(i < dst->num_entries)
+    {
+    if(!(dict = gavl_value_get_dictionary(&dst->entries[i])))
+      {
+      i++;
+      continue;
+      }
+
+    if((m = gavl_track_get_metadata(dict)) &&
+       (klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+       !strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) &&
+       (gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &uri)))
+      {
+      num_added = load_location(uri, flags, dst, i);
+      if(num_added)
+        {
+        i += num_added;
+        ret++;
+        }
+      else
+        i++;
+      }
+    else
+      i++;
+    }
+  return ret;
+  }
 
 void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, int flags)
   {
   int i;
-  const gavl_dictionary_t * dict;
-
+  
   if(src->type == GAVL_TYPE_DICTIONARY)
-    {
-    dict = gavl_value_get_dictionary(src);
-    
-    if(!resolve_location(dict, dst, flags))
-      gavl_array_splice_val(dst, -1, 0, src);
-    }
+    gavl_array_splice_val(dst, -1, 0, src);
   else if(src->type == GAVL_TYPE_ARRAY)
     {
     const gavl_array_t * arr = gavl_value_get_array(src);
-    
-    for(i = 0; i < arr->num_entries; i++)
-      {
-      if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
-          (!resolve_location(dict, dst, flags)))
-        gavl_array_splice_val(dst, -1, 0, &arr->entries[i]);
-      }
+    gavl_array_splice_array(dst, -1, 0, arr);
     }
+
+  for(i = 0; i < 3; i++)
+    {
+    if(!resolve_locations(dst, flags))
+      break;
+    }
+
   }
 
 void bg_plugin_registry_get_input_mimetypes(bg_plugin_registry_t * reg,
