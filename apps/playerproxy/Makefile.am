@@ -13,7 +13,13 @@ AM_LDFLAGS = @GMERLIN_EXE_LDFLAGS@
 
 bin_PROGRAMS = gmerlin-playerproxy
 
-# dist_man_MANS = gmerlin-playerproxy.1
+#manpages = gmerlin-playerproxy.1
+dist_man_MANS =
+if CROSSBUILD
+else
+dist_man_MANS += $(manpages)
+endif
+#CLEANFILES = $(manpages)
 
 gmerlin_playerproxy_SOURCES = \
 gmerlin-playerproxy.c
