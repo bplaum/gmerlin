@@ -2560,7 +2560,11 @@ static int get_files_db_callback(void * data, int argc, char **argv, char **azCo
 
   gavl_dictionary_set_string(dict, GAVL_META_URI, argv[0]);
   gavl_dictionary_set_long(dict,   META_DB_ID, strtoll(argv[1], NULL, 10));
-  gavl_dictionary_set_long(dict,   GAVL_META_MTIME, strtoll(argv[2], NULL, 10));
+
+  if(!argv[2])
+    gavl_dictionary_set_long(dict,   GAVL_META_MTIME, 0);
+  else
+    gavl_dictionary_set_long(dict,   GAVL_META_MTIME, strtoll(argv[2], NULL, 10));
   gavl_dictionary_set_int(dict,    "TYPE", gf->type);
   
   gavl_array_splice_val_nocopy(&gf->arr, -1, 0, &val);
