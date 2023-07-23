@@ -1515,7 +1515,7 @@ void bg_mdb_rescan_sync(bg_controllable_t * db)
     }
   
   bg_msg_hub_disconnect_sink(db->evt_hub, sink);
-  
+  bg_msg_sink_destroy(sink);
   }
 
 
