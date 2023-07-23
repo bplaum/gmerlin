@@ -1937,6 +1937,7 @@ int bg_mdb_can_add(const gavl_dictionary_t * dict, const char * child_class)
   {
   int idx;
   const char * str;
+  const char * klass;
   const gavl_dictionary_t * m;
 
   //  fprintf(stderr, "bg_mdb_can_add\n");
@@ -1946,7 +1947,21 @@ int bg_mdb_can_add(const gavl_dictionary_t * dict, const char * child_class)
   if(!bg_mdb_is_editable(dict))
     return 0;
 
-  m = gavl_track_get_metadata(dict);
+  if(!(m = gavl_track_get_metadata(dict)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+    return 0;
+  
+  /* Directories can only be added to
+     GAVL_META_MEDIA_CLASS_ROOT_PHOTOS and GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES */
+
+  if(!strcmp(child_class, GAVL_META_MEDIA_CLASS_DIRECTORY))
+    {
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS) ||
+       !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES))
+      return 1;
+    else
+      return 0;
+    }
   
   if(!gavl_dictionary_get(m, META_CHILD_CLASSES))
     return 1;
