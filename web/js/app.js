@@ -1322,7 +1322,8 @@ function append_meta_info_internal(parent, obj, tag, parent_container)
     {
     str = dict_get_string(m, tag);
 
-    if(str && parent_container && (dict_get_string(dict_get_dictionary(parent_container, GAVL_META_METADATA), tag) == str))
+    if(str && parent_container &&
+       (dict_get_string(dict_get_dictionary(parent_container, GAVL_META_METADATA), tag) == str))
       str = null;
     }
      
@@ -2533,6 +2534,19 @@ var tile_modes =
 
   ];
 
+function make_label(m, klass)
+  {
+  /* Label */
+  if((klass == GAVL_META_MEDIA_CLASS_MOVIE) ||
+     (klass == GAVL_META_MEDIA_CLASS_SONG) ||
+     (klass == GAVL_META_MEDIA_CLASS_MUSICALBUM))
+    return dict_get_string(m, GAVL_META_TITLE);
+  else
+    return dict_get_string(m, GAVL_META_LABEL);
+    
+  }
+
+
 function create_browser()
   {
   var ret;
@@ -2810,18 +2824,6 @@ function create_browser()
       return true;
      
     }
-
-  ret.get_label = function(m, klass)
-    {
-    /* Label */
-    if((klass == GAVL_META_MEDIA_CLASS_MOVIE) ||
-       (klass == GAVL_META_MEDIA_CLASS_SONG) ||
-       (klass == GAVL_META_MEDIA_CLASS_MUSICALBUM))
-      return dict_get_string(m, GAVL_META_TITLE);
-    else
-      return dict_get_string(m, GAVL_META_LABEL);
-    
-    }
     
   ret.render_tiles = function(div, obj)
     {
@@ -2850,7 +2852,7 @@ function create_browser()
     tr = append_dom_element(table, "tr");
     td = append_dom_element(tr, "td");
     td.setAttribute("class", "browser-label");
-    append_dom_text(td, this.get_label(m, klass));
+    append_dom_text(td, make_label(m, klass));
      
     }
     
@@ -2893,7 +2895,7 @@ function create_browser()
 
     span = append_dom_element(td, "span");
     span.setAttribute("class", "browser-label");
-    append_dom_text(span, this.get_label(m, klass)  );
+    append_dom_text(span, make_label(m, klass));
 
     /* Further info */
     append_dom_element(td, "br");
@@ -3652,7 +3654,7 @@ function create_settings()
   return ret;
   }
 
-/* Volume popup */
+/* Player control */
 
 function create_player_control()
   {
@@ -3790,6 +3792,35 @@ function create_player_control()
     return 0;
     };
 
+  ret.set_track = function(obj)
+    {
+    let el;
+    let span;
+    let m;
+    let klass;
+      /* Set current track */
+    el = document.getElementById("player-image");
+
+    make_icon(el, obj, true, 256);
+
+    if(!(m = dict_get_dictionary(obj, GAVL_META_METADATA)))
+      return;
+    if(!(klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)))
+      return;
+      
+//  console.log("have image " + klass + " " + this.have_container_image);
+    el = document.getElementById("player-info");
+    clear_element(el);
+    span = append_dom_element(el, "span");
+    span.setAttribute("class", "player-label");
+    append_dom_text(span, make_label(m, klass));
+
+    /* Further info */
+    append_dom_element(el, "br");
+    append_meta_info(el, obj);
+    
+    };
+    
   /* Handle player message */
       
   ret.handle_msg = function(msg)
@@ -3923,6 +3954,7 @@ function create_player_control()
 		      {
                       widgets.iteminfo.update();
 		      }
+                    this.set_track(this.current_track);
 		    }
                     break;
 	          case BG_PLAYER_STATE_VOLUME:

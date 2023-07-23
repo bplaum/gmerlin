@@ -112,7 +112,7 @@ td[data-has_play="false"] #header-play
     text-align: center;
 }
 
-#header_icon img {
+#header_icon img, #player-image img {
     max-width: 100%;
     max-height: 2em;
 }

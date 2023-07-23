@@ -34,19 +34,19 @@ body[data-has_wallpaper='0'] #bg {
 
 header
   {
-    background-image: -webkit-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:    -moz-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:     -ms-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:      -o-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:         linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
+    background-image: -webkit-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.5));
+    background-image:    -moz-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.5));
+    background-image:     -ms-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.5));
+    background-image:      -o-linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.5));
+    background-image:         linear-gradient(to bottom, rgba(200,200,255,1.00), rgba(200,200,255,0.5));
   }
 
 footer
   {
-    background-image: -webkit-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:    -moz-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:     -ms-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
-    background-image:         linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75), rgba(200,200,255,0.5));
+    background-image: -webkit-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75));
+    background-image:    -moz-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75));
+    background-image:     -ms-linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75));
+    background-image:         linear-gradient(to top, rgba(200,200,255,1.00), rgba(200,200,255,0.75));
   }
 
 #nav-popup > button:disabled
