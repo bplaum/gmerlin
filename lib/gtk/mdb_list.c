@@ -781,6 +781,8 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
 
 void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   {
+  GtkWidget * menu = t->menu.menu;
+  
   /* Show/hide items */
   gtk_widget_hide(t->menu.track_menu.paste_item);
   gtk_widget_hide(t->menu.track_menu.delete_item);
@@ -804,6 +806,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
     /* Add and play only work for opened albums */
     gtk_widget_hide(t->menu.album_menu.add_item);
     gtk_widget_hide(t->menu.album_menu.play_item);
+    menu = t->menu.album_menu.menu;
     }
   else 
     {
@@ -872,7 +875,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
       gtk_widget_hide(t->menu.album_menu.play_item);
       gtk_widget_hide(t->menu.track_menu.add_item);
       }
-    else
+    else if(!t->menu_ctx.tree)
       {
       gtk_widget_show(t->menu.album_menu.add_item);
       gtk_widget_show(t->menu.album_menu.play_item);
@@ -901,7 +904,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
     }
   
   
-  gtk_menu_popup_at_pointer(GTK_MENU(t->menu.menu), trigger_event);
+  gtk_menu_popup_at_pointer(GTK_MENU(menu), trigger_event);
   }
 
 
