@@ -30,7 +30,7 @@
 
 #include <gmerlin/utils.h>
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/bggavl.h>
 #include <gmerlin/state.h>
 

@@ -6,6 +6,7 @@ bg_sem.h \
 bg_version.h \
 bgcairo.h \
 bggavl.h \
+bgmsg.h \
 bgplug.h \
 bgthread.h \
 cfg_dialog.h \
@@ -25,7 +26,6 @@ lcdproc.h \
 log.h \
 lpcm_handler.h \
 mediaconnector.h \
-msgqueue.h \
 ocr.h \
 osd.h \
 ov.h \

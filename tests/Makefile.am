@@ -28,7 +28,6 @@ bin_PROGRAMS = gmerlin-mediadump
 noinst_PROGRAMS = audioplayer1 \
 videoplayer1 \
 fvtest \
-msgtest \
 server \
 client \
 dump_plugins \
@@ -122,9 +121,6 @@ gmerlin_vanalyze_LDADD = ../lib/libgmerlin.la -ldl
 
 gmerlin_imgdiff_SOURCES = gmerlin_imgdiff.c
 gmerlin_imgdiff_LDADD = ../lib/libgmerlin.la -ldl
-
-msgtest_SOURCES = msgtest.c
-msgtest_LDADD = ../lib/libgmerlin.la -ldl -lpthread
 
 textrenderer_SOURCES = textrenderer.c
 textrenderer_LDADD = ../lib/libgmerlin.la -ldl

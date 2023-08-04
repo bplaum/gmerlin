@@ -35,7 +35,7 @@
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/visualize.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/ringbuffer.h>
 
 

@@ -163,7 +163,6 @@ metadata.c \
 msg.c \
 msgconn.c \
 msghub.c \
-msgqueue.c \
 msgsink.c \
 multiinput.c \
 npt.c \

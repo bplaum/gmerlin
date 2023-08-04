@@ -29,7 +29,7 @@
 #include <gavl/gavlsocket.h>
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/state.h>
 
 #include <gmerlin/translation.h>

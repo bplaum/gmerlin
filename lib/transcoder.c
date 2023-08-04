@@ -33,7 +33,7 @@
 
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/log.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/transcoder.h>
 #include <gmerlin/transcodermsg.h>
 #include <gmerlin/utils.h>

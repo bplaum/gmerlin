@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include <gmerlin/utils.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/state.h>
 #include <gmerlin/application.h>
 #include <gmerlin/bggavl.h>

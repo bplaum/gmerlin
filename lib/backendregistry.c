@@ -29,7 +29,7 @@
 #include <gmerlin/backend.h>
 
 #include <gmerlin/utils.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
 #include <gmerlin/translation.h>

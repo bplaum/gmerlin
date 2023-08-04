@@ -25,7 +25,7 @@
 #include <gavl/gavl.h>
 #include <gavl/metatags.h>
 
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/bggavl.h>
 #include <gmerlin/http.h>
