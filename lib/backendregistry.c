@@ -309,7 +309,7 @@ void bg_backend_add_remote(const gavl_dictionary_t * b)
   msg = bg_msg_sink_get(bg_backend_reg->evt_sink);
   gavl_msg_set_id_ns(msg, BG_MSG_ADD_BACKEND, BG_MSG_NS_BACKEND);
   gavl_msg_set_arg_dictionary(msg, 0, b);
-  bg_msg_sink_put(bg_backend_reg->evt_sink, msg);
+  bg_msg_sink_put(bg_backend_reg->evt_sink);
   
   }
 
@@ -324,7 +324,7 @@ void bg_backend_del_remote(const char * uri)
   msg = bg_msg_sink_get(bg_backend_reg->evt_sink);
   gavl_msg_set_id_ns(msg, BG_MSG_DEL_BACKEND, BG_MSG_NS_BACKEND);
   gavl_msg_set_arg_string(msg, 0, uri);
-  bg_msg_sink_put(bg_backend_reg->evt_sink, msg);
+  bg_msg_sink_put(bg_backend_reg->evt_sink);
   
   gavl_array_splice_val(&bg_backend_reg->devs, idx, 1, NULL);
   }

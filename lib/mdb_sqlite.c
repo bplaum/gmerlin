@@ -2832,9 +2832,6 @@ static void add_directory(bg_mdb_backend_t * b, const char * dir)
 
   bg_sqlite_end_transaction(priv->db);
 
-  /* (re-)create thumbnails */
-  
-  
   if(is_new)
     {
     bg_mdb_export_media_directory(b->ctrl.evt_sink, dir);
@@ -6168,7 +6165,7 @@ static int browse_children(bg_mdb_backend_t * b, const gavl_msg_t * msg)
           last = 1;
         
         bg_mdb_set_browse_children_response(res, &children_arr, msg, &idx, last, total);
-        bg_msg_sink_put(b->ctrl.evt_sink, res);
+        bg_msg_sink_put(b->ctrl.evt_sink);
         time_msg = current_time;
         gavl_array_reset(&children_arr);
         }
@@ -6182,7 +6179,7 @@ static int browse_children(bg_mdb_backend_t * b, const gavl_msg_t * msg)
     {
     gavl_msg_t * res = bg_msg_sink_get(b->ctrl.evt_sink);
     bg_mdb_set_browse_children_response(res, &children_arr, msg, &idx, 1, total);
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     }
   
   ret = 1;
@@ -6246,14 +6243,14 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           
           res = bg_msg_sink_get(be->ctrl.evt_sink);
           bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
+          bg_msg_sink_put(be->ctrl.evt_sink);
           gavl_dictionary_free(&dict);
           }
           break;
         case BG_FUNC_DB_BROWSE_CHILDREN:
           browse_children(be, msg);
           break;
-        case BG_CMD_DB_RESCAN:
+        case BG_FUNC_DB_RESCAN:
           {
           int i;
           gavl_array_t sql_dirs;
@@ -6278,8 +6275,77 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           /* Send done event */
           
           res = bg_msg_sink_get(be->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
+          gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
+          bg_msg_sink_put(be->ctrl.evt_sink);
+          }
+          break;
+        /* SQL Specific */
+        case BG_CMD_DB_ADD_SQL_DIR:
+          {
+          gavl_value_t sql_dirs_val;
+          gavl_array_t * sql_dirs;
+          gavl_msg_t * resp;
+          const char * dir = gavl_msg_get_arg_string_c(msg, 0);
+          
+          gavl_value_init(&sql_dirs_val);
+          sql_dirs = gavl_value_set_array(&sql_dirs_val);
+          bg_sqlite_get_string_array(s->db, "scandirs", "PATH", sql_dirs);
+          
+          if(gavl_string_array_indexof(sql_dirs, dir) < 0)
+            {
+            lock_root_containers(be, 1);
+            add_directory(be, dir);
+            /* Update thumbnails */
+            make_thumbnails(be);
+            lock_root_containers(be, 0);
+            update_root_containers(be);
+
+            /* Also update config registry */
+            gavl_string_array_add(sql_dirs, dir);
+
+            resp = bg_msg_sink_get(be->ctrl.evt_sink);
+            bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX, MDB_BACKEND_SQLITE, "dirs", &sql_dirs_val);
+            bg_msg_sink_put(be->ctrl.evt_sink);
+            
+            }
+          else
+            gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Directory %s already added", dir);
+          
+          gavl_value_free(&sql_dirs_val);
+          }
+          break;
+        case BG_CMD_DB_DEL_SQL_DIR:
+          {
+          int idx;
+          gavl_value_t sql_dirs_val;
+          gavl_array_t * sql_dirs;
+          gavl_msg_t * resp;
+          
+          const char * dir = gavl_msg_get_arg_string_c(msg, 0);
+          
+          gavl_value_init(&sql_dirs_val);
+          sql_dirs = gavl_value_set_array(&sql_dirs_val);
+          bg_sqlite_get_string_array(s->db, "scandirs", "PATH", sql_dirs);
+          
+          if((idx = gavl_string_array_indexof(sql_dirs, dir)) >= 0)
+            {
+            lock_root_containers(be, 1);
+            delete_directory(be, dir);
+            lock_root_containers(be, 0);
+            update_root_containers(be);
+
+            
+            /* Also update config registry */
+            gavl_array_splice_val(sql_dirs, idx, 1, NULL);
+            resp = bg_msg_sink_get(be->ctrl.evt_sink);
+            bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX, MDB_BACKEND_SQLITE, "dirs", &sql_dirs_val);
+            bg_msg_sink_put(be->ctrl.evt_sink);
+            
+            }
+          else
+            gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Directory %s not there", dir);
+          
+          gavl_value_free(&sql_dirs_val);
           }
           break;
         }
@@ -6384,7 +6450,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             {
             gavl_msg_t * resp = bg_msg_sink_get(be->ctrl.evt_sink);
             bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX, MDB_BACKEND_SQLITE, name, &val);
-            bg_msg_sink_put(be->ctrl.evt_sink, resp);
+            bg_msg_sink_put(be->ctrl.evt_sink);
             }
           
           gavl_value_free(&val);
@@ -6575,4 +6641,24 @@ void bg_mdb_create_sqlite(bg_mdb_backend_t * b)
     return; // Should not happen if the path is writeable
 
   create_root_containers(b);
+  }
+
+void bg_mdb_add_sql_directory(bg_controllable_t * db, const char * dir)
+  {
+  gavl_msg_t * cmd = bg_msg_sink_get(db->cmd_sink);
+
+  gavl_msg_set_id_ns(cmd, BG_CMD_DB_ADD_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_arg_string(cmd, 0, dir);
+  
+  bg_msg_sink_put(db->cmd_sink);
+  }
+
+void bg_mdb_del_sql_directory(bg_controllable_t * db, const char * dir)
+  {
+  gavl_msg_t * cmd = bg_msg_sink_get(db->cmd_sink);
+
+  gavl_msg_set_id_ns(cmd, BG_CMD_DB_DEL_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_arg_string(cmd, 0, dir);
+
+  bg_msg_sink_put(db->cmd_sink);
   }

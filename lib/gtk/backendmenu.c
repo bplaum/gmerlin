@@ -132,7 +132,7 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
       {
       gavl_msg_t * msg = bg_msg_sink_get(m->evt_sink);
       bg_msg_set_backend_info(msg, BG_CMD_SET_BACKEND, dev);
-      bg_msg_sink_put(m->evt_sink, msg);
+      bg_msg_sink_put(m->evt_sink);
       }
     
     }

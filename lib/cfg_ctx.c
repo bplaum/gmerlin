@@ -163,7 +163,7 @@ void bg_cfg_ctx_set_parameter(void * data, const char * name,
       bg_msg_set_parameter_ctx(msg, BG_MSG_SET_PARAMETER_CTX, ctx->name, NULL, NULL);
       }
     
-    bg_msg_sink_put(ctx->sink, msg);
+    bg_msg_sink_put(ctx->sink);
 
     }
   else if(ctx->set_param)

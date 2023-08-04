@@ -199,7 +199,7 @@ void bg_recorder_handle_audio_filter_command(bg_recorder_t * p, gavl_msg_t * msg
   bg_audio_filter_chain_lock(p->as.fc);
 
   sink = bg_audio_filter_chain_get_cmd_sink(p->as.fc);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put_copy(sink, msg);
 
   need_restart =
     bg_audio_filter_chain_need_restart(p->as.fc);

@@ -474,10 +474,11 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   
   ret->srv = bg_http_server_create();
   bg_http_server_get_media_dirs(ret->srv);
-  
-  if(!(ret->mdb = bg_mdb_create(db_path, 1, ret->srv)))
-    goto fail;
 
+  if(!(ret->mdb = bg_mdb_create(db_path, 0, ret->srv)) &&
+     !(ret->mdb = bg_mdb_create(db_path, 1, ret->srv)))
+    goto fail;
+  
   /* From here we can direct log messages to the GUI */
   ret->log_window = bg_gtk_log_window_create(TR("Gmerlin player"));
   bg_cfg_section_apply(ret->logwindow_section,

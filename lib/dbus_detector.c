@@ -176,7 +176,7 @@ static void del_dev(bg_dbus_detector_t * d, const char * addr)
   gavl_msg_set_id_ns(msg, BG_MSG_DEL_BACKEND, BG_MSG_NS_BACKEND);
   gavl_msg_set_arg_string(msg, 0, addr);
   
-  bg_msg_sink_put(d->sink, msg);
+  bg_msg_sink_put(d->sink);
 
   }
 
@@ -321,7 +321,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
             msg1 = bg_msg_sink_get(d->sink);
 
             bg_msg_set_backend_info(msg1, BG_MSG_ADD_BACKEND, &info);
-            bg_msg_sink_put(d->sink, msg1);
+            bg_msg_sink_put(d->sink);
   
             gavl_dictionary_free(&info);
             }

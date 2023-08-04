@@ -118,6 +118,8 @@ chapterlist.c \
 charset.c \
 cmdline.c \
 colormatrix.c \
+control.c \
+controllable.c \
 country_table.c \
 downloader.c \
 edldec.c \
@@ -160,7 +162,9 @@ mediasrcsink.c \
 metadata.c \
 msg.c \
 msgconn.c \
+msghub.c \
 msgqueue.c \
+msgsink.c \
 multiinput.c \
 npt.c \
 objectcache.c \

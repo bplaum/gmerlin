@@ -597,7 +597,7 @@ static int handle_command_uri(bg_http_connection_t * conn, void * data)
     
     msg = bg_msg_sink_get(ctrl.cmd_sink);
     bg_msg_set_state(msg, BG_CMD_SET_STATE, 1, var, META_VALUE, &val);
-    bg_msg_sink_put(ctrl.cmd_sink, msg);
+    bg_msg_sink_put(ctrl.cmd_sink);
     
     bg_http_connection_init_res(conn, conn->protocol, 200, "OK");
 
@@ -619,7 +619,7 @@ static int handle_command_uri(bg_http_connection_t * conn, void * data)
 
     msg = bg_msg_sink_get(ctrl.cmd_sink);
     bg_msg_set_state(msg, BG_CMD_SET_STATE_REL, 1, var, META_VALUE, &val);
-    bg_msg_sink_put(ctrl.cmd_sink, msg);
+    bg_msg_sink_put(ctrl.cmd_sink);
 
     
     bg_http_connection_init_res(conn, conn->protocol, 200, "OK");

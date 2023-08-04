@@ -311,7 +311,7 @@ static void set_value(bg_upnp_event_listener_t * l, const char * name, const cha
       //      fprintf(stderr, "Got event:\n");
       //      gavl_msg_dump(msg, 2);
 
-      bg_msg_sink_put(l->sink, msg);
+      bg_msg_sink_put(l->sink);
       }
     }
   }

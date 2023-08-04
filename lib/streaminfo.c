@@ -32,6 +32,7 @@
 #include <gmerlin/streaminfo.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/iconfont.h>
+#include <gmerlin/mdb.h>
 
 #include <gmerlin/pluginregistry.h>
 
@@ -306,7 +307,7 @@ void bg_dictionary_delete_children(const gavl_dictionary_t * container,
       bg_msg_set_splice_children(msg, msg_id, id,
                                  last, i - num_deleted, num_delete, NULL);
       
-      bg_msg_sink_put(sink, msg);
+      bg_msg_sink_put(sink);
 
       i += num_delete;
       num_deleted += num_delete;

@@ -891,7 +891,7 @@ static int check_update(bg_mdb_backend_t * b)
                                       bg_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
     
     gavl_msg_set_arg_dictionary(evt, 0, channel);
-    bg_msg_sink_put(b->ctrl.evt_sink, evt);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     
     /* Update channel items */
 
@@ -908,7 +908,7 @@ static int check_update(bg_mdb_backend_t * b)
     gavl_msg_set_arg_int(evt, 1, old_num); // del
     gavl_msg_set_arg_array(evt, 2, &items_new);
     
-    bg_msg_sink_put(b->ctrl.evt_sink, evt);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     
 
     /* Save items */
@@ -1147,7 +1147,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     gavl_msg_set_arg_int(res, 1, 0); // del
     gavl_msg_set_arg_nocopy(res, 2, &add);
     
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     
     /* Set change event for podcast */
     gavl_array_init(&index);
@@ -1167,7 +1167,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     //    fprintf(stderr, "set changed callback\n");
     //    gavl_dictionary_dump(dict, 2);
     
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     bg_array_save_xml(&index, filename, "items");
     gavl_array_free(&index);
     }
@@ -1189,7 +1189,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     gavl_msg_set_arg_int(res, 1, 0); // del
     gavl_msg_set_arg(res, 2, &entry_val);
     
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     
     /* Set change event for saved */
     gavl_value_init(&val);
@@ -1203,7 +1203,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
     gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(dict));
     gavl_msg_set_arg_dictionary(res, 0, dict);
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     gavl_value_free(&val);
     }
 
@@ -1275,7 +1275,7 @@ static void browse_object(bg_mdb_backend_t * b, gavl_msg_t * msg, const parsed_i
   if(res)
     {
     fprintf(stderr, "Browse object: Sending response\n");
-    bg_msg_sink_put(b->ctrl.evt_sink, res);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     }
   
   }
@@ -1345,7 +1345,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total);
               }
           
-            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            bg_msg_sink_put(b->ctrl.evt_sink);
             
             }
             
@@ -1419,7 +1419,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           
             res = bg_msg_sink_get(b->ctrl.evt_sink);
             gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, idx, del, &added_val);
-            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            bg_msg_sink_put(b->ctrl.evt_sink);
             
             /* Signal root container */
           
@@ -1431,7 +1431,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_track_set_num_children(p->root, p->subscriptions.num_entries, 0);
           
             gavl_msg_set_arg_dictionary(res, 0, p->root);
-            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            bg_msg_sink_put(b->ctrl.evt_sink);
             
             }
           else if(gavl_string_ends_with(ctx_id, "/saved"))
@@ -1526,7 +1526,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               
               gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
                                                   tmp_string, 1, 0, 1, NULL);
-              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              bg_msg_sink_put(b->ctrl.evt_sink);
               
               /* signal parent */
               gavl_array_init(&root_idx);
@@ -1543,7 +1543,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
                 gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
                 gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, tmp_string);
                 gavl_msg_set_arg_dictionary(res, 0, parent_dict);
-                bg_msg_sink_put(b->ctrl.evt_sink, res);
+                bg_msg_sink_put(b->ctrl.evt_sink);
                 }
               
               save_array(b, &root_id, &root_idx);
@@ -1560,7 +1560,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               /* signal saved children */
               res = bg_msg_sink_get(b->ctrl.evt_sink);
               gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, idx, del, NULL);
-              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              bg_msg_sink_put(b->ctrl.evt_sink);
               
               /* signal saved */
               gavl_dictionary_init(&saved_dict);
@@ -1572,7 +1572,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, ctx_id);
               
               gavl_msg_set_arg_dictionary(res, 0, &saved_dict);
-              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              bg_msg_sink_put(b->ctrl.evt_sink);
               
               gavl_dictionary_free(&saved_dict);
               }
@@ -1620,7 +1620,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             res = bg_msg_sink_get(b->ctrl.evt_sink);
             gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN, ctx_id, 1, 0,
                                                 idx->num_entries, &idx_val);
-            bg_msg_sink_put(b->ctrl.evt_sink, res);
+            bg_msg_sink_put(b->ctrl.evt_sink);
             
             gavl_value_free(&idx_val);
             // gavl_sort_tracks_by_label(gavl_array_t * arr)

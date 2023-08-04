@@ -105,7 +105,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 34
+#define BG_PLUGIN_API_VERSION 36
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */

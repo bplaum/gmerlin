@@ -141,7 +141,7 @@ static int handle_msg_open(void * priv, gavl_msg_t * msg)
   if((sink = bg_plug_get_sink(plug)) &&
      (s = bg_media_sink_get_stream_by_id(sink, GAVL_META_STREAM_ID_MSG_PROGRAM)) &&
      s->msgsink)
-    bg_msg_sink_put(s->msgsink, msg);
+    bg_msg_sink_put_copy(s->msgsink, msg);
   
   //  ctrl = bg_plug_get_control(plug);
   // bg_msg_sink_put(ctrl->cmd_sink, msg);

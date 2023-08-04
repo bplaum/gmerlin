@@ -532,6 +532,11 @@ static int msg_write_cb(void * data, gavl_msg_t * msg)
   return 1;
   }
 
+static void ping_func(void * data)
+  {
+  while(bg_websocket_connection_iteration(data))
+    ;
+  }
 
 static void conn_init(bg_websocket_connection_t * conn, int is_client)
   {
@@ -544,6 +549,8 @@ static void conn_init(bg_websocket_connection_t * conn, int is_client)
     bg_controllable_init(&conn->ctrl_client,
                          bg_msg_sink_create(msg_write_cb, conn, 0),
                          bg_msg_hub_create(1));   // Owned
+    conn->ctrl_client.ping_func = ping_func;
+    conn->ctrl_client.ping_data = conn;
     }
   else
     {
@@ -925,9 +932,9 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
       }
     
     if(conn->is_client)
-      bg_msg_sink_put(conn->ctrl_client.evt_sink, &msg);
+      bg_msg_sink_put_copy(conn->ctrl_client.evt_sink, &msg);
     else
-      bg_msg_sink_put(conn->ctrl_server.cmd_sink, &msg);
+      bg_msg_sink_put_copy(conn->ctrl_server.cmd_sink, &msg);
 
     /*
         struct

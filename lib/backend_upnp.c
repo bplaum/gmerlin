@@ -1881,7 +1881,7 @@ static int handle_msg_server(void * priv, // Must be bg_backend_handle_t
 
               res = bg_msg_sink_get(be->ctrl->evt_sink);
               bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
-              bg_msg_sink_put(be->ctrl->evt_sink, res);
+              bg_msg_sink_put(be->ctrl->evt_sink);
               // gavl_dictionary_dump(&dict, 2);
               gavl_dictionary_free(&dict);
               
@@ -1985,7 +1985,7 @@ static int handle_msg_server(void * priv, // Must be bg_backend_handle_t
                 
                 res = bg_msg_sink_get(be->ctrl->evt_sink);
                 bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total_matches);
-                bg_msg_sink_put(be->ctrl->evt_sink, res);
+                bg_msg_sink_put(be->ctrl->evt_sink);
                 }
               gavl_array_free(&arr);
               }

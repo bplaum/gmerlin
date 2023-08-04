@@ -298,15 +298,6 @@ static bg_parameter_info_t parameters[] =
       .type = BG_PARAMETER_SECTION,
     },
     {
-      .name = "cache_mode",
-      .long_name = TRS("Cache mode"),
-      .type = BG_PARAMETER_STRINGLIST,
-
-      .multi_names  = (char const *[]){ "delete_on_exit", "delete_24hr", NULL },
-      .multi_labels = (char const *[]){ TRS("Delete on exit"), TRS("Delete after 24 hrs"), NULL },
-      .val_default  = GAVL_VALUE_INIT_STRING("delete_on_exit"),
-    },
-    {
       .name = "rescan",
       .long_name = TRS("Rescan"),
       .type = BG_PARAMETER_BUTTON,
@@ -343,7 +334,7 @@ static void add_volume_func(void * priv, const char * name, const gavl_value_t *
   for(i = 0; i < num_backends; i++)
     {
     if(db->backends[i].flags & BE_FLAG_VOLUMES)
-      bg_msg_sink_put(db->backends[i].ctrl.cmd_sink, &msg);
+      bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, &msg);
     }
   gavl_msg_free(&msg);
   }
@@ -432,7 +423,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
   if((be_name = bg_mdb_msg_get_backend(msg)) &&
      (be = be_from_name(db, be_name)))
     {
-    bg_msg_sink_put(be->ctrl.cmd_sink, msg);
+    bg_msg_sink_put_copy(be->ctrl.cmd_sink, msg);
     return 1;
     }
 #endif
@@ -444,21 +435,30 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
       {
       switch(msg->ID)
         {
-        case BG_CMD_DB_RESCAN:
+        case BG_FUNC_DB_RESCAN:
           {
           int i;
 
-          bg_mdb_purge_thumbnails(db);
+          if(db->rescan_func)
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Re-scan already in process");
+            return 1;
+            }
 
+          db->rescan_func = gavl_msg_create();
+          gavl_msg_copy(db->rescan_func, msg);
+          
           for(i = 0; i < num_backends; i++)
             {
             if(db->backends[i].flags & BE_FLAG_RESCAN)
               {
-              bg_msg_sink_put(db->backends[i].ctrl.cmd_sink, msg);
+              bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
               db->num_rescan++;
               //          fprintf(stderr, "Put remote msg %d\n", i);
               }
             }
+          bg_mdb_purge_thumbnails(db);
+          
           }
           break;
         case BG_CMD_DB_SAVE_LOCAL:
@@ -577,7 +577,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
               else
                 bg_mdb_set_browse_children_response(res, arr, msg, &start, 1, arr->num_entries);
               
-              bg_msg_sink_put(db->ctrl.evt_sink, res);
+              bg_msg_sink_put(db->ctrl.evt_sink);
               }
             }
           }
@@ -611,7 +611,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             // fprintf(stderr, "Sending response %d %d:\n", res->ID, res->NS);
             //         gavl_msg_dump(res, 2);
 
-            bg_msg_sink_put(db->ctrl.evt_sink, res);
+            bg_msg_sink_put(db->ctrl.evt_sink);
             
             }
           }
@@ -653,7 +653,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
       for(i = 0; i < num_backends; i++)
         {
         if(db->backends[i].flags & BE_FLAG_REMOTE)
-          bg_msg_sink_put(db->backends[i].ctrl.cmd_sink, msg);
+          bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
         }
       break;
       }
@@ -668,7 +668,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         {
         if(db->backends[i].flags & BE_FLAG_VOLUMES)
           {
-          bg_msg_sink_put(db->backends[i].ctrl.cmd_sink, msg);
+          bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
           //          fprintf(stderr, "Put remote msg %d\n", i);
           }
         }
@@ -743,10 +743,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             if(!name)
               return 1;
 
-            if(!strcmp(name, "cache_mode"))
-              {
-              }
-            else if(!strcmp(name, "rescan"))
+            if(!strcmp(name, "rescan"))
               {
               //              fprintf(stderr, "** Rescan **\n");
               bg_mdb_rescan(&db->ctrl);
@@ -771,7 +768,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
               gavl_msg_t * msg1 = bg_msg_sink_get(be->ctrl.cmd_sink);
               gavl_msg_set_id_ns(msg1, BG_MSG_SET_PARAMETER, BG_MSG_NS_PARAMETER);
               bg_msg_set_parameter(msg1, name, &val);
-              bg_msg_sink_put(be->ctrl.cmd_sink, msg1);
+              bg_msg_sink_put(be->ctrl.cmd_sink);
               be = NULL;
               }
             }
@@ -783,7 +780,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
     }
   
   if(be)
-    bg_msg_sink_put(be->ctrl.cmd_sink, msg);
+    bg_msg_sink_put_copy(be->ctrl.cmd_sink, msg);
   
   return 1;
   }
@@ -864,7 +861,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
       /* Store changes in the root directories */
       switch(msg->ID)
         {
-        case BG_MSG_DB_RESCAN_DONE:
+        case BG_RESP_DB_RESCAN:
           db->num_rescan--;
 
           /* Send to the outer world if this was the last one */
@@ -872,8 +869,13 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
              {
              gavl_msg_t * res;
              res = bg_msg_sink_get(db->ctrl.evt_sink);
-             gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
-             bg_msg_sink_put(db->ctrl.evt_sink, res);
+             gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
+
+             gavl_msg_set_resp_for_req(res, db->rescan_func);
+             gavl_msg_destroy(db->rescan_func);
+             db->rescan_func = NULL;
+             
+             bg_msg_sink_put(db->ctrl.evt_sink);
              }
           break;
         case BG_MSG_DB_OBJECT_CHANGED:
@@ -970,7 +972,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
 
           res = bg_msg_sink_get(db->ctrl.evt_sink);
           bg_msg_set_splice_children(res, BG_MSG_DB_SPLICE_CHILDREN, "/", 1, idx, 0, &val);
-          bg_msg_sink_put(db->ctrl.evt_sink, res);
+          bg_msg_sink_put(db->ctrl.evt_sink);
 
           gavl_track_splice_children_nocopy(&db->root, idx, 0, &val);
           }
@@ -986,7 +988,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
 
           res = bg_msg_sink_get(db->ctrl.evt_sink);
           bg_msg_set_splice_children(res, BG_MSG_DB_SPLICE_CHILDREN, "/", 1, idx, 1, NULL);
-          bg_msg_sink_put(db->ctrl.evt_sink, res);
+          bg_msg_sink_put(db->ctrl.evt_sink);
           
           gavl_track_splice_children(&db->root, idx, 1, NULL);
           }
@@ -1055,7 +1057,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
       
     }
   
-  bg_msg_sink_put(db->ctrl.evt_sink, msg);
+  bg_msg_sink_put_copy(db->ctrl.evt_sink, msg);
   
   return 1;
   }
@@ -1067,7 +1069,7 @@ void bg_mdb_export_media_directory(bg_msg_sink_t * sink, const char * path)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_CMD_MDB_ADD_MEDIA_DIR, BG_MSG_NS_MDB_PRIVATE);
   gavl_msg_set_arg_string(msg, 0, path);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_mdb_unexport_media_directory(bg_msg_sink_t * sink, const char * path)
@@ -1077,7 +1079,7 @@ void bg_mdb_unexport_media_directory(bg_msg_sink_t * sink, const char * path)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_CMD_MDB_DEL_MEDIA_DIR, BG_MSG_NS_MDB_PRIVATE);
   gavl_msg_set_arg_string(msg, 0, path);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -1228,21 +1230,43 @@ bg_mdb_t * bg_mdb_create(const char * path,
   if(path)
     {
     ret->path     = bg_sprintf("%s/%s", path, MDB_DIR);
+
+    /* Check if path already exists */
     
     if(do_create)
+      {
+      if(!access(ret->path, R_OK|W_OK|X_OK))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+                 "Won't create database: Directory %s already exists",
+                 ret->path);
+        goto fail;
+        }
       bg_ensure_directory(ret->path, 0);
+      }
     }
   else
     {
     if(do_create)
+      {
+      char * tmp_string;
+      if((tmp_string = bg_search_file_write_nocreate(MDB_DIR, NULL)))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+                 "Won't create database: Directory %s already exists",
+                 tmp_string);
+        free(tmp_string);
+        goto fail;
+        }
+      
       ret->path     = bg_search_file_write(MDB_DIR, NULL);
+      }
     else
       {
       if(!(ret->path     = bg_search_file_write_nocreate(MDB_DIR, NULL)))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Database not found");
-        bg_mdb_destroy(ret);
-        return NULL;
+        goto fail;
         }
       }
     }
@@ -1251,8 +1275,7 @@ bg_mdb_t * bg_mdb_create(const char * path,
   if(!(ret->dirlock = bg_lock_directory(ret->path)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't lock database");
-    bg_mdb_destroy(ret);
-    return NULL;
+    goto fail;
     }
   
   /* Root element */
@@ -1366,6 +1389,12 @@ bg_mdb_t * bg_mdb_create(const char * path,
   bg_mdb_export_media_directory(ret->be_evt_sink, ret->thumbs_dir);
   
   return ret;
+  
+  fail:
+  if(ret)
+    bg_mdb_destroy(ret);
+
+  return NULL;
   }
 
 void bg_mdb_set_root_name(bg_mdb_t * db, const char * root)
@@ -1388,7 +1417,7 @@ void bg_mdb_stop(bg_mdb_t * db)
       msg = bg_msg_sink_get(db->backends[i].ctrl.cmd_sink);
   
       gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-      bg_msg_sink_put(db->backends[i].ctrl.cmd_sink, msg);
+      bg_msg_sink_put(db->backends[i].ctrl.cmd_sink);
       pthread_join(db->backends[i].th, NULL);
 
       if(db->backends[i].stop)
@@ -1398,7 +1427,7 @@ void bg_mdb_stop(bg_mdb_t * db)
     }
   msg = bg_msg_sink_get(db->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-  bg_msg_sink_put(db->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(db->ctrl.cmd_sink);
   pthread_join(db->th, NULL);
 
   }
@@ -1471,7 +1500,9 @@ void bg_mdb_destroy(bg_mdb_t * db)
 
   if(db->cfg_reg)
     gavl_dictionary_destroy(db->cfg_reg);
-  
+
+  if(db->rescan_func)
+    gavl_msg_destroy(db->rescan_func);
   
   free(db);
   }
@@ -1479,10 +1510,25 @@ void bg_mdb_destroy(bg_mdb_t * db)
 void bg_mdb_rescan(bg_controllable_t * db)
   {
   gavl_msg_t * msg = bg_msg_sink_get(db->cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_CMD_DB_RESCAN, BG_MSG_NS_DB);
-  bg_msg_sink_put(db->cmd_sink, msg);
+  gavl_msg_set_id_ns(msg, BG_FUNC_DB_RESCAN, BG_MSG_NS_DB);
+  bg_msg_sink_put(db->cmd_sink);
   }
 
+#if 1
+
+void bg_mdb_rescan_sync(bg_controllable_t * db)
+  {
+  gavl_msg_t msg;
+  gavl_msg_init(&msg);
+  
+  gavl_msg_set_id_ns(&msg, BG_FUNC_DB_RESCAN, BG_MSG_NS_DB);
+  
+  bg_controllable_call_function(db, &msg,
+                                NULL, NULL, 1000*2*3600);
+  gavl_msg_free(&msg);
+  }
+
+#else
 static int handle_message_rescan(void * data, gavl_msg_t * msg)
   {
   int * ret = data;
@@ -1517,7 +1563,7 @@ void bg_mdb_rescan_sync(bg_controllable_t * db)
   bg_msg_hub_disconnect_sink(db->evt_hub, sink);
   bg_msg_sink_destroy(sink);
   }
-
+#endif
 
 
 static const struct
@@ -1622,7 +1668,7 @@ void bg_mdb_add_root_container(bg_msg_sink_t * sink, const gavl_dictionary_t * d
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_CMD_MDB_ADD_ROOT_ELEMENT, BG_MSG_NS_MDB_PRIVATE);
   gavl_msg_set_arg_dictionary(msg, 0, dict);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_mdb_delete_root_container(bg_msg_sink_t * sink, const char * id)
@@ -1631,7 +1677,7 @@ void bg_mdb_delete_root_container(bg_msg_sink_t * sink, const char * id)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_CMD_MDB_DEL_ROOT_ELEMENT, BG_MSG_NS_MDB_PRIVATE);
   gavl_msg_set_arg_string(msg, 0, id);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -1849,52 +1895,6 @@ const gavl_array_t * bg_mdb_cache_get_children_min_mtime(bg_mdb_t * mdb, const c
     return NULL;
   }
 #endif
-
-void bg_mdb_add_uris(bg_mdb_t * mdb, const char * parent_id, int idx,
-                     const gavl_array_t * uris)
-  {
-  int i, j;
-  gavl_array_t add;
-  gavl_dictionary_t * mi;
-  gavl_msg_t * msg;
-  
-  gavl_array_init(&add);
-
-  for(i = 0; i < uris->num_entries; i++)
-    {
-    const char * location;
-    gavl_array_t * tracks;
-
-    if(!(location = gavl_value_get_string(&uris->entries[i])))
-      continue;
-    
-    mi = bg_plugin_registry_load_media_info(bg_plugin_reg,
-                                            location,
-                                            BG_INPUT_FLAG_GET_FORMAT);
-
-    tracks = gavl_get_tracks_nc(mi);
-
-    for(j = 0; j < tracks->num_entries; j++)
-      gavl_array_splice_val_nocopy(&add, -1, 0, &tracks->entries[j]);
-
-    gavl_dictionary_destroy(mi);
-    }
-
-  msg = bg_msg_sink_get(mdb->ctrl.cmd_sink);
-  
-  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, parent_id);
-  
-  gavl_msg_set_arg_int(msg, 0, 1); // last
-  gavl_msg_set_arg_int(msg, 1, idx); // idx
-  gavl_msg_set_arg_int(msg, 2, 0); // del
-  gavl_msg_set_arg_array(msg, 3, &add); // add
-  bg_msg_sink_put(mdb->ctrl.cmd_sink, msg);
-
-  gavl_array_free(&add);
-  }
-
 
 /* Editable flags */
 
@@ -2132,50 +2132,35 @@ int bg_mdb_is_parent_id(const char * child, const char * parent)
     return 0;
   }
 
+#if 0
 typedef struct
   {
   const char * function_tag;
   gavl_dictionary_t * ret;
   } browse_context_t;
+#endif
 
 static int handle_msg_browse_object_sync(void * data, gavl_msg_t * msg)
   {
-  const char * var;
-  browse_context_t * ctx = data;
-
-  //  fprintf(stderr, "handle_msg_browse_object_sync\n");
-  //  gavl_msg_dump(msg, 2);
-  
-  if((var = gavl_dictionary_get_string(&msg->header, BG_FUNCTION_TAG)) &&
-     !strcmp(ctx->function_tag, var))
-    {
-    gavl_msg_get_arg_dictionary(msg, 0, ctx->ret);
-    
-    if(gavl_msg_get_last(msg))
-      return 0;
-    }
-  
+  gavl_msg_get_arg_dictionary(msg, 0, data);
   return 1;
   }
 
 #if 1
-int bg_mdb_browse_object_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout)
+int bg_mdb_browse_object_sync(bg_controllable_t * mdb,
+                              gavl_dictionary_t * ret,
+                              const char * id, int timeout)
   {
   int result = 0;
   gavl_msg_t msg;
-  browse_context_t ctx;
-
   gavl_msg_init(&msg);
   
   gavl_msg_set_id_ns(&msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
-  bg_msg_add_function_tag(&msg);
+
   gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, id);
   
-  ctx.ret = ret;
-  ctx.function_tag = gavl_dictionary_get_string(&msg.header, BG_FUNCTION_TAG);
-
-  result = bg_controllable_call_function(bg_mdb_get_controllable(mdb), &msg,
-                                      handle_msg_browse_object_sync, &ctx, timeout);
+  result = bg_controllable_call_function(mdb, &msg,
+                                         handle_msg_browse_object_sync, ret, timeout);
   gavl_msg_free(&msg);
   return result;
   }
@@ -2183,37 +2168,22 @@ int bg_mdb_browse_object_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const cha
 
 static int handle_msg_browse_children_sync(void * data, gavl_msg_t * msg)
   {
-  const char * var;
-  browse_context_t * ctx = data;
-
-  if((var = gavl_dictionary_get_string(&msg->header, BG_FUNCTION_TAG)) &&
-     !strcmp(ctx->function_tag, var))
-    {
-    gavl_msg_splice_children(msg, ctx->ret);
-    
-    if(gavl_msg_get_last(msg))
-      return 0;
-    }
-  
+  gavl_msg_splice_children(msg, data);
   return 1;
   }
 
-int bg_mdb_browse_children_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout)
+int bg_mdb_browse_children_sync(bg_controllable_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout)
   {
   int result = 0;
   gavl_msg_t msg;
-  browse_context_t ctx;
-
   gavl_msg_init(&msg);
 
   bg_mdb_set_browse_children_request(&msg, id, 0, -1, 1);
   bg_msg_add_function_tag(&msg);
   
-  ctx.ret = ret;
-  ctx.function_tag = gavl_dictionary_get_string(&msg.header, BG_FUNCTION_TAG);
-
-  result = bg_controllable_call_function(bg_mdb_get_controllable(mdb), &msg,
-                                      handle_msg_browse_children_sync, &ctx, timeout);
+  result = bg_controllable_call_function(mdb, &msg,
+                                         handle_msg_browse_children_sync,
+                                         ret, timeout);
   gavl_msg_free(&msg);
   return result;
   }
@@ -2626,7 +2596,7 @@ void bg_mdb_track_lock(bg_mdb_backend_t * b, int lock, gavl_dictionary_t * obj)
   
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(obj));
   gavl_msg_set_arg_dictionary(msg, 0, obj);
-  bg_msg_sink_put(b->ctrl.evt_sink, msg);
+  bg_msg_sink_put(b->ctrl.evt_sink);
   }
 
 

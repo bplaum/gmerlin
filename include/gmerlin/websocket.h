@@ -82,12 +82,6 @@ bg_websocket_connection_create(const char * url, int timeout,
 int
 bg_websocket_connection_iteration(bg_websocket_connection_t * conn);
 
-// void
-// bg_websocket_connection_stop(bg_websocket_connection_t * conn);
-
-int
-bg_websocket_connection_ping(bg_websocket_connection_t * conn);
-
 bg_controllable_t * 
 bg_websocket_connection_get_controllable(bg_websocket_connection_t *);
 

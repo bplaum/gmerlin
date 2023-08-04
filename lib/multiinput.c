@@ -40,14 +40,14 @@ static void forward_command(multi_t * m, gavl_msg_t * msg)
   int i;
   
   if(m->h)
-    bg_msg_sink_put(m->h->control.cmd_sink, msg);
+    bg_msg_sink_put_copy(m->h->control.cmd_sink, msg);
   
   for(i = 0; i < m->src.num_streams; i++)
     {
     if(m->src.streams[i]->user_data)
       {
       bg_plugin_handle_t * h = m->src.streams[i]->user_data;
-      bg_msg_sink_put(h->control.cmd_sink, msg);
+      bg_msg_sink_put_copy(h->control.cmd_sink, msg);
       }
     }
   }
@@ -272,7 +272,7 @@ static void forward_seek(multi_t * priv,
       break;
     }
   
-  bg_msg_sink_put(h->control.cmd_sink, &forward);
+  bg_msg_sink_put_copy(h->control.cmd_sink, &forward);
 
   fail:
   gavl_msg_free(&forward);

@@ -12,7 +12,7 @@
 #include <gmerlin/application.h>
 
 static int input_flags = 0;
-static int num_frames = 10;
+// static int num_frames = 10;
 
 
 static void opt_track(void * data, int * argc, char *** _argv, int arg)
@@ -44,7 +44,7 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
-  int i, j, num_streams;
+  int i, num_streams;
   bg_plugin_handle_t * h;
   gavl_dictionary_t track;
   const gavl_dictionary_t * ti;

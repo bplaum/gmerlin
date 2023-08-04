@@ -1237,7 +1237,7 @@ void bg_gtk_change_callback(GtkWidget * gw, gpointer data)
                              w->section->ctx,
                              w->info->name,
                              &w->value);
-    bg_msg_sink_put(sink, msg);
+    bg_msg_sink_put(sink);
     
     bg_msg_set_parameter_ctx_term(sink);
     }

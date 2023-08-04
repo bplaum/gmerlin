@@ -133,7 +133,7 @@ static void buffer_notify(void * data, float percentage)
   
   m = bg_msg_sink_get(p->ctrl.evt_sink);
   gavl_msg_set_src_buffering(m, percentage);
-  bg_msg_sink_put(p->ctrl.evt_sink, m);
+  bg_msg_sink_put(p->ctrl.evt_sink);
   
   }
 #endif
@@ -704,7 +704,7 @@ void bg_player_set_eof(bg_player_t * p)
   {
   gavl_msg_t * msg = bg_msg_sink_get(p->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_EOF, BG_MSG_NS_PLAYER_PRIV);
-  bg_msg_sink_put(p->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(p->ctrl.cmd_sink);
   }
 
 void bg_player_state_set_local(bg_player_t * p,

@@ -738,7 +738,7 @@ static void broadcast_root_folder(bg_mdb_backend_t * be)
   gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, BG_MDB_ID_STREAMS);
   
   gavl_msg_set_arg_dictionary(evt, 0, p->root_container);
-  bg_msg_sink_put(be->ctrl.evt_sink, evt);
+  bg_msg_sink_put(be->ctrl.evt_sink);
   
   }
 
@@ -1624,7 +1624,7 @@ static void browse_leafs(bg_mdb_backend_t * be, gavl_msg_t * msg,
           last = 1;
         
         bg_mdb_set_browse_children_response(res, &arr, msg, &idx, last, tab.num_val);
-        bg_msg_sink_put(be->ctrl.evt_sink, res);
+        bg_msg_sink_put(be->ctrl.evt_sink);
         time_msg = current_time;
         num_sent += arr.num_entries;
         gavl_array_reset(&arr);
@@ -1637,7 +1637,7 @@ static void browse_leafs(bg_mdb_backend_t * be, gavl_msg_t * msg,
     {
     res = bg_msg_sink_get(be->ctrl.evt_sink);
     bg_mdb_set_browse_children_response(res, &arr, msg, &idx, 1, tab.num_val);
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     }
   
   fail:
@@ -2205,7 +2205,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
     {
     res = bg_msg_sink_get(be->ctrl.evt_sink);
     bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total);
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     }
   
 
@@ -2345,7 +2345,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_msg_t * res = bg_msg_sink_get(be->ctrl.evt_sink);
 
             bg_mdb_set_browse_obj_response(res, &ret, msg, idx, total);
-            bg_msg_sink_put(be->ctrl.evt_sink, res);
+            bg_msg_sink_put(be->ctrl.evt_sink);
             }
           gavl_dictionary_free(&ret);
           }
@@ -2361,15 +2361,15 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           browse_children(be, msg, ctx_id, start, num, one_answer);
           }
           break;
-        case BG_CMD_DB_RESCAN:
+        case BG_FUNC_DB_RESCAN:
           {
           gavl_msg_t * res;
           rescan(be);
           /* Send done event */
           
           res = bg_msg_sink_get(be->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
+          gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
+          bg_msg_sink_put(be->ctrl.evt_sink);
 
           }
           break;
@@ -2456,7 +2456,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_msg_set_arg_int(res, 0, 0); // idx
             gavl_msg_set_arg_int(res, 1, old_num); // del
             gavl_msg_set_arg_array(res, 2, &s->sources);
-            bg_msg_sink_put(be->ctrl.evt_sink, res);
+            bg_msg_sink_put(be->ctrl.evt_sink);
             broadcast_root_folder(be);
             }
           bg_sqlite_end_transaction(s->db);
@@ -3281,7 +3281,7 @@ static int import_radiobrowser(bg_mdb_backend_t * b, int64_t source_id)
   int stations_added = 0;
   int result;
 
-  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Importing streams from radio-browser.info");
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing streams from radio-browser.info");
   
   while((result = import_radiobrowser_sub(b, start, source_id)))
     {

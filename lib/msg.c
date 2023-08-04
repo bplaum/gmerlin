@@ -122,7 +122,7 @@ void bg_msg_set_parameter_ctx_term(bg_msg_sink_t * sink)
   gavl_value_init(&val);
   gavl_value_set_string(&val, NULL);
   bg_msg_set_parameter_ctx(msg, BG_MSG_SET_PARAMETER_CTX, NULL, NULL, &val);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_msg_get_parameter_idx(gavl_msg_t * msg,

@@ -59,13 +59,7 @@ void gmerlin_handle_remote(gmerlin_t * g, gavl_msg_t * msg)
       {
       /* Send to player */
       bg_msg_sink_t * s = g->player_ctrl->cmd_sink;
-
-      gavl_msg_t * msg1 = bg_msg_sink_get(s);
-      if(msg1)
-        {
-        gavl_msg_copy(msg1, msg);
-        bg_msg_sink_put(s, msg1);
-        }
+      bg_msg_sink_put_copy(s, msg);
       }
     }
   }

@@ -1,0 +1,7 @@
+Gmerlin Media Database Documentation
+
+The media database backend is used by the GUI player as well as the media server.
+By default, the GUI player creates it's MDB in $HOME/.gmerlin/gmerlin-mdb.
+
+For manipulating the media database, there is also the comandline tool "mdb-tool".
+

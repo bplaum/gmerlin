@@ -46,6 +46,120 @@
 #define BG_MDB_ID_PHOTOS            "/photos"
 #define BG_MDB_ID_PLAYQUEUE         BG_PLAYQUEUE_ID
 
+/* Messages for namespace BG_MSG_NS_DB */
+
+/*
+ *  ContextID: album_id
+    arg0: idx        (int)
+    arg1: num_delete (int)
+    arg2: new_tracks (array or dictionary)
+ */
+
+#define BG_CMD_DB_SPLICE_CHILDREN         1
+
+/*
+ * ContextID: album_id
+ * arg0: idx        (int)
+ * arg1: uris       (array or string)
+ *
+ */
+
+// #define BG_CMD_DB_LOAD_URIS               2
+
+/*
+ *  Sort by *label*
+ *  Only supported by writable backends
+ *
+ *  ContextID: album_id
+ */
+
+#define BG_CMD_DB_SORT                    4
+
+
+/*
+ *  Make a local copy of an item (currently only supported for
+ *  podcast episodes)
+ */
+
+
+
+#define BG_CMD_DB_SAVE_LOCAL             6
+
+/*
+ *  arg0: path    (string)
+ */
+
+#define BG_CMD_DB_ADD_SQL_DIR              7
+
+/*
+ *  arg0: path    (string)
+ */
+
+#define BG_CMD_DB_DEL_SQL_DIR              8
+
+/*
+ *  ContextID: album_id
+    arg0: idx        (int)
+    arg1: num_delete (int)
+    arg2: new_tracks (array or dictionary)
+ */
+
+#define BG_MSG_DB_SPLICE_CHILDREN         100
+
+/*  ContextID: object_id
+    arg0: track
+ */
+
+#define BG_MSG_DB_OBJECT_CHANGED          101
+
+/*  */
+
+// #define BG_MSG_DB_RESCAN_DONE             102
+
+/*
+ *  ContextID: album_id
+ */
+
+#define BG_FUNC_DB_BROWSE_OBJECT          200
+
+/*
+ *  ContextID: album_id
+ *
+ *  arg0 (optional): start, default 0
+ *  arg1 (optional): num, default: -1
+ *
+ *  num = -1 return all children up to the end, but allow them to be
+ *           sent in separate replies (gmerlin default)
+ *  num = 0  return all children up to the end in one reply (upnp way)
+ */
+
+#define BG_FUNC_DB_BROWSE_CHILDREN        201
+
+#define BG_FUNC_DB_RESCAN                 202
+
+
+
+/*
+ *  ContextID: album_id
+ *  arg0: metadata   (dictionary)
+ */
+
+#define BG_RESP_DB_BROWSE_OBJECT          300
+
+/*
+ *  Compatible with splice for simpler frontends
+ *
+ *  ContextID: album_id
+ *  arg0: last       (int) Last operation in sequence
+ *  arg1: idx        (int)
+ *  arg2: num_delete (int) (always zero)
+ *  arg3: new_tracks (array)
+ */
+
+#define BG_RESP_DB_BROWSE_CHILDREN        301
+
+#define BG_RESP_DB_RESCAN                 302
+
       
 typedef struct bg_mdb_s bg_mdb_t;
 
@@ -62,19 +176,18 @@ bg_controllable_t * bg_mdb_get_controllable(bg_mdb_t * db);
 void bg_mdb_rescan(bg_controllable_t * db);
 void bg_mdb_rescan_sync(bg_controllable_t * db);
 
-
-void bg_mdb_add_uris(bg_mdb_t * mdb, const char * parent_id, int idx,
-                     const gavl_array_t * uris);
-
 void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track);
+
+void bg_mdb_add_sql_directory(bg_controllable_t * db, const char * dir);
+void bg_mdb_del_sql_directory(bg_controllable_t * db, const char * dir);
 
 bg_cfg_ctx_t * bg_mdb_get_cfg(bg_mdb_t * db);
 
 
 /* Browse */
 
-int bg_mdb_browse_object_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
-int bg_mdb_browse_children_sync(bg_mdb_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
+int bg_mdb_browse_object_sync(bg_controllable_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
+int bg_mdb_browse_children_sync(bg_controllable_t * mdb, gavl_dictionary_t * ret, const char * id, int timeout);
 
 void bg_mdb_set_browse_obj_response(gavl_msg_t * msg, const gavl_dictionary_t * obj,
                                     const gavl_msg_t * cmd, int idx, int total);

@@ -272,7 +272,7 @@ void bg_player_handle_audio_filter_command(bg_player_t * p, gavl_msg_t * msg)
   is_interrupted = (state == BG_PLAYER_STATUS_INTERRUPTED);
   
   bg_audio_filter_chain_lock(p->audio_stream.fc);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put_copy(sink, msg);
 
   need_restart =
     bg_audio_filter_chain_need_restart(p->audio_stream.fc);

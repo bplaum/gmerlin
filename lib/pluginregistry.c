@@ -165,7 +165,7 @@ static int handle_ext_message(void * priv, gavl_msg_t * msg)
   //  gavl_msg_dump(msg, 2);
   
   if(h->control.cmd_sink)
-    bg_msg_sink_put(h->control.cmd_sink, msg);
+    bg_msg_sink_put_copy(h->control.cmd_sink, msg);
   return 1;
   }
 
@@ -207,7 +207,7 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
   //  fprintf(stderr, "Got plugin message:\n");
   //  gavl_msg_dump(msg, 2);
   
-  bg_msg_sink_put(h->ctrl_ext.evt_sink, msg);
+  bg_msg_sink_put_copy(h->ctrl_ext.evt_sink, msg);
   
   return 1;
   }
@@ -4410,7 +4410,7 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
     gavl_msg_t * cmd = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
     gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SELECT_TRACK, GAVL_MSG_NS_SRC);
     gavl_msg_set_arg_int(cmd, 0, track);
-    bg_msg_sink_put(h->ctrl_ext.cmd_sink, cmd);
+    bg_msg_sink_put(h->ctrl_ext.cmd_sink);
     }
   
   if(!(mi = bg_input_plugin_get_media_info(h)))
@@ -4450,7 +4450,7 @@ void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   gavl_msg_set_arg_long(cmd, 0, time);
   gavl_msg_set_arg_int(cmd, 1, scale);
   
-  bg_msg_sink_put(h->control.cmd_sink, cmd);
+  bg_msg_sink_put(h->control.cmd_sink);
   //  fprintf(stderr, "bg_input_plugin_seek done\n");
   }
 
@@ -4516,7 +4516,7 @@ void bg_input_plugin_start(bg_plugin_handle_t * h)
   
   cmd = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_START, GAVL_MSG_NS_SRC);
-  bg_msg_sink_put(h->ctrl_ext.cmd_sink, cmd);
+  bg_msg_sink_put(h->ctrl_ext.cmd_sink);
   }
 
 void bg_input_plugin_pause(bg_plugin_handle_t * h)
@@ -4528,7 +4528,7 @@ void bg_input_plugin_pause(bg_plugin_handle_t * h)
 
   cmd = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_PAUSE, GAVL_MSG_NS_SRC);
-  bg_msg_sink_put(h->ctrl_ext.cmd_sink, cmd);
+  bg_msg_sink_put(h->ctrl_ext.cmd_sink);
   }
 
 void bg_input_plugin_resume(bg_plugin_handle_t * h)
@@ -4540,7 +4540,7 @@ void bg_input_plugin_resume(bg_plugin_handle_t * h)
 
   cmd = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_RESUME, GAVL_MSG_NS_SRC);
-  bg_msg_sink_put(h->ctrl_ext.cmd_sink, cmd);
+  bg_msg_sink_put(h->ctrl_ext.cmd_sink);
   }
 
 

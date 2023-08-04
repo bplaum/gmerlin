@@ -268,7 +268,7 @@ static void position_changed(bg_player_tracklist_t * l)
                    BG_PLAYER_STATE_QUEUE_IDX,
                    &val);
   
-  bg_msg_sink_put(l->evt_sink, evt);
+  bg_msg_sink_put(l->evt_sink);
 
   if(l->idx_real < 0)
     return;
@@ -559,7 +559,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
   gavl_msg_set_arg_int(evt, 1, del);
   gavl_msg_set_arg(evt, 2, val);
   
-  bg_msg_sink_put(l->evt_sink, evt);
+  bg_msg_sink_put(l->evt_sink);
   l->list_changed = 1;
   
   l->idx = -1;
@@ -606,7 +606,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
                      BG_PLAYER_STATE_QUEUE_LEN,
                      &val1);
     
-    bg_msg_sink_put(l->evt_sink, evt);
+    bg_msg_sink_put(l->evt_sink);
  
     }
 
@@ -622,7 +622,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
                    BG_PLAYER_STATE_QUEUE_IDX,
                    &val1);
   
-  bg_msg_sink_put(l->evt_sink, evt);
+  bg_msg_sink_put(l->evt_sink);
   
   /* Update metadata for root object:
      
@@ -642,7 +642,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
   gavl_dictionary_set(&tmp_dict, GAVL_META_CHILDREN, NULL);
   
   gavl_msg_set_arg_dictionary(evt, 0, &tmp_dict);
-  bg_msg_sink_put(l->evt_sink, evt);
+  bg_msg_sink_put(l->evt_sink);
   
   gavl_dictionary_free(&tmp_dict);
   }
@@ -854,13 +854,13 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
                 
             bg_mdb_set_browse_children_response(resp, &tmp_arr, msg, &start, 1, arr->num_entries);
             gavl_array_free(&tmp_arr);
-            bg_msg_sink_put(l->evt_sink, resp);
+            bg_msg_sink_put(l->evt_sink);
             }
           else if(one_answer)
             {
             resp = bg_msg_sink_get(l->evt_sink);
             bg_mdb_set_browse_children_response(resp, arr, msg, &start, 1, arr->num_entries);
-            bg_msg_sink_put(l->evt_sink, resp);
+            bg_msg_sink_put(l->evt_sink);
             }
           else // Multiple answers
             {
@@ -875,7 +875,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
                 {
                 resp = bg_msg_sink_get(l->evt_sink);
                 bg_mdb_set_browse_children_response(resp, &tmp_arr, msg, &start, 0, arr->num_entries);
-                bg_msg_sink_put(l->evt_sink, resp);
+                bg_msg_sink_put(l->evt_sink);
                 gavl_array_reset(&tmp_arr);
                 }
               gavl_array_splice_val(&tmp_arr, i, 0, &arr->entries[i]);
@@ -885,7 +885,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
               {
               resp = bg_msg_sink_get(l->evt_sink);
               bg_mdb_set_browse_children_response(resp, &tmp_arr, msg, &start, 1, arr->num_entries);
-              bg_msg_sink_put(l->evt_sink, resp);
+              bg_msg_sink_put(l->evt_sink);
               gavl_array_free(&tmp_arr);
               }
             }
@@ -912,7 +912,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
             
             res = bg_msg_sink_get(l->evt_sink);
             bg_mdb_set_browse_obj_response(res, &tmp_dict, msg, -1, -1);
-            bg_msg_sink_put(l->evt_sink, res);
+            bg_msg_sink_put(l->evt_sink);
             gavl_dictionary_free(&tmp_dict);
             }
           else if((child = gavl_get_track_by_id(l->cnt, ctx_id)))
@@ -921,7 +921,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
             bg_mdb_set_browse_obj_response(res, child, msg,
                                            gavl_get_track_idx_by_id(l->cnt, ctx_id),
                                            gavl_track_get_num_children(l->cnt));
-            bg_msg_sink_put(l->evt_sink, res);
+            bg_msg_sink_put(l->evt_sink);
             }
           ret = 1;
           }

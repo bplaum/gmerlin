@@ -38,22 +38,20 @@
 
 static void * thread1_func(void * data)
   {
-  int keep_going = 1;
+  //  int keep_going = 1;
   gavl_msg_t * msg;
   bg_msg_queue_t * queue;
   const char * str;
     
   queue = (bg_msg_queue_t *)data;
     
-  while(keep_going)
+  while((msg = bg_msg_queue_try_lock_read(queue)))
     {
-    msg = bg_msg_queue_lock_read(queue);
-    
     switch(gavl_msg_get_id(msg))
       {
       case MSG_QUIT:
         fprintf(stderr, "Got message quit\n");
-        keep_going = 0;
+        //        keep_going = 0;
         break;
       case MSG_VOID:
         fprintf(stderr, "Got message void\n");

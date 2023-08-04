@@ -127,7 +127,7 @@ static void apply_func_child(void * priv, const char * name, const gavl_value_t 
   
   msg = bg_msg_sink_get(a->sink);
   bg_msg_set_state(msg, a->id, gavl_dictionary_is_last(a->child, name), a->ctx, name, val);
-  bg_msg_sink_put(a->sink, msg);
+  bg_msg_sink_put(a->sink);
   }
 
 void bg_state_apply_ctx(gavl_dictionary_t * state, const char * ctx, bg_msg_sink_t * sink, int id)
@@ -242,7 +242,7 @@ int bg_state_set(gavl_dictionary_t * state,
     {
     gavl_msg_t * msg = bg_msg_sink_get(sink);
     bg_msg_set_state(msg, id, last, ctx, var, val);
-    bg_msg_sink_put(sink, msg);
+    bg_msg_sink_put(sink);
     }
   return changed;
   }

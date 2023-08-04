@@ -61,25 +61,6 @@ static void msg_transition(gavl_msg_t * msg,
   }
 
 
-static void msg_interrupt(gavl_msg_t * msg,
-                          const void * data)
-  {
-  gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_INTERRUPT, BG_MSG_NS_PLAYER);
-  }
-
-static void msg_interrupt_resume(gavl_msg_t * msg,
-                                 const void * data)
-  {
-  gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_INTERRUPT_RESUME, BG_MSG_NS_PLAYER);
-  }
-
-#if 0
-static void msg_chapter_changed(gavl_msg_t * msg, const void * data)
-  {
-  gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_CHAPTER_CHANGED, BG_MSG_NS_PLAYER);
-  gavl_msg_set_arg_int(msg, 0, *((int*)data));
-  }
-#endif
 
 /*
  *  Interrupt playback so all plugin threads are waiting inside
@@ -801,7 +782,7 @@ static void play_cmd(bg_player_t * player)
                                  gavl_track_get_id(track));
       
       gavl_msg_set_arg_dictionary(msg, 0, track);
-      bg_msg_sink_put(player->ctrl.evt_sink, msg);
+      bg_msg_sink_put(player->ctrl.evt_sink);
       
       bg_player_source_cleanup(player->src);
       return;
@@ -1004,20 +985,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           //          fprintf(stderr, "Player set state: %s %s %d\n", ctx, var, last);
           //          gavl_value_dump(&val, 0);
           //          fprintf(stderr, "\n");
-#if 0 // Message accumulation is disabled for now because it might lead to deep recursions when the state is set
-          /* Check if there are more messages */
           
-          while(bg_msg_sink_peek(player->ctrl.cmd_sink, &next_id, &next_ns) && 
-                (next_id == BG_CMD_SET_STATE) &&
-                (next_ns == BG_MSG_NS_STATE))
-            {
-            command = bg_msg_sink_get_read(player->ctrl.cmd_sink);
-
-            
-
-            bg_msg_sink_done_read(player->ctrl.cmd_sink);
-            }
-#endif     
           if(gavl_string_starts_with(ctx, BG_PLAYER_STATE_CTX) &&
              ((ctx[player_ctx_len] == '/') ||
               (ctx[player_ctx_len] == '\0')))
@@ -1150,7 +1118,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               {
               bg_plugin_handle_t * h = bg_ov_get_plugin(player->video_stream.ov);
               bg_plugin_lock(h);
-              bg_msg_sink_put(player->video_stream.ov_ctrl->cmd_sink, command);
+              bg_msg_sink_put_copy(player->video_stream.ov_ctrl->cmd_sink, command);
               bg_plugin_unlock(h);
               }
             /* Need to store this locally for the plugin registry */
@@ -1379,28 +1347,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           break;
         case BG_PLAYER_CMD_PAUSE:
           pause_cmd(player);
-          break;
-        case BG_PLAYER_CMD_INTERRUPT:
-          /* Interrupt playback and restart */
-          bg_player_stream_change_init(player);
-          bg_msg_hub_send_cb(player->ctrl.evt_hub,
-                             msg_interrupt,
-                             &player);
-
-          while(1)
-            {
-            command = bg_msg_sink_get_read(player->ctrl.cmd_sink);
-            if(gavl_msg_get_id(command) != BG_PLAYER_CMD_INTERRUPT_RESUME)
-              gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
-                     "Ignoring command while playback is interrupted");
-            else
-              break;
-            bg_msg_sink_done_read(player->ctrl.cmd_sink);
-            }
-          bg_player_stream_change_done(player);
-          bg_msg_hub_send_cb(player->ctrl.evt_hub,
-                             msg_interrupt_resume,
-                             &player);
           break;
         case BG_PLAYER_CMD_SHOW_INFO:
           bg_osd_show_info(player->video_stream.osd);
@@ -1786,7 +1732,7 @@ void bg_player_quit(bg_player_t *player)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(player->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_QUIT, BG_MSG_NS_PLAYER);
-  bg_msg_sink_put(player->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(player->ctrl.cmd_sink);
   
   //  pthread_cancel(player->player_thread);
   pthread_join(player->player_thread, NULL);

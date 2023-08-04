@@ -235,7 +235,7 @@ void bg_msg_queue_destroy(bg_msg_queue_t * mq);
  *  The message is owned by the queue and must not be freed.
  */
 
-gavl_msg_t * bg_msg_queue_lock_read(bg_msg_queue_t * mq);
+// gavl_msg_t * bg_msg_queue_lock_read(bg_msg_queue_t * mq);
 
 /** \brief Try to lock a message queue for reading
  *  \param mq A message queue
@@ -274,28 +274,7 @@ gavl_msg_t * bg_msg_queue_lock_write(bg_msg_queue_t * mq);
 
 void bg_msg_queue_unlock_write(bg_msg_queue_t * mq);
 
-/** \brief Check, if there is a message for reading available and get the ID.
- *  \param mq A message queue
- *  \param id Might return the ID
- *  \returns 1 if there is a message (and id is valid), 0 else
- */
-
-int bg_msg_queue_peek(bg_msg_queue_t * mq, uint32_t * id, uint32_t * ns);
-
 /** @} */
-
-/** \defgroup message_queue_list Lists of message queues
- *  \ingroup messages
- *  \brief Send messages to multiple message queues
- 
- *  Lists of message queues can be used, if some informations have to be passed to
- *  multiple recipients. Each listener adds a message queue to the list and will get
- *  all messages, which are broadcasted with \ref bg_msg_queue_list_send from the writing end.
- *  @{
- */
-
-/** \brief Opaque message queue list type. You don't want to know what's inside.
- */
 
 struct json_object *  bg_msg_to_json(const gavl_msg_t * msg);
 
@@ -321,7 +300,9 @@ void bg_msg_dump(gavl_msg_t * msg, int indent);
 typedef struct bg_msg_sink_s bg_msg_sink_t;
 
 gavl_msg_t * bg_msg_sink_get(bg_msg_sink_t * sink);
-void bg_msg_sink_put(bg_msg_sink_t * sink, gavl_msg_t * msg);
+
+void bg_msg_sink_put(bg_msg_sink_t * sink);
+void bg_msg_sink_put_copy(bg_msg_sink_t * sink, const gavl_msg_t * msg);
 
 /* Messages processed in the last call to bg_msg_sink_iteration */
 int bg_msg_sink_get_num(bg_msg_sink_t * sink);
@@ -329,15 +310,10 @@ int bg_msg_sink_get_num(bg_msg_sink_t * sink);
 /* Wait until at least one message arrives */
 void bg_msg_sink_wait(bg_msg_sink_t * sink, int timeout);
 
-int bg_msg_sink_peek(bg_msg_sink_t * sink, uint32_t * id, uint32_t * ns);
-gavl_msg_t * bg_msg_sink_get_read(bg_msg_sink_t * sink);
-gavl_msg_t * bg_msg_sink_get_read_block(bg_msg_sink_t * sink);
-
-void bg_msg_sink_done_read(bg_msg_sink_t * sink);
-
 bg_msg_sink_t * bg_msg_sink_create(gavl_handle_msg_func cb, void * cb_data, int sync);
 void bg_msg_sink_destroy(bg_msg_sink_t *);
 
+// gavl_handle_msg_func
 int bg_msg_sink_handle(void * sink, gavl_msg_t * msg);
 
 /* For asynchronous sinks */
@@ -392,6 +368,11 @@ typedef struct
   void * priv;
   void (*cleanup)(void *);
 
+  /* Some connections need a regular ping while
+   */
+  void * ping_data;
+  void (*ping_func)(void *);
+  
   } bg_controllable_t;
 
 typedef struct
@@ -459,7 +440,7 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_MSG_NS_MENU              111
 #define BG_MSG_NS_STATE             GAVL_MSG_NS_STATE
 #define BG_MSG_NS_RECORDER          113
-#define BG_MSG_NS_DB                114
+#define BG_MSG_NS_DB                114 // mdb.h
 #define BG_MSG_NS_SSDP              115 // ssdh.h
 #define BG_MSG_NS_MDB_PRIVATE       116 // mdb_private.h
 
@@ -520,104 +501,6 @@ void bg_control_cleanup(bg_control_t * c);
  *  BG_MSG_NS_MS
  */
 
-// BG_MSG_NS_DB
-
-/*
- *  ContextID: album_id
-    arg0: idx        (int)
-    arg1: num_delete (int)
-    arg2: new_tracks (array or dictionary)
- */
-
-#define BG_CMD_DB_SPLICE_CHILDREN         1
-
-/*
- * ContextID: album_id
- * arg0: idx        (int)
- * arg1: uris       (array or string)
- *
- */
-
-// #define BG_CMD_DB_LOAD_URIS               2
-
-/*
- *  Sort by *label*
- *  Only supported by writable backends
- *
- *  ContextID: album_id
- */
-
-#define BG_CMD_DB_SORT                    4
-
-/*
- *  Resync all backends 
- */
-
-#define BG_CMD_DB_RESCAN                  5
-
-/*
- *  Make a local copy of an item (currently only supported for
- *  podcast episodes)
- */
-
-#define BG_CMD_DB_SAVE_LOCAL             6
-
-/*
- *  ContextID: album_id
-    arg0: idx        (int)
-    arg1: num_delete (int)
-    arg2: new_tracks (array or dictionary)
- */
-
-#define BG_MSG_DB_SPLICE_CHILDREN         100
-
-/*  ContextID: object_id
-    arg0: track
- */
-
-#define BG_MSG_DB_OBJECT_CHANGED          101
-
-/*  */
-
-#define BG_MSG_DB_RESCAN_DONE             102
-
-/*
- *  ContextID: album_id
- */
-
-#define BG_FUNC_DB_BROWSE_OBJECT          200
-
-/*
- *  ContextID: album_id
- *
- *  arg0 (optional): start, default 0
- *  arg1 (optional): num, default: -1
- *
- *  num = -1 return all children up to the end, but allow them to be
- *           sent in separate replies (gmerlin default)
- *  num = 0  return all children up to the end in one reply (upnp way)
- */
-
-#define BG_FUNC_DB_BROWSE_CHILDREN        201
-
-/*
- *  ContextID: album_id
- *  arg0: metadata   (dictionary)
- */
-
-#define BG_RESP_DB_BROWSE_OBJECT          300
-
-/*
- *  Compatible with splice for simpler frontends
- *
- *  ContextID: album_id
- *  arg0: last       (int) Last operation in sequence
- *  arg1: idx        (int)
- *  arg2: num_delete (int) (always zero)
- *  arg3: new_tracks (array)
- */
-
-#define BG_RESP_DB_BROWSE_CHILDREN        301
 
 // BG_MSG_NS_TREE
 

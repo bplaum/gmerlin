@@ -808,7 +808,7 @@ void bg_recorder_handle_video_filter_command(bg_recorder_t * p, gavl_msg_t * msg
   bg_video_filter_chain_lock(p->as.fc);
 
   sink = bg_video_filter_chain_get_cmd_sink(p->vs.fc);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put_copy(sink, msg);
 
   need_restart =
     bg_video_filter_chain_need_restart(p->vs.fc);

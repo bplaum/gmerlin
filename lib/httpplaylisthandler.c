@@ -214,7 +214,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
               //              gavl_dictionary_dump(new_req, 2);
               
               /* Send request message */
-              bg_msg_sink_put(h->ctrl.cmd_sink, request);
+              bg_msg_sink_put(h->ctrl.cmd_sink);
               
               }
 
@@ -311,7 +311,8 @@ static int handle_http_playlist(bg_http_connection_t * conn, void * data)
      (atoi(var) != 0))
     local = 1;
   
-  if(bg_mdb_browse_children_sync(h->srv->mdb, &ret, id, 10000))
+  if(bg_mdb_browse_children_sync(bg_mdb_get_controllable(h->srv->mdb),
+                                 &ret, id, 10000))
     send_playlist(conn, &ret, local, format_idx);    
   else
     bg_http_connection_init_res(conn, "HTTP/1.1", 500, "Internal Server Error");

@@ -652,7 +652,7 @@ static int bg_dbus_connection_update(bg_dbus_connection_t * conn)
 
         gavl_dictionary_set_int(&msg1->header, GAVL_MSG_ID, conn->listeners[i].id);
         msg1->ID = conn->listeners[i].id;
-        bg_msg_sink_put(conn->listeners[i].sink, msg1);
+        bg_msg_sink_put(conn->listeners[i].sink);
         }
       }
     
@@ -1379,7 +1379,7 @@ static DBusHandlerResult msg_func(DBusConnection *connection, DBusMessage *messa
   bg_msg_sink_t * sink = user_data;
   gavl_msg = bg_msg_sink_get(sink);
   msg_dbus_to_gavl(message, gavl_msg); 
-  bg_msg_sink_put(sink, gavl_msg);
+  bg_msg_sink_put(sink);
   return DBUS_HANDLER_RESULT_HANDLED;
   }
 #endif

@@ -82,7 +82,7 @@ static void thread_func_plug(bg_http_connection_t * conn, void * priv)
     goto fail;
     }
   
-  if(!bg_mdb_browse_object_sync(h->srv->mdb, &track, id, 10000))
+  if(!bg_mdb_browse_object_sync(bg_mdb_get_controllable(h->srv->mdb), &track, id, 10000))
     {
     bg_http_connection_init_res(conn, BG_PLUG_PROTOCOL, 404, "Not Found");
     goto fail;

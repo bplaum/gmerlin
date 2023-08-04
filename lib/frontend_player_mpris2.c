@@ -30,6 +30,7 @@
 #include <gmerlin/player.h>
 #include <gmerlin/application.h>
 #include <gmerlin/backend.h>
+#include <gmerlin/mdb.h>
 
 #include <gavl/metatags.h>
 
@@ -326,7 +327,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
                            BG_PLAYER_STATE_MODE,
                            &v);
           
-          bg_msg_sink_put(fe->ctrl.cmd_sink, msg1);
+          bg_msg_sink_put(fe->ctrl.cmd_sink);
           }
         else if(!strcmp(prop_name, "Shuffle"))
           {
@@ -352,7 +353,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
                            BG_PLAYER_STATE_MODE,
                            &v);
           
-          bg_msg_sink_put(fe->ctrl.cmd_sink, msg1);
+          bg_msg_sink_put(fe->ctrl.cmd_sink);
           }
 #if 0 // Nop
         else if(!strcmp(prop_name, "Rate"))

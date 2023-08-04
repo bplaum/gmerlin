@@ -153,7 +153,7 @@ static void set_sub_param(void * priv, const char * name,
     else
       bg_msg_set_multi_parameter_ctx(msg, w->section->ctx, w->info->name,
                                      w->info->multi_names[list->param_selected], name, val);
-    bg_msg_sink_put(sink, msg);
+    bg_msg_sink_put(sink);
     }
   }
 

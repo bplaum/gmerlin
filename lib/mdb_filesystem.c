@@ -1154,7 +1154,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
     else
       bg_mdb_set_browse_children_response(res, arr, msg, &start, 1, arr->num_entries);
     
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     
     gavl_dictionary_free(&url_vars);
     free(base_path);
@@ -1200,7 +1200,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
 
     res = bg_msg_sink_get(be->ctrl.evt_sink);
     bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, children->num_entries);
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     
     gavl_array_free(&arr);
     }
@@ -1244,7 +1244,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
     
     res = bg_msg_sink_get(be->ctrl.evt_sink);
     bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, children->num_entries);
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     gavl_dictionary_destroy(mi);
     gavl_array_free(&arr);
     }
@@ -1389,7 +1389,7 @@ static void set_directories(bg_mdb_backend_t * be,
   gavl_msg_set_splice_children_nocopy(resp, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
                                       gavl_track_get_id(container),
                                       1, 0, num_deleted, &val_add);
-  bg_msg_sink_put(be->ctrl.evt_sink, resp);
+  bg_msg_sink_put(be->ctrl.evt_sink);
   
   /* Update parent */
 
@@ -1397,7 +1397,7 @@ static void set_directories(bg_mdb_backend_t * be,
   gavl_msg_set_id_ns(resp, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
   gavl_dictionary_set_string(&resp->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(container));
   gavl_msg_set_arg_dictionary(resp, 0, container);
-  bg_msg_sink_put(be->ctrl.evt_sink, resp);
+  bg_msg_sink_put(be->ctrl.evt_sink);
   }
 #endif
 
@@ -1462,7 +1462,7 @@ static void browse_dir_list(bg_mdb_backend_t * be,
     //    fprintf(stderr, "Browse children response:\n");
     //    gavl_msg_dump(res, 2);
 
-    bg_msg_sink_put(be->ctrl.evt_sink, res);
+    bg_msg_sink_put(be->ctrl.evt_sink);
     }
   gavl_array_free(&arr);
   
@@ -1924,7 +1924,7 @@ static void splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx,
       gavl_msg_set_splice_children_nocopy(resp, BG_MSG_NS_DB, BG_MSG_DB_SPLICE_CHILDREN,
                                           ctx_id,
                                           1, idx, del, &val_add);
-      bg_msg_sink_put(b->ctrl.evt_sink, resp);
+      bg_msg_sink_put(b->ctrl.evt_sink);
       
       }
     /* Update parent */
@@ -1935,7 +1935,7 @@ static void splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx,
     gavl_msg_set_id_ns(resp, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
     gavl_dictionary_set_string(&resp->header, GAVL_MSG_CONTEXT_ID, ctx_id);
     gavl_msg_set_arg_dictionary(resp, 0, container);
-    bg_msg_sink_put(b->ctrl.evt_sink, resp);
+    bg_msg_sink_put(b->ctrl.evt_sink);
     
     }
   
@@ -1966,7 +1966,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_msg_t * res = bg_msg_sink_get(be->ctrl.evt_sink);
 
             bg_mdb_set_browse_obj_response(res, &ret, msg, idx, total);
-            bg_msg_sink_put(be->ctrl.evt_sink, res);
+            bg_msg_sink_put(be->ctrl.evt_sink);
             }
           gavl_dictionary_free(&ret);
           }
@@ -1982,15 +1982,15 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           browse_children(be, msg, ctx_id, start, num, one_answer);
           }
           break;
-        case BG_CMD_DB_RESCAN:
+        case BG_FUNC_DB_RESCAN:
           {
           gavl_msg_t * res;
           rescan(be);
           /* Send done event */
           
           res = bg_msg_sink_get(be->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_MSG_DB_RESCAN_DONE, BG_MSG_NS_DB);
-          bg_msg_sink_put(be->ctrl.evt_sink, res);
+          gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
+          bg_msg_sink_put(be->ctrl.evt_sink);
 
           }
           break;
@@ -2184,7 +2184,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             {
             resp = bg_msg_sink_get(be->ctrl.evt_sink);
             bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX, MDB_BACKEND_FILESYSTEM, name, &val);
-            bg_msg_sink_put(be->ctrl.evt_sink, resp);
+            bg_msg_sink_put(be->ctrl.evt_sink);
           
             gavl_value_free(&val);
             }

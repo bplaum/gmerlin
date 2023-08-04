@@ -248,7 +248,9 @@ struct bg_mdb_s
   
   FILE * dirlock;
   int num_rescan;
-
+  
+  gavl_msg_t * rescan_func;
+  
   int page_size;
 
   char * thumbs_dir;

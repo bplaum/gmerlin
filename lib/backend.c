@@ -298,7 +298,7 @@ void bg_backend_handle_stop(bg_backend_handle_t * be)
     {
     msg = bg_msg_sink_get(be->ctrl->cmd_sink);
     gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-    bg_msg_sink_put(be->ctrl->cmd_sink, msg);
+    bg_msg_sink_put(be->ctrl->cmd_sink);
     }
   pthread_join(be->th, NULL);
 

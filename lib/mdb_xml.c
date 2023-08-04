@@ -552,7 +552,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   else
     gavl_msg_set_arg_array(res, 2, add_arr);
   
-  bg_msg_sink_put(b->ctrl.evt_sink, res);
+  bg_msg_sink_put(b->ctrl.evt_sink);
 
   /* Send update event for parent */
   res = bg_msg_sink_get(b->ctrl.evt_sink);
@@ -575,7 +575,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   gavl_track_set_num_children(dir_idx, containers, items);
   
   gavl_msg_set_arg_dictionary(res, 0, &dict);
-  bg_msg_sink_put(b->ctrl.evt_sink, res);
+  bg_msg_sink_put(b->ctrl.evt_sink);
   
   ret = 1;
   fail:
@@ -858,7 +858,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           res = bg_msg_sink_get(b->ctrl.evt_sink);
 
           bg_mdb_set_browse_obj_response(res, dict, msg, item_idx, total);
-          bg_msg_sink_put(b->ctrl.evt_sink, res);
+          bg_msg_sink_put(b->ctrl.evt_sink);
           }
           break;
         case BG_FUNC_DB_BROWSE_CHILDREN:
@@ -884,7 +884,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
               {
               res = bg_msg_sink_get(b->ctrl.evt_sink);
               bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total);
-              bg_msg_sink_put(b->ctrl.evt_sink, res);
+              bg_msg_sink_put(b->ctrl.evt_sink);
               }
             else
               {
@@ -905,7 +905,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
                 
                 res = bg_msg_sink_get(b->ctrl.evt_sink);
                 bg_mdb_set_browse_children_response(res, &arr_sub, msg, &start, last, total);
-                bg_msg_sink_put(b->ctrl.evt_sink, res);
+                bg_msg_sink_put(b->ctrl.evt_sink);
                 
                 gavl_array_reset(&arr_sub);
                 }
@@ -997,7 +997,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_msg_set_arg_int(msg, 0, 0); // idx
             gavl_msg_set_arg_int(msg, 1, children.num_entries); // del
             gavl_msg_set_arg_array(msg, 2, &children);
-            bg_msg_sink_put(b->ctrl.evt_sink, msg);
+            bg_msg_sink_put(b->ctrl.evt_sink);
             
             gavl_array_free(&children);
             }

@@ -331,7 +331,7 @@ static gboolean button_press_event(GtkWidget* self, GdkEventButton * evt,
                      BG_PLAYER_STATE_MODE,
                      &val);
     
-    bg_msg_sink_put(w->player_ctrl.cmd_sink, msg);
+    bg_msg_sink_put(w->player_ctrl.cmd_sink);
     return TRUE;
     }
   else if(self == w->time_box)

@@ -143,11 +143,6 @@
 
 #define BG_PLAYER_CMD_SET_NEXT_TRACK  9
 
-#define BG_PLAYER_CMD_INTERRUPT           23 /* Interrupt playback */
-#define BG_PLAYER_CMD_INTERRUPT_RESUME    24 /* Resume interrupted playback */
-
-/* Different paradigm from the normal player */
-
 /* Start playing previously selected URL */
 #define BG_PLAYER_CMD_PLAY                26
 

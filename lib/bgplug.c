@@ -286,8 +286,6 @@ static int handle_msg_backchannel_wr(void * data, gavl_msg_t * msg)
         }
       break;
     }
-  /* Transfer to sink */
-  //  bg_msg_sink_put(plug->control.cmd_sink, msg);
   return 1;
   }
 
@@ -1911,7 +1909,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
             
             resp = bg_msg_sink_get(sink);
             gavl_msg_set_src_resync(resp, time, scale, 1, 1);
-            bg_msg_sink_put(sink, resp);
+            bg_msg_sink_put(sink);
             }
 #endif
           }
@@ -1933,7 +1931,7 @@ void bg_plug_select_track(bg_plug_t * p, int track)
   gavl_msg_t * cmd = bg_msg_sink_get(p->controllable.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SELECT_TRACK, GAVL_MSG_NS_SRC);
   gavl_msg_set_arg_int(cmd, 0, track);
-  bg_msg_sink_put(p->controllable.cmd_sink, cmd);
+  bg_msg_sink_put(p->controllable.cmd_sink);
   }
 
 /*

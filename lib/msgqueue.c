@@ -114,19 +114,7 @@ void bg_msg_queue_destroy(bg_msg_queue_t * m)
   free(m);
   }
 
-/* Lock message queue for reading, block until something arrives */
-
-gavl_msg_t * bg_msg_queue_lock_read(bg_msg_queue_t * m)
-  {
-  while(sem_wait(&m->msg_output->produced) == -1)
-    {
-    if(errno != EINTR)
-      return NULL;
-    }
-  return m->msg_output->m;
-  
-  // sem_ret->msg_output
-  }
+/* Lock message queue for reading, return NULL if queue is empty */
 
 gavl_msg_t * bg_msg_queue_try_lock_read(bg_msg_queue_t * m)
   {
@@ -136,21 +124,6 @@ gavl_msg_t * bg_msg_queue_try_lock_read(bg_msg_queue_t * m)
     return NULL;
   }
 
-int bg_msg_queue_peek(bg_msg_queue_t * m, uint32_t * id, uint32_t * ns)
-  {
-  int sem_val;
-  sem_getvalue(&m->msg_output->produced, &sem_val);
-  if(sem_val)
-    {
-    if(id)
-      *id = m->msg_output->m->ID;
-    if(ns)
-      *ns = m->msg_output->m->NS;
-    return 1;
-    }
-  else
-    return 0;
-  }
 
 void bg_msg_queue_unlock_read(bg_msg_queue_t * m)
   {

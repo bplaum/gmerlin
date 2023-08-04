@@ -618,7 +618,7 @@ static void play_track(bg_frontend_t * fe, int idx)
   msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, gavl_track_get_id(track)); // ID
-  bg_msg_sink_put(fe->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(fe->ctrl.cmd_sink);
   }
 
 static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
@@ -819,7 +819,7 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   bg_mdb_set_browse_children_request(msg, BG_PLAYQUEUE_ID, 0, -1, 0);
   //  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
   
-  bg_msg_sink_put(ret->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(ret->ctrl.cmd_sink);
   
   return ret;
   }

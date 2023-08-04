@@ -1514,7 +1514,7 @@ void bg_gtk_mdb_browse_children(bg_gtk_mdb_tree_t * t, const char * id)
   
   msg = bg_msg_sink_get(t->ctrl.cmd_sink);
   bg_mdb_set_browse_children_request(msg, id, 0, -1, 0);
-  bg_msg_sink_put(t->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(t->ctrl.cmd_sink);
   }
 
 void bg_gtk_mdb_browse_object(bg_gtk_mdb_tree_t * t, const char * id)
@@ -1539,9 +1539,9 @@ void bg_gtk_mdb_browse_object(bg_gtk_mdb_tree_t * t, const char * id)
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
 
   if(is_playqueue)
-    bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+    bg_msg_sink_put(t->player_ctrl.cmd_sink);
   else
-    bg_msg_sink_put(t->ctrl.cmd_sink, msg);
+    bg_msg_sink_put(t->ctrl.cmd_sink);
   }
 
 static void row_collapsed_callback(GtkTreeView *treeview,
@@ -2325,7 +2325,7 @@ void bg_gtk_mdb_tree_set_player_ctrl(bg_gtk_mdb_tree_t * t, bg_controllable_t * 
   gavl_msg_set_id_ns(msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
 
-  bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+  bg_msg_sink_put(t->player_ctrl.cmd_sink);
 
   
   /* Browse children */
@@ -2333,7 +2333,7 @@ void bg_gtk_mdb_tree_set_player_ctrl(bg_gtk_mdb_tree_t * t, bg_controllable_t * 
 
   bg_mdb_set_browse_children_request(msg, BG_PLAYQUEUE_ID, 0, -1, 0);
   
-  bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+  bg_msg_sink_put(t->player_ctrl.cmd_sink);
 
   }
 
@@ -2366,7 +2366,7 @@ void bg_gtk_mdb_tree_delete_selected_album(bg_gtk_mdb_tree_t * t)
     
     gavl_msg_set_arg_int(msg, 0, idx);
     gavl_msg_set_arg_int(msg, 1, 1);
-    bg_msg_sink_put(t->ctrl.cmd_sink, msg);
+    bg_msg_sink_put(t->ctrl.cmd_sink);
     }
   else
     {

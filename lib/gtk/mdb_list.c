@@ -319,7 +319,7 @@ static void delete_items(bg_msg_sink_t * sink, const char * parent, int idx, int
   
   gavl_msg_set_arg_int(msg, 0, idx);
   gavl_msg_set_arg_int(msg, 1, del);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 /* Internal to GUI index */
@@ -447,7 +447,7 @@ static void list_download_selected(album_t * album)
 
       //      fprintf(stderr, "Download selected 1\n");
       //      gavl_msg_dump(cmd, 2);
-      bg_msg_sink_put(album->t->ctrl.cmd_sink, cmd);
+      bg_msg_sink_put(album->t->ctrl.cmd_sink);
 
       }
     }
@@ -531,7 +531,7 @@ static void list_favorites(album_t * a)
     gavl_msg_set_arg_int(msg, 0, -1);
     gavl_msg_set_arg_int(msg, 1, 0);
     gavl_msg_set_arg(msg, 2, gavl_dictionary_get(sel, GAVL_META_CHILDREN));
-    bg_msg_sink_put(a->t->ctrl.cmd_sink, msg);
+    bg_msg_sink_put(a->t->ctrl.cmd_sink);
     }
       
   gavl_dictionary_destroy(sel);
@@ -918,7 +918,7 @@ static void do_play(bg_gtk_mdb_tree_t * t, const char * id)
   msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, queue_id);
-  bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+  bg_msg_sink_put(t->player_ctrl.cmd_sink);
   free(queue_id);
   }
 
@@ -969,7 +969,7 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
     
     gavl_msg_set_arg_array(msg, 2, arr);
     
-    bg_msg_sink_put(t->player_ctrl.cmd_sink, msg);
+    bg_msg_sink_put(t->player_ctrl.cmd_sink);
     }
 
   if(play_id)
@@ -1255,7 +1255,7 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
       else if(tree->menu_ctx.item)
         gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(tree->menu_ctx.item));
       
-      bg_msg_sink_put(sink, msg);
+      bg_msg_sink_put(sink);
       }
     }
   else if(item == tree->menu.album_menu.add_item)
@@ -1515,7 +1515,7 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
     msg = bg_msg_sink_get(sink);
     bg_mdb_set_load_uris(msg, gavl_track_get_id(a->a), idx, &arr);
     
-    bg_msg_sink_put(sink, msg);
+    bg_msg_sink_put(sink);
     
     gavl_array_free(&arr);
     bg_urilist_free(list);
@@ -1544,7 +1544,7 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
     gavl_msg_set_arg_int(msg, 0, idx);
     gavl_msg_set_arg_int(msg, 1, 0);
     gavl_msg_set_arg_array(msg, 2, gavl_get_tracks(&dict));
-    bg_msg_sink_put(sink, msg);
+    bg_msg_sink_put(sink);
     
     /* Cleanup */
     gavl_dictionary_free(&dict);
@@ -2324,10 +2324,8 @@ static void load_files(bg_gtk_mdb_tree_t * tree)
       
       msg = bg_msg_sink_get(sink);
       bg_mdb_set_load_uris(msg, id, -1, &arr);
-      bg_msg_sink_put(sink, msg);
+      bg_msg_sink_put(sink);
       
-      //      bg_mdb_add_uris(bg_mdb_t * mdb, const char * parent_id, int idx,
-      //                      gavl_array_t * uris)
       }
 #endif
     gavl_array_free(&arr);
@@ -2459,7 +2457,7 @@ static void create_container_generic(bg_gtk_mdb_tree_t * tree,
   //  fprintf(stderr, "Create container\n");
   //  gavl_msg_dump(msg, 0);
   
-  bg_msg_sink_put(tree->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(tree->ctrl.cmd_sink);
   }
 
 
@@ -2491,7 +2489,7 @@ static void add_stream_source(bg_gtk_mdb_tree_t * tree,
   //  fprintf(stderr, "Create container\n");
   //  gavl_msg_dump(msg, 0);
   
-  bg_msg_sink_put(tree->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(tree->ctrl.cmd_sink);
   }
 
 static void create_stream_source(bg_gtk_mdb_tree_t * tree)
@@ -2590,7 +2588,7 @@ static void load_uri(bg_gtk_mdb_tree_t * tree)
 
   bg_mdb_set_load_uri(msg, id, -1, str);
   
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   
   free(str);
   }

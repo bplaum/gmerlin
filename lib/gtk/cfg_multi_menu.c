@@ -173,7 +173,7 @@ static void set_param(void * data, const char * name, const gavl_value_t * val)
       bg_msg_set_multi_parameter_ctx(msg, w->section->ctx, w->info->name,
                                      w->info->multi_names[priv->selected],
                                      name, val);
-      bg_msg_sink_put(sink, msg);
+      bg_msg_sink_put(sink);
       }
     }
   }

@@ -35,7 +35,7 @@ void bg_player_set_track(bg_msg_sink_t * sink, const gavl_dictionary_t * loc)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_dictionary(msg, 0, loc);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_next_track(bg_msg_sink_t * s, const gavl_dictionary_t * loc)
@@ -45,7 +45,7 @@ void bg_player_set_next_track(bg_msg_sink_t * s, const gavl_dictionary_t * loc)
   msg = bg_msg_sink_get(s);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_NEXT_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_dictionary(msg, 0, loc);
-  bg_msg_sink_put(s, msg);
+  bg_msg_sink_put(s);
   }
 
 void bg_player_load_uri(bg_msg_sink_t * s,
@@ -58,7 +58,7 @@ void bg_player_load_uri(bg_msg_sink_t * s,
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_LOCATION, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, uri);
   gavl_msg_set_arg_int(msg, 1, start_playing);
-  bg_msg_sink_put(s, msg);
+  bg_msg_sink_put(s);
   }
 
 void bg_player_play_track(bg_msg_sink_t * sink,
@@ -73,7 +73,7 @@ void bg_player_play(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_play_by_id(bg_msg_sink_t * sink, const char * id)
@@ -82,7 +82,7 @@ void bg_player_play_by_id(bg_msg_sink_t * sink, const char * id)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, id);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_stop_m(gavl_msg_t * msg)
@@ -95,7 +95,7 @@ void bg_player_stop(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_stop_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_mute_m(gavl_msg_t * msg, int mute)
@@ -124,7 +124,7 @@ void bg_player_toggle_mute(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_mute_m(msg, 2);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_mute(bg_msg_sink_t * sink, int mute)
@@ -132,7 +132,7 @@ void bg_player_set_mute(bg_msg_sink_t * sink, int mute)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_mute_m(msg, mute);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -146,7 +146,7 @@ void bg_player_pause(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_pause_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_show_info_m(gavl_msg_t * msg)
@@ -159,7 +159,7 @@ void bg_player_show_info(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_show_info_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_audio_stream_menu_m(gavl_msg_t * msg)
@@ -182,7 +182,7 @@ void bg_player_audio_stream_menu(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_audio_stream_menu_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_subtitle_stream_menu(bg_msg_sink_t * sink)
@@ -190,7 +190,7 @@ void bg_player_subtitle_stream_menu(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_subtitle_stream_menu_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_chapter_menu(bg_msg_sink_t * sink)
@@ -198,7 +198,7 @@ void bg_player_chapter_menu(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_chapter_menu_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_show_time_m(gavl_msg_t * msg)
@@ -211,7 +211,7 @@ void bg_player_show_time(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_show_time_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_audio_stream_m(gavl_msg_t * msg, int index)
@@ -230,7 +230,7 @@ void bg_player_set_audio_stream(bg_msg_sink_t * sink, int index)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_audio_stream_m(msg, index);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_video_stream_m(gavl_msg_t * msg, int index)
@@ -249,7 +249,7 @@ void bg_player_set_video_stream(bg_msg_sink_t * sink, int index)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_video_stream_m(msg, index);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_subtitle_stream_m(gavl_msg_t * msg, int index)
@@ -268,7 +268,7 @@ void bg_player_set_subtitle_stream(bg_msg_sink_t * sink, int index)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_subtitle_stream_m(msg, index);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t * dict)
@@ -324,7 +324,7 @@ void bg_player_set_fullscreen(bg_msg_sink_t * sink, int fs)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_fullscreen_m(msg, fs);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -430,7 +430,7 @@ void bg_player_accel_pressed(bg_controllable_t * ctrl, int id)
       {
       gavl_msg_t * msg = bg_msg_sink_get(ctrl->cmd_sink);
       gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_NEXT_VISUALIZATION, BG_MSG_NS_PLAYER);
-      bg_msg_sink_put(ctrl->cmd_sink, msg);
+      bg_msg_sink_put(ctrl->cmd_sink);
       }
       break;
       
@@ -441,7 +441,7 @@ void bg_player_accel_pressed(bg_controllable_t * ctrl, int id)
       gavl_msg_t * msg = bg_msg_sink_get(ctrl->evt_sink);
       gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_ACCEL, BG_MSG_NS_PLAYER);
       gavl_msg_set_arg_int(msg, 0, id);
-      bg_msg_sink_put(ctrl->evt_sink, msg);
+      bg_msg_sink_put(ctrl->evt_sink);
       }
       break;
 #endif
@@ -470,7 +470,7 @@ void bg_player_seek(bg_msg_sink_t * sink, gavl_time_t time, int scale)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_seek_m(msg, time, scale);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_seek_perc_m(gavl_msg_t * msg, float perc)
@@ -494,7 +494,7 @@ void bg_player_seek_perc(bg_msg_sink_t * sink, float perc)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_seek_perc_m(msg, perc);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -519,7 +519,7 @@ void bg_player_seek_rel(bg_msg_sink_t * sink, gavl_time_t t)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_seek_rel_m(msg, t);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_volume_m(gavl_msg_t * msg, float volume)
@@ -541,7 +541,7 @@ void bg_player_set_volume(bg_msg_sink_t * sink, float volume)
   
   msg = bg_msg_sink_get(sink);
   bg_player_set_volume_m(msg, volume);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_volume_rel_m(gavl_msg_t * msg, float volume)
@@ -564,7 +564,7 @@ void bg_player_set_volume_rel(bg_msg_sink_t * sink, float volume)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_volume_rel_m(msg, volume);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_error(bg_msg_sink_t * sink)
@@ -574,63 +574,9 @@ void bg_player_error(bg_msg_sink_t * sink)
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_ERROR, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_STATUS_ERROR);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
-
-void bg_player_interrupt(bg_player_t * p)
-  {
-  bg_msg_sink_t * evt_sink;
-  gavl_msg_t * msg;
-
-  /* Create message sink and connect to player */
-  evt_sink = bg_msg_sink_create(NULL, NULL, 0);
-  bg_msg_hub_connect_sink(p->ctrl.evt_hub, evt_sink);
-  
-  /* Tell player to interrupt */
-  msg = bg_msg_sink_get(p->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_INTERRUPT, BG_MSG_NS_PLAYER);
-  bg_msg_sink_put(p->ctrl.cmd_sink, msg);
-
-  /* Wait for confirmation */
-  while((msg = bg_msg_sink_get_read_block(evt_sink)) &&
-        (gavl_msg_get_id(msg) != BG_PLAYER_MSG_INTERRUPT))
-    {
-    bg_msg_sink_done_read(evt_sink);
-    }
-  bg_msg_sink_done_read(evt_sink);
-  
-  /* Cleanup */
-  bg_msg_hub_disconnect_sink(p->ctrl.evt_hub, evt_sink);
-  bg_msg_sink_destroy(evt_sink);
-  }
-
-void bg_player_interrupt_resume(bg_player_t * p)
-  {
-  bg_msg_sink_t * evt_sink;
-  gavl_msg_t * msg;
-
-  /* Create message sink and connect to player */
-  evt_sink = bg_msg_sink_create(NULL, NULL, 0);
-  bg_msg_hub_connect_sink(p->ctrl.evt_hub, evt_sink);
-
-  /* Tell player to resume */
-  msg = bg_msg_sink_get(p->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_INTERRUPT_RESUME, BG_MSG_NS_PLAYER);
-  bg_msg_sink_put(p->ctrl.cmd_sink, msg);
-
-  /* Wait for confirmation */
-  while((msg = bg_msg_sink_get_read_block(evt_sink)) &&
-        (gavl_msg_get_id(msg) != BG_PLAYER_MSG_INTERRUPT_RESUME))
-    {
-    bg_msg_sink_done_read(evt_sink);
-    }
-  bg_msg_sink_done_read(evt_sink);
-  
-  /* Cleanup */
-  bg_msg_hub_disconnect_sink(p->ctrl.evt_hub, evt_sink);
-  bg_msg_sink_destroy(evt_sink);
-  }
 
 void bg_player_next_chapter_m(gavl_msg_t * msg)
   {
@@ -658,7 +604,7 @@ void bg_player_next(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_next_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_prev(bg_msg_sink_t * sink)
@@ -666,7 +612,7 @@ void bg_player_prev(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_prev_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 
@@ -678,7 +624,7 @@ void bg_player_next_chapter(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_next_chapter_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_prev_chapter_m(gavl_msg_t * msg)
@@ -696,7 +642,7 @@ void bg_player_prev_chapter(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_prev_chapter_m(msg);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_set_chapter_m(gavl_msg_t * msg, int chapter)
@@ -714,7 +660,7 @@ void bg_player_set_chapter(bg_msg_sink_t * sink, int chapter)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   bg_player_set_chapter_m(msg, chapter);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_player_underrun(bg_msg_sink_t * sink)
@@ -722,7 +668,7 @@ void bg_player_underrun(bg_msg_sink_t * sink)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(sink);
   gavl_msg_set_id_ns(msg, GAVL_MSG_SINK_UNDERRUN, GAVL_MSG_NS_SINK);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 /* Extract infos from messages */

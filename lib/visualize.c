@@ -365,7 +365,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
       //      gavl_msg_dump(
 
       /* Pass to plugin */
-      bg_msg_sink_put(bg_msg_hub_get_sink(v->mhub), msg);
+      bg_msg_sink_put_copy(bg_msg_hub_get_sink(v->mhub), msg);
       }
     }
   
@@ -595,7 +595,7 @@ void bg_visualizer_stop(bg_visualizer_t * vis)
     {
     gavl_msg_t * msg = bg_msg_sink_get(vis->msink);
     gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-    bg_msg_sink_put(vis->msink, msg);
+    bg_msg_sink_put(vis->msink);
 
     fprintf(stderr, "pthread_join...");
     pthread_join(vis->th, NULL);
@@ -824,12 +824,12 @@ void bg_visualizer_set_plugin(bg_visualizer_t * v, int plugin)
 
   gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_SET_PLUGIN, BG_MSG_NS_VISUALIZER);
   gavl_msg_set_arg_int(msg, 0, plugin);
-  bg_msg_sink_put(v->msink, msg);
+  bg_msg_sink_put(v->msink);
   }
   
 void bg_visualizer_pause(bg_visualizer_t * v)
   {
   gavl_msg_t * msg = bg_msg_sink_get(v->msink);
   gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_PAUSE, BG_MSG_NS_VISUALIZER);
-  bg_msg_sink_put(v->msink, msg);
+  bg_msg_sink_put(v->msink);
   }

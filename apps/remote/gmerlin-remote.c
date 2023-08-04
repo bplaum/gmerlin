@@ -119,7 +119,7 @@ static void cmd_play(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_ACCEL, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_PLAY);
   
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   }
 
 static void cmd_next(void * data, int * argc, char *** _argv, int arg)
@@ -129,7 +129,7 @@ static void cmd_next(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_ACCEL, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_NEXT);
   
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
 
   }
 
@@ -141,7 +141,7 @@ static void cmd_prev(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_ACCEL, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_PREV);
   
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   }
 
 static void cmd_stop(void * data, int * argc, char *** _argv, int arg)
@@ -151,7 +151,7 @@ static void cmd_stop(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_id_ns(msg, BG_PLAYER_MSG_ACCEL, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_STOP);
 
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   }
 
 static void cmd_toggle_mute(void * data, int * argc, char *** _argv, int arg)
@@ -164,7 +164,7 @@ static void cmd_pause(void * data, int * argc, char *** _argv, int arg)
   {
   gavl_msg_t * msg = bg_msg_sink_get(backend_ctrl->cmd_sink);
   bg_player_pause_m(msg);
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   }
 
 static void cmd_addplay(void * data, int * argc, char *** _argv, int arg)
@@ -209,7 +209,7 @@ static void cmd_volume(void * data, int * argc, char *** _argv, int arg)
     }
   vol = strtod(argv[arg], NULL);
   bg_player_set_volume_m(msg, vol);
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -227,7 +227,7 @@ static void cmd_volume_rel(void * data, int * argc, char *** _argv, int arg)
 
   vol = strtod(argv[arg], NULL);
   bg_player_set_volume_rel_m(msg, vol);
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -246,7 +246,7 @@ static void cmd_seek_rel(void * data, int * argc, char *** _argv, int arg)
   diff = strtod(argv[arg], NULL);
   
   bg_player_seek_rel_m(msg, gavl_seconds_to_time(diff));
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -264,7 +264,7 @@ static void cmd_seek_perc(void * data, int * argc, char *** _argv, int arg)
 
   perc = strtod(argv[arg], NULL);
   bg_player_seek_perc_m(msg, perc / 100.0);
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -289,7 +289,7 @@ static void cmd_chapter(void * data, int * argc, char *** _argv, int arg)
     index = atoi(argv[arg]);
     bg_player_set_chapter_m(msg, index);
     }
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -570,7 +570,7 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
                                      
         bg_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_LABEL, &name_val);
         gavl_dictionary_copy(&msg1->header, &msg->header);
-        bg_msg_sink_put(proxy_ctrl.evt_sink, msg1);
+        bg_msg_sink_put(proxy_ctrl.evt_sink);
         return 1;
         }
       else if(!strcmp(var, GAVL_META_ICON_NAME) && srv)
@@ -611,7 +611,7 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
         bg_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_ICON_URL, &val_1);
         
         gavl_dictionary_copy(&msg1->header, &msg->header);
-        bg_msg_sink_put(proxy_ctrl.evt_sink, msg1);
+        bg_msg_sink_put(proxy_ctrl.evt_sink);
         return 1;
         }
       
@@ -620,14 +620,14 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
     gavl_value_free(&val);
     }
   
-  bg_msg_sink_put(proxy_ctrl.evt_sink, msg);
+  bg_msg_sink_put_copy(proxy_ctrl.evt_sink, msg);
   
   return 1;
   }
 
 static int handle_frontend_command(void * data, gavl_msg_t * msg)
   {
-  bg_msg_sink_put(backend_ctrl->cmd_sink, msg);
+  bg_msg_sink_put_copy(backend_ctrl->cmd_sink, msg);
   return 1;
   }
 

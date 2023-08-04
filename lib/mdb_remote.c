@@ -446,7 +446,7 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
             local_id = id_remote_to_local(s, remote_id);
             
             bg_msg_set_splice_children(msg1, BG_MSG_DB_SPLICE_CHILDREN, local_id, last, idx, del, &add);
-            bg_msg_sink_put(s->be->ctrl.evt_sink, msg1);
+            bg_msg_sink_put(s->be->ctrl.evt_sink);
             gavl_value_free(&add);
 
             free(local_id);
@@ -460,8 +460,29 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
           {
           const char * id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           /* Filter out remote objects */
-          if(id && gavl_string_starts_with(id, "/remote"))
-            return 1;
+          if(id)
+            {
+            if(gavl_string_starts_with(id, "/remote"))
+              return 1;
+            /* Root object: Store locally */
+            if(!strchr(id + 1, '/'))
+              {
+              gavl_dictionary_t * track;
+              //              const gavl_dictionary_t * new_track;
+              char * local_id;
+              
+              local_id = id_remote_to_local(s, id);
+              
+              /* Store root track */
+              if((track = gavl_get_track_by_id_nc(&s->root, local_id)))
+                {
+                gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Storing changed root object %s", local_id);
+                gavl_dictionary_reset(track);
+                gavl_msg_get_arg_dictionary_c(msg, 0, track);
+                }
+              free(local_id);
+              }
+            }
           }
           break;
         case BG_RESP_DB_BROWSE_OBJECT:
@@ -496,7 +517,7 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
             msg1 = bg_msg_sink_get(s->ctrl.cmd_sink);
             gavl_msg_set_id_ns(msg1, BG_FUNC_DB_BROWSE_CHILDREN, BG_MSG_NS_DB);
             gavl_dictionary_set_string(&msg1->header, GAVL_MSG_CONTEXT_ID, "/");
-            bg_msg_sink_put(s->ctrl.cmd_sink, msg1);
+            bg_msg_sink_put(s->ctrl.cmd_sink);
 
             
             
@@ -579,7 +600,7 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
       // fprintf(stderr, "Got remote message 2:\n");
       // gavl_msg_dump(res, 2);
       
-      bg_msg_sink_put(s->be->ctrl.evt_sink, msg1);
+      bg_msg_sink_put(s->be->ctrl.evt_sink);
       }
       break;
     }
@@ -630,7 +651,7 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const gavl_dictionary
   msg = bg_msg_sink_get(ret->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, "/");
-  bg_msg_sink_put(ret->ctrl.cmd_sink, msg);
+  bg_msg_sink_put(ret->ctrl.cmd_sink);
   
   p->num_servers++;
   return ret;
@@ -764,7 +785,7 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
               //              fprintf(stderr, "Sending root response 2 %d:\n", server_idx);
               //              gavl_dictionary_dump(&p->servers[server_idx].root, 2);
               
-              bg_msg_sink_put(be->ctrl.evt_sink, msg1);
+              bg_msg_sink_put(be->ctrl.evt_sink);
               }
             else
               {
@@ -772,7 +793,7 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
               gavl_msg_copy(msg1, msg);
               gavl_dictionary_set_string(&msg1->header, GAVL_MSG_CONTEXT_ID, remote_id);
               msg_local_to_remote(&p->servers[server_idx], msg1);
-              bg_msg_sink_put(p->servers[server_idx].ctrl.cmd_sink, msg1);
+              bg_msg_sink_put(p->servers[server_idx].ctrl.cmd_sink);
               }
             
             }

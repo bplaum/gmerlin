@@ -81,7 +81,7 @@ static void update_state(bg_volume_manager_t * vol)
                           "volumes",
                           &val);
   
-  bg_msg_sink_put(vol->evt_sink, msg);
+  bg_msg_sink_put(vol->evt_sink);
   }
 
 static void add_volume(bg_volume_manager_t * vol,
@@ -116,7 +116,7 @@ static void add_volume(bg_volume_manager_t * vol,
   gavl_msg_set_arg_string(msg, 0, id);
   gavl_msg_set_arg_dictionary(msg, 1, dict);
   
-  bg_msg_sink_put(vol->evt_sink, msg);
+  bg_msg_sink_put(vol->evt_sink);
   
   gavl_dictionary_set_nocopy(&vol->volumes, id, &val);
   update_state(vol);
@@ -133,7 +133,7 @@ static void remove_volume(bg_volume_manager_t * vol, const char * id)
   msg = bg_msg_sink_get(vol->evt_sink);
   gavl_msg_set_id_ns(msg, BG_MSG_ID_VOLUME_REMOVED, BG_MSG_NS_VOLUMEMANAGER);
   gavl_msg_set_arg_string(msg, 0, id);
-  bg_msg_sink_put(vol->evt_sink, msg);
+  bg_msg_sink_put(vol->evt_sink);
   
   gavl_dictionary_set(&vol->volumes, id, NULL);
   update_state(vol);

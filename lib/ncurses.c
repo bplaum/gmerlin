@@ -172,7 +172,7 @@ static void report_window_size(bg_msg_sink_t * sink)
   gavl_msg_set_arg_int(msg, 1, 0);
   gavl_msg_set_arg_int(msg, 2, w);
   gavl_msg_set_arg_int(msg, 3, h);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 static int button_mask(MEVENT * event)
@@ -212,7 +212,7 @@ static void report_button_press(bg_msg_sink_t * sink, MEVENT * event, int button
   gavl_msg_set_arg_int(msg, 3,   event->y);
   gavl_msg_set_arg_nocopy(msg, 4, &pos_val);
   
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 static void report_button_release(bg_msg_sink_t * sink, MEVENT * event, int button)
@@ -242,7 +242,7 @@ static void report_button_release(bg_msg_sink_t * sink, MEVENT * event, int butt
   pos[1] = (double)event->y / (h-1);
   
   
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   
   }
 
@@ -267,7 +267,7 @@ static void report_button_doubleclick(bg_msg_sink_t * sink, MEVENT * event, int 
   gavl_msg_set_arg_int(msg, 2,   event->x);
   gavl_msg_set_arg_int(msg, 3,   event->y);
   gavl_msg_set_arg_nocopy(msg, 4, &pos_val);
-  bg_msg_sink_put(sink, msg);
+  bg_msg_sink_put(sink);
   }
 
 void bg_ncurses_process_events(bg_msg_sink_t * sink)
@@ -404,7 +404,7 @@ void bg_ncurses_process_events(bg_msg_sink_t * sink)
         gavl_msg_set_arg_int(msg, 3,   event.y);
         gavl_msg_set_arg_float(msg, 4, (double)event.x / w);
         gavl_msg_set_arg_float(msg, 5, (double)event.y / h);
-        bg_msg_sink_put(sink, msg);
+        bg_msg_sink_put(sink);
         
         }
       else if(event.bstate & BUTTON5_RELEASED)         /* mouse button 4 up             */
@@ -428,7 +428,7 @@ void bg_ncurses_process_events(bg_msg_sink_t * sink)
       msg = bg_msg_sink_get(sink);
       
       
-      bg_msg_sink_put(sink, msg);
+      bg_msg_sink_put(sink);
       */
       }
     else
@@ -444,7 +444,7 @@ void bg_ncurses_process_events(bg_msg_sink_t * sink)
           gavl_msg_set_arg_int(msg, 0, keymap[idx].gavl_code);
           gavl_msg_set_arg_int(msg, 1, keymap[idx].gavl_mask);
           
-          bg_msg_sink_put(sink, msg);
+          bg_msg_sink_put(sink);
           break;
           }
         

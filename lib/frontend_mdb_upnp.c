@@ -197,7 +197,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       //      gavl_dictionary_dump(req, 2);
       
       /* 3. Send request message */
-      bg_msg_sink_put(fe->ctrl.cmd_sink, msg);
+      bg_msg_sink_put(fe->ctrl.cmd_sink);
       }
     gavl_dictionary_free(&soap);
     }

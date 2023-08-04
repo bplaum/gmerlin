@@ -809,7 +809,7 @@ static void handle_msg(gavl_handle_msg_func func,
 
           /* Send to input */
           if(gavftools_ctrl_in)
-            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+            bg_msg_sink_put_copy(gavftools_ctrl_in->cmd_sink, msg);
           
           func(func_data, msg);
 
@@ -827,7 +827,7 @@ static void handle_msg(gavl_handle_msg_func func,
           
           /* Send to input */
           if(gavftools_ctrl_in)
-            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+            bg_msg_sink_put_copy(gavftools_ctrl_in->cmd_sink, msg);
           
           func(func_data, msg);
 
@@ -857,7 +857,7 @@ static void handle_msg(gavl_handle_msg_func func,
           {
           /* Send to input */
           if(gavftools_ctrl_in)
-            bg_msg_sink_put(gavftools_ctrl_in->cmd_sink, msg);
+            bg_msg_sink_put_copy(gavftools_ctrl_in->cmd_sink, msg);
           
           func(func_data, msg);
           /* TODO: Reset out plug */

@@ -108,7 +108,7 @@ static int msg_callback(void * data, gavl_msg_t * msg)
 
   /* Echo message */
   
-  bg_msg_sink_put(ctrl.evt_sink, msg);
+  bg_msg_sink_put_copy(ctrl.evt_sink, msg);
   return 1;
   }
 

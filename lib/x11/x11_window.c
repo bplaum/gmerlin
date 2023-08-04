@@ -256,7 +256,7 @@ void x11_window_accel_pressed(bg_x11_window_t * win, int id)
       msg = bg_msg_sink_get(win->ctrl.evt_sink);
       gavl_msg_set_id_ns(msg, GAVL_MSG_GUI_ACCEL, GAVL_MSG_NS_GUI);
       gavl_msg_set_arg_int(msg, 0, id);
-      bg_msg_sink_put(win->ctrl.evt_sink, msg);
+      bg_msg_sink_put(win->ctrl.evt_sink);
       }
       break;
     }

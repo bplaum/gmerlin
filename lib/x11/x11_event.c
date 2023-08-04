@@ -772,7 +772,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
           gavl_msg_set_arg_int(msg, 1, y);
           gavl_msg_set_arg_int(msg, 2, width);
           gavl_msg_set_arg_int(msg, 3, height);
-          bg_msg_sink_put(w->ctrl.evt_sink, msg);
+          bg_msg_sink_put(w->ctrl.evt_sink);
 
           /* Store state */
           gavl_value_init(&val);
@@ -823,7 +823,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
           gavl_msg_set_arg_int(msg, 1, evt->xconfigure.y);
           gavl_msg_set_arg_int(msg, 2, evt->xconfigure.width);
           gavl_msg_set_arg_int(msg, 3, evt->xconfigure.height);
-          bg_msg_sink_put(w->ctrl.evt_sink, msg);
+          bg_msg_sink_put(w->ctrl.evt_sink);
           
           bg_x11_window_size_changed(w);
 
@@ -886,7 +886,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
       
       gavl_msg_set_gui_motion(msg, 
                               key_mask, evt->xmotion.x, evt->xmotion.y, gavl_value_get_position(&val));
-      bg_msg_sink_put(w->ctrl.evt_sink, msg);
+      bg_msg_sink_put(w->ctrl.evt_sink);
       break;
     case UnmapNotify:
       if(evt->xunmap.window == w->normal.win)
@@ -1014,7 +1014,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
           msg = bg_msg_sink_get(w->ctrl.evt_sink);
           gavl_msg_set_gui_key_press(msg, key_code, key_mask,
                                      evt->xkey.x, evt->xkey.y, gavl_value_get_position(&val));
-          bg_msg_sink_put(w->ctrl.evt_sink, msg);
+          bg_msg_sink_put(w->ctrl.evt_sink);
           }
         else // KeyRelease
           {
@@ -1023,7 +1023,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
           msg = bg_msg_sink_get(w->ctrl.evt_sink);
           gavl_msg_set_gui_key_release(msg, key_code, key_mask,
                                        evt->xkey.x, evt->xkey.y, gavl_value_get_position(&val));
-          bg_msg_sink_put(w->ctrl.evt_sink, msg);
+          bg_msg_sink_put(w->ctrl.evt_sink);
           }
         }
       
@@ -1138,7 +1138,7 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
         gavl_msg_set_gui_button_release(msg, button_number, key_mask, 
                                         evt->xbutton.x, evt->xbutton.y, gavl_value_get_position(&val));
         
-      bg_msg_sink_put(w->ctrl.evt_sink, msg);
+      bg_msg_sink_put(w->ctrl.evt_sink);
         
       /* Also send to parent */
       if(w->current->parent != w->root)

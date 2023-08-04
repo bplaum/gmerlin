@@ -50,7 +50,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
     {
     case BG_MSG_NS_STATE:
       /* Propagate state changes to player */
-      bg_msg_sink_put(p->ctrl.evt_sink, msg);
+      bg_msg_sink_put_copy(p->ctrl.evt_sink, msg);
       break;
     case GAVL_MSG_NS_GUI:
       {
@@ -88,7 +88,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
             bg_player_seek_rel(p->ctrl.cmd_sink, - 2 * GAVL_TIME_SCALE);
             return 1;
             }
-          bg_msg_sink_put(p->ctrl.evt_sink, msg);
+          bg_msg_sink_put_copy(p->ctrl.evt_sink, msg);
           }
           break;
         case GAVL_MSG_GUI_BUTTON_RELEASE:
@@ -103,7 +103,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
           if((button != 4) && (button == 5))
             {
             /* Broadcast */
-            bg_msg_sink_put(p->ctrl.evt_sink, msg);
+            bg_msg_sink_put_copy(p->ctrl.evt_sink, msg);
             }
           
           }

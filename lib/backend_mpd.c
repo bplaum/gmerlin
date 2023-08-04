@@ -31,6 +31,7 @@
 #include <gmerlin/playermsg.h>
 #include <gmerlin/player.h>
 #include <gmerlin/application.h>
+#include <gmerlin/mdb.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
