@@ -107,20 +107,23 @@ static void set_editable(const char * id, gavl_dictionary_t * dict)
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
     }
-
-  if(strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_TV))
+  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_TV))
     {
-    bg_mdb_add_can_add(dict, "item.video*");
+    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST);
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
     }
-  else if(strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_RADIO))
+  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_RADIO))
     {
-    bg_mdb_add_can_add(dict, "item.audio*");
+    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
     bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
     }
-
+  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_PLAYLIST))
+    {
+    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_SONG);
+    }
+  
   }
 
 static void item_to_storage(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
