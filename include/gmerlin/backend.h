@@ -25,7 +25,7 @@
 #include <gavl/gavlsocket.h>
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 #include <gmerlin/httpserver.h>
 
@@ -69,7 +69,7 @@
    GAVL_META_LABEL:  Label for display
    GAVL_META_URI:    Address
    GAVL_META_ID:     bg_get_filename_hash() of GAVL_META_URI
-   BG_BACKEND_TYPE:  BG_BACKEND_MEDIASERVER or BG_BACKEND_RENDERER (see msgqueue.h)
+   BG_BACKEND_TYPE:  BG_BACKEND_MEDIASERVER or BG_BACKEND_RENDERER (see bgmsg.h)
    BG_BACKEND_LOCAL: Optional, 1 if backend is local to the process
 
    BG_APP_NETWORK_ICONS: Array of icon URLs

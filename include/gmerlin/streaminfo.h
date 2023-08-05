@@ -30,7 +30,7 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 
 /** \defgroup streaminfo Track information

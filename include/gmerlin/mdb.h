@@ -24,7 +24,7 @@
 
 
 #include <gmerlin/httpserver.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/backend.h>
 

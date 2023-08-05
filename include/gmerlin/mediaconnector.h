@@ -29,7 +29,7 @@
 
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/bgthread.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 
 #define BG_MEDIACONNECTOR_FLAG_EOF     (1<<0)

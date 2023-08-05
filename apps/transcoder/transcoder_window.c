@@ -36,7 +36,7 @@
 
 #include <gmerlin/cfg_dialog.h>
 #include <gmerlin/transcoder_track.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/transcoder.h>
 #include <gmerlin/transcodermsg.h>
 

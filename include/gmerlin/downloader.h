@@ -22,7 +22,7 @@
 #ifndef BG_DOWNLOADER_H_INCLUDED
 #define BG_DOWNLOADER_H_INCLUDED
 
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 typedef struct bg_downloader_s bg_downloader_t;
 

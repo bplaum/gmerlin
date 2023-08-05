@@ -23,7 +23,7 @@
 #define BG_CFG_CTX_H_INCLUDED
 
 #include <gmerlin/cfg_registry.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 /* Configuration context */
 

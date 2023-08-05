@@ -25,7 +25,7 @@
 #include <dbus/dbus.h>
 
 #include <gmerlin/frontend.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 // dbus-monitor "type='signal',member='NameOwnerChanged',arg0namespace='org.mpris.MediaPlayer2'"
 
 /* These *must* match the specifiers for dbus_bus_add_match() */

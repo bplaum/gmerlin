@@ -22,7 +22,7 @@
 #ifndef BG_VOLUMEMANAGER_H_INCLUDED
 #define BG_VOLUMEMANAGER_H_INCLUDED
 
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 typedef struct bg_volume_manager_s bg_volume_manager_t;
 

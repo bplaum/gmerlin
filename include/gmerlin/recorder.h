@@ -24,7 +24,7 @@
 
 
 #include <gmerlin/pluginregistry.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/cfgctx.h>
 
 extern const uint32_t bg_recorder_stream_mask;

@@ -26,7 +26,7 @@
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
 

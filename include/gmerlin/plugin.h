@@ -33,7 +33,7 @@
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
 #include <gmerlin/accelerator.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/mediaconnector.h>
 
 /** \defgroup plugin Plugins

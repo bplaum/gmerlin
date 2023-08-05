@@ -24,7 +24,7 @@
 
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/state.h>
 
 #include <x11/x11.h>

@@ -40,7 +40,7 @@
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
 
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/http.h>
 #include <gmerlin/httpserver.h>
 #include <gmerlin/websocket.h>

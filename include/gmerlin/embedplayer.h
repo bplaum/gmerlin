@@ -23,7 +23,7 @@
 #define BG_EMBEDPLAYER_H_INCLUDED
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/cfgctx.h>
 
 typedef struct bg_embed_player_s bg_embed_player_t;

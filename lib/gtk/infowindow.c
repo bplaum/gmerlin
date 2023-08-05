@@ -32,7 +32,6 @@
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
-//#include <msgqueue.h>
 
 #include <gmerlin/player.h>
 #include <gmerlin/iconfont.h>

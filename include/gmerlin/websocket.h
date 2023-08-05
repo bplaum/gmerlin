@@ -27,7 +27,7 @@
 #include <pthread.h>
 
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/http.h>
 #include <gmerlin/httpserver.h>
 #include <gmerlin/backend.h>

@@ -26,7 +26,7 @@
 
 #include <gmerlin/translation.h>
 #include <gmerlin/parameter.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 #include <x11/x11.h>
 #include <x11/x11_window_private.h>

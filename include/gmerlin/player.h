@@ -23,7 +23,7 @@
 #define BG_PLAYER_H_INCLUDED
 
 #include <gmerlin/pluginregistry.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 #include <gmerlin/state.h>
 
 #include <gmerlin/cfgctx.h>

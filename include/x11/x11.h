@@ -24,7 +24,7 @@
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/accelerator.h>
-#include <gmerlin/msgqueue.h>
+#include <gmerlin/bgmsg.h>
 
 #include <gavl/gavl.h>
 #include <gavl/connectors.h>
