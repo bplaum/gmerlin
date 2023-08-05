@@ -111,13 +111,19 @@ int bg_controllable_call_function(bg_controllable_t * c, gavl_msg_t * func,
   int result = 0;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20ms
   bg_control_t ctrl;
+  function_context_t ctx;
   gavl_timer_t * timer = gavl_timer_create();
 
   memset(&ctrl, 0, sizeof(ctrl));
+  memset(&ctx, 0, sizeof(ctx));
+
+  ctx.req = func;
+  ctx.cb  = cb;
+  ctx.data = data;
   
   bg_msg_add_function_tag(func);
-
-  bg_control_init(&ctrl, bg_msg_sink_create(handle_msg_function, data, 0));
+  
+  bg_control_init(&ctrl, bg_msg_sink_create(handle_msg_function, &ctx, 0));
   bg_controllable_connect(c, &ctrl);
   
   bg_msg_sink_put_copy(ctrl.cmd_sink, func);

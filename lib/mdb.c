@@ -2049,6 +2049,29 @@ static void add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char *
     }
   }
 
+/* Add / delete http translations of radiobrowser URIs */
+
+
+static void rb_add_uri(gavl_dictionary_t * m)
+  {
+  const char * location = NULL;
+  char * uri;
+  
+  if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    return;
+
+  if(!bg_rb_check_uri(location))
+    return;
+  
+  if((uri = bg_rb_resolve_uri(location)))
+    {
+    gavl_metadata_add_src(m, GAVL_META_SRC,
+                          "application/mpegurl", uri);
+    free(uri);
+    }
+  
+  }
+
 void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   {
   if(mdb->srv && mdb->srv->plughandler)
@@ -2056,12 +2079,14 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   
   if(mdb->srv && mdb->srv->lpcmhandler)
     bg_lpcm_handler_add_uris(mdb->srv->lpcmhandler, dict);
-  
+
   bg_mdb_get_thumbnails(mdb, dict);
   
   if(!(dict = gavl_track_get_metadata_nc(dict)) || !mdb->dirs)
     return;
-
+  
+  rb_add_uri(dict);
+  
   //  fprintf(stderr, "Add http uris 1\n");
   //  gavl_dictionary_dump(dict, 2);
   
@@ -2087,7 +2112,6 @@ void bg_mdb_add_http_uris_arr(bg_mdb_t * mdb, gavl_array_t * arr)
     }
   }
 
-
 static void delete_http_uris(gavl_dictionary_t * dict, const char * name)
   {
   const gavl_dictionary_t * local_dict;
@@ -2098,7 +2122,7 @@ static void delete_http_uris(gavl_dictionary_t * dict, const char * name)
   if((local_val = gavl_dictionary_get_item(dict, name, 0)) &&
      (local_dict = gavl_value_get_dictionary(local_val)) &&
      (local_uri = gavl_dictionary_get_string(local_dict, GAVL_META_URI)) &&
-     (local_uri[0] == '/'))
+     ((local_uri[0] == '/') || bg_rb_check_uri(local_uri)))
     {
     int num = gavl_dictionary_get_num_items(dict, name);
     while(num > 1)

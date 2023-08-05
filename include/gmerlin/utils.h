@@ -742,6 +742,12 @@ const char * bg_get_search_string(const char * str);
 extern char const * const bg_language_codes[];
 extern char const * const bg_language_labels[];
 
+/* Support for radio-browser URIs */
+char * bg_rb_make_uri(const char * station_uuid);
+char * bg_rb_resolve_uri(const char * uri);
+int bg_rb_check_uri(const char * uri);
+char  *bg_get_rb_server();
+
 #ifdef DEBUG
 #define bg_debug(f,...) fprintf(stderr, f, __VA_ARGS__)
 #else

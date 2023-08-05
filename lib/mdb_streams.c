@@ -318,6 +318,8 @@ browse_url_callback(void * data, int argc, char **argv, char **azColName)
   int64_t mimetype_id = -1;
   browse_url_t * d = data;
   int width = 0, height = 0, bitrate = 0;
+
+  char * http_location = NULL;
   
   const char * location = NULL;
   char * mimetype = NULL;
@@ -368,7 +370,13 @@ browse_url_callback(void * data, int argc, char **argv, char **azColName)
     gavl_dictionary_set_int(m, GAVL_META_WIDTH, width);
   if(height > 0)
     gavl_dictionary_set_int(m, GAVL_META_HEIGHT, height);
-
+  
+  if((http_location = bg_rb_resolve_uri(location)))
+    {
+    gavl_metadata_add_src(m, GAVL_META_SRC,
+                          "application/mpegurl", http_location);
+    }
+  
   if(mimetype)
     free(mimetype);
   
@@ -3110,13 +3118,6 @@ static void import_icecast(bg_mdb_backend_t * b)
 
 #define NUM_RB_STATIONS 5000 // Stations to query at once
 
-static const char * rb_servers[] =
-  {
-    "https://de1.api.radio-browser.info",
-    "https://nl1.api.radio-browser.info",
-    "https://fr1.api.radio-browser.info",
-    NULL
-  };
 
 /*
 static const char * rb_dict_get_string(json_object * obj, const char * tag)
@@ -3169,10 +3170,10 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
   {
   int ret = 0;
   // station_t s;
-  
-  int uri_idx = 0;
-  char * uri;
-  json_object * obj;
+
+  char * srv;
+  char * uri = NULL;
+  json_object * obj = NULL;
   json_object * child;
   
   int num;
@@ -3182,37 +3183,27 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
   gavl_dictionary_t dict;
   gavl_dictionary_t * m;
   gavl_array_t * arr;
+
+  srv = bg_get_rb_server();
+  if(!srv)
+    goto fail;
   
-  while(rb_servers[uri_idx])
-    {
-    uri = gavl_sprintf("%s/json/stations?order=name&offset=%d&limit=%d&hidebroken=true",
-                       rb_servers[uri_idx], start, NUM_RB_STATIONS);
+  uri = gavl_sprintf("https://%s/json/stations?order=name&offset=%d&limit=%d&hidebroken=true",
+                     srv, start, NUM_RB_STATIONS);
     
-    //    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Downloading %s", uri);
+  //    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Downloading %s", uri);
     
-    if((obj = bg_json_from_url(uri, NULL)) &&
-       json_object_is_type(obj, json_type_array))
-      {
-      //    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Downloaded %s", uri);
-      free(uri);
-      break;
-      }
-
-    if(obj)
-      json_object_put(obj);
-    
-    free(uri);
-    uri_idx++;
-    }
-
-  if(!obj)
+  if(!(obj = bg_json_from_url(uri, NULL)) ||
+     !json_object_is_type(obj, json_type_array))
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Failed to download radiobrowser streams");
     goto fail;
     }
 
+  free(uri); uri = NULL;
+  
   num = json_object_array_length(obj);
-
+  
   gavl_dictionary_init(&dict);
   
   // station_init(&s);
@@ -3239,19 +3230,10 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
     gavl_dictionary_set_string(m, GAVL_META_LOGO_URL, bg_json_dict_get_string(child, "favicon"));
     gavl_dictionary_set_string(m, GAVL_META_STATION_URL, bg_json_dict_get_string(child, "homepage"));
     
-    uri = gavl_sprintf("%s/m3u/url/%s", rb_servers[uri_idx], var);
-
-    gavl_metadata_add_src(m, GAVL_META_SRC, "application/mpegurl", uri);
-
-#if 0    
-    s.name        = bg_json_dict_get_string(child, "name");
-    s.logo_uri    = bg_json_dict_get_string(child, "favicon");
-    s.station_uri = bg_json_dict_get_string(child, "homepage");
-    s.stream_uri  = uri;
-    s.mimetype = "application/mpegurl";
-    s.source_id   = source_id;
-#endif
-
+    //    uri = gavl_sprintf("%s/m3u/url/%s", rb_servers[uri_idx], var);
+    uri = bg_rb_make_uri(var);
+    gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
+    
     arr = gavl_dictionary_get_array_create(m, GAVL_META_TAG);
     rb_set_array(child, arr, "tags", 0, 0);
 
@@ -3264,6 +3246,7 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
     add_station(b, &dict, source_id);
     gavl_dictionary_reset(&dict);
     free(uri);
+    uri = NULL;
     ret++;
     }
   
@@ -3271,6 +3254,12 @@ static int import_radiobrowser_sub(bg_mdb_backend_t * b, int start, int64_t sour
   
   if(obj)
     json_object_put(obj);
+
+  if(uri)
+    free(uri);
+
+  if(srv)
+    free(srv);
   
   return ret;
   }

@@ -347,51 +347,6 @@ static int http_get(const char * url,
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size)
   {
-#if 0
-  int i;
-  char * redirect = NULL;
-  char * real_url = gavl_strdup(url);
-  gavl_dictionary_t res;
-  gavl_dictionary_t vars;
-
-  int result = 0;
-  
-  gavl_dictionary_init(&res);
-  gavl_dictionary_init(&vars);
-
-  if((offset > 0) || (size > 0))
-    {
-    gavl_dictionary_set_string_nocopy(&vars, "Range",
-                                      bg_sprintf("bytes=%"PRId64"-%"PRId64, offset, offset + size - 1));
-    }
-  
-  for(i = 0; i < 5; i++)
-    {
-    if(http_get(real_url, &res, &redirect, 0, ret, NULL))
-      {
-      if(dict)
-        gavl_dictionary_set_string(dict, GAVL_META_MIMETYPE,
-                                   gavl_dictionary_get_string_i(&res, "Content-Type"));
-      result = 1;
-      break;
-      }
-    else if(redirect)
-      {
-      free(real_url);
-      real_url = redirect;
-      redirect = NULL;
-      }
-    else
-      break; // Error
-    
-    gavl_dictionary_free(&res);
-    gavl_dictionary_init(&res);
-    }
-  gavl_dictionary_free(&res);
-  gavl_dictionary_free(&vars);
-  free(real_url);
-  return result;
-#else
   gavf_io_t * io;
   io = gavl_http_client_create();
 
@@ -417,7 +372,6 @@ int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t *
     }
   gavf_io_destroy(io);
   return 1;
-#endif
   }
 
 int bg_http_get(const char * url, gavl_buffer_t * buf, gavl_dictionary_t * dict)
