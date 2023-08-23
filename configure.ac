@@ -885,7 +885,6 @@ web/wallpapers/Makefile \
 apps/Makefile \
 apps/player/Makefile \
 apps/playerproxy/Makefile \
-apps/controlpanel/Makefile \
 apps/cmdlineplayer/Makefile \
 apps/cmdlinerecorder/Makefile \
 apps/transcoder/Makefile \
@@ -895,7 +894,6 @@ apps/mediainfo/Makefile \
 apps/remote/Makefile \
 apps/renderer/Makefile \
 apps/server/Makefile \
-apps/toys/Makefile \
 doc/Makefile \
 doc/Doxyfile \
 icons/Makefile \

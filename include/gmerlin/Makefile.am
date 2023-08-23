@@ -2,6 +2,7 @@
 pkginclude_HEADERS = \
 accelerator.h \
 application.h \
+backend.h \
 bg_sem.h \
 bg_version.h \
 bgcairo.h \

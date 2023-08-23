@@ -17,16 +17,9 @@ else
 thumbnailer_subdirs =
 endif
 
-if HAVE_TOYS
-toys_subdirs = toys
-else
-toys_subdirs =
-endif
-
 SUBDIRS = $(player_subdirs) \
 cmdlineplayer \
 cmdlinerecorder \
-controlpanel \
 mdb-tool \
 mediainfo \
 playerproxy \
@@ -34,5 +27,4 @@ remote \
 renderer \
 server \
 $(transcoder_subdirs) \
-$(thumbnailer_subdirs) \
-$(toys_subdirs) 
+$(thumbnailer_subdirs)
