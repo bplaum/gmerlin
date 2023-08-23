@@ -226,11 +226,11 @@ static void show_label(GtkWidget * w)
   
   }
 
-static void set_time_label(main_window_t * w, const gavl_dictionary_t * dict)
+static void set_time_label(main_window_t * w, gavl_time_t t)
   {
   char str[GAVL_TIME_STRING_LEN];
-  int64_t t = GAVL_TIME_UNDEFINED;
   
+#if 0  
   switch(w->display_mode)
     {
     case DISPLAY_MODE_NORMAL:
@@ -246,7 +246,8 @@ static void set_time_label(main_window_t * w, const gavl_dictionary_t * dict)
       gavl_dictionary_get_long(dict, BG_PLAYER_TIME_REM_ABS, &t);
       break;
     }
-
+#endif
+  
   if(t > (gavl_time_t)GAVL_TIME_SCALE*3600*24*356)
     gavl_time_prettyprint_local(t, str);
   else
@@ -259,36 +260,41 @@ static void set_time_label(main_window_t * w, const gavl_dictionary_t * dict)
 static void set_display_mode(main_window_t * w)
   {
   const gavl_value_t * time_val;
-  const gavl_dictionary_t * time_dict;
+  gavl_time_t t;
+  const char * time_name = NULL;
+  
   /* Update labels */
   switch(w->display_mode)
     {
     case DISPLAY_MODE_NORMAL:
       hide_label(w->all_label);
       hide_label(w->rem_label);
+      time_name = BG_PLAYER_STATE_TIME;
       break;
     case DISPLAY_MODE_REM:
       hide_label(w->all_label);
       show_label(w->rem_label);
+      time_name = BG_PLAYER_STATE_TIME_REM;
       break;
     case DISPLAY_MODE_ALL:
       show_label(w->all_label);
       hide_label(w->rem_label);
+      time_name = BG_PLAYER_STATE_TIME_ABS;
       break;
     case DISPLAY_MODE_ALL_REM:
       show_label(w->all_label);
       show_label(w->rem_label);
+      time_name = BG_PLAYER_STATE_TIME_REM_ABS;
       break;
-      
     }
 
-  if((time_val = bg_state_get(&w->g->state,
+  if(time_name &&
+     (time_val = bg_state_get(&w->g->state,
                               BG_PLAYER_STATE_CTX,
-                              BG_PLAYER_STATE_CURRENT_TIME)) &&     // dictionary
-     (time_dict = gavl_value_get_dictionary(time_val)))
-    {
-    set_time_label(w, time_dict);
-    }
+                              time_name)) &&     // long
+     gavl_value_get_long(time_val, &t))
+    set_time_label(w, t);
+  
   }
 
 static gboolean button_press_event(GtkWidget* self, GdkEventButton * evt,
@@ -324,8 +330,8 @@ static gboolean button_press_event(GtkWidget* self, GdkEventButton * evt,
     
     msg = bg_msg_sink_get(w->player_ctrl.cmd_sink);
 
-    bg_msg_set_state(msg,
-                     BG_CMD_SET_STATE_REL,
+    gavl_msg_set_state(msg,
+                       BG_CMD_SET_STATE_REL,
                      1,
                      BG_PLAYER_STATE_CTX,
                      BG_PLAYER_STATE_MODE,
@@ -506,21 +512,41 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
           
           gavl_value_init(&val);
           
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, &w->g->state);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, &w->g->state);
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
-            if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))          // dictionary
+            if(!strcmp(var, BG_PLAYER_STATE_TIME) && (w->display_mode == DISPLAY_MODE_NORMAL))          // dictionary
               {
-              const gavl_dictionary_t * dict;
-              if(!(dict = gavl_value_get_dictionary(&val)))
-                return 1;
-              
+              gavl_time_t t;
+              if(gavl_value_get_long(&val, &t))
+                set_time_label(w, t);
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_REM) && (w->display_mode == DISPLAY_MODE_REM))          // long
+              {
+              gavl_time_t t;
+              if(gavl_value_get_long(&val, &t))
+                set_time_label(w, t);
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_ABS) && (w->display_mode == DISPLAY_MODE_ALL))          // long
+              {
+              gavl_time_t t;
+              if(gavl_value_get_long(&val, &t))
+                set_time_label(w, t);
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_REM_ABS) && (w->display_mode == DISPLAY_MODE_ALL_REM))      // long
+              {
+              gavl_time_t t;
+              if(gavl_value_get_long(&val, &t))
+                set_time_label(w, t);
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))         // float
+              {
               if(!(w->seek_flags & SEEK_ACTIVE))
                 {
                 double perc = -1.0;
                 
-                if(gavl_dictionary_get_float(dict, BG_PLAYER_TIME_PERC, &perc) &&
+                if(gavl_value_get_float(&val, &perc) &&
                    (perc >= 0.0))
                   {
                   g_signal_handler_block(G_OBJECT(w->seek_slider), w->seek_change_id);
@@ -528,8 +554,6 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
                   g_signal_handler_unblock(G_OBJECT(w->seek_slider), w->seek_change_id);
                   }
                 }
-
-              set_time_label(w, dict);
               }
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {

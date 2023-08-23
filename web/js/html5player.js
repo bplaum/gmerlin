@@ -1,23 +1,23 @@
 
 function html5player_set_time(player, time, duration)
   {
-  var time_dict = new Object();
+  var perc;
 
   if(duration > 0)
-    time_dict[BG_PLAYER_TIME_PERC] = value_create(GAVL_TYPE_FLOAT, time/duration);
+    perc = value_create(GAVL_TYPE_FLOAT, time/duration);
   else
-    time_dict[BG_PLAYER_TIME_PERC] = value_create(GAVL_TYPE_FLOAT, -1.0);
+    perc = value_create(GAVL_TYPE_FLOAT, -1.0);
       
-  time_dict[BG_PLAYER_TIME] = value_create(GAVL_TYPE_LONG, time);
+  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
+                              value_create(GAVL_TYPE_LONG, time));
 
-  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-                              value_create(GAVL_TYPE_DICTIONARY, time_dict));
-      
+  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
+                              value_create(GAVL_TYPE_FLOAT, perc));
+  
   }
 
 function html5player_stop(player)
   {
-  var time_dict = new Object();
   var obj = new Object();
   var m = new Object();
 
@@ -39,11 +39,11 @@ function html5player_stop(player)
       
   dict_set_dictionary(obj, GAVL_META_METADATA, m);
 
-  time_dict[BG_PLAYER_TIME_PERC] = value_create(GAVL_TYPE_FLOAT, 0);
-  time_dict[BG_PLAYER_TIME] = value_create(GAVL_TYPE_LONG, 0);
 
-  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
-                              value_create(GAVL_TYPE_DICTIONARY, time_dict));
+  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
+                              value_create(GAVL_TYPE_LONG, 0));
+  html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
+                              value_create(GAVL_TYPE_FLOAT, 0.0));
       
   html5player_set_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS,
                               value_create(GAVL_TYPE_INT, BG_PLAYER_STATUS_STOPPED));
@@ -485,10 +485,10 @@ function html5player_set_state(player, ctx, name, val)
           break;
 
         }
-    case BG_PLAYER_STATE_CTX + "/" + BG_PLAYER_STATE_CURRENT_TIME:
+    case BG_PLAYER_STATE_CTX:
       switch(name)
 	{
-        case BG_PLAYER_TIME_PERC:
+        case BG_PLAYER_STATE_TIME_PERC:
 	  {
           var status = html5player_get_state_local(player, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_STATUS).v;
           if((status == BG_PLAYER_STATUS_PLAYING) ||

@@ -74,7 +74,7 @@ static int put_msg_hub(void * data, gavl_msg_t * msg)
   
   if((msg->NS == BG_MSG_NS_STATE) &&
      (msg->ID == BG_MSG_STATE_CHANGED))
-    bg_msg_get_state(msg, NULL, NULL, NULL, NULL, &h->state);
+    gavl_msg_get_state(msg, NULL, NULL, NULL, NULL, &h->state);
 
   id = gavl_msg_get_client_id(msg);
   

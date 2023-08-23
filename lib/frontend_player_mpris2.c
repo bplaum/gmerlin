@@ -321,7 +321,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
           gavl_value_init(&v);
           gavl_value_set_int(&v, get_gmerlin_mode(shuffle, loop_status));
 
-          bg_msg_set_state(msg1,
+          gavl_msg_set_state(msg1,
                            BG_CMD_SET_STATE, 1,
                            BG_PLAYER_STATE_CTX,
                            BG_PLAYER_STATE_MODE,
@@ -347,7 +347,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
           gavl_value_init(&v);
           gavl_value_set_int(&v, get_gmerlin_mode(shuffle, loop_status));
 
-          bg_msg_set_state(msg1,
+          gavl_msg_set_state(msg1,
                            BG_CMD_SET_STATE, 1,
                            BG_PLAYER_STATE_CTX,
                            BG_PLAYER_STATE_MODE,
@@ -681,7 +681,7 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
           gavl_value_t val;
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
 
           //          fprintf(stderr, "Get state: %s %s\n", ctx, var);
           
@@ -768,13 +768,11 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
               
 
               }
-            else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME))
               {
-              const gavl_dictionary_t * dict;
               gavl_time_t t;
               
-              if((dict = gavl_value_get_dictionary(&val)) &&
-                 (gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &t)) &&
+              if((gavl_value_get_long(&val, &t)) &&
                  (t != GAVL_TIME_UNDEFINED))
                 {
                 gavl_value_t v;

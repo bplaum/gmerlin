@@ -691,7 +691,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
           gavl_value_t val;
           
           gavl_value_init(&val);
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
       
           if(!strcmp(ctx, "volumemanager") && !strcmp(var, "volumes") && !db->volumes_added)
             {
@@ -849,6 +849,8 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
   
   bg_mdb_t * db = priv;
 
+  int do_forward = 1;
+  
 #if 0
   fprintf(stderr, "handle_be_msg\n");
   gavl_msg_dump(msg, 2);
@@ -877,6 +879,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
              
              bg_msg_sink_put(db->ctrl.evt_sink);
              }
+          do_forward = 0;
           break;
         case BG_MSG_DB_OBJECT_CHANGED:
           {
@@ -1056,8 +1059,9 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
       }
       
     }
-  
-  bg_msg_sink_put_copy(db->ctrl.evt_sink, msg);
+
+  if(do_forward)
+    bg_msg_sink_put_copy(db->ctrl.evt_sink, msg);
   
   return 1;
   }
@@ -1523,8 +1527,7 @@ void bg_mdb_rescan_sync(bg_controllable_t * db)
   
   gavl_msg_set_id_ns(&msg, BG_FUNC_DB_RESCAN, BG_MSG_NS_DB);
   
-  bg_controllable_call_function(db, &msg,
-                                NULL, NULL, 1000*2*3600);
+  bg_controllable_call_function(db, &msg, NULL, NULL, 1000*2*3600);
   gavl_msg_free(&msg);
   }
 
@@ -2059,7 +2062,15 @@ static void rb_add_uri(gavl_dictionary_t * m)
   
   if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
     return;
-
+  
+#if 0  
+  if(!location)
+    {
+    fprintf(stderr, "Scheisse\n");
+    gavl_dictionary_dump(m, 2);
+    return;
+    }
+#endif
   if(!bg_rb_check_uri(location))
     return;
   
@@ -2074,6 +2085,10 @@ static void rb_add_uri(gavl_dictionary_t * m)
 
 void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   {
+  gavl_dictionary_t * m;
+  gavl_dictionary_t * part;
+  int num_parts, i;
+  
   if(mdb->srv && mdb->srv->plughandler)
     bg_plug_handler_add_uris(mdb->srv->plughandler, dict);
   
@@ -2082,23 +2097,31 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
 
   bg_mdb_get_thumbnails(mdb, dict);
   
-  if(!(dict = gavl_track_get_metadata_nc(dict)) || !mdb->dirs)
+  if(!(m = gavl_track_get_metadata_nc(dict)) || !mdb->dirs)
     return;
   
-  rb_add_uri(dict);
+  rb_add_uri(m);
   
   //  fprintf(stderr, "Add http uris 1\n");
-  //  gavl_dictionary_dump(dict, 2);
+  //  gavl_dictionary_dump(m, 2);
   
-  add_http_uris(mdb, dict, GAVL_META_SRC);
-  add_http_uris(mdb, dict, GAVL_META_COVER_URL);
-  add_http_uris(mdb, dict, GAVL_META_POSTER_URL);
-  add_http_uris(mdb, dict, GAVL_META_WALLPAPER_URL);
-  add_http_uris(mdb, dict, GAVL_META_ICON_URL);
+  add_http_uris(mdb, m, GAVL_META_SRC);
+  add_http_uris(mdb, m, GAVL_META_COVER_URL);
+  add_http_uris(mdb, m, GAVL_META_POSTER_URL);
+  add_http_uris(mdb, m, GAVL_META_WALLPAPER_URL);
+  add_http_uris(mdb, m, GAVL_META_ICON_URL);
 
   //  fprintf(stderr, "Add http uris 2\n");
   //  gavl_dictionary_dump(dict, 2);
 
+  num_parts = gavl_track_get_num_parts(dict);
+
+  for(i = 0; i < num_parts; i++)
+    {
+    part = gavl_track_get_part_nc(dict, i);
+    bg_mdb_add_http_uris(mdb, part);
+    }
+  
   }
 
 void bg_mdb_add_http_uris_arr(bg_mdb_t * mdb, gavl_array_t * arr)

@@ -553,7 +553,7 @@ static void handle_client_connection(bg_http_server_t * s, int fd)
   
   if(!bg_http_connection_read_req(&s->req, fd, TIMEOUT))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't read request");
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Couldn't read request");
     goto fail;
     }
 
@@ -647,7 +647,7 @@ int bg_http_server_iteration(bg_http_server_t * s)
     }
   while((fd = gavl_listen_socket_accept(s->fd, 0, s->remote_addr)) >= 0)
     {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got connection from %s fd: %d",
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got connection from %s fd: %d",
            gavl_socket_address_to_string(s->remote_addr, addr_str), fd);
     handle_client_connection(s, fd);
     ret++;

@@ -114,7 +114,6 @@ static const char * get_track_id(const gavl_dictionary_t * dict)
 
 static void set_player_time(bg_backend_handle_t * dev, gavl_time_t cur)
   {
-  gavl_dictionary_t * t;
   gavl_value_t val;
   
   /* Generate gmerlin compatible time stamps */
@@ -127,7 +126,6 @@ static void set_player_time(bg_backend_handle_t * dev, gavl_time_t cur)
   p = dev->priv;
 
   gavl_value_init(&val);
-  t = gavl_value_set_dictionary(&val);
   
   if(p->flags & RENDERER_OUR_PLAYBACK)
     {
@@ -150,14 +148,29 @@ static void set_player_time(bg_backend_handle_t * dev, gavl_time_t cur)
     time_abs = cur;
     time_rem_abs = time_rem;
     }
+
+  gavl_value_set_long(&val, cur);
+  bg_state_set(&p->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, time_abs);
+  bg_state_set(&p->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_ABS,
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
+  gavl_value_reset(&val);
   
-  gavl_dictionary_set_long(t, BG_PLAYER_TIME, cur);
-  gavl_dictionary_set_long(t, BG_PLAYER_TIME_ABS, time_abs);
-  gavl_dictionary_set_long(t, BG_PLAYER_TIME_REM, time_rem);
-  gavl_dictionary_set_long(t, BG_PLAYER_TIME_REM_ABS, time_rem_abs);
-  gavl_dictionary_set_float(t, BG_PLAYER_TIME_PERC, percentage);
-  
-  bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME,
+  gavl_value_set_long(&val, time_rem);
+  bg_state_set(&p->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM,
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, time_rem_abs);
+  bg_state_set(&p->gmerlin_state, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM_ABS,
+               &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
+  gavl_value_reset(&val);
+
+  gavl_value_set_float(&val, percentage);
+  bg_state_set(&p->gmerlin_state, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
                &val, dev->ctrl_int.evt_sink, BG_MSG_STATE_CHANGED);
   }
 
@@ -614,12 +627,10 @@ static void mpris2_set_player_property(void * priv, const char * name, const gav
       /* Set duration range */
       if(p->duration != GAVL_TIME_UNDEFINED)
         bg_state_set_range_long(&p->gmerlin_state,
-                                BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME, BG_PLAYER_TIME,
-                                0, p->duration);
+                                BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME, 0, p->duration);
       else
         bg_state_set_range_long(&p->gmerlin_state,
-                                BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME, BG_PLAYER_TIME,
-                                0, 0);
+                                BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME, 0, 0);
       
       set_current_track(dev, &dict);
       
@@ -1041,14 +1052,14 @@ static int handle_msg_mpris2(void * priv, // Must be bg_backend_handle_t
           gavl_value_init(&val);
           gavl_value_init(&add);
           
-          bg_msg_get_state(msg, &last, &ctx, &var, &add, NULL);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &add, NULL);
           
           /* Add (and clamp) value */
 
           bg_state_add_value(&r->gmerlin_state, ctx, var, &add, &val);
           
           gavl_msg_init(&cmd);
-          bg_msg_set_state(&cmd, BG_CMD_SET_STATE, last, ctx, var, &val);
+          gavl_msg_set_state(&cmd, BG_CMD_SET_STATE, last, ctx, var, &val);
           handle_msg_mpris2(priv, &cmd);
           gavl_msg_free(&cmd);
           
@@ -1067,46 +1078,42 @@ static int handle_msg_mpris2(void * priv, // Must be bg_backend_handle_t
           
           int last = 0;
           
-          int player_ctx_len = strlen(BG_PLAYER_STATE_CTX);
-
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
           
           
-          if(gavl_string_starts_with(ctx, BG_PLAYER_STATE_CTX) &&
-             ((ctx[player_ctx_len] == '/') ||
-              (ctx[player_ctx_len] == '\0')))
+          if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
-            if(!strcmp(ctx, BG_PLAYER_STATE_CTX"/"BG_PLAYER_STATE_CURRENT_TIME))          // dictionary
+            /* Seek */
+            if(!strcmp(var, BG_PLAYER_STATE_TIME))
               {
+              int64_t t = GAVL_TIME_UNDEFINED;
+              
               if(!(r->flags & RENDERER_CAN_SEEK))
                 break;
               
-              /* Seek */
-              if(!strcmp(var, BG_PLAYER_TIME))
+              if(gavl_value_get_long(&val, &t))                
+                do_seek(be, t);
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))
+              {
+              double perc;
+              gavl_time_t t;
+              
+              if(!(r->flags & RENDERER_CAN_SEEK))
+                break;
+              
+              if(gavl_value_get_float(&val, &perc))                
                 {
-                int64_t t = GAVL_TIME_UNDEFINED;
-                
-                if(gavl_value_get_long(&val, &t))                
-                  do_seek(be, t);
-                }
-              else if(!strcmp(var, BG_PLAYER_TIME_PERC))
-                {
-                double perc;
-                gavl_time_t t;
-
-                if(gavl_value_get_float(&val, &perc))                
-                  {
-                  t = (int64_t)(perc * ((double)(r->duration)) + 0.5);
-                  do_seek(be, t);
-                  }
+                t = (int64_t)(perc * ((double)(r->duration)) + 0.5);
+                do_seek(be, t);
                 }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
               double val_f;
-              
+
               if(!gavl_value_get_float(&val, &val_f))
                 break;
 

@@ -262,7 +262,7 @@ static void position_changed(bg_player_tracklist_t * l)
   
   evt = bg_msg_sink_get(l->evt_sink);
   
-  bg_msg_set_state(evt, 
+  gavl_msg_set_state(evt, 
                    BG_MSG_STATE_CHANGED, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_QUEUE_IDX,
@@ -600,7 +600,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
     
     evt = bg_msg_sink_get(l->evt_sink);
     
-    bg_msg_set_state(evt, 
+    gavl_msg_set_state(evt, 
                      BG_MSG_STATE_CHANGED, 1,
                      BG_PLAYER_STATE_CTX,
                      BG_PLAYER_STATE_QUEUE_LEN,
@@ -616,7 +616,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
   
   evt = bg_msg_sink_get(l->evt_sink);
   
-  bg_msg_set_state(evt, 
+  gavl_msg_set_state(evt, 
                    BG_MSG_STATE_CHANGED, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_QUEUE_IDX,

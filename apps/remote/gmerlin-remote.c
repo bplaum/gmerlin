@@ -546,7 +546,7 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
     
     gavl_value_init(&val);
 
-    bg_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
+    gavl_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
     
     //    fprintf(stderr, "Got backend message\n");
     //    gavl_msg_dump(msg, 2);
@@ -568,7 +568,7 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
         
         msg1 = bg_msg_sink_get(proxy_ctrl.evt_sink);
                                      
-        bg_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_LABEL, &name_val);
+        gavl_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_LABEL, &name_val);
         gavl_dictionary_copy(&msg1->header, &msg->header);
         bg_msg_sink_put(proxy_ctrl.evt_sink);
         return 1;
@@ -608,7 +608,7 @@ static int handle_backend_message(void * data, gavl_msg_t * msg)
         //  gavl_array_dump(arr, 2);
         
 
-        bg_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_ICON_URL, &val_1);
+        gavl_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_ICON_URL, &val_1);
         
         gavl_dictionary_copy(&msg1->header, &msg->header);
         bg_msg_sink_put(proxy_ctrl.evt_sink);

@@ -42,7 +42,14 @@
 #define BG_PLAYER_STATE_VOLUME        "volume"        // float
 #define BG_PLAYER_STATE_STATUS        "status"        // int
 #define BG_PLAYER_STATE_CURRENT_TRACK "track"         // dictionary
-#define BG_PLAYER_STATE_CURRENT_TIME  "current_time"  // dictionary
+// #define BG_PLAYER_STATE_CURRENT_TIME  "current_time"  // dictionary
+
+#define BG_PLAYER_STATE_TIME          "time"         // long
+#define BG_PLAYER_STATE_TIME_REM      "time_rem"     // long
+#define BG_PLAYER_STATE_TIME_REM_ABS  "time_rem_abs" // long
+#define BG_PLAYER_STATE_TIME_ABS      "time_abs"      // long
+#define BG_PLAYER_STATE_TIME_PERC     "time_perc"     // float
+
 // #define BG_PLAYER_STATE_CURRENT_URI   "uri"           // string
 
 /* Some read-only variables */
@@ -50,18 +57,6 @@
 #define BG_PLAYER_STATE_PROTOCOLS     "protocols"
 #define BG_PLAYER_STATE_MIMETYPES     "mimetypes"
 #define BG_PLAYER_STATE_LABEL         GAVL_META_LABEL
-
-/* Members of BG_PLAYER_STATE_CURRENT_TIME */
-#define BG_PLAYER_TIME          "time"          // long
-#define BG_PLAYER_TIME_REM      "time_rem"      // long
-#define BG_PLAYER_TIME_ABS      "time_abs"      // long
-#define BG_PLAYER_TIME_REM_ABS  "time_rem_abs"  // long
-#define BG_PLAYER_TIME_PERC     "time_perc"     // float
-#define BG_PLAYER_TIME_CLOCK    "time_clock"    // long
-
-/* These change when we have a sliding window */
-// #define BG_PLAYER_TIME_WINDOW_START "time_start" // long, default 0. GAVL_TIME_SCALE
-// #define BG_PLAYER_TIME_WINDOW_END   "time_end"   // long, default: track_duration, GAVL_TIME_SCALE
 
 #define BG_PLAYER_STATE_MODE          "mode"          // int
 #define BG_PLAYER_STATE_MUTE          "mute"          // int

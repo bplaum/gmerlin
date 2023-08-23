@@ -379,24 +379,38 @@ int bg_http_get(const char * url, gavl_buffer_t * buf, gavl_dictionary_t * dict)
   return bg_http_get_range(url, buf, dict, 0, 0);
   }
 
+#define BYTES_TO_READ (10*1024)
+
 char * bg_http_download(const char * url, const char * out_base)
   {
+  gavf_io_t * io;
+  
   int ret = 0;
   const char * pos1;
   const char * pos2;
   
   char * extension = NULL;
   char * filename = NULL;
-  
   gavl_buffer_t  buf;
-  gavl_dictionary_t dict;
-
-  gavl_dictionary_init(&dict);
-  gavl_buffer_init(&buf);
+  const gavl_dictionary_t * res;
+  FILE * out = NULL;
+  int64_t bytes_read;
   
-  if(!bg_http_get(url, &buf, &dict))
+  io = gavl_http_client_create();
+  
+  //  gavl_dictionary_init(&dict);
+  gavl_buffer_init(&buf);
+
+  /* */
+  
+  //  if(!bg_http_get(url, &buf, &dict))
+  //    goto fail;
+  
+  if(!gavl_http_client_open(io, "GET", url))
     goto fail;
 
+  res = gavl_http_client_get_response(io);
+  
   /* Figure out extension */
   if((pos1 = strrchr(url, '.')))
     {
@@ -416,7 +430,7 @@ char * bg_http_download(const char * url, const char * out_base)
 
   if(!extension)
     {
-    if((pos1 = gavl_dictionary_get_string(&dict, GAVL_META_MIMETYPE)))
+    if((pos1 = gavl_dictionary_get_string_i(res, "Content-Type")))
       extension = gavl_strdup(bg_mimetype_to_ext(pos1));
     }
 
@@ -427,12 +441,46 @@ char * bg_http_download(const char * url, const char * out_base)
     }
 
   filename = gavl_sprintf("%s.%s", out_base, extension);
-  bg_write_file(filename, buf.buf, buf.len);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Downloaded %s (%d bytes)", url, buf.len);
+
+  /* TODO: Download */
+  
+  gavl_buffer_alloc(&buf, BYTES_TO_READ);
+
+  out = fopen(filename, "w");
+
+  bytes_read = 0;
+  
+  while(1)
+    {
+    buf.len = gavf_io_read_data(io, buf.buf, BYTES_TO_READ);
+
+    /* Read error */
+    if(buf.len < 0)
+      goto fail;
+    
+    if(buf.len > 0)
+      {
+      /* Write error */
+      if(fwrite(buf.buf, 1, buf.len, out) < buf.len)
+        goto fail;
+      bytes_read += buf.len;
+      }
+    
+    /* EOF */
+    if(buf.len < BYTES_TO_READ)
+      break;
+    }
+  
+  
+  //  bg_write_file(filename, buf.buf, buf.len);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Downloaded %s (%"PRId64" bytes)", url, bytes_read);
   
   ret = 1;
   fail:
 
+  if(out)
+    fclose(out);
+  
   if(!ret)
     {
     free(filename);
@@ -442,7 +490,6 @@ char * bg_http_download(const char * url, const char * out_base)
   if(extension)
     free(extension);
   
-  gavl_dictionary_free(&dict);
   gavl_buffer_free(&buf);
   return filename;
   }

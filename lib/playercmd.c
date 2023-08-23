@@ -106,13 +106,13 @@ void bg_player_set_mute_m(gavl_msg_t * msg, int mute)
   if((mute != 0) && (mute != 1))
     {
     gavl_value_set_int(&val, 1);
-    bg_msg_set_state(msg, BG_CMD_SET_STATE_REL, 1, BG_PLAYER_STATE_CTX,
+    gavl_msg_set_state(msg, BG_CMD_SET_STATE_REL, 1, BG_PLAYER_STATE_CTX,
                      BG_PLAYER_STATE_MUTE, &val);
     }
   else
     {
     gavl_value_set_int(&val, mute);
-    bg_msg_set_state(msg, BG_CMD_SET_STATE, 1, BG_PLAYER_STATE_CTX,
+    gavl_msg_set_state(msg, BG_CMD_SET_STATE, 1, BG_PLAYER_STATE_CTX,
                      BG_PLAYER_STATE_MUTE, &val);
     }
     gavl_value_free(&val);
@@ -219,7 +219,7 @@ void bg_player_set_audio_stream_m(gavl_msg_t * msg, int index)
   gavl_value_t val;
   gavl_value_init(&val);
   gavl_value_set_int(&val, index);
-  bg_msg_set_state(msg, BG_CMD_SET_STATE, 1,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_AUDIO_STREAM_USER, &val);
   gavl_msg_set_arg_int(msg, 0, index);
@@ -238,7 +238,7 @@ void bg_player_set_video_stream_m(gavl_msg_t * msg, int index)
   gavl_value_t val;
   gavl_value_init(&val);
   gavl_value_set_int(&val, index);
-  bg_msg_set_state(msg, BG_CMD_SET_STATE, 1,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_VIDEO_STREAM_USER, &val);
   gavl_msg_set_arg_int(msg, 0, index);
@@ -257,7 +257,7 @@ void bg_player_set_subtitle_stream_m(gavl_msg_t * msg, int index)
   gavl_value_t val;
   gavl_value_init(&val);
   gavl_value_set_int(&val, index);
-  bg_msg_set_state(msg, BG_CMD_SET_STATE, 1,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_SUBTITLE_STREAM_USER, &val);
   gavl_msg_set_arg_int(msg, 0, index);
@@ -292,11 +292,11 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
   /* Set duration range */
   if((duration = gavl_track_get_duration(d)) != GAVL_TIME_UNDEFINED)
     bg_state_set_range_long(&player->state,
-                            BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME, BG_PLAYER_TIME,
+                            BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
                             0, duration);
   else
     bg_state_set_range_long(&player->state,
-                            BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME, BG_PLAYER_TIME,
+                            BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
                             0, 0);
   
   }
@@ -309,12 +309,12 @@ void bg_player_set_fullscreen_m(gavl_msg_t * msg, int fs)
   if((fs != 0) && (fs != 1))
     {
     gavl_value_set_int(&val, 1);
-    bg_msg_set_state(msg, BG_CMD_SET_STATE_REL, 1, BG_STATE_CTX_OV, BG_STATE_OV_FULLSCREEN, &val);
+    gavl_msg_set_state(msg, BG_CMD_SET_STATE_REL, 1, BG_STATE_CTX_OV, BG_STATE_OV_FULLSCREEN, &val);
     }
   else
     {
     gavl_value_set_int(&val, fs);
-    bg_msg_set_state(msg, BG_CMD_SET_STATE, 1, BG_STATE_CTX_OV, BG_STATE_OV_FULLSCREEN, &val);
+    gavl_msg_set_state(msg, BG_CMD_SET_STATE, 1, BG_STATE_CTX_OV, BG_STATE_OV_FULLSCREEN, &val);
     }
   gavl_value_free(&val);
   }
@@ -457,11 +457,11 @@ void bg_player_seek_m(gavl_msg_t * msg, gavl_time_t time, int scale)
   gavl_value_init(&val);
   gavl_value_set_long(&val, gavl_time_unscale(scale, time));
   
-  bg_msg_set_state(msg,
+  gavl_msg_set_state(msg,
                    BG_CMD_SET_STATE,
                    1,
-                   BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME,
-                   BG_PLAYER_TIME,
+                   BG_PLAYER_STATE_CTX,
+                   BG_PLAYER_STATE_TIME,
                    &val);
   }
 
@@ -481,11 +481,11 @@ void bg_player_seek_perc_m(gavl_msg_t * msg, float perc)
   gavl_value_init(&val);
   gavl_value_set_float(&val, perc);
   
-  bg_msg_set_state(msg,
+  gavl_msg_set_state(msg,
                    BG_CMD_SET_STATE,
                    1,
-                   BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME,
-                   BG_PLAYER_TIME_PERC,
+                   BG_PLAYER_STATE_CTX,
+                   BG_PLAYER_STATE_TIME_PERC,
                    &val);
   }
 
@@ -506,11 +506,11 @@ void bg_player_seek_rel_m(gavl_msg_t * msg, gavl_time_t t)
   gavl_value_init(&val);
   gavl_value_set_long(&val, t);
   
-  bg_msg_set_state(msg,
+  gavl_msg_set_state(msg,
                    BG_CMD_SET_STATE_REL,
                    1,
-                   BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME,
-                   BG_PLAYER_TIME,
+                   BG_PLAYER_STATE_CTX,
+                   BG_PLAYER_STATE_TIME,
                    &val);
   }
 
@@ -528,7 +528,7 @@ void bg_player_set_volume_m(gavl_msg_t * msg, float volume)
   gavl_value_init(&val);
   gavl_value_set_float(&val, volume);
   
-  bg_msg_set_state(msg,
+  gavl_msg_set_state(msg,
                    BG_CMD_SET_STATE, 1,
                    BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_VOLUME,
@@ -551,7 +551,7 @@ void bg_player_set_volume_rel_m(gavl_msg_t * msg, float volume)
   gavl_value_init(&val);
   gavl_value_set_float(&val, volume);
   
-  bg_msg_set_state(msg,
+  gavl_msg_set_state(msg,
                    BG_CMD_SET_STATE_REL,
                    1,
                    BG_PLAYER_STATE_CTX,
@@ -584,7 +584,7 @@ void bg_player_next_chapter_m(gavl_msg_t * msg)
   gavl_value_init(&val);
   gavl_value_set_int(&val, 1);
 
-  bg_msg_set_state(msg, BG_CMD_SET_STATE_REL,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE_REL,
                    1, BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_CHAPTER, &val);
   }
@@ -632,7 +632,7 @@ void bg_player_prev_chapter_m(gavl_msg_t * msg)
   gavl_value_t val;
   gavl_value_init(&val);
   gavl_value_set_int(&val, -1);
-  bg_msg_set_state(msg, BG_CMD_SET_STATE_REL,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE_REL,
                    1, BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_CHAPTER, &val);
   }
@@ -650,7 +650,7 @@ void bg_player_set_chapter_m(gavl_msg_t * msg, int chapter)
   gavl_value_t val;
   gavl_value_init(&val);
   gavl_value_set_int(&val, chapter);
-  bg_msg_set_state(msg, BG_CMD_SET_STATE,
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE,
                    1, BG_PLAYER_STATE_CTX,
                    BG_PLAYER_STATE_CHAPTER, &val);
   }

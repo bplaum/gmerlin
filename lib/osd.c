@@ -955,7 +955,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg,
+          gavl_msg_get_state(msg,
                            &last,
                            &ctx,
                            &var,
@@ -1093,16 +1093,21 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                 bg_osd_show_info(osd);
                 }
               }
-            else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))          // dictionary
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME))          // long
               {
-              const gavl_dictionary_t * dict;
-
-              if(!(dict = gavl_value_get_dictionary(&val)) ||
-                 !gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &osd->track_time))
+              if(!gavl_value_get_long(&val, &osd->track_time))
                 return 1;
               
-              gavl_dictionary_get_float(dict, BG_PLAYER_TIME_PERC, &osd->percentage);
-              
+              if(osd->current_osd == OSD_TIME)
+                {
+                char * str = make_time_string(osd);
+                osd_set(osd, str, "left", "bottom", OSD_TIME, PACKET_FLAG_UPDATE, 2);
+                }
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))          // float
+              {
+              gavl_value_get_float(&val, &osd->percentage);
+
               if(osd->current_osd == OSD_TIME)
                 {
                 char * str = make_time_string(osd);

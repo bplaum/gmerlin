@@ -74,7 +74,7 @@ static void update_state(bg_volume_manager_t * vol)
   gavl_value_init(&val);
   gavl_dictionary_copy(gavl_value_set_dictionary(&val), &vol->volumes);
   
-  bg_msg_set_state_nocopy(msg,
+  gavl_msg_set_state_nocopy(msg,
                           BG_MSG_STATE_CHANGED,
                           1,
                           "volumemanager",

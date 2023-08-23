@@ -92,6 +92,9 @@ static int handle_msg_function(void * data, gavl_msg_t * msg)
   
   function_context_t * ctx = data;
 
+  //  fprintf(stderr, "handle_msg_function\n");
+  //  gavl_msg_dump(msg, 2);
+  
   if(!(var = gavl_dictionary_get_string(&msg->header, BG_FUNCTION_TAG)) ||
      strcmp(var, gavl_dictionary_get_string(&ctx->req->header, BG_FUNCTION_TAG)))
     return 1;
@@ -144,7 +147,8 @@ int bg_controllable_call_function(bg_controllable_t * c, gavl_msg_t * func,
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Timeout expired when waiting for function result");
       break;
       }
-    gavl_time_delay(&delay_time);
+    if(!bg_msg_sink_get_num(ctrl.evt_sink))
+      gavl_time_delay(&delay_time);
     }
   
   gavl_timer_destroy(timer);

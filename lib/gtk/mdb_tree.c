@@ -1490,7 +1490,6 @@ void bg_gtk_mdb_tree_close_window_album(bg_gtk_mdb_tree_t * t, int idx)
 
 void bg_gtk_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx)
   {
-  
   gtk_notebook_remove_page(GTK_NOTEBOOK(t->notebook), idx);
   album_array_splice_nocopy(t, &t->tab_albums, idx, 1, NULL, NULL);
   }
@@ -1967,7 +1966,7 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
           
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg,
+          gavl_msg_get_state(msg,
                            &last,
                            &ctx,
                            &var,

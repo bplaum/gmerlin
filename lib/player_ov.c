@@ -33,9 +33,9 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-// #define DUMP_TIMESTAMPS
+#define DUMP_TIMESTAMPS
 
-#define NOSKIP
+// #define NOSKIP
 
 #define STATE_READ  1  // Try to read frame
 #define STATE_WAIT  2  // Wait to show frame
@@ -396,6 +396,11 @@ void * bg_player_ov_thread(void * data)
       bg_player_time_get(p, 1, &current_time);
       diff_time =  s->frame_time - current_time;
 
+#ifdef DUMP_TIMESTAMPS
+      bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
+               current_time, s->frame_time, s->frame_time - current_time);
+#endif
+      
       if((diff_time >= GAVL_TIME_SCALE / 2) && !warn_wait)
         {
         gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Waiting  %f sec. (cur: %f, frame: %f)",

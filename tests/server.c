@@ -24,9 +24,11 @@
 #include <stdlib.h>
 #include <sys/poll.h>
 #include <unistd.h>
+#include <config.h>
 
 #include <gavl/gavlsocket.h>
-
+#include <gavl/log.h>
+#define LOG_DOMAIN "server"
 
 #include <gmerlin/utils.h>
 
@@ -71,6 +73,82 @@ static connection_t * remove_connection(connection_t * list, connection_t * c)
   free(c);
   return list;
   }
+
+/*
+ *  Read a single line from a filedescriptor
+ *
+ *  ret will be reallocated if neccesary and ret_alloc will
+ *  be updated then
+ *
+ *  The string will be 0 terminated, a trailing \r or \n will
+ *  be removed
+ */
+
+#define BYTES_TO_ALLOC 1024
+
+static int socket_read_line(int fd, char ** ret,
+                        int * ret_alloc, int milliseconds)
+  {
+  char * pos;
+  char c;
+  int bytes_read;
+  bytes_read = 0;
+  /* Allocate Memory for the case we have none */
+  if(!(*ret_alloc))
+    {
+    *ret_alloc = BYTES_TO_ALLOC;
+    *ret = realloc(*ret, *ret_alloc);
+    }
+  pos = *ret;
+  while(1)
+    {
+    c = 0;
+    if(!gavl_socket_read_data(fd, (uint8_t*)(&c), 1, milliseconds))
+      {
+      //  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading line failed: %s", strerror(errno));
+
+      if(!bytes_read)
+        {
+        return 0;
+        }
+      break;
+      }
+
+    // fprintf(stderr, "%c", c);
+    
+    if((c > 0x00) && (c < 0x20) && (c != '\r') && (c != '\n'))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got non ASCII character (%d) while reading line", c);
+      return 0;
+      }
+    
+    /*
+     *  Line break sequence
+     *  is starting, remove the rest from the stream
+     */
+    if(c == '\n')
+      {
+      break;
+      }
+    /* Reallocate buffer */
+    else if((c != '\r') && (c != '\0'))
+      {
+      if(bytes_read+2 >= *ret_alloc)
+        {
+        *ret_alloc += BYTES_TO_ALLOC;
+        *ret = realloc(*ret, *ret_alloc);
+        pos = &((*ret)[bytes_read]);
+        }
+      /* Put the byte and advance pointer */
+      *pos = c;
+      pos++;
+      bytes_read++;
+      }
+    }
+  *pos = '\0';
+  return 1;
+  }
+
 
 int main(int argc, char ** argv)
   {
@@ -163,7 +241,7 @@ int main(int argc, char ** argv)
             {
             /* Read message */
             
-            if(!gavl_socket_read_line(pollfds[i].fd, &buffer, &buffer_size, -1))
+            if(!socket_read_line(pollfds[i].fd, &buffer, &buffer_size, -1))
               {
               con_tmp = con_ptr->next;
               connections = remove_connection(connections, con_ptr);

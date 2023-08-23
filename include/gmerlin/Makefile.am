@@ -25,6 +25,7 @@ iconfont.h \
 lcdproc.h \
 log.h \
 lpcm_handler.h \
+mdb.h \
 mediaconnector.h \
 ocr.h \
 osd.h \

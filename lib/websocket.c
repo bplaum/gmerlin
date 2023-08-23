@@ -534,8 +534,7 @@ static int msg_write_cb(void * data, gavl_msg_t * msg)
 
 static void ping_func(void * data)
   {
-  while(bg_websocket_connection_iteration(data))
-    ;
+  bg_websocket_connection_iteration(data);
   }
 
 static void conn_init(bg_websocket_connection_t * conn, int is_client)
@@ -932,7 +931,11 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
       }
     
     if(conn->is_client)
+      {
+      //      fprintf(stderr, "Websocket: Got message:\n");
+      //      gavl_msg_dump(&msg, 2);
       bg_msg_sink_put_copy(conn->ctrl_client.evt_sink, &msg);
+      }
     else
       bg_msg_sink_put_copy(conn->ctrl_server.cmd_sink, &msg);
 

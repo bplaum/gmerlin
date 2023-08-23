@@ -56,7 +56,7 @@ static int handle_player_message_console(void * data,
           
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg,
+          gavl_msg_get_state(msg,
                            NULL,
                            &ctx,
                            &var,
@@ -64,13 +64,10 @@ static int handle_player_message_console(void * data,
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
-            if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))          // long
+            if(!strcmp(var, BG_PLAYER_STATE_TIME))          // long
               {
-              const gavl_dictionary_t * dict;
               gavl_time_t t = GAVL_TIME_UNDEFINED;
-              
-              if(!(dict = gavl_value_get_dictionary(&val)) ||
-                 !gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &t))
+              if(!gavl_value_get_long(&val, &t))
                 return 1;
               print_time(fe, t);
               }

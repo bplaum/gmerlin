@@ -99,9 +99,6 @@ gavl_type_t bg_parameter_type_to_gavl(bg_parameter_type_t type);
 #define BG_PARAMETER_OWN_SECTION    (1<<4) //!< For parameters of the type BG_PARAMETER_SECTION: Following parameters should be stored in an own section
 #define BG_PARAMETER_GLOBAL_PRESET  (1<<5) //!< For parameters of the type BG_PARAMETER_SECTION: There should be one preset for all following sections
 
-
-#define BG_PARAMETER_STATEVARIABLE BG_PARAMETER_HIDE_DIALOG
-
 /** \brief Typedef for parmeter description
  */
 

@@ -94,32 +94,6 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
   
  */
 
-#define bg_msg_set_state gavl_msg_set_state 
-#define bg_msg_set_state_nocopy gavl_msg_set_state_nocopy
-#define bg_msg_get_state gavl_msg_get_state
-
-#if 0
-void bg_msg_set_state(gavl_msg_t * msg,
-                      int id,
-                      int last,
-                      const char * ctx,
-                      const char * var,
-                      const gavl_value_t * val);
-
-void bg_msg_set_state_nocopy(gavl_msg_t * msg,
-                             int id,
-                             int last,
-                             const char * ctx,
-                             const char * var,
-                             gavl_value_t * val);
-
-void bg_msg_get_state(const gavl_msg_t * msg,
-                      int * last,
-                      const char ** ctx_p,
-                      const char ** var_p,
-                      gavl_value_t * val,
-                      gavl_dictionary_t * dict);
-#endif
 
 /* String initalizer for UUID. Will be changed to a real UUID when encountered */
 

@@ -187,7 +187,7 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
           gavl_value_t val;
           
           gavl_value_init(&val);
-          bg_msg_get_state(msg, &last, &ctx_p, &var_p, &val,
+          gavl_msg_get_state(msg, &last, &ctx_p, &var_p, &val,
                            bg_plugin_reg->state);
           
           // gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Storing plugin state %s %s", ctx_p, var_p);
@@ -2243,18 +2243,21 @@ static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
 
   bg_plugin_handle_connect_control(ret);
   
-  if(ret->ctrl_plugin && bg_plugin_reg->state)
+  if(ret->ctrl_plugin)
     {
-    bg_state_apply_ctx(bg_plugin_reg->state, ret->info->name, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
-
-    /* Some plugin types have generic state variables also */
-
-    if(info->type == BG_PLUGIN_OUTPUT_VIDEO)
+    if(bg_plugin_reg->state)
       {
-      //      fprintf(stderr, "Apply ov state %p\n", ret->plugin_reg->state);
-      //      gavl_dictionary_dump(ret->plugin_reg->state, 2);
+      bg_state_apply_ctx(bg_plugin_reg->state, ret->info->name, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+
+      /* Some plugin types have generic state variables also */
+
+      if(info->type == BG_PLUGIN_OUTPUT_VIDEO)
+        {
+        //      fprintf(stderr, "Apply ov state %p\n", ret->plugin_reg->state);
+        //      gavl_dictionary_dump(ret->plugin_reg->state, 2);
       
-      bg_state_apply_ctx(bg_plugin_reg->state, BG_STATE_CTX_OV, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+        bg_state_apply_ctx(bg_plugin_reg->state, BG_STATE_CTX_OV, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+        }
       }
     }
   else

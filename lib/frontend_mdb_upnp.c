@@ -421,7 +421,7 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
           gavl_value_init(&val);
           
           //          bg_msg_get_state(msg, &last, &ctx, &var, NULL, &p->state);
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
           
           gavl_value_free(&val);
           

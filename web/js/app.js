@@ -1663,8 +1663,8 @@ function player_create()
 
     msg = msg_create(BG_CMD_SET_STATE, BG_MSG_NS_STATE);
     msg_set_arg_int(msg, 0, 1); // Last
-    msg_set_arg_string(msg, 1, BG_PLAYER_STATE_CTX + "/" + BG_PLAYER_STATE_CURRENT_TIME);
-    msg_set_arg_string(msg, 2, BG_PLAYER_TIME_PERC);
+    msg_set_arg_string(msg, 1, BG_PLAYER_STATE_CTX);
+    msg_set_arg_string(msg, 2, BG_PLAYER_STATE_TIME_PERC);
     msg_set_arg_float(msg, 3, perc);
     this.handle_command(msg);
     };
@@ -3841,27 +3841,27 @@ function create_player_control()
 	      case BG_PLAYER_STATE_CTX:
                 switch(msg.args[2].v)
                   {
-                  case BG_PLAYER_STATE_CURRENT_TIME:
+                  case BG_PLAYER_STATE_TIME:
 //                  console.log("Handle msg 2");
                     if(!this.seeking)
                       {
-			  if(msg.args[3].t != "d")
-                              break;      
+                      if(msg.args[3].t != "l")
+                        break;      
 //                      console.log("Got time " + JSON.stringify(msg.args[3].v));
-                      if(msg.args[3].v[BG_PLAYER_TIME_CLOCK])
-                        document.getElementById("player-display").innerHTML =
-		          time_to_string_local(msg.args[3].v[BG_PLAYER_TIME_CLOCK].v);
-		      else
-		        document.getElementById("player-display").innerHTML =
-		          time_to_string(msg.args[3].v[BG_PLAYER_TIME].v);
+                      document.getElementById("player-display").innerHTML =
+		        time_to_string(msg.args[3].v);
 
-                      if(msg.args[3].v[BG_PLAYER_TIME_PERC].v >= 0.0)
-                        document.getElementById("player-slider").value = 
-		              msg.args[3].v[BG_PLAYER_TIME_PERC].v;
-                      else
-                        document.getElementById("player-slider").value = 0.0;
                       }
              	    break;
+                  case BG_PLAYER_STATE_TIME_PERC:
+                    if(msg.args[3].t != "f")
+                      break;      
+                    if(msg.args[3].v >= 0.0)
+                      document.getElementById("player-slider").value = msg.args[3].v;
+                    else
+                      document.getElementById("player-slider").value = 0.0;
+		    
+		    break;
 	          case BG_PLAYER_STATE_STATUS:
 		    {
 	            var status_icon = null;

@@ -1,7 +1,7 @@
 #!/bin/sh
 PREFIX="/usr/local/include"
 
-FILES="${PREFIX}/gavl/metatags.h ${PREFIX}/gavl/msg.h ${PREFIX}/gmerlin/msgqueue.h ${PREFIX}/gmerlin/playermsg.h"
+FILES="${PREFIX}/gavl/metatags.h ${PREFIX}/gavl/msg.h ${PREFIX}/gmerlin/bgmsg.h ${PREFIX}/gmerlin/playermsg.h ${PREFIX}/gmerlin/mdb.h"
 
 for i in $FILES; do
   awk '(NF >= 3) && ($1 == "#define") {

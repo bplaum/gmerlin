@@ -141,7 +141,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           gavl_value_init(&val);
           
           //          bg_msg_get_state(msg, &last, &ctx, &var, NULL, &p->state);
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
           
           if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
             {

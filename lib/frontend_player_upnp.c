@@ -366,7 +366,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
           gavl_value_init(&val);
           
           /* Store state locally */
-          bg_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
+          gavl_msg_get_state(msg, &last, &ctx, &var, &val, &p->state);
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
@@ -512,11 +512,10 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
                 }
 
               }
-            else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME))
               {
-              const gavl_dictionary_t * dict;
-
-              if((dict = gavl_value_get_dictionary(&val)))
+              gavl_time_t t = GAVL_TIME_UNDEFINED;
+              if(gavl_value_get_long(&val, &t))
                 {
                 
                 }
@@ -974,7 +973,6 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "GetPositionInfo"))
       {
       const gavl_value_t * val;
-      const gavl_dictionary_t * dict;
       gavl_time_t t;
       char time_str[GAVL_TIME_STRING_LEN_MS];
       
@@ -989,9 +987,8 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       
       if((val = bg_state_get(&priv->state,
                              BG_PLAYER_STATE_CTX,
-                             BG_PLAYER_STATE_CURRENT_TIME)) &&
-         (dict = gavl_value_get_dictionary(val)) &&
-         gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &t))
+                             BG_PLAYER_STATE_TIME)) &&
+         gavl_value_get_long(val, &t))
         gavl_time_prettyprint_ms_full(t, time_str);
       else
         strncpy(time_str, "0:00:00.000", GAVL_TIME_STRING_LEN_MS);

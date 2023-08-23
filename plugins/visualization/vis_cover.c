@@ -151,7 +151,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           
           gavl_value_init(&val);
           
-          bg_msg_get_state(msg, &last, &ctx,
+          gavl_msg_get_state(msg, &last, &ctx,
                            &var, &val, NULL);
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))

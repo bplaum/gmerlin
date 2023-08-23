@@ -38,78 +38,10 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "state"
 
-#define MIN_DICT "$min"
-#define MAX_DICT "$max"
+#define DESC_MIN "min"
+#define DESC_MAX "max"
 
-#if 0
-void bg_msg_set_state(gavl_msg_t * msg,
-                      int id,
-                      int last,
-                      const char * ctx,
-                      const char * var,
-                      const gavl_value_t * val)
-  {
-  gavl_msg_set_id_ns(msg, id, BG_MSG_NS_STATE);
-  gavl_msg_set_arg_int(msg, 0, last);
-  
-  gavl_msg_set_arg_string(msg, 1, ctx);
-  gavl_msg_set_arg_string(msg, 2, var);
-  gavl_msg_set_arg(msg, 3, val);
-  }
-
-void bg_msg_set_state_nocopy(gavl_msg_t * msg,
-                             int id,
-                             int last,
-                             const char * ctx,
-                             const char * var,
-                             gavl_value_t * val)
-  {
-  gavl_msg_set_id_ns(msg, id, BG_MSG_NS_STATE);
-  gavl_msg_set_arg_int(msg, 0, last);
-  gavl_msg_set_arg_string(msg, 1, ctx);
-  gavl_msg_set_arg_string(msg, 2, var);
-  gavl_msg_set_arg_nocopy(msg, 3, val);
-  }
-
-void bg_msg_get_state(const gavl_msg_t * msg,
-                      int * last_p,
-                      const char ** ctx_p,
-                      const char ** var_p,
-                      gavl_value_t * val_p,
-                      gavl_dictionary_t * dict)
-  {
-  const char * ctx;
-  const char * var;
-  const gavl_value_t * val;
-
-  int last;
-
-  last = gavl_msg_get_arg_int(msg, 0);
-  
-  ctx = gavl_msg_get_arg_string_c(msg, 1);
-  var = gavl_msg_get_arg_string_c(msg, 2);
-  
-  if(last_p)
-    *last_p = last;
-  
-  if(ctx_p)
-    *ctx_p = ctx;
-  if(var_p)
-    *var_p = var;
-
-  val = gavl_msg_get_arg_c(msg, 3);
-  if(val_p)
-    gavl_value_copy(val_p, val);
-  
-  if(dict)
-    {
-    gavl_dictionary_t * child;
-    child = gavl_dictionary_get_dictionary_create(dict, ctx);
-    gavl_dictionary_set(child, var, val);
-    }
-  
-  }
-#endif
+#define DESC_DICT "$desc"
 
 typedef struct
   {
@@ -120,13 +52,31 @@ typedef struct
   const gavl_dictionary_t * child;
   } apply_t;
 
+static const gavl_dictionary_t * state_var_get_desc(const gavl_dictionary_t * dict, const char * ctx, const char * var)
+  {
+  if(!(dict = gavl_dictionary_get_dictionary(dict, DESC_DICT)) ||
+     !(dict = gavl_dictionary_get_recursive(dict, ctx)) ||
+     !(dict = gavl_dictionary_get_dictionary(dict, var)))
+    return NULL;
+  return dict;
+  }
+
+static gavl_dictionary_t * state_var_get_desc_create(gavl_dictionary_t * dict, const char * ctx, const char * var)
+  {
+  if(!(dict = gavl_dictionary_get_dictionary_create(dict, DESC_DICT)) ||
+     !(dict = gavl_dictionary_get_recursive_create(dict, ctx)) ||
+     !(dict = gavl_dictionary_get_dictionary_create(dict, var)))
+    return NULL;
+  return dict;
+  }
+
 static void apply_func_child(void * priv, const char * name, const gavl_value_t * val)
   {
   gavl_msg_t * msg;
   apply_t * a = priv;
   
   msg = bg_msg_sink_get(a->sink);
-  bg_msg_set_state(msg, a->id, gavl_dictionary_is_last(a->child, name), a->ctx, name, val);
+  gavl_msg_set_state(msg, a->id, gavl_dictionary_is_last(a->child, name), a->ctx, name, val);
   bg_msg_sink_put(a->sink);
   }
 
@@ -138,7 +88,7 @@ void bg_state_apply_ctx(gavl_dictionary_t * state, const char * ctx, bg_msg_sink
   a.id = id;
   a.sink = sink;
   a.ctx = ctx;
-  a.child = gavl_dictionary_get_dictionary_create(state, ctx);
+  a.child = gavl_dictionary_get_recursive_create(state, ctx);
   
   gavl_dictionary_foreach(a.child, apply_func_child, &a);
   }
@@ -147,11 +97,9 @@ static void apply_func(void * priv, const char * name, const gavl_value_t * val)
   {
   apply_t * a = priv;
 
-  if(!strcmp(name, MIN_DICT))
-    {
-    /* NOP */
-    }
-  else if(!strcmp(name, MAX_DICT))
+  //  if(gavl_string_starts_with(name
+  
+  if(gavl_string_starts_with(name, DESC_DICT))
     {
     /* NOP */
     }
@@ -172,53 +120,6 @@ void bg_state_apply(gavl_dictionary_t * state, bg_msg_sink_t * sink, int id)
   gavl_dictionary_foreach(state, apply_func, &a);
   }
 
-static gavl_dictionary_t * get_val_dict(gavl_dictionary_t * state, const char * ctx)
-  {
-  gavl_dictionary_t * ret = NULL;
-  char ** path;
-  int idx = 0;
-  
-  if(!strchr(ctx, '/')) // Shortcut
-    return gavl_dictionary_get_dictionary_create(state, ctx);
-  
-  path = gavl_strbreak(ctx, '/');
-  ret = state;
-  
-  while(path[idx])
-    {
-    ret = gavl_dictionary_get_dictionary_create(ret, path[idx]);
-    idx++;
-    }
-  
-  gavl_strbreak_free(path);
-  return ret;
-  }
-
-static const gavl_dictionary_t * get_val_dict_c(const gavl_dictionary_t * state, const char * ctx)
-  {
-  const gavl_dictionary_t * ret = NULL;
-  char ** path;
-  int idx = 0;
-  
-  if(!strchr(ctx, '/')) // Shortcut
-    return gavl_dictionary_get_dictionary(state, ctx);
-  
-  path = gavl_strbreak(ctx, '/');
-  ret = state;
-  
-  while(path[idx])
-    {
-    ret = gavl_dictionary_get_dictionary(ret, path[idx]);
-
-    if(!ret)
-      break;
-    
-    idx++;
-    }
-  
-  gavl_strbreak_free(path);
-  return ret;
-  }
 
 int bg_state_set(gavl_dictionary_t * state,
                   int last,
@@ -232,7 +133,7 @@ int bg_state_set(gavl_dictionary_t * state,
   
   if(state)
     {
-    child = get_val_dict(state, ctx);
+    child = gavl_dictionary_get_recursive_create(state, ctx);
     changed = gavl_dictionary_set(child, var, val);
     }
   else
@@ -241,7 +142,7 @@ int bg_state_set(gavl_dictionary_t * state,
   if(sink && (last || changed))
     {
     gavl_msg_t * msg = bg_msg_sink_get(sink);
-    bg_msg_set_state(msg, id, last, ctx, var, val);
+    gavl_msg_set_state(msg, id, last, ctx, var, val);
     bg_msg_sink_put(sink);
     }
   return changed;
@@ -253,7 +154,7 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
   {
   const gavl_dictionary_t * child;
 
-  if(!(child = get_val_dict_c(state, ctx)))
+  if(!(child = gavl_dictionary_get_recursive(state, ctx)))
     {
     //    fprintf(stderr, "No such ctx %s\n", ctx);
     return NULL;
@@ -267,7 +168,7 @@ void bg_state_set_range(gavl_dictionary_t * state,
                         const gavl_value_t * min,
                         const gavl_value_t * max)
   {
-  gavl_dictionary_t * sub;
+  gavl_dictionary_t * desc;
 
   if(!min || (min->type == GAVL_TYPE_UNDEFINED) ||
      !max || (max->type == GAVL_TYPE_UNDEFINED))
@@ -275,11 +176,11 @@ void bg_state_set_range(gavl_dictionary_t * state,
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid range passed to bg_state_set_range");
     return;
     }
-  sub = gavl_dictionary_get_dictionary_create(state, MIN_DICT);
-  bg_state_set(sub, 1, ctx, var, min, NULL, 0);
 
-  sub = gavl_dictionary_get_dictionary_create(state, MAX_DICT);
-  bg_state_set(sub, 1, ctx, var, max, NULL, 0);
+  desc = state_var_get_desc_create(state, ctx, var);
+
+  gavl_dictionary_set(desc, DESC_MIN, min);
+  gavl_dictionary_set(desc, DESC_MAX, max);
   }
 
 int bg_state_get_range(gavl_dictionary_t * state,
@@ -287,19 +188,18 @@ int bg_state_get_range(gavl_dictionary_t * state,
                        gavl_value_t * min,
                        gavl_value_t * max)
   {
-  gavl_dictionary_t * sub;
+  const gavl_dictionary_t * desc;
   const gavl_value_t * val;
-  
-  if(!(sub = gavl_dictionary_get_dictionary_nc(state, MIN_DICT)) ||
-     !(val = bg_state_get(sub, ctx, var)))
-    return 0;
 
+  if(!(desc = state_var_get_desc(state, ctx, var)))
+    return 0;
+  
+  if(!(val = gavl_dictionary_get(desc, DESC_MIN)))
+    return 0;
   gavl_value_copy(min, val);
 
-  if(!(sub = gavl_dictionary_get_dictionary_nc(state, MAX_DICT)) ||
-     !(val = bg_state_get(sub, ctx, var)))
+  if(!(val = gavl_dictionary_get(desc, DESC_MAX)))
     return 0;
-
   gavl_value_copy(max, val);
   
   return 1;

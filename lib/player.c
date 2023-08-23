@@ -44,7 +44,11 @@ static const bg_state_var_desc_t state_vars[] =
     { BG_PLAYER_STATE_VOLUME,          GAVL_TYPE_FLOAT,      GAVL_VALUE_INIT_FLOAT(0.5) },
     { BG_PLAYER_STATE_STATUS,          GAVL_TYPE_INT,        GAVL_VALUE_INIT_INT(BG_PLAYER_STATUS_INIT) },
     { BG_PLAYER_STATE_CURRENT_TRACK,   GAVL_TYPE_DICTIONARY  },
-    { BG_PLAYER_STATE_CURRENT_TIME,    GAVL_TYPE_DICTIONARY  },
+    { BG_PLAYER_STATE_TIME,            GAVL_TYPE_LONG  },
+    { BG_PLAYER_STATE_TIME_REM,        GAVL_TYPE_LONG  },
+    { BG_PLAYER_STATE_TIME_REM_ABS,    GAVL_TYPE_LONG  },
+    { BG_PLAYER_STATE_TIME_ABS,        GAVL_TYPE_LONG  },
+    { BG_PLAYER_STATE_TIME_PERC,       GAVL_TYPE_FLOAT },
     { BG_PLAYER_STATE_MODE,                 GAVL_TYPE_INT,        }, // Zero
     { BG_PLAYER_STATE_MUTE,                 GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_AUDIO_STREAM_USER,    GAVL_TYPE_INT,        },
@@ -141,20 +145,28 @@ static void buffer_notify(void * data, float percentage)
 static void state_init_time(gavl_dictionary_t * dict)
   {
   gavl_value_t val;
-  gavl_dictionary_t * current_time;
-
   /* Initialize the time dictionary */
   gavl_value_init(&val);
-  current_time = gavl_value_set_dictionary(&val);
   
-  gavl_dictionary_set_long(current_time, BG_PLAYER_TIME, 0);
-  gavl_dictionary_set_long(current_time, BG_PLAYER_TIME_REM, GAVL_TIME_UNDEFINED);
-  gavl_dictionary_set_long(current_time, BG_PLAYER_TIME_ABS, GAVL_TIME_UNDEFINED);
-  gavl_dictionary_set_long(current_time, BG_PLAYER_TIME_REM_ABS, GAVL_TIME_UNDEFINED);
-  gavl_dictionary_set_float(current_time, BG_PLAYER_TIME_PERC, -1.0);
-  //  gavl_dictionary_set(current_time, BG_PLAYER_TIME_CLOCK, NULL);
-  
-  bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME, &val, NULL, 0);
+  gavl_value_set_long(&val, 0);
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME, &val, NULL, 0);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, GAVL_TIME_UNDEFINED);
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM, &val, NULL, 0);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, GAVL_TIME_UNDEFINED);
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_ABS, &val, NULL, 0);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, GAVL_TIME_UNDEFINED);
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM_ABS, &val, NULL, 0);
+  gavl_value_reset(&val);
+
+  gavl_value_set_float(&val, -1.0);
+  bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC, &val, NULL, 0);
+  gavl_value_reset(&val);
   
   //  fprintf(stderr, "state_init_time %d\n", result);
   //  gavl_dictionary_dump(gavl_dictionary_get_dictionary(dict, BG_PLAYER_STATE_CTX), 2);
@@ -192,7 +204,7 @@ void bg_player_state_init(gavl_dictionary_t * dict, const char * label,
                            0.0, 1.0);
   
   bg_state_set_range_float(dict,
-                           BG_PLAYER_STATE_CTX "/" BG_PLAYER_STATE_CURRENT_TIME, BG_PLAYER_TIME_PERC,
+                           BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
                            0.0, 1.0);
 
   if(protocols)

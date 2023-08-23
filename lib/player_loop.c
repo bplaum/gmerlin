@@ -949,14 +949,14 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           gavl_value_init(&val);
           gavl_value_init(&add);
           
-          bg_msg_get_state(command, &last, &ctx, &var, &add, NULL);
+          gavl_msg_get_state(command, &last, &ctx, &var, &add, NULL);
           
           /* Add (and clamp) value */
 
           bg_state_add_value(&player->state, ctx, var, &add, &val);
           
           gavl_msg_init(&cmd);
-          bg_msg_set_state(&cmd, BG_CMD_SET_STATE, last, ctx, var, &val);
+          gavl_msg_set_state(&cmd, BG_CMD_SET_STATE, last, ctx, var, &val);
           bg_player_handle_command(priv, &cmd);
           gavl_msg_free(&cmd);
 
@@ -972,11 +972,10 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           const char * var;
 
           int last = 0;
-          int player_ctx_len = strlen(BG_PLAYER_STATE_CTX);
           
           gavl_value_init(&val);
 
-          bg_msg_get_state(command,
+          gavl_msg_get_state(command,
                            &last,
                            &ctx,
                            &var,
@@ -986,16 +985,14 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           //          gavl_value_dump(&val, 0);
           //          fprintf(stderr, "\n");
           
-          if(gavl_string_starts_with(ctx, BG_PLAYER_STATE_CTX) &&
-             ((ctx[player_ctx_len] == '/') ||
-              (ctx[player_ctx_len] == '\0')))
+          if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
             // ctx += player_ctx_len;
             
-            if(!strcmp(ctx, BG_PLAYER_STATE_CTX"/"BG_PLAYER_STATE_CURRENT_TIME))          // dictionary
+            if(!strcmp(var, BG_PLAYER_STATE_TIME))          // dictionary
               {
               /* Seek */
-
+              gavl_time_t t = GAVL_TIME_UNDEFINED;
               int state;
               
               if(!player->can_seek)
@@ -1006,51 +1003,54 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                  (state != BG_PLAYER_STATUS_PAUSED))
                 break;           
               
-              if(!strcmp(var, BG_PLAYER_TIME))
+              /* TODO: Support rational number */
+              if(gavl_value_get_long(&val, &t) &&
+                 (t != GAVL_TIME_UNDEFINED))
                 {
-                gavl_time_t t = GAVL_TIME_UNDEFINED;
-
-                /* TODO: Support rational number */
-                if(gavl_value_get_long(&val, &t) &&
-                   (t != GAVL_TIME_UNDEFINED))
-                  {
-                  seek_cmd(player, t, GAVL_TIME_SCALE, -1.0);
-                  bg_osd_show_time(player->video_stream.osd);
-                  }
+                seek_cmd(player, t, GAVL_TIME_SCALE, -1.0);
+                bg_osd_show_time(player->video_stream.osd);
                 }
-              else if(!strcmp(var, BG_PLAYER_TIME_PERC))
-                {
-                double perc = -1.0;
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))     // float
+              {
+              double perc = -1.0;
 
-                int state = bg_player_get_status(player);
-                if((state != BG_PLAYER_STATUS_PLAYING) &&
-                   (state != BG_PLAYER_STATUS_PAUSED))
-                  break;           
-                
-                if(gavl_value_get_float(&val, &perc) &&
-                   (perc >= 0.0))
-                  {
-                  seek_cmd(player, GAVL_TIME_UNDEFINED, 0, perc);
-                  bg_osd_show_time(player->video_stream.osd);
-                  }
-                }
+              int state;
+
+              if(!player->can_seek)
+                break;
               
-#if 0 // TODO
-              else if(!strcmp(var, BG_PLAYER_TIME_REM))
+              state = bg_player_get_status(player);
+              
+              if((state != BG_PLAYER_STATUS_PLAYING) &&
+                 (state != BG_PLAYER_STATUS_PAUSED))
+                break;           
+                
+              if(gavl_value_get_float(&val, &perc) &&
+                 (perc >= 0.0))
+                {
+                seek_cmd(player, GAVL_TIME_UNDEFINED, 0, perc);
+                bg_osd_show_time(player->video_stream.osd);
+                }
+
+              
+              }
+#if 1 // TODO
+            else if(!strcmp(var, BG_PLAYER_STATE_TIME_REM))
                 {
                 
                 }
-              else if(!strcmp(var, BG_PLAYER_TIME_ABS))
+              else if(!strcmp(var, BG_PLAYER_STATE_TIME_ABS))
                 {
                 
                 }
-              else if(!strcmp(var, BG_PLAYER_TIME_REM_ABS))
+              else if(!strcmp(var, BG_PLAYER_STATE_TIME_REM_ABS))
                 {
                 
                 }
 #endif
-              
-              }
+
+            
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
               double volume;
@@ -1686,13 +1686,11 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t pts_time)
   gavl_time_t t_rem;
   gavl_time_t t_rem_abs;
   double percentage = -1.0;
-  gavl_dictionary_t * dict;
-
+  
   gavl_time_t t;
   
   gavl_value_init(&val);
-  dict = gavl_value_set_dictionary(&val);
-
+  
   pthread_mutex_lock(&player->dpy_time_offset_mutex);
   t = pts_time + player->dpy_time_offset;
   pthread_mutex_unlock(&player->dpy_time_offset_mutex);
@@ -1713,12 +1711,25 @@ void bg_player_broadcast_time(bg_player_t * player, gavl_time_t pts_time)
     //            t, win_start, win_end);
     }
   
-  gavl_dictionary_set_long(dict, BG_PLAYER_TIME, t);
-  gavl_dictionary_set_long(dict, BG_PLAYER_TIME_ABS, t_abs);
-  gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM, t_rem);
-  gavl_dictionary_set_long(dict, BG_PLAYER_TIME_REM_ABS, t_rem_abs);
-  gavl_dictionary_set_float(dict, BG_PLAYER_TIME_PERC, percentage);
-  bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TIME, &val);
+  gavl_value_set_long(&val, t);
+  bg_player_state_set_local(player, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME, &val);
+  gavl_value_reset(&val);
+  
+  gavl_value_set_long(&val, t_abs);
+  bg_player_state_set_local(player, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_ABS, &val);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, t_rem);
+  bg_player_state_set_local(player, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM, &val);
+  gavl_value_reset(&val);
+
+  gavl_value_set_long(&val, t_rem_abs);
+  bg_player_state_set_local(player, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_REM_ABS, &val);
+  gavl_value_reset(&val);
+
+  gavl_value_set_float(&val, percentage);
+  bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC, &val);
+  
   gavl_value_free(&val);
   }
 

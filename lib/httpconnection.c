@@ -149,6 +149,8 @@ void bg_http_connection_clear_keepalive(bg_http_connection_t * c)
 int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   {
   gavf_io_t * io = gavf_io_create_socket(fd, timeout, 0);
+
+  
   
   req->fd = fd;
 
@@ -327,7 +329,7 @@ void bg_http_connection_send_static_file(bg_http_connection_t * conn)
     }
   
   /* Check if we are outside of the tree */
-  if(strncmp(real_file, WEB_ROOT, strlen(WEB_ROOT)))
+  if(!gavl_string_starts_with(real_file, WEB_ROOT))
     {
     bg_http_connection_init_res(conn, "HTTP/1.1", 
                           401, "Forbidden");

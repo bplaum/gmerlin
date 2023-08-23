@@ -333,7 +333,7 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
           
           gavl_value_init(&val);
 
-          bg_msg_get_state(msg,
+          gavl_msg_get_state(msg,
                            NULL,
                            &ctx,
                            &var,
@@ -341,25 +341,25 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
-            if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TIME))          // long
+            if(!strcmp(var, BG_PLAYER_STATE_TIME))          // long
               {
               char str[GAVL_TIME_STRING_LEN];
-              const gavl_dictionary_t * dict;
               p->time = GAVL_TIME_UNDEFINED;
-              
-              if(!(dict = gavl_value_get_dictionary(&val)) ||
-                 !gavl_dictionary_get_long(dict, BG_PLAYER_TIME, &p->time))
-                return 1;
 
+              if(!gavl_value_get_long(&val, &p->time))
+                return 1;
+              
               gavl_time_prettyprint(p->time, str);
               
               mvwprintw(p->player_win, 2, 1, "%10s", str);
               wrefresh(p->player_win);
 
-              if(gavl_dictionary_get_float(dict, BG_PLAYER_TIME_PERC, &p->perc) && (p->perc >= 0.0))
-                draw_seek_slider(fe);
-              
               // print_time(fe, t);
+              }
+            if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))          // float
+              {
+              if(gavl_value_get_float(&val, &p->perc) && (p->perc >= 0.0))
+                draw_seek_slider(fe);
               }
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
