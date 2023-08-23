@@ -27,7 +27,6 @@ SUBDIRS = $(player_subdirs) \
 cmdlineplayer \
 cmdlinerecorder \
 controlpanel \
-gavftools \
 mdb-tool \
 mediainfo \
 playerproxy \

@@ -883,7 +883,6 @@ web/icons/Makefile \
 web/css/Makefile \
 web/wallpapers/Makefile \
 apps/Makefile \
-apps/gavftools/Makefile \
 apps/player/Makefile \
 apps/playerproxy/Makefile \
 apps/controlpanel/Makefile \

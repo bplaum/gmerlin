@@ -1,5 +1,6 @@
 include/gmerlin/log.h
 include/gmerlin/mediaconnector.h
+include/gmerlin/bgmsg.h
 include/gmerlin/lpcm_handler.h
 include/gmerlin/volumemanager.h
 include/gmerlin/visualize.h
@@ -50,7 +51,6 @@ include/gmerlin/ringbuffer.h
 include/gmerlin/subprocess.h
 include/gmerlin/bgplug.h
 include/gmerlin/utils.h
-include/gmerlin/msgqueue.h
 include/gmerlin/cfg_registry.h
 include/gmerlin/application.h
 include/gmerlin/bg_sem.h
@@ -71,6 +71,7 @@ include/backend_priv.h
 include/float_cast.h
 include/bgladspa.h
 include/mdb_private.h
+include/msgconn.h
 include/language_table.h
 include/ladspa.h
 include/ovl2text.h
@@ -142,6 +143,7 @@ tests/cfgtest.c
 tests/gmerlin_visualize.c
 tests/audioplayer1.c
 tests/album2m3u.c
+tests/gmerlin-mediadump.c
 tests/remotedevreg.c
 tests/dump_plugins.c
 tests/dbus.c
@@ -157,7 +159,6 @@ lib/core.c
 lib/httpserver.c
 lib/state.c
 lib/osd.c
-lib/visualize_slave.c
 lib/websocket.c
 lib/frontend_player_mpris2.c
 lib/bgxml.c
@@ -244,6 +245,7 @@ lib/player_loop.c
 lib/xspf.c
 lib/preset_xml.c
 lib/mediadirs.c
+lib/msghub.c
 lib/mediasrcsink.c
 lib/recorder_audio.c
 lib/base64.c
@@ -268,7 +270,9 @@ lib/mdb_removable.c
 lib/transcoder.c
 lib/player_video.c
 lib/cfg_ctx.c
+lib/control.c
 lib/backend.c
+lib/controllable.c
 lib/gtk/cfg_color.c
 lib/gtk/fileselect.c
 lib/gtk/multiinfo.c
@@ -314,6 +318,7 @@ lib/gtk/backendmenu.c
 lib/serverstorage.c
 lib/trackio.c
 lib/mdb_image.c
+lib/dbus_detector.c
 lib/frontend_gmerlin.c
 lib/mdb_remote.c
 lib/volumemanager.c
@@ -323,12 +328,12 @@ lib/player_oa.c
 lib/ocr.c
 lib/fileutils.c
 lib/backend_mpris2.c
-lib/msgqueue.c
 lib/msg.c
 lib/bgplug.c
 lib/formats.c
 lib/colormatrix.c
 lib/downloader.c
+lib/msgsink.c
 lib/pluginregistry.c
 lib/language_table.c
 lib/sha1.c
@@ -342,7 +347,6 @@ lib/frametimer.c
 lib/encoder.c
 lib/device.c
 lib/mdb_sqlite.c
-lib/backend_dbus.c
 lib/edl_xml.c
 lib/player_subtitle.c
 lib/ov.c
@@ -481,7 +485,6 @@ apps/transcoder/transcoder_window.c
 apps/transcoder/tracklist.c
 apps/transcoder/tracklist.h
 apps/player/skinbrowser.c
-apps/player/gmerlin_remote.c
 apps/player/gmerlin.h
 apps/player/playerwindow.h
 apps/player/main.c
@@ -495,24 +498,6 @@ apps/player/skin.c
 apps/player/cfgdialog.c
 apps/mdb-tool/mdb-tool.c
 apps/thumbnailer/gmerlin-video-thumbnailer.c
-apps/gavftools/gavf-record.c
-apps/gavftools/gavf-decode.h
-apps/gavftools/gavf-server.h
-apps/gavftools/gavf-info.c
-apps/gavftools/gavf-play.c
-apps/gavftools/gavftools.h
-apps/gavftools/gavf-filter.c
-apps/gavftools/gavf-demux.c
-apps/gavftools/gavf-recompress.c
-apps/gavftools/program.c
-apps/gavftools/decode_albumstream.c
-apps/gavftools/decode_album.c
-apps/gavftools/gavf-tee.c
-apps/gavftools/gavf-read.c
-apps/gavftools/gavf-encode.c
-apps/gavftools/gavf-mux.c
-apps/gavftools/gavf-visualize.c
-apps/gavftools/gavftools.c
 apps/server/server.h
 apps/server/server_upnp.c
 apps/server/gmerlin-server.c
