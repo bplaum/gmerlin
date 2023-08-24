@@ -111,13 +111,13 @@ struct bg_http_server_s
 
   bg_http_playlist_handler_t * playlist_handler;
   
-  bg_backend_proxy_t ** backend_proxies;
-  int num_backend_proxies;
-  int backend_proxies_alloc;
+  //  bg_backend_proxy_t ** backend_proxies;
+  //  int num_backend_proxies;
+  //  int backend_proxies_alloc;
 
   bg_lpcm_handler_t * lpcmhandler;
   bg_plug_handler_t * plughandler;
-  
+  gavl_array_t static_dirs;
   };
 
 //int bg_http_playlist_handler_ping(bg_http_playlist_handler_t * h);

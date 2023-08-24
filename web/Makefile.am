@@ -2,7 +2,6 @@ pkgdatadir = $(datadir)/gmerlin/web
 
 files = \
 app.html \
-controlpanel.html \
 guitest.html \
 websocket.html \
 manifest.json

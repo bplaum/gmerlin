@@ -3,7 +3,6 @@ pkgdatadir = $(datadir)/gmerlin/web/css
 files = \
 guitest.css \
 icons.css \
-controlpanel.css \
 mediarenderer.css \
 mc.css \
 app.css \

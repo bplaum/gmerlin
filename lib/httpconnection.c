@@ -224,11 +224,6 @@ void bg_http_connection_init_res(bg_http_connection_t * conn,
   conn->flags |= BG_HTTP_REQ_HAS_STATUS;
   }
 
-
-/* Retrieve a file from <prefix>/share/gmerlin/web */
-
-#define WEB_ROOT DATA_DIR"/web/"
-
 void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real_file)
   {
   struct stat st;
@@ -274,6 +269,14 @@ void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real
                           401, "Forbidden");
     goto go_on;
     }
+
+  /* Check if the file is regular */
+  if(!(S_ISREG(st.st_mode)))
+    {
+    bg_http_connection_init_res(conn, "HTTP/1.1", 
+                          401, "Forbidden");
+    goto go_on;
+    }
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
 
@@ -307,40 +310,3 @@ void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real
   
   }
 
-void bg_http_connection_send_static_file(bg_http_connection_t * conn)
-  {
-  char * pos;
-
-  char * real_file = NULL;
-  char * path = bg_sprintf("%s%s", WEB_ROOT, conn->path);
-
-  
-  if((pos = strrchr(path, '?')))
-    *pos = '\0';
-    
-  real_file = bg_canonical_filename(path);
-
-  if(!real_file)
-    {
-    bg_http_connection_init_res(conn, "HTTP/1.1", 
-                          404, "Not Found");
-    bg_http_connection_write_res(conn);
-    return;
-    }
-  
-  /* Check if we are outside of the tree */
-  if(!gavl_string_starts_with(real_file, WEB_ROOT))
-    {
-    bg_http_connection_init_res(conn, "HTTP/1.1", 
-                          401, "Forbidden");
-    bg_http_connection_write_res(conn);
-    return;
-    }
-  
-  bg_http_connection_send_file(conn, real_file);
-  
-  if(real_file)
-    free(real_file);
-  if(path)
-    free(path);
-  }

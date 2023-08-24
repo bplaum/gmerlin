@@ -86,7 +86,7 @@ void bg_http_connection_init_res(bg_http_connection_t * conn,
 
 int bg_http_connection_write_res(bg_http_connection_t * conn);
 
-void bg_http_connection_send_static_file(bg_http_connection_t * conn);
+//void bg_http_connection_send_static_file(bg_http_connection_t * conn);
 void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real_file);
 
 int bg_http_connection_check_keepalive(bg_http_connection_t * c);
@@ -179,6 +179,7 @@ int bg_http_server_iteration(bg_http_server_t * s);
 gavl_time_t bg_http_server_get_time(bg_http_server_t * s);
 
 void bg_http_server_set_static_path(bg_http_server_t * s, const char * path);
+void bg_http_server_add_static_path(bg_http_server_t * s, const char * http_path, const char * local_path);
 
 void bg_http_server_enable_appicons(bg_http_server_t * s);
 

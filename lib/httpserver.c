@@ -58,6 +58,7 @@
 
 #define TIMEOUT GAVL_TIME_SCALE/2000
 
+#define WEB_ROOT DATA_DIR"/web"
 
 /* Server */
 
@@ -178,15 +179,94 @@ void bg_http_server_put_connection(bg_http_server_t * s, bg_http_connection_t * 
     }
   }
 
+#define STATIC_PATH_HTTP  "h"
+#define STATIC_PATH_LOCAL "l"
+
+
 static int handle_static(bg_http_connection_t * conn, void * data)
   {
-  bg_http_connection_send_static_file(conn);
+  int i;
+  char * pos;
+  const gavl_dictionary_t * dict;
+  const char * http_path;
+  const char * local_path;
+  int path_len;
+  char * real_file = NULL;
+  char * path = NULL;
+
+  bg_http_server_t * srv = data;
+  
+  for(i = 0; i < srv->static_dirs.num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&srv->static_dirs.entries[i])) &&
+       (http_path = gavl_dictionary_get_string(dict, STATIC_PATH_HTTP)) &&
+       (local_path = gavl_dictionary_get_string(dict, STATIC_PATH_LOCAL)) &&
+       gavl_string_starts_with(conn->path, http_path) &&
+       (path_len = strlen(http_path)) &&
+       (conn->path[path_len] == '/'))
+      {
+      path = bg_sprintf("%s%s", local_path, conn->path + path_len);
+      break;
+      }
+    }
+  
+  if(!path)
+    return 0;
+  
+  if((pos = strrchr(path, '?')))
+    *pos = '\0';
+  
+  real_file = bg_canonical_filename(path);
+
+  if(!real_file)
+    {
+    bg_http_connection_init_res(conn, "HTTP/1.1", 
+                          404, "Not Found");
+    bg_http_connection_write_res(conn);
+    return 1;
+    }
+  
+  /* Check if we are outside of the tree */
+  if(!gavl_string_starts_with(real_file, local_path) ||
+     (real_file[strlen(local_path)] != '/'))
+    {
+    bg_http_connection_init_res(conn, "HTTP/1.1", 
+                          401, "Forbidden");
+    bg_http_connection_write_res(conn);
+    return 1;
+    }
+  
+  bg_http_connection_send_file(conn, real_file);
+  
+  if(real_file)
+    free(real_file);
+  if(path)
+    free(path);
+  
+  //  send_static_file(conn);
   return 1;
+  }
+
+void bg_http_server_add_static_path(bg_http_server_t * s, const char * http_path, const char * local_path)
+  {
+  gavl_value_t val;
+  gavl_dictionary_t * dict;
+
+  if(!s->static_dirs.num_entries)
+    bg_http_server_add_handler(s, handle_static, BG_HTTP_PROTO_HTTP, NULL, s);
+  
+  gavl_value_init(&val);
+  dict = gavl_value_set_dictionary(&val);
+  gavl_dictionary_set_string(dict, STATIC_PATH_HTTP, http_path);
+  gavl_dictionary_set_string(dict, STATIC_PATH_LOCAL, local_path);
+  gavl_array_splice_val_nocopy(&s->static_dirs, -1, 0, &val);
   }
 
 void bg_http_server_set_static_path(bg_http_server_t * s, const char * path)
   {
-  bg_http_server_add_handler(s, handle_static, BG_HTTP_PROTO_HTTP, path, s);
+  bg_http_server_add_static_path(s, path, WEB_ROOT);
+  
+  //  bg_http_server_add_handler(s, handle_static, BG_HTTP_PROTO_HTTP, path, s);
   }
 
 /*
@@ -343,6 +423,8 @@ void bg_http_server_destroy(bg_http_server_t * s)
   if(s->params)
     bg_parameter_info_destroy_array(s->params);
 
+  gavl_array_free(&s->static_dirs);
+  
   free(s);
   }
 
