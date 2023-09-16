@@ -351,3 +351,7 @@ input[type="submit"]::-moz-focus-inner
   display: none;
 }
 
+
+#settings-table {
+  border-spacing: 0 0.5em;
+}

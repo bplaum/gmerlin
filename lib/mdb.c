@@ -646,6 +646,9 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case BG_MSG_DEL_BACKEND:
           update_remote_devs_state(db);
           break;
+        case BG_MSG_BACKENDS_RESCAN:
+          bg_backend_registry_rescan();
+          break;
         }
       
       //   fprintf(stderr, "Got remote msg\n");

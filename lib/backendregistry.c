@@ -79,13 +79,13 @@ bg_backend_registry_get()
   return ret;
   }
 
-static int bg_backend_registry_update(bg_backend_registry_t * reg)
+static int bg_backend_registry_update(void)
   {
   int ret = 0;
 
-  ret += bg_ssdp_update(reg->ssdp);
+  ret += bg_ssdp_update(bg_backend_reg->ssdp);
 #ifdef HAVE_DBUS
-  ret += bg_dbus_detector_update(reg->dbus);
+  ret += bg_dbus_detector_update(bg_backend_reg->dbus);
 #endif
   return ret;
   }
@@ -95,19 +95,26 @@ static void * thread_func(void * data)
   {
   int result;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 100; // 10 ms
-  bg_backend_registry_t * reg = data;
 
   //  bg_backend_registry_init(reg);
   
   while(1)
     {
     backend_registry_lock();
-    if(reg->do_stop)
+    if(bg_backend_reg->do_stop)
       {
       backend_registry_unlock();
       return NULL;
       }
-    result = bg_backend_registry_update(reg);
+
+    if(bg_backend_reg->do_rescan)
+      {
+      if(bg_backend_reg->ssdp)
+        bg_ssdp_force_search(bg_backend_reg->ssdp);
+      bg_backend_reg->do_rescan = 0;
+      }
+    
+    result = bg_backend_registry_update();
     backend_registry_unlock();
     
     if(!result) // idle
@@ -118,28 +125,34 @@ static void * thread_func(void * data)
   }
 
 
-static void bg_backend_registry_start(bg_backend_registry_t * ret)
+static void bg_backend_registry_start(void)
   {
-  pthread_create(&ret->th, NULL, thread_func, ret);  
+  pthread_create(&bg_backend_reg->th, NULL, thread_func, NULL);  
   }
   
-static void bg_backend_registry_stop(bg_backend_registry_t * reg)
+static void bg_backend_registry_stop(void)
   {
   backend_registry_lock();
   
-  if(reg->do_stop)
+  if(bg_backend_reg->do_stop)
     {
     backend_registry_unlock();
     return;
     }
   
-  reg->do_stop = 1;
+  bg_backend_reg->do_stop = 1;
 
   backend_registry_unlock();
   
-  pthread_join(reg->th, NULL);
+  pthread_join(bg_backend_reg->th, NULL);
   }
 
+void bg_backend_registry_rescan(void)
+  {
+  backend_registry_lock();
+  bg_backend_reg->do_rescan = 1;
+  backend_registry_unlock();
+  }
 
 static void 
 bg_backend_registry_create1(void)
@@ -157,29 +170,28 @@ bg_backend_registry_create1(void)
   bg_backend_reg->dbus = bg_dbus_detector_create();
 #endif  
   /* Start thread */
-  bg_backend_registry_start(bg_backend_reg);
+  bg_backend_registry_start();
   
 
   }
 
 
-static void bg_backend_registry_destroy(bg_backend_registry_t * reg)
+static void bg_backend_registry_destroy()
   {
-  bg_backend_registry_stop(reg);
+  bg_backend_registry_stop();
 
-  bg_ssdp_destroy(reg->ssdp);
+  bg_ssdp_destroy(bg_backend_reg->ssdp);
 
 #ifdef HAVE_DBUS
-  bg_dbus_detector_destroy(reg->dbus);
+  bg_dbus_detector_destroy(bg_backend_reg->dbus);
 #endif
   
-  bg_msg_hub_destroy(reg->evt_hub);
-  gavl_array_free(&reg->devs);
-  gavl_array_free(&reg->local_devs);
+  bg_msg_hub_destroy(bg_backend_reg->evt_hub);
+  gavl_array_free(&bg_backend_reg->devs);
+  gavl_array_free(&bg_backend_reg->local_devs);
   
-  pthread_mutex_destroy(&reg->mutex);
-  
-  free(reg);
+  pthread_mutex_destroy(&bg_backend_reg->mutex);
+  free(bg_backend_reg);
   }
 
 bg_backend_registry_t * bg_get_backend_registry(void)

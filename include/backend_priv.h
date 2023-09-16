@@ -100,6 +100,7 @@ int bg_dbus_detector_update(bg_dbus_detector_t *);
 struct bg_backend_registry_s
   {
   int do_stop;
+  int do_rescan;
 
   gavl_array_t devs;
   gavl_array_t local_devs;

@@ -29,13 +29,6 @@
 
 #include <gmerlin/httpserver.h>
 
-// BG_MSG_NS_BACKEND
-
-#define BG_MSG_ADD_BACKEND            1
-#define BG_MSG_DEL_BACKEND            2
-
-#define BG_CMD_BACKEND_REGISTER_LOCAL 3
-#define BG_CMD_SET_BACKEND            4
 
 /* Proxy URL scheme
  *
@@ -118,7 +111,8 @@ typedef struct bg_backend_registry_s bg_backend_registry_t;
 
 
 bg_backend_registry_t * bg_get_backend_registry(void);
-  
+void bg_backend_registry_rescan();
+
 
 void bg_backend_registry_set_proxy_prefix(const char * proxy_prefix);
 

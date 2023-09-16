@@ -576,6 +576,11 @@ function server_connection_init()
     {
     console.log("Server websocket error " + evt.data);
     };
+
+  server_connection.onclose = function()
+    {
+    setTimeout(server_connection_init, 1000);
+    };
       
   };
 
@@ -2189,7 +2194,8 @@ function create_menu(menu_data)
  *  Configuration stuff
  */
 
-var CFG_TYPE_ENUM = "enum";
+var CFG_TYPE_ENUM   = "enum";
+var CFG_TYPE_BUTTON = "button";
 
 var cfg_info = [
 ];
@@ -2231,6 +2237,11 @@ function cfg_set_parameter(name, val)
         player_control.show();
       else
         player_control.hide();
+      }
+      break;
+    case "rescan_devs":
+      {
+      msg_send(msg_create(BG_MSG_BACKENDS_RESCAN, BG_MSG_NS_BACKEND), server_connection);
       }
       break;
     }
@@ -2326,7 +2337,12 @@ function cfg_info_init()
   cfg_info_set_devices(info);
       
   cfg_info.push(info);
-      
+
+  /* Rescan */
+    
+  info = cfg_item_create("rescan_devs", CFG_TYPE_BUTTON, "Search devices");
+  cfg_info.push(info);
+  
   /* Skins */
 
   info = cfg_item_create("skin", CFG_TYPE_ENUM, "Skin");
@@ -2390,6 +2406,12 @@ function cfg_menu_button_callback(evt)
   this.menu.show(this, cfg_menu_cb);
   }
 
+function cfg_button_callback(evt)
+  {
+//  console.log("cfg_button_callback " + this.id.substring(11));
+  cfg_set_parameter(this.id.substring(11), true);
+  }
+
 function menu_button_set(id, val)
   {
   var table;
@@ -2434,6 +2456,12 @@ function menu_button_set(id, val)
   td.setAttribute("style", "text-align: right;");
   }
 
+function append_cfg_row(table)
+  {
+  var tr = append_dom_element(table, "tr");
+  return tr;
+  }
+
 function cfg_init()
   {
   var i;
@@ -2448,7 +2476,7 @@ function cfg_init()
     switch(dict_get_string(cfg_info[i], "type"))
       {
       case CFG_TYPE_ENUM:
-        tr = append_dom_element(table, "tr");
+        tr = append_cfg_row(table, "tr");
         td = append_dom_element(tr, "td");
         td.setAttribute("style", "white-space: nowrap;");
 	  
@@ -2468,6 +2496,18 @@ function cfg_init()
 
 	button.onclick = cfg_menu_button_callback;
         	  
+        break;
+      case CFG_TYPE_BUTTON:
+        tr = append_cfg_row(table, "tr");
+        td = append_dom_element(tr, "td");
+        td.setAttribute("colspan", "2");
+	
+        button = append_dom_element(td, "button");
+
+	append_dom_text(button, dict_get_string(cfg_info[i], GAVL_META_LABEL));
+        button.setAttribute("id", "cfg-widget-" +
+			    dict_get_string(cfg_info[i], GAVL_META_ID));
+	button.onclick = cfg_button_callback;
         break;
       }
 

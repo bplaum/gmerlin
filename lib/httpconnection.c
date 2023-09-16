@@ -154,6 +154,7 @@ int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   if(gavl_socket_is_disconnected(fd, timeout))
     {
     //  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Socket disconnected");
+    gavl_socket_close(fd);
     return 0;
     }
   io = gavf_io_create_socket(fd, timeout, 0);

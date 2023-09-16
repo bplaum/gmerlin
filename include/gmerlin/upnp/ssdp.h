@@ -81,6 +81,9 @@ typedef struct bg_ssdp_s bg_ssdp_t;
 bg_ssdp_t *
 bg_ssdp_create(void);
 
+void bg_ssdp_force_search(bg_ssdp_t * s);
+
+
 int
 bg_ssdp_has_device(const bg_ssdp_root_device_t *,
                    const char * type, int version, int * dev_index);

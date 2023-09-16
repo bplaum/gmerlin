@@ -977,9 +977,9 @@ static int check_expired(bg_ssdp_t * s)
   return ret;
   }
 
-static int do_search(bg_ssdp_t * s)
+static int do_search(bg_ssdp_t * s, int force)
   {
-  if(s->next_search_time <= s->cur_time)
+  if((s->next_search_time <= s->cur_time) || force)
     {
     /* Send search packet */
     
@@ -1025,7 +1025,7 @@ int bg_ssdp_update(bg_ssdp_t * s)
   ret += flush_multicast(s, 0);
   ret += flush_unicast(s);
   ret += check_expired(s);
-  ret += do_search(s);
+  ret += do_search(s, 0);
   
   ret += notify(s);
 
@@ -1034,3 +1034,8 @@ int bg_ssdp_update(bg_ssdp_t * s)
   return ret;
   }
 
+void bg_ssdp_force_search(bg_ssdp_t * s)
+  {
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-scanning");
+  do_search(s, 1);
+  }
