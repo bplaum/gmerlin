@@ -21,7 +21,7 @@
 
 /*
  * This is the replacement for the old xml-based media tree. It's used for
- * all albums, which are user editable: Favorites, Incoming and
+ * all albums, which are user editable: Favorites and
  * "Library" (a completely user defined area)
  *
  * The implementation is straightforward:
@@ -67,7 +67,7 @@
 #define META_CHILD_IDS "ChildIDs"
 
 /* Maximum number of children to transmit at once (so clients can update) */
-#define MAX_CHILDREN 100
+#define MAX_CHILDREN 20
 
 typedef struct
   {
@@ -1063,6 +1063,9 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
   priv = calloc(1, sizeof(*priv));
 
   priv->favorites = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES, &priv->favorites_id);
+
+  fprintf(stderr, "Created favorites: %p\n", priv->favorites);
+
   priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
   
   bg_controllable_init(&b->ctrl,

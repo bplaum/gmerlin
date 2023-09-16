@@ -148,7 +148,15 @@ void bg_http_connection_clear_keepalive(bg_http_connection_t * c)
 
 int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   {
-  gavf_io_t * io = gavf_io_create_socket(fd, timeout, 0);
+  gavf_io_t * io;
+
+  /* Return silently for connect() floods or closed keepalive sockets */
+  if(gavl_socket_is_disconnected(fd, timeout))
+    {
+    //  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Socket disconnected");
+    return 0;
+    }
+  io = gavf_io_create_socket(fd, timeout, 0);
 
   
   

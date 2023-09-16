@@ -454,6 +454,9 @@ static void size_prepared_callback(GdkPixbufLoader * loader, int width, int heig
 static void area_prepared_callback(GdkPixbufLoader * loader, gpointer data)
   {
   load_gtk_image_t * m = data;
+
+  //  fprintf(stderr, "area_prepared_callback\n");
+
   m->ret = gdk_pixbuf_loader_get_pixbuf(loader); 
   g_object_ref(m->ret);
   }
@@ -467,7 +470,8 @@ static void pixbuf_from_buffer(load_gtk_image_t * d, const gavl_buffer_t * buf)
   
   if(!gdk_pixbuf_loader_write(loader, buf->buf, buf->len, NULL))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Sending data failed");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "pixbuf_from_buffer: Parsing image buffer failed");
+    // gavl_hexdump(buf->buf, 16, 16);
     goto fail;
     }
   if(!gdk_pixbuf_loader_close(loader, NULL))
@@ -493,7 +497,7 @@ GdkPixbuf * bg_gtk_pixbuf_from_buffer(const gavl_buffer_t * buf, int max_width, 
   
   pixbuf_from_buffer(&d, buf);
 
-  if((transformed = gdk_pixbuf_apply_embedded_orientation(d.ret)))
+  if(d.ret && (transformed = gdk_pixbuf_apply_embedded_orientation(d.ret)))
     {
     g_object_unref(d.ret);
     return transformed;

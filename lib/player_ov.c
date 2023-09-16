@@ -33,7 +33,7 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-#define DUMP_TIMESTAMPS
+// #define DUMP_TIMESTAMPS
 
 // #define NOSKIP
 
@@ -124,6 +124,9 @@ void bg_player_ov_create(bg_player_t * player)
   {
   bg_player_video_stream_t * s = &player->video_stream;
   s->ov_evt_sink = bg_msg_sink_create(handle_message, player, 1);
+  s->timer = gavl_timer_create();
+  gavl_timer_start(s->timer);
+  
   }
 
 void bg_player_add_accelerators(bg_player_t * player,
@@ -202,6 +205,9 @@ void bg_player_ov_destroy(bg_player_t * player)
   if(ctx->ov_evt_sink)
     bg_msg_sink_destroy(ctx->ov_evt_sink);
 
+  if(ctx->timer)
+    gavl_timer_destroy(ctx->timer);
+  
   if(ctx->plugin_params)
     bg_parameter_info_destroy_array(ctx->plugin_params);
 
@@ -312,7 +318,85 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   bg_ov_handle_events(s->ov);
   }
 
+#if 0
+typedef struct
+  {
+  gavl_time_t decode_time;
+  gavl_time_t render;
+  gavl_time_t pts;
+  } frame_stats_el_t;
 
+#define FRAME_STATS_LEN 5
+
+typedef struct
+  {
+  frame_stats_el_t el[FRAME_STATS_LEN];
+  int idx;
+  } frame_stats_t;
+
+static void frame_stats_init(frame_stats_t * stats)
+  {
+  
+  }
+
+static void frame_stats_update(frame_stats_t * stats,
+                               const gavl_video_frame_t * f, const gavl_video_format_t * fmt,
+                               gavl_time_t decode_duration, gavl_time_t render_duration)
+  {
+  
+  }
+#endif
+
+static gavl_source_status_t read_frame(bg_player_t * p)
+  {
+  bg_player_video_stream_t * s;
+  gavl_time_t frame_time;
+  gavl_time_t time_before;
+
+  gavl_source_status_t st;
+  
+  s = &p->video_stream;
+  
+  //    fprintf(stderr, "do read\n");
+
+  time_before = gavl_timer_get(s->timer);
+  
+  if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
+    {
+    bg_player_video_set_eof(p);
+    if(!bg_thread_wait_for_start(s->th))
+      return GAVL_SOURCE_EOF;
+    }
+  
+  s->decode_duration = gavl_timer_get(s->timer) - time_before;
+  
+  //      fprintf(stderr, "do read done\n");
+
+  frame_time = gavl_time_unscale(s->output_format.timescale,
+                                 s->frame->timestamp);
+
+  pthread_mutex_lock(&p->config_mutex);
+  frame_time += p->sync_offset; // Passed by user
+  pthread_mutex_unlock(&p->config_mutex);
+      
+  if(DO_STILL(p->flags) && (s->frame_time == GAVL_TIME_UNDEFINED))
+    gavl_timer_set(s->timer, frame_time);
+      
+  s->frame_time = frame_time;
+
+  if(DO_STILL(p->flags))
+    s->state = STATE_STILL;
+  else
+    {
+    /* Subtitle handling */
+    if(DO_SUBTITLE(p->flags))
+      bg_subtitle_handler_update(s->sh, s->frame->timestamp);
+      
+    s->state = STATE_WAIT;
+    }
+  
+  return GAVL_SOURCE_OK;
+  }
 
 void * bg_player_ov_thread(void * data)
   {
@@ -320,22 +404,28 @@ void * bg_player_ov_thread(void * data)
   bg_player_t * p = data;
   //  gavl_video_frame_t * frame = NULL;
   gavl_video_sink_t * sink;
-  gavl_timer_t * timer = gavl_timer_create();
+  //  gavl_timer_t * timer = gavl_timer_create();
   gavl_source_status_t st = GAVL_SOURCE_OK;
   int warn_wait = 0;
   int done = 0;
   int still_shown = 0;
-
+  int frames_shown = 0;
+  
   s = &p->video_stream;
 
   s->state = STATE_READ;
-  
-  bg_thread_wait_for_start(s->th);
+
+  /* Read the first frame because this might take a while */
   
   s->frame_time = GAVL_TIME_UNDEFINED;
   s->skip = 0;
 
   s->frame = NULL;
+
+  if(read_frame(p) != GAVL_SOURCE_OK)
+    return NULL;
+  
+  bg_thread_wait_for_start(s->th);
   
   while(!done)
     {
@@ -345,10 +435,14 @@ void * bg_player_ov_thread(void * data)
       break;
       }
 
+    /* TODO: Check if we are able to play this at all */
+    
+    
     /* Check whether to read a frame */
 
     if(s->state == STATE_READ)
       {
+#if 0
       gavl_time_t frame_time;
 
       //    fprintf(stderr, "do read\n");
@@ -386,6 +480,14 @@ void * bg_player_ov_thread(void * data)
         s->state = STATE_WAIT;
         warn_wait = 0;
         }
+#else
+      warn_wait = 0;
+      if(read_frame(p) != GAVL_SOURCE_OK)
+        {
+        done = 1;
+        continue;
+        }
+#endif
       }
 
     if(s->state == STATE_WAIT)
@@ -421,7 +523,7 @@ void * bg_player_ov_thread(void * data)
         }
 #ifndef NOSKIP
       /* Drop frame */
-      else if(diff_time < -GAVL_TIME_SCALE / 20) // 50 ms
+      else if((diff_time < -GAVL_TIME_SCALE / 20) && !frames_shown) // 50 ms
         {
         gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
         s->skip++;
@@ -471,6 +573,8 @@ void * bg_player_ov_thread(void * data)
     
     if(s->state == STATE_SHOW)
       {
+      gavl_time_t time_before;
+      
       bg_osd_update(s->osd);
 
       if(p->time_update_mode == TIME_UPDATE_FRAME)
@@ -478,62 +582,28 @@ void * bg_player_ov_thread(void * data)
       
       sink = bg_ov_get_sink(s->ov);
       //    fprintf(stderr, "ov_put_frame (v): %p\n", frame);
+
+      time_before = gavl_timer_get(s->timer);
       
       gavl_video_sink_put_frame(sink, s->frame);
+
+      s->render_duration = gavl_timer_get(s->timer) - time_before;
       s->skip = 0;
       
       s->frame = NULL;
+
+      frames_shown++;
       
       if(DO_STILL(p->flags))
         s->state = STATE_STILL;
       else
         s->state = STATE_READ;
-      }
-    
-#if 0    
-    /* Check for underruns */
-    if(s->frame_time - gavl_timer_get(timer) < -GAVL_TIME_SCALE)
-      {
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
-               "Detected underrun due to slow reading (e.g. slow network)");
-      gavl_timer_set(timer, s->frame_time);
-      }
-    
-    bg_player_time_get(p, 1, &current_time);
-    diff_time =  s->frame_time - current_time;
-    
-#ifdef DUMP_TIMESTAMPS
-    bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
-             current_time, s->frame_time, s->frame_time - current_time);
-#endif
-    
-    /* Wait until we can display the frame */
 
-    if((s->last_time == GAVL_TIME_UNDEFINED) ||
-       (current_time > s->last_time))
-      {
+      /* TODO: Update stats */
       
-      if(diff_time > 0)
-        {
-        if(diff_time >= GAVL_TIME_SCALE / 2)
-          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Waiting  %f sec. (cur: %f, frame: %f)",
-                   gavl_time_to_seconds(diff_time), gavl_time_to_seconds(current_time),
-                   gavl_time_to_seconds(s->frame_time));
-        gavl_time_delay(&diff_time);
-        s->skip = 0;
-        }
       }
     
-    s->last_time = current_time;
-    
-
-    if(!gavl_timer_is_running(timer))
-      gavl_timer_start(timer);
-#endif
-
     }
-  
-  gavl_timer_destroy(timer);
   
   return NULL;
   }

@@ -355,7 +355,7 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_MSG_NS_UPNP              106
 #define BG_MSG_NS_TREE              107
 
-#define BG_MSG_NS_PLAYER_PRIV       109
+#define BG_MSG_NS_PLAYER_PRIVATE    109
 #define BG_MSG_NS_MENU              111
 #define BG_MSG_NS_STATE             GAVL_MSG_NS_STATE
 #define BG_MSG_NS_RECORDER          113

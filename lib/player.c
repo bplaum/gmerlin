@@ -715,9 +715,18 @@ bg_cfg_ctx_t * bg_player_get_cfg(bg_player_t *  player)
 void bg_player_set_eof(bg_player_t * p)
   {
   gavl_msg_t * msg = bg_msg_sink_get(p->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_EOF, BG_MSG_NS_PLAYER_PRIV);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_EOF, BG_MSG_NS_PLAYER_PRIVATE);
   bg_msg_sink_put(p->ctrl.cmd_sink);
   }
+
+void bg_player_next_variant(bg_player_t * p)
+  {
+  gavl_msg_t * msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_NEXT_VARIANT, BG_MSG_NS_PLAYER_PRIVATE);
+  bg_msg_sink_put(p->ctrl.cmd_sink);
+  
+  }
+
 
 void bg_player_state_set_local(bg_player_t * p,
                                int last,

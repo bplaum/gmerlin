@@ -68,6 +68,10 @@ bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
 void
 bg_track_set_variant(gavl_dictionary_t * dict, int variant);
 
+int
+bg_track_next_variant(gavl_dictionary_t * dict);
+
+
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
 

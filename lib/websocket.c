@@ -498,7 +498,8 @@ msg_read(bg_websocket_connection_t * conn)
     }
   else
     {
-    fprintf(stderr, "Got payload %"PRId64" %"PRId64"\n", conn->read_msg.payload_read, conn->read_msg.payload_len);
+    fprintf(stderr, "Got payload %"PRId64" %"PRId64"\n",
+            conn->read_msg.payload_read, conn->read_msg.payload_len);
     fprintf(stderr, "Header: %d\n", conn->read_msg.head_len);
     gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
     }

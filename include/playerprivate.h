@@ -170,7 +170,10 @@ typedef struct
   gavl_video_format_t input_format;
   gavl_video_format_t output_format;
 
-
+  gavl_timer_t * timer; /* For measuring decode- and render duration */
+  gavl_time_t decode_duration;
+  gavl_time_t render_duration;
+  
   int lock_fullscreen;
   
   bg_ov_t * ov;
@@ -191,9 +194,6 @@ typedef struct
   
   bg_player_subtitle_stream_t * ss;
   bg_subtitle_handler_t * sh;
-  
-  //  gavl_video_frame_t * still_frame_in;
-  //  int do_still;
   
   int eof;
   pthread_mutex_t eof_mutex;
@@ -818,9 +818,12 @@ const bg_parameter_info_t * bg_player_get_osd_parameters(bg_player_t * player);
 void bg_player_set_osd_parameter(void*data, const char * name, const gavl_value_t*val);
 
 void bg_player_set_eof(bg_player_t * p);
+void bg_player_next_variant(bg_player_t * p);
 
+/* BG_MSG_NS_PLAYER_PRIVATE */
 
-#define BG_PLAYER_CMD_EOF 1
+#define BG_PLAYER_CMD_EOF          1
+#define BG_PLAYER_CMD_NEXT_VARIANT 2
 
 #endif // PLAYERPRIVATE_H_INCLUDED
 

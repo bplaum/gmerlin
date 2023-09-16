@@ -180,7 +180,7 @@ static void start_multi(void * priv)
     can_seek = gavl_track_can_seek(track);
     can_pause = gavl_track_can_pause(track);
 
-    fprintf(stderr, "Started main URI %d %d\n", can_seek, can_pause);
+    //    fprintf(stderr, "Started main URI %d %d\n", can_seek, can_pause);
     }
   else
     {
@@ -201,7 +201,7 @@ static void start_multi(void * priv)
     if(can_pause && !gavl_track_can_pause(track))
       can_pause = 0;
 
-    fprintf(stderr, "Started external URI %d %d\n", can_seek, can_pause);
+    //    fprintf(stderr, "Started external URI %d %d\n", can_seek, can_pause);
     }
   
   if(can_seek)

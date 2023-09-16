@@ -376,39 +376,6 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     goto fail;
     }
   
-#if 0 
-  if(src->location)
-    {
-    gavl_dictionary_t vars;
-    /* Support the -ip option */
-
-    real_location = gavl_strdup(src->location);
-    
-    gavl_dictionary_init(&vars);
-    gavl_url_get_vars(real_location, &vars);
-
-    gavl_dictionary_set_int(&vars, BG_URL_VAR_CMDLINE, 1);
-
-    real_location = bg_url_append_vars(real_location, &vars);
-    
-    gavl_dictionary_free(&vars);
-    
-    if(!(h = bg_input_plugin_load_full(real_location)))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed (primary: %d)", src->location, primary);
-      // fprintf(stderr, "Loading %s failed (primary: %d)\n", src->location, primary);
-      free(real_location);
-
-      goto fail;
-      }
-    free(real_location);
-    track_index = -1;
-    }
-  else
-    {
-    goto fail;
-    }
-#endif
 
   /* Shut down from last playback if necessary */
   if((src == p->src) && src->input_handle)
@@ -1404,7 +1371,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
         }
       }
       break;
-    case BG_MSG_NS_PLAYER_PRIV:
+    case BG_MSG_NS_PLAYER_PRIVATE:
       {
       switch(command->ID)
         {
@@ -1536,6 +1503,21 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             if(DO_VIDEO(player->flags))
               bg_player_ov_update_still(player);
             }
+          }
+          break;
+        case BG_PLAYER_CMD_NEXT_VARIANT:
+          {
+          gavl_dictionary_t * dict;
+          if(!(dict = bg_player_tracklist_get_current_track(&player->tl)) ||
+             !bg_track_next_variant(dict))
+            {
+            /* TODO: Switch to next track */
+            }
+          
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Poor playback performance, selecting lower quality stream");
+          /* Stop playback start again */
+          play_cmd(player);
+          
           }
           break;
         }

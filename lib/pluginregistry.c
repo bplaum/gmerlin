@@ -6059,6 +6059,23 @@ bg_track_get_variant(const gavl_dictionary_t * dict)
   return ret;
   }
 
+int
+bg_track_next_variant(gavl_dictionary_t * dict)
+  {
+  int val = bg_track_get_variant(dict);
+  int num_variants = gavl_track_get_num_variants(dict);
+  
+  val++;
+  
+  if(val >= num_variants)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No variants left");
+    return 0;
+    }
+  bg_track_set_variant(dict, val);
+  return 1;
+  }
+
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict)
   {
