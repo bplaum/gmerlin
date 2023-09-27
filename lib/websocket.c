@@ -446,62 +446,54 @@ msg_read(bg_websocket_connection_t * conn)
     /* Read message */
     conn->read_msg.buf.len += conn->read_msg.payload_len;
     conn->read_msg.buf.buf[conn->read_msg.buf.len] = '\0';
-
-    
-    /* Check opcode */
-    switch(conn->read_msg.head[0] & 0x0f)
-      {
-      case 0x0: // continuation frame
-      case 0x1: // text frame
-      case 0x2: // binary frame
-        if(conn->read_msg.head[0] & 0x80) // FIN
-          return GAVL_SOURCE_OK;
-        else
-          {
-          /* Read another segment */
-          conn_reset_read_msg_segment(conn);
-          return GAVL_SOURCE_AGAIN;
-          }
-        break;
-      case 0x8: // Close
-        msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0x8);
-        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got opcode close");
-        return GAVL_SOURCE_EOF;
-        break;
-      case 0x9: // Ping
-        /* Send pong */
-        //      fprintf(stderr, "Sending pong\n");
-        msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0xA);
-        conn_reset_read_msg(conn);
-        return GAVL_SOURCE_AGAIN;
-        break;
-      case 0xA: // Pong
-        /* If we are a server, check if the pong belongs to the last ping */
-
-        if(conn->ping_sent && (conn->read_msg.buf.len == PING_PAYLOAD_LEN))
-          {
-          gavl_time_t payload = GAVL_PTR_2_64BE(conn->read_msg.buf.buf);
-          if(payload == conn->last_ping_time)
-            {
-            //          gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got pong");
-            conn->ping_sent = 0;
-            }
-          }
-        conn_reset_read_msg(conn);
-        return GAVL_SOURCE_AGAIN;
-        break;
-      default:
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown opcode: %x", conn->read_msg.head[0] & 0x0f);
-        return GAVL_SOURCE_EOF;
-        break;
-      }
     }
-  else
+    
+  /* Check opcode */
+  switch(conn->read_msg.head[0] & 0x0f)
     {
-    fprintf(stderr, "Got payload %"PRId64" %"PRId64"\n",
-            conn->read_msg.payload_read, conn->read_msg.payload_len);
-    fprintf(stderr, "Header: %d\n", conn->read_msg.head_len);
-    gavl_hexdump(conn->read_msg.head, conn->read_msg.head_len, 16);
+    case 0x0: // continuation frame
+    case 0x1: // text frame
+    case 0x2: // binary frame
+      if(conn->read_msg.head[0] & 0x80) // FIN
+        return GAVL_SOURCE_OK;
+      else
+        {
+        /* Read another segment */
+        conn_reset_read_msg_segment(conn);
+        return GAVL_SOURCE_AGAIN;
+        }
+      break;
+    case 0x8: // Close
+      msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0x8);
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got opcode close");
+      return GAVL_SOURCE_EOF;
+      break;
+    case 0x9: // Ping
+      /* Send pong */
+      //      fprintf(stderr, "Sending pong\n");
+      msg_write(conn, conn->read_msg.buf.buf, conn->read_msg.buf.len, 0xA);
+      conn_reset_read_msg(conn);
+      return GAVL_SOURCE_AGAIN;
+      break;
+    case 0xA: // Pong
+      /* If we are a server, check if the pong belongs to the last ping */
+
+      if(conn->ping_sent && (conn->read_msg.buf.len == PING_PAYLOAD_LEN))
+        {
+        gavl_time_t payload = GAVL_PTR_2_64BE(conn->read_msg.buf.buf);
+        if(payload == conn->last_ping_time)
+          {
+          //          gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got pong");
+          conn->ping_sent = 0;
+          }
+        }
+      conn_reset_read_msg(conn);
+      return GAVL_SOURCE_AGAIN;
+      break;
+    default:
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown opcode: %x", conn->read_msg.head[0] & 0x0f);
+      return GAVL_SOURCE_EOF;
+      break;
     }
   
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Whoops %x", conn->read_msg.head[0] & 0x0f);
