@@ -306,7 +306,8 @@ static void album_move(album_t * dst, album_t * src)
 #endif
 
 static album_t * album_array_splice_nocopy(bg_gtk_mdb_tree_t * tree,
-                                           album_array_t * arr, int idx, int del, const char * id, album_t * a)
+                                           album_array_t * arr, int idx, int del,
+                                           const char * id, album_t * a)
   {
   int i;
   album_t * ret = NULL;
@@ -1643,6 +1644,7 @@ static const gavl_dictionary_t * get_selected_album(bg_gtk_mdb_tree_t * t,
   return ret;
   }
 
+#if 0
 static const gavl_dictionary_t * get_parent_album(bg_gtk_mdb_tree_t * t,
                                                   const char * id)
   {
@@ -1656,7 +1658,31 @@ static const gavl_dictionary_t * get_parent_album(bg_gtk_mdb_tree_t * t,
   free(parent_id);
   return ret;
   }
+#endif
 
+static void tree_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent * evt)
+  {
+  GtkTreeIter iter;
+  GtkTreeSelection * sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(t->treeview));
+    
+  memset(&t->menu_ctx, 0, sizeof(t->menu_ctx));
+
+  if(gtk_tree_selection_get_selected(sel, NULL, &iter))
+    {
+    char * id;
+    t->menu_ctx.num_selected = 1;
+    id = iter_to_id_tree(GTK_TREE_VIEW(t->treeview), &iter);
+    t->menu_ctx.album = get_selected_album(t, id);
+    free(id);
+    }
+  
+  
+  t->menu_ctx.widget = t->treeview;
+  t->menu_ctx.tree = 1;
+    
+  bg_gtk_mdb_popup_menu(t, evt);
+  
+  }
   
 static gboolean tree_button_press_callback(GtkWidget * w, GdkEventButton * evt,
                                            gpointer data)
@@ -1667,8 +1693,10 @@ static gboolean tree_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   gboolean ret = FALSE;
   bg_gtk_mdb_tree_t * t = data;
   char * id = NULL;
-
+  GtkTreeSelection * sel;
+  
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(t->treeview));
+  sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(t->treeview));
   
   if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(t->treeview),
                                     evt->x, evt->y, &path,
@@ -1684,22 +1712,10 @@ static gboolean tree_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   
   if((evt->button == 3) && (evt->type == GDK_BUTTON_PRESS))
     {
-    memset(&t->menu_ctx, 0, sizeof(t->menu_ctx));
-
-    t->menu_ctx.num_selected =
-      gtk_tree_selection_count_selected_rows(gtk_tree_view_get_selection(GTK_TREE_VIEW(w)));
+    if(path)
+      gtk_tree_selection_select_iter(sel, &iter);
     
-    /* Set the menu album */
-    if(id && !(t->menu_ctx.album = get_selected_album(t, id)))
-      goto end;
-
-    t->menu_ctx.item = t->menu_ctx.album;
-    t->menu_ctx.parent = get_parent_album(t, id);
-    
-    t->menu_ctx.widget = w;
-    t->menu_ctx.tree = 1;
-    
-    bg_gtk_mdb_popup_menu(t, (const GdkEvent *)evt);
+    tree_popup_menu(t, (const GdkEvent*)evt);
     ret = TRUE;
     goto end;
     }
@@ -1716,6 +1732,20 @@ static gboolean tree_button_press_callback(GtkWidget * w, GdkEventButton * evt,
     gtk_tree_path_free(path);
   
   return ret;
+  }
+
+static gboolean tree_key_press_callback(GtkWidget * w, GdkEventKey * evt,
+                                           gpointer data)
+  {
+  bg_gtk_mdb_tree_t * t = data;
+  switch(evt->keyval)
+    {
+    case GDK_KEY_Menu:
+      tree_popup_menu(t, (const GdkEvent *)evt);
+      return TRUE;
+    }
+  
+  return FALSE;
   }
 
 static gboolean idle_func(gpointer user_data)
@@ -1836,10 +1866,9 @@ static GtkNotebook * create_window_callback(GtkNotebook *notebook,
   gtk_window_set_default_size(GTK_WINDOW(lst->window), 600, 400);
   gtk_window_set_position(GTK_WINDOW(lst->window), GTK_WIN_POS_MOUSE);
   
-  
   g_signal_connect(G_OBJECT(ret), "remove", G_CALLBACK(container_remove_func), user_data);
   g_signal_connect(G_OBJECT(lst->window), "delete_event", G_CALLBACK(window_delete_callback), user_data);
-
+  
   gtk_container_add(GTK_CONTAINER(lst->window), ret);
   
   gtk_widget_show(lst->window);
@@ -2094,6 +2123,9 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
   
   ret->treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
 
+  gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(ret->treeview)),
+                              GTK_SELECTION_BROWSE);
+  
   gtk_tree_view_set_tooltip_column(GTK_TREE_VIEW(ret->treeview), TREE_COLUMN_TOOLTIP);
   
   gtk_widget_add_events(ret->treeview, GDK_KEY_PRESS_MASK | GDK_BUTTON_PRESS_MASK);
@@ -2123,6 +2155,9 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
   
   g_signal_connect(G_OBJECT(ret->treeview), "button-press-event",
                    G_CALLBACK(tree_button_press_callback), (gpointer)ret);
+
+  g_signal_connect(G_OBJECT(ret->treeview), "key-press-event",
+                   G_CALLBACK(tree_key_press_callback), (gpointer)ret);
   
   column = gtk_tree_view_column_new();
 

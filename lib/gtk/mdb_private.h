@@ -127,8 +127,11 @@ typedef struct
   guint drop_time;
   int move;        // Move active
   
-  int mouse_x;
-  int mouse_y;
+  int last_mouse_x;
+  int last_mouse_y;
+  GtkTreePath * last_path;
+
+  int select_on_release;
   } list_t;
 
 struct album_s

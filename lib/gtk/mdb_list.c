@@ -1,4 +1,3 @@
-
 /*****************************************************************
  * gmerlin - a general purpose multimedia framework and applications
  *
@@ -48,8 +47,6 @@
 #include <gmerlin/cfg_dialog.h>
 
 #include "mdb_private.h"
-
-
 
 /* Forward declarations */
 
@@ -705,6 +702,9 @@ void bg_gtk_mdb_list_destroy(list_t * l)
   if(l->window)
     gtk_widget_destroy(l->window);
 
+  if(l->last_path)
+    gtk_tree_path_free(l->last_path);
+  
   /* widgets are destroyed when they are removed from the notebook */
   //  else if(l->widget)
   //    gtk_widget_destroy(l->widget);
@@ -988,6 +988,80 @@ static void selected_add(bg_gtk_mdb_tree_t * t, album_t * a, int replace, int pl
   gavl_dictionary_destroy(album);
   }
 
+static void list_popup_menu(album_t * a, const GdkEvent * evt)
+  {
+  bg_gtk_mdb_tree_t * t = a->t;
+  GtkTreeSelection * selection;
+  GtkWidget * w = a->list->listview;
+  GtkTreeModel * model;
+  
+  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
+  memset(&t->menu_ctx, 0, sizeof(t->menu_ctx));
+
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+  
+  t->menu_ctx.num_selected =
+    gtk_tree_selection_count_selected_rows(selection);
+  
+  /* Set the menu album */
+  t->menu_ctx.a = a;
+  t->menu_ctx.album = t->menu_ctx.a->a;
+    
+  /* Set selected item */
+  if((t->menu_ctx.num_selected == 1) && t->menu_ctx.album)
+    {
+    GtkTreeIter iter;
+    char * id;
+      
+    if(gtk_tree_model_get_iter_first(model, &iter))
+      {
+      while(1)
+        {
+        if(gtk_tree_selection_iter_is_selected(selection, &iter))
+          {
+          id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
+
+          t->menu_ctx.item = gavl_get_track_by_id(t->menu_ctx.album, id);
+            
+          free(id);
+          break; 
+          }
+        if(!gtk_tree_model_iter_next(model, &iter))
+          break;
+        }
+      }
+    //      gtk_widget_set_sensitive(w, sensitive);
+    }
+    
+  t->menu_ctx.widget = w;
+    
+  bg_gtk_mdb_popup_menu(t, evt);
+  
+  }
+
+static gboolean list_button_release_callback(GtkWidget * w, GdkEventButton * evt,
+                                             gpointer data)
+  {
+  gboolean ret = FALSE;
+  album_t * a = data;
+  GtkTreeSelection * sel;
+  
+  if(a->list->select_on_release && a->list->last_path)
+    {
+    GtkTreeIter iter;
+    GtkTreeModel * model;
+    
+    sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
+    model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+    gtk_tree_model_get_iter(model, &iter, a->list->last_path);
+    gtk_tree_selection_unselect_all(sel);
+    gtk_tree_selection_select_iter(sel, &iter);
+    ret = TRUE;
+    }
+  
+  a->list->select_on_release = 0;
+  return ret;
+  }
 
 static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
                                            gpointer data)
@@ -995,12 +1069,15 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   GtkTreeModel * model;
   GtkTreePath * path;
   GtkTreeIter iter;
-
   album_t * a = data;
   bg_gtk_mdb_tree_t * t = a->t;
   
+  gboolean ret = FALSE;
+  
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
 
+  a->list->select_on_release = 0;
+  
   if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(w),
                                    evt->x, evt->y, &path,
                                    NULL,
@@ -1012,54 +1089,51 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   
   if((evt->button == 3) && (evt->type == GDK_BUTTON_PRESS))
     {
-    memset(&t->menu_ctx, 0, sizeof(t->menu_ctx));
-
-    t->menu_ctx.num_selected =
-      gtk_tree_selection_count_selected_rows(gtk_tree_view_get_selection(GTK_TREE_VIEW(w)));
-    
-    /* Set the menu album */
-    t->menu_ctx.a = a;
-    t->menu_ctx.album = t->menu_ctx.a->a;
-    
-    /* Set selected item */
-    if((t->menu_ctx.num_selected == 1) && t->menu_ctx.album)
-      {
-      GtkTreeIter iter;
-      char * id;
-      GtkTreeSelection * selection;
-
-      selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
-      
-      if(gtk_tree_model_get_iter_first(model, &iter))
-        {
-        while(1)
-          {
-          if(gtk_tree_selection_iter_is_selected(selection, &iter))
-            {
-            id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
-
-            t->menu_ctx.item = gavl_get_track_by_id(t->menu_ctx.album, id);
-            
-            free(id);
-            break; 
-            }
-          if(!gtk_tree_model_iter_next(model, &iter))
-            break;
-          }
-        }
-      //      gtk_widget_set_sensitive(w, sensitive);
-      }
-    
-    t->menu_ctx.widget = w;
-    
-    bg_gtk_mdb_popup_menu(t, (const GdkEvent*)evt);
-    return TRUE;
+    list_popup_menu(a, (const GdkEvent*)evt);
+    ret = TRUE;
     }
 
-  else if((evt->button == 1) && (evt->type == GDK_BUTTON_PRESS))
+  else if((evt->button == 1) && (evt->type == GDK_BUTTON_PRESS) && path)
     {
-    a->list->mouse_x = (int)evt->x;
-    a->list->mouse_y = (int)evt->y;
+    GtkTreeSelection * sel;
+    
+    sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
+    
+    /* We do the selection stuff ourselves */
+
+    switch(evt->state & (GDK_SHIFT_MASK|GDK_CONTROL_MASK))
+      {
+      case 0:
+        if(!gtk_tree_selection_iter_is_selected(sel, &iter))
+          {
+          gtk_tree_selection_unselect_all(sel);
+          gtk_tree_selection_select_iter(sel, &iter);
+          }
+        else
+          {
+          a->list->select_on_release = 1;
+          }
+        ret = TRUE;
+        break;
+      case GDK_SHIFT_MASK:
+        {
+        if(a->list->last_path)
+          gtk_tree_selection_select_range(sel, a->list->last_path, path);
+        ret = TRUE;
+        }
+        break;
+      case GDK_CONTROL_MASK:
+        if(gtk_tree_selection_iter_is_selected(sel, &iter))
+          gtk_tree_selection_unselect_iter(sel, &iter);
+        else
+          gtk_tree_selection_select_iter(sel, &iter);
+        ret = TRUE;
+        break;
+      }
+    
+    a->list->last_mouse_x = (int)evt->x;
+    a->list->last_mouse_y = (int)evt->y;
+
     }
   else if((evt->button == 1) && (evt->type == GDK_2BUTTON_PRESS) && path)
     {
@@ -1077,15 +1151,14 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
     //    entry_add(t, a, id, 0, 1);
     
     free(id);
-    return FALSE;
     }
 
-  if(path)
-    gtk_tree_path_free(path);
-
+  if(a->list->last_path)
+    gtk_tree_path_free(a->list->last_path);
   
+  a->list->last_path = path;
   
-  return FALSE;
+  return ret;
   }
 
 static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
@@ -1149,6 +1222,11 @@ static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
         selected_add(a->t, a, 0, 1);
         }
       }
+      break;
+    case GDK_KEY_Menu:
+      list_popup_menu(a, (const GdkEvent*)evt);
+      //      bg_gtk_mdb_popup_menu(a->t, (const GdkEvent *)evt);
+      return TRUE;
       break;
     case GDK_KEY_Escape:
       break;
@@ -1229,7 +1307,7 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     }
   else if(item == tree->menu.album_menu.sort_item)
     {
-    fprintf(stderr, "Sort %p\n", tree->menu_ctx.item);
+    //    fprintf(stderr, "Sort %p\n", tree->menu_ctx.item);
     
     if(tree->menu_ctx.item)
       {
@@ -1438,24 +1516,22 @@ static gboolean
 motion_callback(GtkWidget * w, GdkEventMotion * evt,
                 gpointer user_data)
   {
-  //  GdkDragContext* ctx;
-  GtkTreeSelection * selection;
-  int num_selected;
-
   album_t * a = user_data;
-  
-  selection =
-    gtk_tree_view_get_selection(GTK_TREE_VIEW(a->list->listview));
-  
-  num_selected = gtk_tree_selection_count_selected_rows(selection);
-
   
   if(evt->state & GDK_BUTTON1_MASK)
     {
     GtkTargetList * tl;
 
-    if((abs((int)(evt->x) - a->list->mouse_x) + abs((int)(evt->y) - a->list->mouse_y) < 10) ||
-       (!num_selected))
+    GtkTreeSelection * selection;
+    int num_selected;
+    selection =
+      gtk_tree_view_get_selection(GTK_TREE_VIEW(a->list->listview));
+  
+    num_selected = gtk_tree_selection_count_selected_rows(selection);
+    
+    if((abs((int)(evt->x) - a->list->last_mouse_x) +
+        abs((int)(evt->y) - a->list->last_mouse_y) < 10) ||
+       !num_selected)
       return FALSE;
 
     tl = gtk_target_list_new(list_src_entries, num_list_src_entries);
@@ -1463,6 +1539,7 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
     // ctx = 
     gtk_drag_begin_with_coordinates(w, tl, GDK_ACTION_COPY, 1, (GdkEvent*)evt, -1, -1);
     gtk_target_list_unref(tl);
+    a->list->select_on_release = 0;
     }
 
   
@@ -1822,11 +1899,16 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   g_object_unref(provider);
 #endif
   
-  gtk_widget_add_events(l->listview, GDK_KEY_PRESS_MASK |
-                        GDK_BUTTON_PRESS_MASK | GDK_BUTTON1_MOTION_MASK);
+  gtk_widget_add_events(l->listview,
+                        GDK_KEY_PRESS_MASK |
+                        GDK_BUTTON_PRESS_MASK |
+                        GDK_BUTTON_RELEASE_MASK |
+                        GDK_BUTTON1_MOTION_MASK);
   
   g_signal_connect(G_OBJECT(l->listview), "button-press-event",
                    G_CALLBACK(list_button_press_callback), a);
+  g_signal_connect(G_OBJECT(l->listview), "button-release-event",
+                   G_CALLBACK(list_button_release_callback), a);
 
   g_signal_connect(G_OBJECT(l->listview), "key-press-event",
                    G_CALLBACK(list_key_press_callback), a);
