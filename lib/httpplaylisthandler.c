@@ -312,7 +312,7 @@ static int handle_http_playlist(bg_http_connection_t * conn, void * data)
     local = 1;
   
   if(bg_mdb_browse_children_sync(bg_mdb_get_controllable(h->srv->mdb),
-                                 &ret, id, 10000))
+                                 &ret, id, 20000))
     send_playlist(conn, &ret, local, format_idx);    
   else
     bg_http_connection_init_res(conn, "HTTP/1.1", 500, "Internal Server Error");

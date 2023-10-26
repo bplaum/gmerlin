@@ -94,7 +94,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           gavl_value_t val;
           gavl_value_init(&val);
           
-          bg_msg_get_state(msg,
+          gavl_msg_get_state(msg,
                            NULL,
                            &ctx,
                            &var,
