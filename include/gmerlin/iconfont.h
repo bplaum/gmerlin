@@ -141,7 +141,7 @@
 #define BG_ICON_CHEVRON2_UP    (char[]){ 0xc2, 0xbe, 0x00 }
 #define BG_ICON_CHEVRON2_DOWN  (char[]){ 0xc2, 0xbf, 0x00 }
 #define BG_ICON_RUN            (char[]){ 0xc3, 0x80, 0x00 }
-
+#define BG_ICON_LOG            (char[]){ 0xc3, 0x81, 0x00 }
 #define BG_ICON_FILTER         (char[]){ 0xc3, 0x82, 0x00 }
 #define BG_ICON_CHAPTERS       (char[]){ 0xc3, 0x83, 0x00 }
 #define BG_ICON_PLUGIN         (char[]){ 0xc3, 0x84, 0x00 }
