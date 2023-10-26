@@ -465,15 +465,12 @@
   content: "\00bf"
 }
 
-#define BG_ICON_RUN            (char[]){ 0xc2, 0xc0, 0x00 }
-#define BG_ICON_CONFIG         (char[]){ 0xc2, 0xc1, 0x00 }
-#define BG_ICON_FILTER         (char[]){ 0xc2, 0xc2, 0x00 }
-#define BG_ICON_CHAPTERS       (char[]){ 0xc2, 0xc3, 0x00 }
-#define BG_ICON_PLUGIN         (char[]){ 0xc2, 0xc4, 0x00 }
-
-
 .icon-run:before {
   content: "\00c0"
+}
+
+.icon-log:before {
+  content: "\00c1"
 }
 
 .icon-filter:before {

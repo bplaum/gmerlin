@@ -443,14 +443,14 @@ function server_connection_init()
           + currentdate.getMinutes() + ":" +
           currentdate.getSeconds());
  */
-
-//    setTimeout(server_connection_init, 10);
+    my_log("Server websocket closed (code: " + evt.code + " " + get_websocket_close_reason(evt) + ")");
+    setTimeout(server_connection_init, 1000);
     };
   
   server_connection.onopen = function()
     {
     var msg;
-    console.log("Server websocket open");
+    my_log("Server websocket open");
 
     /* Browse for root object */
 
@@ -574,13 +574,9 @@ function server_connection_init()
 
   server_connection.onerror = function(evt)
     {
-    console.log("Server websocket error " + evt.data);
+    my_log("Server websocket error");
     };
 
-  server_connection.onclose = function()
-    {
-    setTimeout(server_connection_init, 1000);
-    };
       
   };
 
@@ -1015,6 +1011,11 @@ function show_info()
     }
   }
 
+function show_log()
+  {
+  show_widget("iteminfo");
+  }
+
 function handle_global_keys(evt)
   {
   var done = false;
@@ -1114,6 +1115,9 @@ function handle_global_keys(evt)
       break;
     case "i":
       show_info();
+      break;
+    case "l":
+      show_widget("logviewer");
       break;
     case "v":
       {
@@ -1482,17 +1486,7 @@ function player_create_websocket(ret, url)
   ret.ws.onclose = function(evt)
     {
     var div;
-//    var currentdate = new Date(); 
-
-    console.log("Renderer websocket closed (code: " + evt.code + " :(");
-
-//    setTimeout(player_create, 10);
-/*
-	alert("Renderer websocket closed " +
-          currentdate.getHours() + ":" 
-          + currentdate.getMinutes() + ":" +
-          currentdate.getSeconds());
-*/
+    my_log("Renderer websocket closed (code: " + evt.code + " " + get_websocket_close_reason(evt) + ")");
     playqueue_create();
     if((div = widgets.browser.div_by_id(BG_PLAYQUEUE_ID)))
       {
@@ -1500,14 +1494,18 @@ function player_create_websocket(ret, url)
       if(widgets.browser == current_widget)
 	adjust_header_footer(widgets.browser.div);
       }
+    document.getElementById("player-status").setAttribute("class", "icon-x");
 
+    //  TODO: Auto reconnect
+    //    setTimeout(player_create, 1000);
+    
     };
 
   ret.ws.player = ret;
       
   ret.ws.onopen = function()
     {
-    console.log("Renderer websocket open :)");
+    my_log("Renderer websocket open");
     ret.ready = true;
     playqueue_init();
     };
@@ -1521,7 +1519,7 @@ function player_create_websocket(ret, url)
 
   ret.ws.onerror = function(evt)
     {
-    console.log("websocket error " + evt.data);
+    my_log("renderer websocket error");
     };
     
   }
@@ -2651,9 +2649,13 @@ function create_browser()
         this.render = this.render_tiles;
         this.num_columns = Math.floor(window.innerWidth / 256.0);
 
+//        this.div.style.setProperty("grid-template-columns",
+//				   "repeat(" + this.num_columns + ", 1fr)");
+
         this.div.style.setProperty("grid-template-columns",
-				   "repeat(" + this.num_columns + ", 1fr)");
-        this.mode_button.setAttribute("class", "icon-view-list");
+				   "repeat(" + this.num_columns + ", " + 99 / this.num_columns + "%)");
+
+	this.mode_button.setAttribute("class", "icon-view-list");
 
 	this.div.dataset.imgaspect = "square";
 
@@ -2914,7 +2916,7 @@ function create_browser()
     m = dict_get_dictionary(obj, GAVL_META_METADATA);
       
     div.setAttribute("class", "browser");
-
+    div.setAttribute("style", "width: 100%;");
 	
     table = append_dom_element(div, "table");
     table.setAttribute("style", "width: 100%;");
@@ -2992,7 +2994,6 @@ function create_browser()
   ret.create_row = function(obj)
     {
     var r = document.createElement("div");
-    r.setAttribute("style", "width: 100%;");
     r.dataset.id = obj_get_id(obj);
     r.dataset.selected = "false";
     r.dataset.current  = "false";
@@ -3293,7 +3294,6 @@ function create_browser()
               }
             else if(id == cur_id)
 	      {
-              console.log("BG_MSG_DB_OBJECT_CHANGED " + " " + JSON.stringify(msg.args[0].v));
               merge_objects(msg.args[0].v, this.container);
 	      if(this == current_widget)
 		{
@@ -4284,6 +4284,13 @@ function create_nav_popup()
     show_widget("settings");
     };
 
+  ret.log_button = document.getElementById("nav-log");
+  ret.log_button.onclick = function()
+    {
+    nav_popup.idle_counter = 0;
+    show_widget("logviewer");
+    };
+    
   ret.search_button = document.getElementById("nav-search");
   ret.search_button.onclick = function()
     {
@@ -4297,6 +4304,7 @@ function create_nav_popup()
     nav_popup.idle_counter = 0;
     show_info();
     };
+
 
   ret.fav_button = document.getElementById("nav-fav");
   ret.fav_button.onclick = function()
@@ -4671,6 +4679,86 @@ function create_image_viewer()
     
   return ret;
    
+  }
+
+function my_log(str)
+  {
+  var div;
+  var span;
+  var message;
+  var now = new Date();
+
+  message = "[" + now.toLocaleString() + "] " + str;
+    
+  div = widgets.logviewer.div;
+
+  if(div.children.length > 0)
+    append_dom_element(div, "br");
+  span = append_dom_element(div, "span");
+  append_dom_text(span, message);
+  
+  }
+
+function create_log_viewer()
+  {
+  var ret = new Object();
+  ret.div = document.getElementById("logviewer");
+
+  ret.key_hdlr = new Object();
+  ret.key_hdlr.lv = ret;
+  ret.key_hdlr.handle_msg = function(evt)
+    {
+    switch(evt.key)
+      {
+      case "ArrowUp":
+//        this.iv.prev();
+        break;
+      case "ArrowDown":
+//        this.iv.next();
+        break;
+      case "Escape":
+        {
+	my_history_back(false);
+/*        app_state.widget = "browser";
+	delete app_state.image_id;
+	app_state_apply();
+	*/
+	}
+        break;
+      default:
+        return 0;
+      }
+    stop_propagate(evt);
+    return 0;
+    };
+
+  ret.show = function()
+    {
+    var obj = new Object();
+    var m = new Object();
+
+    this.div.style.display = "block";
+
+    key_event_hub.disconnect(widgets.browser.key_hdlr);
+    key_event_hub.connect(this.key_hdlr);
+    adjust_header_footer(this.div);
+
+    dict_set_string(m, GAVL_META_ICON_URL, "icon-log");
+    dict_set_string(m, GAVL_META_TITLE, "Log messages");
+    dict_set_dictionary(obj, GAVL_META_METADATA, m);
+    set_header(obj);
+    adjust_header_footer(this.div);
+    }
+
+  ret.hide = function()
+    {
+    this.div.style.display = "none";
+
+    key_event_hub.disconnect(this.key_hdlr);
+    key_event_hub.connect(widgets.browser.key_hdlr);
+    };
+   
+  return ret;
   }
 
 /* Help screen */
@@ -5119,9 +5207,11 @@ function global_init()
   create_nav_popup();
   create_search_popup();
 
+  widgets.logviewer     = create_log_viewer();
+
   server_uri = "ws://" +  window.location.host + "/ws/server";
   server_connection_init();
-      
+    
   widgets.browser   = create_browser();
 
   widgets.settings      = create_settings();
@@ -5129,7 +5219,6 @@ function global_init()
   widgets.help          = create_help_screen();
 
   widgets.imageviewer   = create_image_viewer();
-      
      
   /* */
       

@@ -53,14 +53,17 @@
     </div>
     <div id="imageviewer" style="display: none;">
 
-    <img id="imageviewer-img" style="z-index: 1;">
+      <img id="imageviewer-img" style="z-index: 1;">
 
-    <button type="button" class="icon-chevron-left iv-control" id="imageviewer-prev"></button>
-    <button type="button" class="icon-chevron-right iv-control" id="imageviewer-next"></button>
+      <button type="button" class="icon-chevron-left iv-control" id="imageviewer-prev"></button>
+      <button type="button" class="icon-chevron-right iv-control" id="imageviewer-next"></button>
 
-    <div id="imageviewer-label" class="iv-control"></div>
+      <div id="imageviewer-label" class="iv-control"></div>
     
     </div>
+
+    <div id="logviewer" style="width: 100%; display: none;"></div>
+    
     <div id="help-screen" style="width: 100%; display: none;">
       <table>
 	<tr>
@@ -111,6 +114,9 @@
  	<tr>
 	  <td>I</td><td>Show media info</td>
 	</tr>
+ 	<tr>
+	  <td>L</td><td>Show log messages</td>
+	</tr>
 	<tr>
 	  <td>N</td><td>Navigation menu</td>
 	</tr>
@@ -150,7 +156,7 @@
     <button id="nav-browser"         class="icon-view-list"></button><br>
 
     <button id="nav-visualization"   class="icon-eye"></button>
-    <button id="nav-delete"          class="icon-trash"></button>
+    <button id="nav-log"             class="icon-log"></button>
     <button id="nav-help"            class="icon-help"></button>
   </div>
 
@@ -219,7 +225,7 @@
     <table style="width: 100%;" id="footer-table">
       <tr style="width: 100%;">
 	<td id="footer_left"   style="width: 45%;">Footer</td>
-	<td id="player-status" style="width: 10%; text-align: center; padding: 0px;"></td>
+	<td id="player-status" style="width: 10%; text-align: center; padding: 0px;" class="icon-x"></td>
 	<td id="footer_right"  style="width: 45%; text-align: right; padding: 0px;">
 	  <button id="browse-mode-button" class="icon-view-icons"></button>
 	  <button id="controls-button" class="icon-player"></button>

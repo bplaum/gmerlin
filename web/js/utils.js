@@ -2480,3 +2480,50 @@ function set_browse_children_response(req, arr)
   return ret;
     
   }
+
+function get_websocket_close_reason(event)
+  {
+  switch(event.code)
+    {
+    case 1000:
+      return "Normal closure";
+      break;
+    case 1001:
+      return "Server going down or a browser having navigated away from a page.";
+      break;
+    case 1002:
+      return "Protocol error";
+      break;
+    case 1003:
+      return "Received unacceptable data";
+      break;
+    case 1004:
+      return "Reserved";
+      break;
+    case 1005:
+      return "No code present";
+      break;
+    case 1006:
+      return "Unexpected close";
+      break;
+    case 1007:
+      return "Invalid message for type";
+      break;
+    case 1008:
+      return "Policy violation";
+      break;
+    case 1009:
+      return "Message too large";
+      break;
+    case 1010:
+      return "Expected extension not present";
+      break;
+    case 1011:
+      return "Unexpected condition";
+      break;
+    case 1015:
+      return "TLS handshake failed";
+      break;
+    }
+  return "Unknown reason";
+  }
