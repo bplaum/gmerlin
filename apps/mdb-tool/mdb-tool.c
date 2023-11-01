@@ -104,54 +104,11 @@ static bg_cmdline_arg_t global_options[] =
     }
   };
 
-#if 0
-static int handle_message_rescan(void * data, gavl_msg_t * msg)
-  {
-  int * ret = data;
-
-  if((msg->NS == BG_MSG_NS_DB) && (msg->ID == BG_MSG_DB_RESCAN_DONE))
-    *ret = 1;
-  
-  return 1;
-  }
-#endif
-
 static void opt_rescan(void * data, int * argc, char *** _argv, int arg)
   {
   if(!ensure_mdb(0))
     return;
-
-#if 1
   bg_mdb_rescan_sync(mdb_ctrl);
-#else  
-  if(mdb)
-    bg_mdb_rescan_sync(mdb_ctrl);
-  else if(conn)
-    {
-    gavl_time_t delay_time = GAVL_TIME_SCALE/20; // 50 ms
-    int done = 0;
-    bg_msg_sink_t * sink = bg_msg_sink_create(handle_message_rescan, &done, 0);
-
-    bg_msg_hub_connect_sink(mdb_ctrl->evt_hub, sink);
-
-    bg_mdb_rescan(mdb_ctrl);
-  
-    while(1)
-      {
-      bg_websocket_connection_iteration(conn);
-      bg_msg_sink_iteration(sink);
-
-      if(done)
-        break;
-    
-      if(!bg_msg_sink_get_num(sink))
-        gavl_time_delay(&delay_time);
-      }
-  
-    bg_msg_hub_disconnect_sink(mdb_ctrl->evt_hub, sink);
-    bg_msg_sink_destroy(sink);
-    }
-#endif
   }
 
 static void browse_obj(void * data, int * argc, char *** _argv, int arg)
@@ -207,7 +164,7 @@ static void add_sql_dir(void * data, int * argc, char *** _argv, int arg)
   if(!ensure_mdb(0))
     return;
   
-  bg_mdb_add_sql_directory(mdb_ctrl, (*_argv)[arg]);
+  bg_mdb_add_sql_directory_sync(mdb_ctrl, (*_argv)[arg]);
   
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
@@ -221,7 +178,7 @@ static void del_sql_dir(void * data, int * argc, char *** _argv, int arg)
     }
   if(!ensure_mdb(0))
     return;
-  bg_mdb_del_sql_directory(mdb_ctrl, (*_argv)[arg]);
+  bg_mdb_del_sql_directory_sync(mdb_ctrl, (*_argv)[arg]);
   
   bg_cmdline_remove_arg(argc, _argv, arg);
   }

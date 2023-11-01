@@ -717,7 +717,7 @@ static void close_button_callback(GtkWidget * wid, gpointer data)
   {
   int i;
   bg_gtk_mdb_tree_t * tree = data;
-
+  
   for(i = 0; i < tree->tab_albums.num_albums; i++)
     {
     if(tree->tab_albums.albums[i]->list->close_button == wid)
@@ -735,6 +735,8 @@ static void close_button_callback(GtkWidget * wid, gpointer data)
       return;
       }
     }
+  fprintf(stderr, "Close button callback: Got no album to close\n");
+
   }
 
 #if 0
@@ -815,9 +817,11 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
     gtk_widget_show(t->menu.album_menu.play_item);
     }
   
-  //  fprintf(stderr, "bg_gtk_mdb_popup_menu %p %p %d\n",
-  //          t->menu_ctx.album,
-  //          t->menu_ctx.parent, bg_mdb_is_editable(t->menu_ctx.parent));
+#if 0  
+  fprintf(stderr, "bg_gtk_mdb_popup_menu %p %p\n",
+          t->menu_ctx.album,
+          t->menu_ctx.parent /* bg_mdb_is_editable(t->menu_ctx.parent) */ );
+#endif
   
   if(t->menu_ctx.album)
     {
@@ -1157,6 +1161,8 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
     gtk_tree_path_free(a->list->last_path);
   
   a->list->last_path = path;
+
+  gtk_widget_grab_focus(w);
   
   return ret;
   }
@@ -2661,8 +2667,8 @@ static void load_uri(bg_gtk_mdb_tree_t * tree)
   if(!str)
     return;
   
-  fprintf(stderr, "Load URI %s\n", str);
-
+  // fprintf(stderr, "Load URI %s\n", str);
+  
   if(!strcmp(id, BG_PLAYQUEUE_ID))
     sink = tree->player_ctrl.cmd_sink;
   

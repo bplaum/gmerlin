@@ -23,6 +23,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <config.h>
 
@@ -137,7 +138,8 @@ static void load_disk_index(bg_object_cache_t * cache)
   gavl_value_init(&val);
   
   filename = bg_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
-  bg_value_load_xml(&val, filename, ROOT_NAME_INDEX);
+  if(!access(filename, R_OK))
+    bg_value_load_xml(&val, filename, ROOT_NAME_INDEX);
   free(filename);
 
   cache->disk_cache_size = 0;

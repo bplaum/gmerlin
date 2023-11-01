@@ -229,8 +229,8 @@ album_t * bg_gtk_mdb_album_is_open(bg_gtk_mdb_tree_t * tree, const char * id);
 void bg_gtk_mdb_album_update_track(album_t * a, const char * id,
                                    const gavl_dictionary_t * dict);
 
-void bg_gtk_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx);
 void bg_gtk_mdb_tree_close_window_album(bg_gtk_mdb_tree_t * t, int idx);
+void bg_gtk_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx);
 
 void bg_gtk_mdb_tree_delete_selected_album(bg_gtk_mdb_tree_t * t);
 

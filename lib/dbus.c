@@ -891,8 +891,7 @@ gavl_msg_t * bg_dbus_connection_call_method(bg_dbus_connection_t * conn,
 
   if(dbus_error_is_set(&err))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Message call failed: %s", err.message);
-    fprintf(stderr, "Message call failed: %s\n", err.message);
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Message call failed: %s", err.message);
     dbus_error_free(&err); 
     bg_dbus_connection_unlock(conn);
     return NULL;

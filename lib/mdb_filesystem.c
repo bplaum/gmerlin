@@ -1793,8 +1793,9 @@ static void load_dir_list(bg_mdb_backend_t * be, gavl_array_t * arr)
     tmp_string = bg_sprintf("%s/"FS_PHOTO_NAME, be->db->path);
     photo_mode = 1;
     }
-  
-  bg_array_load_xml(arr, tmp_string, "dirs");
+
+  if(!access(tmp_string, R_OK))
+    bg_array_load_xml(arr, tmp_string, "dirs");
   free(tmp_string);
 
   if(photo_mode)

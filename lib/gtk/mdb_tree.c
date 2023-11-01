@@ -124,7 +124,6 @@ static void pixbuf_from_uri_callback_list(void * data, const char *id, GdkPixbuf
   tree->icons_loading--;
   }
 
-
 static void load_icons(bg_gtk_mdb_tree_t * t)
   {
   const char * id;
@@ -213,7 +212,6 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
   
   return;
   }
-
 
 int bg_gtk_mdb_array_get_flag_str(const gavl_array_t * arr, const char * id)
   {
@@ -383,6 +381,7 @@ static void album_array_free(album_array_t * arr)
     free(arr->albums);
   }
 
+#if 0
 static album_t * album_array_move_1(bg_gtk_mdb_tree_t * tree,
                                     album_array_t * arr, int old_idx, int new_idx)
   {
@@ -404,6 +403,7 @@ static album_t * album_array_move_1(bg_gtk_mdb_tree_t * tree,
   
   return ret;
   }
+#endif
 
 static int album_array_has_id(album_array_t * arr, const char * id)
   {
@@ -1491,7 +1491,21 @@ void bg_gtk_mdb_tree_close_window_album(bg_gtk_mdb_tree_t * t, int idx)
 
 void bg_gtk_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx)
   {
-  gtk_notebook_remove_page(GTK_NOTEBOOK(t->notebook), idx);
+  int page_idx = 0;
+  GtkWidget * child;
+  
+  while((child = gtk_notebook_get_nth_page(GTK_NOTEBOOK(t->notebook),
+                                           page_idx)))
+    {
+    if(child == t->tab_albums.albums[idx]->list->widget)
+      {
+      gtk_notebook_remove_page(GTK_NOTEBOOK(t->notebook), page_idx);
+      break;
+      }
+    else
+      page_idx++;
+    }
+  // fprintf(stderr, "bg_gtk_mdb_tree_close_tab_album %d %d\n", idx, page_idx);
   album_array_splice_nocopy(t, &t->tab_albums, idx, 1, NULL, NULL);
   }
 
@@ -1669,13 +1683,27 @@ static void tree_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent * evt)
 
   if(gtk_tree_selection_get_selected(sel, NULL, &iter))
     {
-    char * id;
+    char * id = NULL;
+    char * parent_id = NULL;
+
     t->menu_ctx.num_selected = 1;
     id = iter_to_id_tree(GTK_TREE_VIEW(t->treeview), &iter);
     t->menu_ctx.album = get_selected_album(t, id);
-    free(id);
+    
+    if((parent_id = bg_mdb_get_parent_id(id)))
+      {
+      album_t * a;
+
+      if((a = album_array_get_by_id(&t->exp_albums, parent_id)))
+        t->menu_ctx.parent = a->a;
+      //      else
+      //        fprintf(stderr, "Parent not open: %s\n", parent_id);
+      }
+    if(id)
+      free(id);
+    if(parent_id)
+      free(parent_id);
     }
-  
   
   t->menu_ctx.widget = t->treeview;
   t->menu_ctx.tree = 1;
@@ -1879,32 +1907,6 @@ static GtkNotebook * create_window_callback(GtkNotebook *notebook,
   return GTK_NOTEBOOK(ret);
   }
 
-
-static void
-page_reordered_callback(GtkNotebook *notebook,
-                        GtkWidget   *child,
-                        guint        page_num,
-                        gpointer     user_data)
-  {
-  int src_idx = -1;
-  int i;
-  
-  bg_gtk_mdb_tree_t * t = user_data;
-
-  for(i = 0; i < t->tab_albums.num_albums; i++)
-    {
-    if(t->tab_albums.albums[i]->list->widget == child)
-      {
-      src_idx = i;
-      break;
-      }
-    }
-  
-  fprintf(stderr, "page_reordered_callback %d -> %d\n", src_idx, page_num);
-
-  if(src_idx >= 0)
-    album_array_move_1(t, &t->tab_albums, src_idx, page_num);
-  }
 
 static int handle_player_message(void * priv, gavl_msg_t * msg)
   {
@@ -2228,10 +2230,6 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
   g_signal_connect(G_OBJECT(ret->notebook), "create-window",
                    G_CALLBACK(create_window_callback),
                    ret);
-
-  g_signal_connect(G_OBJECT(ret->notebook), "page-reordered",
-                   G_CALLBACK(page_reordered_callback), (gpointer)ret);
-
   
   gtk_notebook_set_scrollable(GTK_NOTEBOOK(ret->notebook), TRUE);
   gtk_notebook_popup_enable(GTK_NOTEBOOK(ret->notebook));

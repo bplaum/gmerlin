@@ -1,7 +1,30 @@
 Gmerlin Media Database Documentation
 
 The media database backend is used by the GUI player as well as the media server.
-By default, the GUI player creates it's MDB in $HOME/.gmerlin/gmerlin-mdb.
+By default, the GUI player creates it's MDB in $HOME/.gmerlin/gmerlin-mdb. You can,
+however, also set up a database at arbitrary places in the filesystem.
 
 For manipulating the media database, there is also the comandline tool "mdb-tool".
+
+
+1. Setting up a Media DB for gmerlin-server:
+
+# Set variable to your database path. Make sure to reserve some space
+# since thumbnails will also be stored there
+export MDBPATH="/your/media/directory"
+
+# Create media DB (will create a directory ${MDBPATH}/gmerlin-mdb)
+# The creation process also loads the default sources for Radio and
+# TV stations, so it might take some time
+mdb-tool -db $MDBPATH -create
+
+# Add directories with media data. The contents should be tagged properly
+# (See tag support below)
+mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Music/"
+mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Movies/"
+
+# Re-scan the whole database (Synchronize SQL with Filesystem)
+mdb-tool -db $MDBPATH -rescan
+
+2. Tagging support
 

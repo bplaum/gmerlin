@@ -6280,12 +6280,13 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           }
           break;
         /* SQL Specific */
-        case BG_CMD_DB_ADD_SQL_DIR:
+        case BG_FUNC_DB_ADD_SQL_DIR:
           {
           gavl_value_t sql_dirs_val;
           gavl_array_t * sql_dirs;
           gavl_msg_t * resp;
           const char * dir = gavl_msg_get_arg_string_c(msg, 0);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Adding SQL dir %s", dir);
           
           gavl_value_init(&sql_dirs_val);
           sql_dirs = gavl_value_set_array(&sql_dirs_val);
@@ -6310,11 +6311,18 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             }
           else
             gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Directory %s already added", dir);
-          
+
           gavl_value_free(&sql_dirs_val);
+          
+          /* */
+          resp = bg_msg_sink_get(be->ctrl.evt_sink);
+          gavl_msg_set_id_ns(resp, BG_RESP_ADD_SQL_DIR, BG_MSG_NS_DB);
+          gavl_msg_set_resp_for_req(resp, msg);
+          bg_msg_sink_put(be->ctrl.evt_sink);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Added SQL dir");
           }
           break;
-        case BG_CMD_DB_DEL_SQL_DIR:
+        case BG_FUNC_DB_DEL_SQL_DIR:
           {
           int idx;
           gavl_value_t sql_dirs_val;
@@ -6322,6 +6330,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_msg_t * resp;
           
           const char * dir = gavl_msg_get_arg_string_c(msg, 0);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleting SQL dir %s", dir);
           
           gavl_value_init(&sql_dirs_val);
           sql_dirs = gavl_value_set_array(&sql_dirs_val);
@@ -6333,12 +6342,12 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             delete_directory(be, dir);
             lock_root_containers(be, 0);
             update_root_containers(be);
-
             
             /* Also update config registry */
             gavl_array_splice_val(sql_dirs, idx, 1, NULL);
             resp = bg_msg_sink_get(be->ctrl.evt_sink);
-            bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX, MDB_BACKEND_SQLITE, "dirs", &sql_dirs_val);
+            bg_msg_set_parameter_ctx(resp, BG_MSG_PARAMETER_CHANGED_CTX,
+                                     MDB_BACKEND_SQLITE, "dirs", &sql_dirs_val);
             bg_msg_sink_put(be->ctrl.evt_sink);
             
             }
@@ -6346,6 +6355,13 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Directory %s not there", dir);
           
           gavl_value_free(&sql_dirs_val);
+
+          /* */
+          resp = bg_msg_sink_get(be->ctrl.evt_sink);
+          gavl_msg_set_id_ns(resp, BG_RESP_DEL_SQL_DIR, BG_MSG_NS_DB);
+          gavl_msg_set_resp_for_req(resp, msg);
+          bg_msg_sink_put(be->ctrl.evt_sink);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleted SQL dir");
           }
           break;
         }
@@ -6647,7 +6663,7 @@ void bg_mdb_add_sql_directory(bg_controllable_t * db, const char * dir)
   {
   gavl_msg_t * cmd = bg_msg_sink_get(db->cmd_sink);
 
-  gavl_msg_set_id_ns(cmd, BG_CMD_DB_ADD_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_id_ns(cmd, BG_FUNC_DB_ADD_SQL_DIR, BG_MSG_NS_DB);
   gavl_msg_set_arg_string(cmd, 0, dir);
   
   bg_msg_sink_put(db->cmd_sink);
@@ -6657,8 +6673,33 @@ void bg_mdb_del_sql_directory(bg_controllable_t * db, const char * dir)
   {
   gavl_msg_t * cmd = bg_msg_sink_get(db->cmd_sink);
 
-  gavl_msg_set_id_ns(cmd, BG_CMD_DB_DEL_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_id_ns(cmd, BG_FUNC_DB_DEL_SQL_DIR, BG_MSG_NS_DB);
   gavl_msg_set_arg_string(cmd, 0, dir);
 
   bg_msg_sink_put(db->cmd_sink);
+  }
+
+void bg_mdb_add_sql_directory_sync(bg_controllable_t * db, const char * dir)
+  {
+  gavl_msg_t msg;
+  gavl_msg_init(&msg);
+  
+  gavl_msg_set_id_ns(&msg, BG_FUNC_DB_ADD_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_arg_string(&msg, 0, dir);
+  
+  bg_controllable_call_function(db, &msg, NULL, NULL, 1000*2*3600);
+  gavl_msg_free(&msg);
+  
+  }
+
+void bg_mdb_del_sql_directory_sync(bg_controllable_t * db, const char * dir)
+  {
+  gavl_msg_t msg;
+  gavl_msg_init(&msg);
+  
+  gavl_msg_set_id_ns(&msg, BG_FUNC_DB_DEL_SQL_DIR, BG_MSG_NS_DB);
+  gavl_msg_set_arg_string(&msg, 0, dir);
+  
+  bg_controllable_call_function(db, &msg, NULL, NULL, 1000*2*3600);
+  gavl_msg_free(&msg);
   }

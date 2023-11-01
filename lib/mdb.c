@@ -461,6 +461,11 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
           
           }
           break;
+        case BG_FUNC_DB_ADD_SQL_DIR:
+        case BG_FUNC_DB_DEL_SQL_DIR:
+          /* Forward to sql backend */
+          be = be_from_name(db, MDB_BACKEND_SQLITE);
+          break;
         case BG_CMD_DB_SAVE_LOCAL:
           {
           const char * ctx_id;
@@ -481,7 +486,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
           const char * ctx_id;
-
+          
           if(!(ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID)))
             return 1;
           
@@ -1236,8 +1241,15 @@ bg_mdb_t * bg_mdb_create(const char * path,
   
   if(path)
     {
+    char * pos;
     ret->path     = bg_sprintf("%s/%s", path, MDB_DIR);
 
+    /* Remove trailing /  */
+    pos = ret->path + (strlen(ret->path) - 1);
+    
+    if(*pos == '/')
+      *pos = '\0';
+    
     /* Check if path already exists */
     
     if(do_create)
@@ -1355,7 +1367,8 @@ bg_mdb_t * bg_mdb_create(const char * path,
   
   ret->cfg_reg = gavl_dictionary_create();
   
-  if(!bg_cfg_registry_load(ret->cfg_reg, ret->config_file))
+  if(access(ret->config_file, R_OK) ||
+     !bg_cfg_registry_load(ret->cfg_reg, ret->config_file))
     {
     /* Create empty registry */
     has_new_cfg_reg = 1;
@@ -1436,12 +1449,18 @@ void bg_mdb_stop(bg_mdb_t * db)
   gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
   bg_msg_sink_put(db->ctrl.cmd_sink);
   pthread_join(db->th, NULL);
-
+  
   }
 
 void bg_mdb_destroy(bg_mdb_t * db)
   {
   int i;
+
+  if(db->cfg_save_time != GAVL_TIME_UNDEFINED)
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving config file %s", db->config_file);
+    bg_cfg_registry_save_to(db->cfg_reg, db->config_file);
+    }
   
   /* Free data */  
   
@@ -2660,7 +2679,9 @@ void bg_mdb_set_load_uri(gavl_msg_t * msg, const char * id, int idx, const char 
 
   gavl_track_from_location(dict, uri);
   
-  gavl_msg_set_splice_children_nocopy(msg, BG_MSG_NS_DB, BG_CMD_DB_SPLICE_CHILDREN, id, 1, idx, 0, &add_val);
+  gavl_msg_set_splice_children_nocopy(msg, BG_MSG_NS_DB, BG_CMD_DB_SPLICE_CHILDREN,
+                                      id, 1, idx, 0, &add_val);
+  
   }
 
 void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl_array_t * arr)

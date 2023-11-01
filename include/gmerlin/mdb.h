@@ -85,17 +85,6 @@
 
 #define BG_CMD_DB_SAVE_LOCAL             6
 
-/*
- *  arg0: path    (string)
- */
-
-#define BG_CMD_DB_ADD_SQL_DIR              7
-
-/*
- *  arg0: path    (string)
- */
-
-#define BG_CMD_DB_DEL_SQL_DIR              8
 
 /*
  *  ContextID: album_id
@@ -137,7 +126,17 @@
 
 #define BG_FUNC_DB_RESCAN                 202
 
+/*
+ *  arg0: path    (string)
+ */
 
+#define BG_FUNC_DB_ADD_SQL_DIR            203
+
+/*
+ *  arg0: path    (string)
+ */
+
+#define BG_FUNC_DB_DEL_SQL_DIR            204
 
 /*
  *  ContextID: album_id
@@ -160,6 +159,8 @@
 
 #define BG_RESP_DB_RESCAN                 302
 
+#define BG_RESP_ADD_SQL_DIR               303
+#define BG_RESP_DEL_SQL_DIR               304
       
 typedef struct bg_mdb_s bg_mdb_t;
 
@@ -180,6 +181,10 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track);
 
 void bg_mdb_add_sql_directory(bg_controllable_t * db, const char * dir);
 void bg_mdb_del_sql_directory(bg_controllable_t * db, const char * dir);
+
+void bg_mdb_add_sql_directory_sync(bg_controllable_t * db, const char * dir);
+void bg_mdb_del_sql_directory_sync(bg_controllable_t * db, const char * dir);
+
 
 bg_cfg_ctx_t * bg_mdb_get_cfg(bg_mdb_t * db);
 

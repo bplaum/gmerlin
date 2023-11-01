@@ -702,6 +702,8 @@ static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl
     return ret;
     }
   
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Subscribing to %s", uri);
+  
   /* Check if we have this already */
   if(gavl_string_array_indexof(&p->subscriptions, uri) >= 0)
     {
@@ -718,11 +720,7 @@ static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl
   if(load_items(b, uri, md5, channel, &items))
     {
     
-    fprintf(stderr, "Loaded podcast 1\n");
-    gavl_value_dump(&channel_val, 2);
-    
     gavl_string_array_insert_at(&p->subscriptions, i, uri);
-    //    gavl_string_array_add(&p->subscriptions, uri);
     save_subscriptions(b);
     
     /* Save items */
@@ -793,9 +791,9 @@ static int check_update(bg_mdb_backend_t * b)
     }
   gavl_array_init(&idx);
   filename = bg_sprintf("%s/index", p->dir);
-  bg_array_load_xml(&idx, filename, "items");
+  if(!access(filename, R_OK))
+    bg_array_load_xml(&idx, filename, "items");
   free(filename);
-  
   
   /* Load feeds */
   for(i = 0; i < p->subscriptions.num_entries; i++)
@@ -975,7 +973,7 @@ static int load_array(bg_mdb_backend_t * b, const parsed_id_t * id, gavl_array_t
   
   filename = get_index_filename(b, id);
   
-  if(filename && bg_array_load_xml(arr, filename, "items"))
+  if(filename && !access(filename, R_OK) && bg_array_load_xml(arr, filename, "items"))
     {
     /* Saved episodes */
     if(!id->saved && id->podcast_id)
@@ -1375,13 +1373,9 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
             gavl_value_init(&added_val);
             added_arr = gavl_value_set_array(&added_val);
-
+            
             /* Load root container */
-            if(!load_array(b, &id, &index))
-              {
-              gavl_value_free(&add);
-              break;
-              }
+            load_array(b, &id, &index);
             
             if((idx < 0) || (idx > p->subscriptions.num_entries)) // Append
               idx = p->subscriptions.num_entries;
