@@ -933,8 +933,10 @@ static int check_update(bg_mdb_backend_t * b)
   p->last_update_time = gavl_timer_get(p->timer);
 
   if(full)
+    {
     p->last_full_update_time = p->last_update_time;
-  
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Full update done");
+    }
   return ret;
   }
 

@@ -53,7 +53,7 @@
 #define VOLUME_ID        "volume_id"
 #define VOLUME_CONTAINER "volume_container"
 
-#define META_DIR "dir"
+// #define META_DIR "dir"
 
 #define FS_DIRS_NAME "fs_dirs"
 #define FS_PHOTO_NAME "photo_dirs"
@@ -280,21 +280,20 @@ static void destroy_filesystem(bg_mdb_backend_t * b)
 
 static int scan_directory_entry(const char * path, gavl_dictionary_t * ret)
   {
+  gavl_dictionary_t * m, * src;
   struct stat st;
   if(stat(path, &st))
     return 0;
-    
-  gavl_dictionary_set_long(ret, GAVL_META_MTIME, st.st_mtime);
-  gavl_dictionary_set_string(ret, GAVL_META_URI, path);
-
+  
+  m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
+  
   if(S_ISDIR(st.st_mode))
-    {
-    gavl_dictionary_set_string(ret, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_DIRECTORY);
-    }
+    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_DIRECTORY);
   else
-    {
-    gavl_dictionary_set_string(ret, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
-    }
+    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  
+  src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, path);
+  gavl_dictionary_set_long(src, GAVL_META_MTIME, st.st_mtime);
   return 1;
   }
 
@@ -369,8 +368,8 @@ static void read_container_info(const bg_mdb_backend_t * be,
       {
       gavl_dictionary_t * mi;
       int num_tracks;
-      
-      uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+
+      gavl_track_get_src(dict, GAVL_META_SRC, 0, NULL, &uri);
       
       if(photo_mode) // Ignore everything except images
         {
@@ -608,13 +607,11 @@ static char * path_to_id_dirlist(const bg_mdb_backend_t * be, const gavl_array_t
        !strncmp(dir_uri, path, dir_uri_len))
       {
       if(path[dir_uri_len] == '/')
-        return bg_sprintf("%s/%s/%s",
-                          root_id,
-                          gavl_dictionary_get_string(d, GAVL_META_LABEL),
+        return bg_sprintf("%s/%s",
+                          gavl_dictionary_get_string(d, GAVL_META_ID),
                           path + (dir_uri_len + 1));
       else if(path[dir_uri_len] == '\0')
-        return bg_sprintf("%s/%s", root_id,
-                          gavl_dictionary_get_string(d, GAVL_META_LABEL));
+        return gavl_strdup(gavl_dictionary_get_string(d, GAVL_META_ID));
       }
     }
 
@@ -759,9 +756,10 @@ static int browse_object_internal(bg_mdb_backend_t * be,
   
   int track = -1;
   gavl_dictionary_t * first_image = NULL;
+
+  gavl_track_get_src(entry, GAVL_META_SRC, 0, NULL, &path);
   
-  
-  path = gavl_dictionary_get_string(entry, GAVL_META_URI);
+  //  path = gavl_dictionary_get_string(entry, GAVL_META_URI);
 
   if(strstr(path, "://")) /* Device */
     {
@@ -830,8 +828,10 @@ static int browse_object_internal(bg_mdb_backend_t * be,
       fprintf(stderr, "No label for path %s\n", path);
     
     gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, path_to_id(be, path));
-    
     gavl_dictionary_set_long(m, GAVL_META_MTIME, st.st_mtime);
+
+    fprintf(stderr, "Got ID: %s\n", gavl_dictionary_get_string(m, GAVL_META_ID));
+    
     }
   else if(S_ISREG(st.st_mode))
     {
@@ -990,6 +990,8 @@ static int dirs_equal(const gavl_array_t * dir1,
   return 1;
   }
 
+/* Read a directory from cache for filesystem */
+
 static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
                                              const char * path,
                                              const char * ctx_id)
@@ -1004,8 +1006,10 @@ static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
   
   fs_t * fs = be->priv;
 
+  fprintf(stderr, "ensure_directory %s %s\n", path, ctx_id);
+  
   gavl_array_init(&dir);
-    
+  
   scan_directory(path, &dir);
 
   /*
@@ -1023,12 +1027,18 @@ static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache object is no dictionary", path);
     goto rescan;
     }
+
+  if(!(children = gavl_dictionary_get_array(cache_entry, GAVL_META_CHILDREN)))
+   goto rescan;
+#if 0
   if(!(cache_dir = gavl_dictionary_get_array(cache_entry, META_DIR)))
     {
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache object contains no Element "META_DIR, path);
     goto rescan;
     }
-  if(!dirs_equal(cache_dir, &dir))
+#endif
+  
+  if(!dirs_equal(children, &dir))
     {
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "re-scanning %s, cache expired %d %d", path,
              cache_dir->num_entries, dir.num_entries);
@@ -1040,10 +1050,7 @@ static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
     
     goto rescan;
     }
-
-  if(!(children = gavl_dictionary_get_array(cache_entry, GAVL_META_CHILDREN)))
-    goto rescan;
-
+  
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got %s from cache", path);
   
   goto end;
@@ -1060,8 +1067,7 @@ static const gavl_array_t * ensure_directory(bg_mdb_backend_t * be,
     /* Re-scan directory */
     new_cache_entry = gavl_value_set_dictionary(&new_cache_entry_val);
     new_children = gavl_dictionary_get_array_create(new_cache_entry, GAVL_META_CHILDREN);
-    gavl_dictionary_set_array(new_cache_entry, META_DIR, &dir);
-
+    
     scan_directory_full(be, ctx_id, new_children, &dir);
     children = new_children;
 
@@ -1436,8 +1442,8 @@ static void browse_dir_list(bg_mdb_backend_t * be,
       children = ensure_directory(be, gavl_dictionary_get_string(dir, GAVL_META_URI),
                                   gavl_dictionary_get_string(dir, GAVL_META_ID));
 
-      fprintf(stderr, "Got children:\n");
-      gavl_array_dump(children, 2);
+      //      fprintf(stderr, "Got children:\n");
+      //      gavl_array_dump(children, 2);
       
       read_container_info(be, track, children, photo_mode);
       
@@ -1445,8 +1451,8 @@ static void browse_dir_list(bg_mdb_backend_t * be,
       }
     }
 
-  fprintf(stderr, "Browse dir list:\n");
-  gavl_array_dump(&arr, 2);
+  //  fprintf(stderr, "Browse dir list:\n");
+  //  gavl_array_dump(&arr, 2);
   
   if(arr.num_entries)
     {
@@ -1468,6 +1474,7 @@ static void browse_dir_list(bg_mdb_backend_t * be,
   
   }
 
+#if 0
 static const gavl_dictionary_t * cache_dirent_by_path(const gavl_dictionary_t * cache_entry, const char * path)
   {
   int i;
@@ -1487,6 +1494,7 @@ static const gavl_dictionary_t * cache_dirent_by_path(const gavl_dictionary_t * 
     }
   return 0;
   }
+#endif
 
 static const gavl_dictionary_t *
 cache_object_by_id(const gavl_dictionary_t * cache_entry, const char * id, int * idx, int * total)
@@ -1524,7 +1532,7 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   gavl_value_t new_cache_entry_val;
   gavl_dictionary_t * new_cache_entry;
   gavl_array_t * new_children;
-  gavl_array_t * new_dir;
+  gavl_array_t new_dir;
   
   int64_t mtime;
   fs_t * fs = be->priv;
@@ -1533,6 +1541,8 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   struct stat st;
   int result = 0;
 
+  gavl_array_init(&new_dir);
+  
   if(gavl_string_starts_with(id, fs->root_id) && (dict = bg_mdb_dir_array_get_by_id(&fs->dirs, id)))
     {
     obj = gavl_dictionary_get_dictionary(dict, "obj");
@@ -1574,27 +1584,19 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
     goto rescan;
     }
 
-  if(!(dict = cache_dirent_by_path(cache_entry, path)))
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Found no dirent for path %s in cache entry for ID %s", path, id);
-    goto rescan;
-    }
-  
-  if(!gavl_dictionary_get_long(dict, GAVL_META_MTIME, &mtime))
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cache entry for path %s contains no MTIME", path);
-    goto rescan;
-    }
-    
-  if(mtime != st.st_mtime)
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "MTIME mismatch");
-    goto rescan;
-    }
-  
   if(!(dict = cache_object_by_id(cache_entry, id, idx, total)))
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cache object missing");
+    goto rescan;
+    }
+  if(!gavl_dictionary_get_long(dict, GAVL_META_MTIME, &mtime))
+    {
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cache entry for id %s contains no MTIME", id);
+    goto rescan;
+    }
+  if(mtime != st.st_mtime)
+    {
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "MTIME mismatch");
     goto rescan;
     }
   
@@ -1616,11 +1618,10 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   gavl_value_init(&new_cache_entry_val);
   new_cache_entry = gavl_value_set_dictionary(&new_cache_entry_val);
   new_children = gavl_dictionary_get_array_create(new_cache_entry, GAVL_META_CHILDREN);
-  new_dir = gavl_dictionary_get_array_create(new_cache_entry, META_DIR);
+
   
-  scan_directory(path, new_dir);
-    
-  scan_directory_full(be, parent_id, new_children, new_dir);
+  scan_directory(path, &new_dir);
+  scan_directory_full(be, parent_id, new_children, &new_dir);
 
   if((dict = cache_object_by_id(new_cache_entry, id, idx, total)))
     {
@@ -1632,6 +1633,8 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   cache_put(be, id, &new_cache_entry_val);
   
   end:
+
+  gavl_array_free(&new_dir);
   
   if(path)
     free(path);

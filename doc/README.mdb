@@ -24,7 +24,36 @@ mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Music/"
 mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Movies/"
 
 # Re-scan the whole database (Synchronize SQL with Filesystem)
+# This should be called regularly to keep the stream directories
+# up to date
 mdb-tool -db $MDBPATH -rescan
 
-2. Tagging support
+# Call gmerlin-server once to generate a default config file
+gmerlin-server -sc server.xml
 
+# Edit server.xml and adjust entries.
+# set "export_media_dirs" to 1 if you want your media to be available via http
+
+# Call gmerlin-server with the adjusted config file
+gmerlin-server -c server.xml
+
+2 Tagging support
+2.1 Music files
+Music files are typically grouped by Album. The following Tags are supported and
+should be set in order to properly build a database:
+
+- Artist *
+- Albumartist *
+- Album
+- Title
+- Genre *
+- Year (or date)
+- Track number
+
+Metadata tags with "*" can have multiple entries. 
+
+In addition the directory, where a music file is stored, is searched for a file "cover.jpg".
+
+2.2 TV shows
+
+TV Shows are 

@@ -57,26 +57,26 @@
 
 static char * db_path = NULL;
 
-static void opt_dbpath(void * data, int * argc, char *** _argv, int arg)
+static void opt_db(void * data, int * argc, char *** _argv, int arg)
   {
   if(arg >= *argc)
     {
-    fprintf(stderr, "Option -dbpath requires an argument\n");
+    fprintf(stderr, "Option -db requires an argument\n");
     exit(-1);
     }
 
   db_path = (*_argv)[arg];
   bg_cmdline_remove_arg(argc, _argv, arg);
 
-  fprintf(stderr, "db path: %s\n", db_path);
+  fprintf(stderr, "Usinf db path from commandline: %s\n", db_path);
   }
 
 static bg_cmdline_arg_t cmdline_args[] =
   {
     {
-      .arg =         "-dbpath",
+      .arg =         "-db",
       .help_string = "Use other database path",
-      .callback =    opt_dbpath,
+      .callback =    opt_db,
     },
     BG_PLUGIN_OPT_OA,
     BG_PLUGIN_OPT_OV,

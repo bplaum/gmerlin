@@ -2644,6 +2644,7 @@ static void init_sources(bg_mdb_backend_t * b)
 
 static int ping_streams(bg_mdb_backend_t * be)
   {
+  gavl_msg_t * evt;
   streams_t * priv = be->priv;
   //  rescan(b);
   
@@ -2669,6 +2670,10 @@ static int ping_streams(bg_mdb_backend_t * be)
                               bg_sqlite_get_int(priv->db, "select count("META_DB_ID") from sources;"), 0);
 
   broadcast_root_folder(be);
+
+  evt = bg_msg_sink_get(be->ctrl.evt_sink);
+  gavl_msg_set_id_ns(evt, BG_MSG_DB_CREATION_DONE, BG_MSG_NS_DB);
+  bg_msg_sink_put(be->ctrl.evt_sink);
   
   be->ping_func = NULL;
   return 1;

@@ -55,6 +55,7 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 #define BE_FLAG_REMOTE   (1<<1) // We want remote devices
 #define BE_FLAG_VOLUMES  (1<<2) // We want volumes and drives
 #define BE_FLAG_RESCAN   (1<<3) // We want rescan commands
+#define BE_FLAG_CREATION_DONE   (1<<4) // We send CREATION_DONE events
 
 /* BG_MSG_NS_MDB_PRIVATE */
 
@@ -248,10 +249,11 @@ struct bg_mdb_s
   
   FILE * dirlock;
   int num_rescan;
+  int num_create;
   
   gavl_msg_t * rescan_func;
   
-  int page_size;
+  //  int page_size;
 
   char * thumbs_dir;
   

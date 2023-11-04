@@ -1423,8 +1423,12 @@ static void open_album(bg_gtk_mdb_tree_t * t, const char * id)
     }
   else
     {
-    if((dict = id_to_album(t, id)) &&
-       gavl_track_is_locked(dict))
+    if(!(dict = id_to_album(t, id)))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Album %s not found", id);
+      return;
+      }
+    else if(gavl_track_is_locked(dict))
       {
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Album %s is locked", id);
       return;

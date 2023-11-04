@@ -103,7 +103,7 @@
 
 /*  */
 
-// #define BG_MSG_DB_RESCAN_DONE             102
+#define BG_MSG_DB_CREATION_DONE           102
 
 /*
  *  ContextID: album_id

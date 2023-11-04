@@ -871,6 +871,14 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
       /* Store changes in the root directories */
       switch(msg->ID)
         {
+        case BG_MSG_DB_CREATION_DONE:
+          db->num_create--;
+          if(!db->num_create)
+            {
+            bg_msg_sink_put_copy(db->ctrl.evt_sink, msg);
+            gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creation done");
+            }
+          break;
         case BG_RESP_DB_RESCAN:
           db->num_rescan--;
 
@@ -1211,6 +1219,15 @@ static void set_state_mimetypes(bg_mdb_t * db)
 
   }
 
+static int handle_creation_event(void * priv, gavl_msg_t * msg)
+  {
+  if((msg->NS == BG_MSG_NS_DB) && (msg->ID == BG_MSG_DB_CREATION_DONE))
+    {
+    int * done = priv;
+    *done = 1;
+    }
+  return 1;
+  }
 
 
 bg_mdb_t * bg_mdb_create(const char * path,
@@ -1222,6 +1239,8 @@ bg_mdb_t * bg_mdb_create(const char * path,
   char * tmp_string;
   int has_new_cfg_reg = 0;
   gavl_dictionary_t * m;
+  bg_msg_sink_t * sink = NULL;
+  int done = 0;
   
   ret->cfg_save_time = GAVL_TIME_UNDEFINED;
   
@@ -1329,7 +1348,10 @@ bg_mdb_t * bg_mdb_create(const char * path,
     {
     ret->backends[i].db = ret;
     backends[i].create_func(&ret->backends[i]);
-
+    
+    if(do_create && (ret->backends[i].flags & BE_FLAG_CREATION_DONE))
+      ret->num_create++;
+    
     ret->backends[i].name = backends[i].name;
     ret->backends[i].long_name = backends[i].long_name;
     
@@ -1400,6 +1422,12 @@ bg_mdb_t * bg_mdb_create(const char * path,
 
   set_state_mimetypes(ret);
 
+  if(do_create)
+    {
+    /* Wait until the creation is complete */
+    sink = bg_msg_sink_create(handle_creation_event, &done, 0);
+    bg_msg_hub_connect_sink(ret->ctrl.evt_hub, sink);
+    }
   
   for(i = 0; i < num_backends; i++)
     pthread_create(&ret->backends[i].th, NULL, backend_thread, &ret->backends[i]);
@@ -1407,6 +1435,29 @@ bg_mdb_t * bg_mdb_create(const char * path,
   pthread_create(&ret->th, NULL, mdb_thread, ret);
 
   bg_mdb_export_media_directory(ret->be_evt_sink, ret->thumbs_dir);
+
+  if(do_create)
+    {
+    gavl_time_t delay_time = GAVL_TIME_SCALE / 10;
+    /* Wait until the creation is complete */
+    while(1)
+      {
+      bg_msg_sink_iteration(sink);
+      if(!done)
+        gavl_time_delay(&delay_time);
+      else
+        {
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creation completed");
+        break;
+        }
+      }
+    }
+
+  if(sink)
+    {
+    bg_msg_hub_disconnect_sink(ret->ctrl.evt_hub, sink);
+    bg_msg_sink_destroy(sink);
+    }
   
   return ret;
   
@@ -1475,7 +1526,8 @@ void bg_mdb_destroy(bg_mdb_t * db)
     free(db->backends);
     }
 
-  bg_msg_hub_disconnect_sink(bg_backend_registry_get_evt_hub() , db->ctrl.cmd_sink);
+  if(db->ctrl.cmd_sink)
+    bg_msg_hub_disconnect_sink(bg_backend_registry_get_evt_hub(), db->ctrl.cmd_sink);
   
   bg_controllable_cleanup(&db->ctrl);
 
