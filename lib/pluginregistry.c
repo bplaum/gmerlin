@@ -92,11 +92,6 @@ static void
 set_locations(gavl_dictionary_t * dict, const char * location);
 
 
-static int probe_image(bg_plugin_registry_t * r,
-                       const char * filename,
-                       gavl_video_format_t * format,
-                       gavl_dictionary_t * m, bg_plugin_handle_t ** h);
-
 
 static struct
   {
@@ -1979,10 +1974,9 @@ bg_plugin_registry_load_cover_cnv(bg_plugin_registry_t * r,
   }
 
 
-static int probe_image(bg_plugin_registry_t * r,
-                       const char * filename,
-                       gavl_video_format_t * format,
-                       gavl_dictionary_t * m, bg_plugin_handle_t ** h)
+int bg_plugin_registry_probe_image(const char * filename,
+                                   gavl_video_format_t * format,
+                                   gavl_dictionary_t * m, bg_plugin_handle_t ** h)
   {
   bg_image_reader_plugin_t * ir;
   bg_plugin_handle_t * handle = NULL;
@@ -2033,8 +2027,8 @@ bg_plugin_registry_load_image(bg_plugin_registry_t * r,
   // fprintf(stderr, "bg_plugin_registry_load_image\n");
   memset(format, 0, sizeof(*format));
   
-  if(!probe_image(r, filename, format,
-                  m, &handle))
+  if(!bg_plugin_registry_probe_image(filename, format,
+                                     m, &handle))
     goto fail;
   
   ir = (bg_image_reader_plugin_t*)handle->plugin;
@@ -2470,7 +2464,7 @@ static int check_image(bg_plugin_registry_t * plugin_reg,
   memset(&fmt, 0, sizeof(fmt));
   gavl_dictionary_init(&m);
   
-  if(access(filename, R_OK) || !probe_image(plugin_reg, filename, &fmt, &m, NULL))
+  if(access(filename, R_OK) || !bg_plugin_registry_probe_image(filename, &fmt, &m, NULL))
     return 0;
   
   gavl_metadata_add_image_uri(dict, key, fmt.image_width, fmt.image_height,
@@ -4707,6 +4701,7 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
   int num_tracks;
   bg_plugin_handle_t * h = NULL;
   gavl_dictionary_t * ret = NULL;
+  gavl_dictionary_t * edl = NULL;
 
   char * location = gavl_strdup(location1);
   
@@ -4793,6 +4788,16 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
     ret = NULL;
     }
 
+  /* Check whether to return edl instead */
+
+  if(ret && (edl = gavl_dictionary_get_dictionary_nc(ret, GAVL_META_EDL)))
+    {
+    gavl_dictionary_t * tmp = calloc(1, sizeof(*tmp));
+    gavl_dictionary_move(tmp, edl);
+    gavl_dictionary_destroy(ret);
+    ret = tmp;
+    }
+  
   free(location);
   
   return ret;

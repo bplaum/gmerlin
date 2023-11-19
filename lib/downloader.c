@@ -182,7 +182,6 @@ static int save_cache_item(bg_downloader_t * d,
   return 1;
   }
 
-
 void bg_downloader_update(bg_downloader_t * d)
   {
   int i, j;
@@ -383,6 +382,7 @@ void bg_downloader_add(bg_downloader_t * d, const char * uri,
   item->cb = cb;
   item->cb_data = cb_data;
 
+  /* Check if download for this uri is already running */
   item->slot = get_download_slot(d, uri);
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Added download %s slot: %d", uri, item->slot);
 

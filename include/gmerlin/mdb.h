@@ -214,6 +214,13 @@ void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl
 
 char * bg_mdb_get_parent_id(const char * id);
 
+/* Return the "depth" of an ID
+   "/" is depth 0
+   "/dir" is depth 1
+   "/dir/subdir" is depth 2
+   and so o */
+int bg_mdb_id_get_depth(const char * id);
+
 const char * bg_mdb_get_child_class(const gavl_dictionary_t * track);
 
 int bg_mdb_is_parent_id(const char * child, const char * parent);

@@ -384,7 +384,13 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD
       GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD
     */
-    
+
+#if 0    
+    fprintf(stderr, "Media:      %s\n", media);
+    fprintf(stderr, "Label:      %s\n", label);
+    fprintf(stderr, "Filesystem: %s\n", filesystem);
+    fprintf(stderr, "Name:       %s\n", name);
+#endif
     add_volume(v, name, label, location, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM);
     }
 

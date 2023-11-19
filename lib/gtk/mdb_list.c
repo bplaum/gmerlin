@@ -48,6 +48,9 @@
 
 #include "mdb_private.h"
 
+/* Make the display of the track info use the browse_object function */
+#define TEST_BROWSE_OBJECT
+
 /* Forward declarations */
 
 static void save_tracks(bg_gtk_mdb_tree_t * tree);
@@ -1282,6 +1285,64 @@ bg_gtk_mdb_search_equal_func(GtkTreeModel *model, gint column,
   return ret;
   }
 
+#ifdef TEST_BROWSE_OBJECT
+
+static int handle_msg_show_track_info(void * data, gavl_msg_t * msg)
+  {
+  /* data = toplevel */
+  
+  if((msg->ID == BG_RESP_DB_BROWSE_OBJECT) &&
+     (msg->NS == BG_MSG_NS_DB))
+    {
+    gavl_dictionary_t dict;
+    gavl_dictionary_init(&dict);
+    
+    gavl_msg_get_arg_dictionary(msg, 0, &dict);
+
+    bg_gtk_trackinfo_show(&dict, data);
+    gavl_dictionary_free(&dict);
+    }
+  return 1;
+  }
+#endif
+
+static void show_track_info(bg_gtk_mdb_tree_t * tree,
+                            const gavl_dictionary_t * dict,
+                            GtkWidget * toplevel)
+  {
+#ifdef TEST_BROWSE_OBJECT
+  const char * id;
+  bg_controllable_t * ctrl;
+  gavl_msg_t msg;
+  gavl_msg_init(&msg);
+  gavl_msg_set_id_ns(&msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
+  
+  if(!(id = gavl_track_get_id(dict)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "show_track_info: Track has no ID");
+    return;
+    }
+
+  gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, id);
+  
+  if(gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
+    ctrl = tree->player_ctrl_p;
+  else
+    ctrl = tree->mdb_ctrl_p;
+  
+  if(!bg_controllable_call_function(ctrl, &msg,
+                                    handle_msg_show_track_info, toplevel, 10000))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "show_track_info: browsing object failed");
+    }
+  
+  gavl_msg_free(&msg);
+  
+#else
+  bg_gtk_trackinfo_show(dict, toplevel);
+#endif
+  }
+
 /* List menu */
 
 static void clipboard_received_func(GtkClipboard *clipboard,
@@ -1308,8 +1369,10 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     {
     //  fprintf(stderr, "Album info %p\n", tree->menu_ctx.album);
     if(tree->menu_ctx.album)
-      bg_gtk_trackinfo_show(tree->menu_ctx.album, tree->menu_ctx.widget);
-    
+      {
+      show_track_info(tree, tree->menu_ctx.album,
+                      tree->menu_ctx.widget);
+      }
     }
   else if(item == tree->menu.album_menu.sort_item)
     {
@@ -1404,7 +1467,8 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
   else if(item == tree->menu.track_menu.info_item)
     {
     if(tree->menu_ctx.item)
-      bg_gtk_trackinfo_show(tree->menu_ctx.item, tree->menu_ctx.widget);
+      show_track_info(tree, tree->menu_ctx.item,
+                      tree->menu_ctx.widget);
     }
   else if(item == tree->menu.track_menu.copy_item)
     {

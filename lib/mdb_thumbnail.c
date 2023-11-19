@@ -309,6 +309,14 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
     bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
     free(sql);
     }
+  else if((path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_ICON_URL, 0, NULL, NULL, NULL)) &&
+     ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
+    {
+    sql = bg_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
+    tn.tag = GAVL_META_ICON_URL;
+    bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
+    free(sql);
+    }
   
   /* Album cover */  
   if((path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_COVER_URL, 0, NULL, NULL, NULL)) &&

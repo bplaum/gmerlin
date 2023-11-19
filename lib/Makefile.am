@@ -150,6 +150,7 @@ md5.c \
 mdb_filesystem.c \
 mdb_radiobrowser.c \
 mdb_remote.c \
+mdb_removable.c \
 mdb_podcast.c \
 mdb_sqlite.c \
 mdb_streams.c \

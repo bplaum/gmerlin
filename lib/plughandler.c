@@ -227,9 +227,10 @@ void bg_plug_handler_add_uris(bg_plug_handler_t * h, gavl_dictionary_t * track)
   if(!(id = gavl_track_get_id(track)))
     return;
 
-  root_uri = bg_http_server_get_root_url(h->srv);
   
-  if(!(pos = strstr(root_uri, "://")))
+  
+  if(!(root_uri = bg_http_server_get_root_url(h->srv)) ||
+     !(pos = strstr(root_uri, "://")))
     return;
     
   uri      = bg_sprintf("gavf-tcp%s"PLUG_PATH"%s", pos, id);

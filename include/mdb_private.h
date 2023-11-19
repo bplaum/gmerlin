@@ -44,6 +44,7 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 #define MDB_BACKEND_REMOTE         "remote"
 #define MDB_BACKEND_PODCASTS       "podcasts"
 #define MDB_BACKEND_STREAMS        "streams"
+#define MDB_BACKEND_REMOVABLE      "removable"
 
 /* Special dictionary to store MDB specific data in
    gavl tracks. Will be removed before passed to the outer world */
@@ -123,6 +124,9 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b);
 
 void bg_mdb_create_streams(bg_mdb_backend_t * b);
 
+void bg_mdb_create_removable(bg_mdb_backend_t * b);
+
+
 /* id is e.g.: /upnp-2/upnp_id */
 
 /* mdb_thumbnail.c */
@@ -167,11 +171,6 @@ void bg_mdb_add_http_uris_arr(bg_mdb_t * mdb, gavl_array_t * arr);
 void bg_mdb_delete_http_uris(gavl_dictionary_t * dict);
 
 
-const gavl_dictionary_t * bg_mdb_cache_get_object_max_age(bg_mdb_t * mdb, const char * id, int64_t max_age);
-const gavl_dictionary_t * bg_mdb_cache_get_object_min_mtime(bg_mdb_t * mdb, const char * id, int64_t min_mtime);
-
-const gavl_array_t * bg_mdb_cache_get_children_max_age(bg_mdb_t * mdb, const char * id, int64_t max_age);
-const gavl_array_t * bg_mdb_cache_get_children_min_mtime(bg_mdb_t * mdb, const char * id, int64_t min_mtime);
 
 
 void bg_mdb_set_next_previous(gavl_array_t * arr);
@@ -227,8 +226,6 @@ struct bg_mdb_s
 
   bg_volume_manager_t * volman;
   int volumes_added;
-
-  bg_object_cache_t * cache;
 
   gavl_dictionary_t root;
   

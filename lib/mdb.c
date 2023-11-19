@@ -66,6 +66,7 @@ backends[] =
     //    { bg_mdb_create_radio_browser, MDB_BACKEND_RADIO_BROWSER, "Radiobrowser" },
     { bg_mdb_create_podcasts,      MDB_BACKEND_PODCASTS,      "Podcasts"     },
     { bg_mdb_create_streams,       MDB_BACKEND_STREAMS,       "Streams"      },
+    { bg_mdb_create_removable,     MDB_BACKEND_REMOVABLE,     "Removable"    },
   };
 
 #define num_backends (sizeof(backends)/sizeof(backends[0]))
@@ -1236,7 +1237,6 @@ bg_mdb_t * bg_mdb_create(const char * path,
   int i;
   int idx;
   bg_mdb_t * ret = calloc(1, sizeof(*ret));
-  char * tmp_string;
   int has_new_cfg_reg = 0;
   gavl_dictionary_t * m;
   bg_msg_sink_t * sink = NULL;
@@ -1322,11 +1322,6 @@ bg_mdb_t * bg_mdb_create(const char * path,
   gavl_dictionary_set_string(m, GAVL_META_LABEL, "Root");
   gavl_dictionary_set_string(m, GAVL_META_ID, "/");
   gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT);
-  
-  /* Cache */
-  tmp_string = bg_sprintf("%s/cache", ret->path);
-  ret->cache = bg_object_cache_create(10000, 200, tmp_string);
-  free(tmp_string);
   
   /* Thumbnails */
   
@@ -1540,10 +1535,6 @@ void bg_mdb_destroy(bg_mdb_t * db)
   if(db->thumbs_dir)
     free(db->thumbs_dir);
   
-  
-  if(db->cache)
-    bg_object_cache_destroy(db->cache);
-
   bg_unlock_directory(db->dirlock, db->path);
   
   if(db->path)
@@ -1881,6 +1872,22 @@ char * bg_mdb_get_parent_id(const char * id)
   return gavl_strndup(id, end);
   }
 
+int bg_mdb_id_get_depth(const char * id)
+  {
+  int ret = 0;
+  if(!strcmp(id, "/"))
+    return 0;
+
+  while(*id != '\0')
+    {
+    if(*id == '/')
+      ret++;
+    id++;
+    }
+  return ret;
+  }
+
+
 int bg_mdb_is_ancestor(const char * ancestor, const char * descendant)
   {
   int ancestor_len;
@@ -1899,79 +1906,6 @@ int bg_mdb_is_ancestor(const char * ancestor, const char * descendant)
   
   return 1;
   }
-
-/* Caching utilities */
-#if 0
-const gavl_dictionary_t * bg_mdb_cache_get_object_max_age(bg_mdb_t * mdb, const char * id, int64_t max_age)
-  {
-  char * parent_id;
-  const gavl_value_t * val;
-
-  if((val = bg_object_cache_get_max_age(mdb->cache, id, max_age)))
-    return gavl_value_get_dictionary(val);
-
-  if((parent_id = bg_mdb_get_parent_id(id)))
-    {
-    const gavl_dictionary_t * dict = NULL;
-    
-    if((val = bg_object_cache_get_max_age(mdb->cache, parent_id, max_age)) &&
-       (dict = gavl_value_get_dictionary(val)))
-      dict = gavl_get_track_by_id(dict, id);
-    
-    free(parent_id);
-
-    return dict;
-    }
-  return NULL;
-  }
-
-const gavl_dictionary_t * bg_mdb_cache_get_object_min_mtime(bg_mdb_t * mdb, const char * id, int64_t min_mtime)
-  {
-  char * parent_id;
-  const gavl_value_t * val;
-
-  if((val = bg_object_cache_get_min_mtime(mdb->cache, id, min_mtime)))
-    return gavl_value_get_dictionary(val);
-
-  if((parent_id = bg_mdb_get_parent_id(id)))
-    {
-    const gavl_dictionary_t * dict = NULL;
-    
-    if((val = bg_object_cache_get_min_mtime(mdb->cache, parent_id, min_mtime)) &&
-       (dict = gavl_value_get_dictionary(val)))
-      dict = gavl_get_track_by_id(dict, id);
-    
-    free(parent_id);
-
-    return dict;
-    }
-  return NULL;
-  }
-
-const gavl_array_t * bg_mdb_cache_get_children_max_age(bg_mdb_t * mdb, const char * id, int64_t max_age)
-  {
-  const gavl_value_t * val;
-  const gavl_dictionary_t * dict;
-
-  if((val = bg_object_cache_get_max_age(mdb->cache, id, max_age)) &&
-     (dict = gavl_value_get_dictionary(val)))
-    return gavl_get_tracks(dict);
-  else
-    return NULL;
-  }
-
-const gavl_array_t * bg_mdb_cache_get_children_min_mtime(bg_mdb_t * mdb, const char * id, int64_t min_mtime)
-  {
-  const gavl_value_t * val;
-  const gavl_dictionary_t * dict;
-
-  if((val = bg_object_cache_get_min_mtime(mdb->cache, id, min_mtime)) &&
-     (dict = gavl_value_get_dictionary(val)))
-    return gavl_get_tracks(dict);
-  else
-    return NULL;
-  }
-#endif
 
 /* Editable flags */
 

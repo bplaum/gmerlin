@@ -144,7 +144,7 @@ int bg_controllable_call_function(bg_controllable_t * c, gavl_msg_t * func,
       }
     if((gavl_timer_get(timer)*1000) / GAVL_TIME_SCALE > timeout)
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Timeout expired when waiting for function result");
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Timeout expired while waiting for function result");
       break;
       }
     if(!bg_msg_sink_get_num(ctrl.evt_sink))

@@ -558,8 +558,6 @@ static void trackinfo_show(bg_gtk_trackinfo_t * w, int modal, GtkWidget * parent
 
 /* This pops up a window which shows all informations about a selected track */
 
-#define S(s) (s?s:"(NULL)")
-
 void bg_gtk_trackinfo_show(const gavl_dictionary_t * dict,
                            GtkWidget * parent)
   {

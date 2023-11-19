@@ -70,20 +70,16 @@ struct bg_object_cache_s
 
   char * directory;
 
-  pthread_mutex_t mutex;
-
   };
 
-static void cache_delete_nolock(bg_object_cache_t * cache, const char * id);
+static gavl_value_t * object_cache_put_nocopy(bg_object_cache_t * cache,
+                                              const char * id, gavl_value_t * val);
 
-static const gavl_value_t * object_cache_put_nocopy(bg_object_cache_t * cache,
-                                                    const char * id, gavl_value_t * val);
+static gavl_value_t * object_cache_put(bg_object_cache_t * cache,
+                                       const char * id, const gavl_value_t * val);
 
-static const gavl_value_t * object_cache_put(bg_object_cache_t * cache,
-                                             const char * id, const gavl_value_t * val);
-
-static const gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cache,
-                                                        const char * id, gavl_value_t * val);
+static gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cache,
+                                                  const char * id, gavl_value_t * val);
 
 
 static void move_to_front_mem(mem_cache_entry_t * arr, int num, int idx)
@@ -260,20 +256,17 @@ static int disk_cache_index(const bg_object_cache_t * cache, const uint32_t * md
   return -1;
   }
 
-const gavl_value_t * bg_object_cache_get(bg_object_cache_t * cache, const char * id)
+gavl_value_t * bg_object_cache_get(bg_object_cache_t * cache, const char * id)
   {
   int idx;
   int done = 0;
-  const gavl_value_t * ret = NULL;
+  gavl_value_t * ret = NULL;
   gavl_value_t * val = NULL;
   
   uint32_t md5[4];
   
-  
   /* Calculate md5 of id */
   id_2_md5(id, md5);
-  
-  pthread_mutex_lock(&cache->mutex);
   
   /* 1. Try memory cache */
   if((idx = mem_cache_index(cache, md5)) >= 0)
@@ -305,13 +298,7 @@ const gavl_value_t * bg_object_cache_get(bg_object_cache_t * cache, const char *
       }
     }
   
-  pthread_mutex_unlock(&cache->mutex);
   return ret;
-  }
-
-void bg_object_cache_done_get(bg_object_cache_t * cache)
-  {
-  pthread_mutex_unlock(&cache->mutex);
   }
 
 static void delete_memory_cache(bg_object_cache_t * cache,
@@ -331,22 +318,13 @@ static void delete_disk_cache(bg_object_cache_t * cache,
     delete_disk_cache_idx(cache, idx);
   }
 
-static void cache_delete_nolock(bg_object_cache_t * cache,
-                                const char * id)
+void bg_object_cache_delete(bg_object_cache_t * cache,
+                            const char * id)
   {
   uint32_t md5[4];
   id_2_md5(id, md5);
   delete_memory_cache(cache, md5);
   delete_disk_cache(cache, md5);
-  }
-
-
-void bg_object_cache_delete(bg_object_cache_t * cache,
-                            const char * id)
-  {
-  pthread_mutex_lock(&cache->mutex);
-  cache_delete_nolock(cache, id);
-  pthread_mutex_unlock(&cache->mutex);
   }
 
 static void put_disk_cache_nocopy(bg_object_cache_t * cache, const uint32_t * md5,
@@ -390,7 +368,6 @@ static void put_disk_cache_nocopy(bg_object_cache_t * cache, const uint32_t * md
 
   gavl_dictionary_init(&dict);
   gavl_dictionary_set_nocopy(&dict, "v", val);
-  gavl_dictionary_set_string(&dict, GAVL_META_ID, id);
   
   filename = create_filename(cache, md5);
 
@@ -400,7 +377,7 @@ static void put_disk_cache_nocopy(bg_object_cache_t * cache, const uint32_t * md
   gavl_dictionary_free(&dict);
   }
 
-static const gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cache,
+static gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cache,
                                                         const char * id, gavl_value_t * val)
   {
   /* Make space in memory cache */
@@ -426,15 +403,15 @@ static const gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cach
   
   }
 
-static const gavl_value_t * object_cache_put_nocopy(bg_object_cache_t * cache,
+static gavl_value_t * object_cache_put_nocopy(bg_object_cache_t * cache,
                                                     const char * id, gavl_value_t * val)
   {
-  cache_delete_nolock(cache, id);
+  bg_object_cache_delete(cache, id);
   return object_cache_prepend_nocopy(cache, id, val);
   }
 
-static const gavl_value_t * object_cache_put(bg_object_cache_t * cache,
-                                             const char * id, const gavl_value_t * val)
+static gavl_value_t * object_cache_put(bg_object_cache_t * cache,
+                                       const char * id, const gavl_value_t * val)
   {
   gavl_value_t v;
   gavl_value_init(&v);
@@ -442,23 +419,19 @@ static const gavl_value_t * object_cache_put(bg_object_cache_t * cache,
   return object_cache_put_nocopy(cache, id, &v);
   }
 
-const gavl_value_t * bg_object_cache_put(bg_object_cache_t * cache,
-                                         const char * id, const gavl_value_t * val)
+gavl_value_t * bg_object_cache_put(bg_object_cache_t * cache,
+                                          const char * id, const gavl_value_t * val)
   {
-  const gavl_value_t * ret;
-  pthread_mutex_lock(&cache->mutex);
+  gavl_value_t * ret;
   ret = object_cache_put(cache, id, val);
-  pthread_mutex_unlock(&cache->mutex);
   return ret;
   }
 
-const gavl_value_t * bg_object_cache_put_nocopy(bg_object_cache_t * cache,
+gavl_value_t * bg_object_cache_put_nocopy(bg_object_cache_t * cache,
                                                 const char * id, gavl_value_t * val)
   {
-  const gavl_value_t * ret;
-  pthread_mutex_lock(&cache->mutex);
+  gavl_value_t * ret;
   ret = object_cache_put_nocopy(cache, id, val);
-  pthread_mutex_unlock(&cache->mutex);
   return ret;
   }
 
@@ -468,8 +441,6 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
   {
   bg_object_cache_t * ret = calloc(1, sizeof(*ret));
 
-  pthread_mutex_init(&ret->mutex, NULL); 
-  
   ret->max_disk_cache_size = max_disk_cache_size;
   ret->max_memory_cache_size = max_memory_cache_size;
 
@@ -482,54 +453,6 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
   
   load_disk_index(ret);
   return ret;
-  }
-
-void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv)
-  {
-  int i;
-  //  char * filename;
-  //  gavl_dictionary_t dict;
-  //  const char * id;
-  //  const gavl_value_t * val;
-  
-  pthread_mutex_lock(&cache->mutex);
-
-  i = 0;
-  /* Memory cache */
-  while(i < cache->memory_cache_size)
-    {
-    if(!f(&cache->memory_cache[i].val,
-          cache->memory_cache[i].id,
-          priv))
-      delete_memory_cache_idx(cache, i);
-    else
-      i++;
-    }
-
-#if 0
-  
-  i =  0;
-  while(i < cache->disk_cache_size)
-    {
-    gavl_dictionary_init(&dict);
-    filename = create_filename(cache, cache->disk_cache[i].md5);
-
-    
-    if(bg_dictionary_load_xml(&dict, filename, ROOT_NAME_ENTRY))
-      {
-      val = gavl_dictionary_get(&dict, "v");
-      id = gavl_dictionary_get_string(&dict, GAVL_META_ID);
-      }
-    
-    i++;
-    
-    free(filename);
-    gavl_dictionary_free(&dict);
-    }
-#endif
-
-  /* Disk cache */
-  pthread_mutex_unlock(&cache->mutex);
   }
 
 void bg_object_cache_destroy(bg_object_cache_t * cache)
@@ -551,8 +474,6 @@ void bg_object_cache_destroy(bg_object_cache_t * cache)
   free(cache->memory_cache);
   free(cache->disk_cache);
   free(cache->directory);
-
-  pthread_mutex_destroy(&cache->mutex); 
   
   free(cache);
   }

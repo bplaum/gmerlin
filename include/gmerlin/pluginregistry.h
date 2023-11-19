@@ -1002,6 +1002,11 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
                                                        const char * location,
                                                        int flags);
 
+int bg_plugin_registry_probe_image(const char * filename,
+                                   gavl_video_format_t * format,
+                                   gavl_dictionary_t * m, bg_plugin_handle_t ** h);
+
+
 #if 0
 void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
                                               const gavl_value_t * val,

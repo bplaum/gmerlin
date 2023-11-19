@@ -29,14 +29,12 @@ typedef int (*bg_object_cache_check_func)(const gavl_value_t * val, const char *
 
 /* The value is only valid until the next call to any cache function */
 
-const gavl_value_t * bg_object_cache_get(bg_object_cache_t * cache, const char * id);
-
-void bg_object_cache_done_get(bg_object_cache_t * cache);
+gavl_value_t * bg_object_cache_get(bg_object_cache_t * cache, const char * id);
 
 void bg_object_cache_delete(bg_object_cache_t * cache, const char * id);
 
-const gavl_value_t * bg_object_cache_put_nocopy(bg_object_cache_t * cache, const char * id, gavl_value_t * val);
-const gavl_value_t * bg_object_cache_put(bg_object_cache_t * cache, const char * id, const gavl_value_t * val);
+gavl_value_t * bg_object_cache_put_nocopy(bg_object_cache_t * cache, const char * id, gavl_value_t * val);
+gavl_value_t * bg_object_cache_put(bg_object_cache_t * cache, const char * id, const gavl_value_t * val);
 
 bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
                                            int max_memory_cache_size,
@@ -44,7 +42,9 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
 
 void bg_object_cache_destroy(bg_object_cache_t * cache);
 
-void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv);
+// void bg_object_cache_cleanup(bg_object_cache_t * cache, bg_object_cache_check_func f, void * priv);
+
+#if 0
 
 /* TODO: Local store for long tracklists */
 
@@ -58,7 +58,7 @@ const gavl_dictionary_t * bg_list_store_get(bg_list_store_t * st, int idx);
 
 /* val can be array or dictionary */
 void bg_list_store_splice(bg_list_store_t * st, int idx, int del, gavl_value_t * val);
-
+#endif
 
 
 #endif // BG_OBJCACHE_H_INCLUDED
