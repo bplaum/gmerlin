@@ -1154,19 +1154,8 @@ set_input_format_cropscale(void * priv,
 static void transfer_global_options(gavl_video_options_t * opt,
                                     gavl_video_options_t * global_opt)
   {
-  void * client_data;
-  gavl_video_stop_func stop_func;
-  gavl_video_run_func  run_func;
-  
   gavl_video_options_set_quality(opt, gavl_video_options_get_quality(global_opt));
-  gavl_video_options_set_num_threads(opt, gavl_video_options_get_num_threads(global_opt));
-                                     
-  run_func = gavl_video_options_get_run_func(global_opt, &client_data);
-  gavl_video_options_set_run_func(opt, run_func, client_data);
-
-  stop_func = gavl_video_options_get_stop_func(global_opt, &client_data);
-  gavl_video_options_set_stop_func(opt, stop_func, client_data);
-  
+  gavl_video_options_set_thread_pool(opt, gavl_video_options_get_thread_pool(global_opt));
   }
 
 static void init_scaler(cropscale_priv_t * vp)

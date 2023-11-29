@@ -236,6 +236,7 @@ int main(int argc, char ** argv)
   gavl_video_format_dump(&out_format);
 
   gavl_dictionary_dump(&metadata, 0);
+  fprintf(stderr, "\n");
   
   opt = gavl_video_converter_get_options(cnv);
   gavl_video_options_copy(opt, vopt.opt);

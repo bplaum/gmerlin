@@ -30,8 +30,6 @@
 #include <gavl/metadata.h>
 #include <gavl/value.h>
 
-/* Forward declaration */
-typedef struct bg_thread_pool_s bg_thread_pool_t;
 
 /* Struct for converting audio */
 
@@ -79,7 +77,7 @@ typedef struct
   int user_pixel_width;
   int user_pixel_height;
   
-  bg_thread_pool_t * thread_pool;
+  gavl_thread_pool_t * thread_pool;
   int num_threads;
   int options_changed;
   } bg_gavl_video_options_t;
@@ -684,17 +682,6 @@ int bg_overlay_too_old(gavl_time_t time, gavl_time_t ovl_time,
 
 int bg_overlay_too_new(gavl_time_t time, gavl_time_t ovl_time);
 
-/* Thread pool */
-
-bg_thread_pool_t * bg_thread_pool_create(int num_threads);
-void bg_thread_pool_destroy(bg_thread_pool_t *);
-
-void bg_thread_pool_run(void (*func)(void*,int start, int len),
-                        void * gavl_data,
-                        int start, int len,
-                        void * client_data, int thread);
-
-void bg_thread_pool_stop(void * client_data, int thread);
 
 /* Print time */
 

@@ -67,12 +67,8 @@ struct bg_colormatrix_s
 
   /* Multithreading stuff */
 
-  gavl_video_run_func run_func;
-  void * run_data;
-  gavl_video_stop_func stop_func;
-  void * stop_data;
-  int num_threads;
-
+  gavl_thread_pool_t * tp;
+  
   gavl_video_frame_t * frame;
   };
 
@@ -1417,9 +1413,7 @@ void bg_colormatrix_init(bg_colormatrix_t * m,
                          gavl_video_format_t * format, int flags,
                          gavl_video_options_t * opt)
   {
-  m->run_func  = gavl_video_options_get_run_func(opt, &m->run_data);
-  m->stop_func = gavl_video_options_get_stop_func(opt, &m->stop_data);
-  m->num_threads = gavl_video_options_get_num_threads(opt);
+  m->tp  = gavl_video_options_get_thread_pool(opt);
   
   if(flags & BG_COLORMATRIX_FORCE_ALPHA)
     format->pixelformat = gavl_pixelformat_get_best(format->pixelformat,
@@ -1445,7 +1439,7 @@ void bg_colormatrix_process(bg_colormatrix_t * m,
 
   m->frame = in_frame;
   
-  nt = m->num_threads;
+  nt = gavl_thread_pool_get_num_threads(m->tp);
   if(nt > m->format.image_height)
     nt = m->format.image_height;
 
@@ -1454,13 +1448,13 @@ void bg_colormatrix_process(bg_colormatrix_t * m,
 
   for(j = 0; j < nt - 1; j++)
     {
-    m->run_func(m->func, m, scanline, scanline+delta, m->run_data, j);
+    gavl_thread_pool_run(m->func, m, scanline, scanline+delta, m->tp, j);
     scanline += delta;
     }
-  m->run_func(m->func, m, scanline, m->format.image_height,
-              m->run_data, nt - 1);
+  gavl_thread_pool_run(m->func, m, scanline, m->format.image_height,
+                       m->tp, nt - 1);
   
   for(j = 0; j < nt; j++)
-    m->stop_func(m->stop_data, j);
+    gavl_thread_pool_stop(m->tp, j);
   }
 

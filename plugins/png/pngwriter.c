@@ -188,7 +188,7 @@ int bg_pngwriter_write_header(void * priv,
 
   idx = 0;
   png->num_text = metadata->num_entries;
-  png->text = calloc(png->num_text, sizeof(*png->text));
+  png->text = calloc(png->num_text+1, sizeof(*png->text));
 
   for(j = 0; j < metadata->num_entries; j++)
     {
@@ -198,13 +198,13 @@ int bg_pngwriter_write_header(void * priv,
     png->text[idx].compression = PNG_TEXT_COMPRESSION_NONE;
 
     if(!strcmp(metadata->entries[j].name, GAVL_META_AUTHOR))
-      png->text[idx].key         = gavl_strrep(png->text[j].key, "Author");
+      png->text[idx].key         = gavl_strdup("Author");
     else if(!strcmp(metadata->entries[j].name, GAVL_META_TITLE))
-      png->text[idx].key         = gavl_strrep(png->text[j].key, "Title");
+      png->text[idx].key         = gavl_strdup("Title");
     else if(!strcmp(metadata->entries[j].name, GAVL_META_COPYRIGHT))
-      png->text[idx].key         = gavl_strrep(png->text[j].key, "Copyright");
+      png->text[idx].key         = gavl_strdup("Copyright");
     else
-      png->text[idx].key = gavl_strrep(png->text[j].key, metadata->entries[j].name);
+      png->text[idx].key = gavl_strdup(metadata->entries[j].name);
     
     png->text[idx].text = val_string;
     idx++;

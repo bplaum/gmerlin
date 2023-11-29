@@ -87,14 +87,9 @@ struct bg_yadif_s
 #ifdef HAVE_MMX
   int mmx;
 #endif
-
+  
   /* Multithreading stuff */
-
-  gavl_video_run_func run_func;
-  void * run_data;
-  gavl_video_stop_func stop_func;
-  void * stop_data;
-  int num_threads;
+  gavl_thread_pool_t * tp;
   };
 
 /* Line filter functions */
@@ -179,9 +174,7 @@ void bg_yadif_init(bg_yadif_t * di,
   di->field = 0;
   di->eof = 0;
 
-  di->run_func  = gavl_video_options_get_run_func(opt, &di->run_data);
-  di->stop_func = gavl_video_options_get_stop_func(opt, &di->stop_data);
-  di->num_threads = gavl_video_options_get_num_threads(opt);
+  di->tp = gavl_video_options_get_thread_pool(opt);
   
   FREE_FRAME(di->cur);
   FREE_FRAME(di->prev);
@@ -368,7 +361,7 @@ static void filter_frame(bg_yadif_t * di, int parity,
   
   di->dst = out;
 
-  if(di->num_threads < 2)
+  if(gavl_thread_pool_get_num_threads(di->tp) < 2)
     {
     for(i = 0; i < di->num_components; i++)
       {
@@ -382,7 +375,7 @@ static void filter_frame(bg_yadif_t * di, int parity,
     for(i = 0; i < di->num_components; i++)
       {
       di->comp = &di->components[i];
-      nt = di->num_threads;
+      nt = gavl_thread_pool_get_num_threads(di->tp);
       if(nt > di->comp->h)
         nt = di->comp->h;
 
@@ -390,15 +383,15 @@ static void filter_frame(bg_yadif_t * di, int parity,
       scanline = 0;
       for(j = 0; j < nt - 1; j++)
         {
-        di->run_func(filter_plane, di, scanline, scanline+delta, di->run_data, j);
+        gavl_thread_pool_run(filter_plane, di, scanline, scanline+delta, di->tp, j);
         
         //        fprintf(stderr, "scanline: %d (%d)\n", ctx->scanline, ctx->dst_rect.h);
         scanline += delta;
         }
-      di->run_func(filter_plane, di, scanline, di->comp->h, di->run_data, nt - 1);
+      gavl_thread_pool_run(filter_plane, di, scanline, di->comp->h, di->tp, nt - 1);
       
       for(j = 0; j < nt; j++)
-        di->stop_func(di->stop_data, j);
+        gavl_thread_pool_stop(di->tp, j);
       }
     
     }

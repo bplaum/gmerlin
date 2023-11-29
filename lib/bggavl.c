@@ -645,10 +645,8 @@ int bg_gavl_video_set_parameter(void * data, const char * name,
     opt->num_threads = val->v.i;
     if(!opt->thread_pool)
       {
-      opt->thread_pool = bg_thread_pool_create(opt->num_threads);
-      gavl_video_options_set_num_threads(opt->opt, opt->num_threads);
-      gavl_video_options_set_run_func(opt->opt, bg_thread_pool_run, opt->thread_pool);
-      gavl_video_options_set_stop_func(opt->opt, bg_thread_pool_stop, opt->thread_pool);
+      opt->thread_pool = gavl_thread_pool_create(opt->num_threads);
+      gavl_video_options_set_thread_pool(opt->opt, opt->thread_pool);
       }
     return 1;
     }
@@ -668,7 +666,7 @@ void bg_gavl_video_options_free(bg_gavl_video_options_t * opt)
   if(opt->opt)
     gavl_video_options_destroy(opt->opt);
   if(opt->thread_pool)
-    bg_thread_pool_destroy(opt->thread_pool);
+    gavl_thread_pool_destroy(opt->thread_pool);
   }
 
 

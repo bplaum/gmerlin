@@ -213,7 +213,6 @@ stringutils.c \
 subprocess.c \
 subtitle.c \
 textrenderer.c \
-threadpool.c \
 thumbnail.c \
 trackio.c \
 transcoder.c \

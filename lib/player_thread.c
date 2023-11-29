@@ -22,7 +22,6 @@
 #include <gmerlin/bgthread.h>
 
 #include <pthread.h>
-#include <gmerlin/bg_sem.h>
 
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "player.thread"

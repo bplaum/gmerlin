@@ -1,13 +1,17 @@
 Gmerlin Media Database Documentation
 
-The media database backend is used by the GUI player as well as the media server.
-By default, the GUI player creates it's MDB in $HOME/.gmerlin/gmerlin-mdb. You can,
-however, also set up a database at arbitrary places in the filesystem.
+1. Introduction
+===============
 
-For manipulating the media database, there is also the comandline tool "mdb-tool".
+The media database is used by the GUI player as well as the media server.
+By default, the GUI player creates it's MDB in $HOME/.gmerlin/gmerlin-mdb. All
+configurations can then be done with the GUI player.
 
+You can, however, also set up a database at arbitrary places in the filesystem
+with the comandline tool "mdb-tool".
 
-1. Setting up a Media DB for gmerlin-server:
+2. Setting up a Media DB for gmerlin-server:
+============================================
 
 # Set variable to your database path. Make sure to reserve some space
 # since thumbnails will also be stored there
@@ -23,9 +27,8 @@ mdb-tool -db $MDBPATH -create
 mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Music/"
 mdb-tool -db $MDBPATH -add-sql-dir "/your/media/directory/Movies/"
 
-# Re-scan the whole database (Synchronize SQL with Filesystem)
-# This should be called regularly to keep the stream directories
-# up to date
+# Re-scan the whole database (Synchronize SQL with Filesystem) and
+# update the stream directories. Should be called regularly.
 mdb-tool -db $MDBPATH -rescan
 
 # Call gmerlin-server once to generate a default config file
@@ -37,8 +40,15 @@ gmerlin-server -sc server.xml
 # Call gmerlin-server with the adjusted config file
 gmerlin-server -c server.xml
 
-2 Tagging support
-2.1 Music files
+3 Tagging support
+=================
+
+Proper tagging of media files is essential for the SQL backend. For untagged media directories,
+it is probably better to add them under "Directories"
+
+3.1 Music files
+===============
+
 Music files are typically grouped by Album. The following Tags are supported and
 should be set in order to properly build a database:
 
@@ -51,9 +61,47 @@ should be set in order to properly build a database:
 - Track number
 
 Metadata tags with "*" can have multiple entries. 
-
 In addition the directory, where a music file is stored, is searched for a file "cover.jpg".
 
-2.2 TV shows
+3.2 Nfo files
+============
 
-TV Shows are 
+Nfo files are used for Movies and TV-Shows. We use the same format as Kodi
+(https://kodi.wiki/view/NFO_files/Templates). See below for infos, which tags are used.
+
+3.3 TV shows
+============
+
+TV Shows must have a filename like:
+
+Show name S1E2 Episode name
+
+Where S1 denotes the first season and E2 denotes the second episode.
+
+3.3 Single part movies
+======================
+
+Filename should be in the format: Movie name (2012).avi
+
+where 2012 is the year the Movie was released. In addition, the following
+files are used:
+
+Movie poster: Movie name (2012).jpg
+Wallpaper:    Movie name (2012).fanart.jpg
+NFO-file:     Movie name (2012).nfo
+
+The following nfo tags are used:
+title
+originaltitle
+outline|plot
+mpaa
+rating
+genre *
+actor *
+director *
+country *
+
+Metadata tags with "*" can have multiple entries. 
+
+3.4 Multi part movies
+
