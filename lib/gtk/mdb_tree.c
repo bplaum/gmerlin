@@ -2009,7 +2009,22 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
 
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
-            if(!strcmp(var, BG_PLAYER_STATE_QUEUE_IDX))
+            if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TRACK))
+              {
+              const gavl_dictionary_t * track;
+              const gavl_dictionary_t * m;
+              const char * hash;
+              
+              if((track = gavl_value_get_dictionary(&val)) &&
+                 (m = gavl_track_get_metadata(track)) &&
+                 (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
+                {
+                bg_gtk_mdb_album_array_set_current(&t->win_albums, hash);
+                bg_gtk_mdb_album_array_set_current(&t->tab_albums, hash);
+                bg_gtk_mdb_album_set_current(&t->playqueue, hash);
+                }
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_QUEUE_IDX))
               {
               int num, i, current;
 
@@ -2416,3 +2431,71 @@ void bg_gtk_mdb_tree_delete_selected_album(bg_gtk_mdb_tree_t * t)
   return;
   }
 
+void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
+                                       const char * hash)
+  {
+  int i;
+  for(i = 0; i < arr->num_albums; i++)
+    bg_gtk_mdb_album_set_current(arr->albums[i], hash);
+  }
+
+void bg_gtk_mdb_album_set_current(album_t * album, const char * hash)
+  {
+  int num, i, current;
+  
+  // fprintf(stderr, "queue index changed: %d\n", val.v.i);
+  num = gavl_track_get_num_children(album->a);
+
+  for(i = 0; i < num; i++)
+    {
+    gavl_dictionary_t * track;
+    const gavl_dictionary_t * m;
+    const char * track_hash;
+    
+    track = gavl_get_track_nc(album->a, i);
+    m = gavl_track_get_metadata(track);
+    track_hash = gavl_dictionary_get_string(m, GAVL_META_HASH);
+    current = gavl_track_get_gui_state(track, GAVL_META_GUI_CURRENT);
+    
+    if(current)
+      {
+      /* Update */
+      if(album->list)
+        {
+        gavl_dictionary_t new_dict;
+
+        gavl_dictionary_init(&new_dict);
+        gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 0);
+        
+        bg_gtk_mdb_album_update_track(album, gavl_track_get_id(track),
+                                      &new_dict);
+        gavl_dictionary_free(&new_dict);
+        }
+      else
+        {
+        gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 0);
+        }
+      }
+
+    if(!strcmp(hash, track_hash))
+      {
+      /* Update */
+      if(album->list)
+        {
+        gavl_dictionary_t new_dict;
+
+        gavl_dictionary_init(&new_dict);
+        gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 1);
+          
+        bg_gtk_mdb_album_update_track(album, gavl_track_get_id(track),
+                                      &new_dict);
+                      
+        gavl_dictionary_free(&new_dict);
+        }
+      else
+        {
+        gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 1);
+        }
+      }
+    }
+  }

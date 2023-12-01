@@ -486,8 +486,8 @@ static void firstrun_button_callback(GtkWidget *w, gpointer data)
 
 static gboolean firstrun_delete_callback(GtkWidget *w, GdkEventAny * evt, gpointer data)
   {
-  firstrun_window_t * win = data;
 #if 0
+  firstrun_window_t * win = data;
   if(win->main_running)
     {
     fprintf(stderr, "Delete callback\n");

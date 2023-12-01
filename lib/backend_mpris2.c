@@ -1314,7 +1314,7 @@ static int handle_msg_mpris2(void * priv, // Must be bg_backend_handle_t
 
           bg_player_tracklist_handle_message(&r->tl, &msg1);
 
-          id = bg_player_tracklist_id_from_uri(NULL, gavl_msg_get_arg_string_c(msg, 0));
+          id = bg_player_tracklist_id_from_uri(gavl_msg_get_arg_string_c(msg, 0));
           bg_player_tracklist_set_current_by_id(&r->tl, id);
           free(id);
           

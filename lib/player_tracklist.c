@@ -346,6 +346,7 @@ void bg_player_tracklist_get_times(bg_player_tracklist_t * l,
 /* Returns 0 if the track is already in the list */
 static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const char * client_id)
   {
+  const char * hash;
   const char * track_id;
 
   char * new_id;
@@ -355,53 +356,23 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
   if(!(track = gavl_value_get_dictionary_nc(track_val)) ||
      !(m = gavl_track_get_metadata_nc(track)))
     return 0;
-
-  //  fprintf(stderr, "set_id %s\n", client_id);
-  //  gavl_dictionary_dump(track, 2);
   
-  if(!(track_id = gavl_track_get_id(track)))
-    {
-    /* We generate the ID as MD5-Sum of the filename. This way we guarantee, that
-       the same file is added just once */
-    const char * location;
-
-    if(gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
-      {
-      char md5[MD5STRING_LEN];
-      if(!location)
-        {
-        fprintf(stderr, "Track has a src but no location??\n");
-        gavl_dictionary_dump(m, 2);
-        return 0;
-        }
-      bg_get_filename_hash(location, md5);
-      gavl_track_set_id(track, md5);
-      client_id = NULL;
-      }
-    else
-      {
-      char uuid_str[38];
-      uuid_t u;
-      
-      uuid_generate(u);
-      uuid_unparse(u, uuid_str);
-      gavl_track_set_id(track, uuid_str);
-      }
-    
-    track_id = gavl_track_get_id(track);
-    }
-
   /* Set original ID, client ID and new ID */
 
-  new_id = bg_player_tracklist_make_id(client_id, track_id);
+  if(!(hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Track got no hash");
+    return 0;
+    }
   
-  gavl_dictionary_set_string(m, BG_PLAYER_META_CLIENT_ID, client_id);
-  gavl_dictionary_set_string(m, BG_PLAYER_META_ORIGINAL_ID, track_id);
+  if(!(track_id = gavl_dictionary_get_string(m, GAVL_META_ID)))
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Track got no id");
+  
+  new_id = bg_player_tracklist_make_id(hash);
+  
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, new_id);
   return 1;
   }
-
-
 
 static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int del, const char * client_id)
   {
@@ -442,40 +413,16 @@ static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int d
   return 1;
   }
 
-char * bg_player_tracklist_make_id(const char * client_id, const char * original_id)
+char * bg_player_tracklist_make_id(const char * hash)
   {
-  char * ret;
-  
-  char * pos;
-  char * track_id;
-  track_id = gavl_strdup(original_id);
-
-  if(gavl_string_starts_with(track_id, BG_PLAYQUEUE_ID))
-    return track_id;
-  
-  pos = track_id;
-
-  while(*pos != '\0')
-    {
-    if(*pos == '/')
-      *pos = '~';
-    pos++;
-    }
-
-  if(client_id)
-    ret = bg_sprintf(BG_PLAYQUEUE_ID"/%s~%s", client_id, track_id);
-  else
-    ret = bg_sprintf(BG_PLAYQUEUE_ID"/%s", track_id);
-  
-  free(track_id);
-  return ret;
+  return bg_sprintf(BG_PLAYQUEUE_ID"/%s", hash);
   }
 
-char * bg_player_tracklist_id_from_uri(const char * client_id, const char * location)
+char * bg_player_tracklist_id_from_uri(const char * location)
   {
   char md5[33];
-  bg_get_filename_hash(location, md5);
-  return bg_player_tracklist_make_id(client_id, md5);
+  gavl_md5_buffer_str(location, strlen(location), md5);
+  return bg_player_tracklist_make_id(md5);
   }
 
 static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
@@ -681,7 +628,9 @@ void bg_player_tracklist_set_current_by_idx(bg_player_tracklist_t * l, int idx)
 
   if((idx < 0) || (idx >= list->num_entries))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "bg_player_tracklist_set_current_by_idx: idx %d out of range (0 %d)", idx, list->num_entries-1);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+             "bg_player_tracklist_set_current_by_idx: idx %d out of range (0 %d)",
+             idx, list->num_entries-1);
     return;
     }
   

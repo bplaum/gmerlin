@@ -915,10 +915,19 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   }
 
 
-static void do_play(bg_gtk_mdb_tree_t * t, const char * id)
+static void do_play(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * track)
   {
   gavl_msg_t * msg;
-  char * queue_id = bg_player_tracklist_make_id(t->player_ctrl.id, id);
+  const char * hash;
+  const gavl_dictionary_t * m;
+  
+  char * queue_id;
+
+  if((m = gavl_track_get_metadata(track)) &&
+     (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
+    queue_id = bg_player_tracklist_make_id(hash);
+  else
+    return;
   
   /* Set current track */
 
@@ -934,8 +943,8 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
   const gavl_array_t * arr;
   gavl_msg_t * msg;
   const char * id;
+  const gavl_dictionary_t * play_track = NULL;
   
-  const char * play_id = NULL;
 
   if(!t->player_ctrl.cmd_sink)
     return;
@@ -947,10 +956,7 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
   
   if(play)
     {
-    const gavl_dictionary_t * track;
-    
-    if((track = gavl_get_track(album, 0)))
-      play_id = gavl_track_get_id(track);
+    play_track = gavl_get_track(album, 0);
     }
   if((arr = gavl_get_tracks(album)) &&
      arr->num_entries)
@@ -979,8 +985,8 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
     bg_msg_sink_put(t->player_ctrl.cmd_sink);
     }
 
-  if(play_id)
-    do_play(t, play_id);
+  if(play_track)
+    do_play(t, play_track);
   }
 
 static void selected_add(bg_gtk_mdb_tree_t * t, album_t * a, int replace, int play)
@@ -1145,15 +1151,15 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   else if((evt->button == 1) && (evt->type == GDK_2BUTTON_PRESS) && path)
     {
     char * id;
-    
+    gavl_dictionary_t * track; 
     id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
-
-    if(!gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
-      {
-      album_add(t, a->a, 1, 0);
-      }
+    gavl_get_track_by_id_nc(a->a, id);
+    track = gavl_get_track_by_id_nc(a->a, id);
     
-    do_play(t, id);
+    if(!gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
+      album_add(t, a->a, 1, 0);
+    
+    do_play(t, track);
     
     //    entry_add(t, a, id, 0, 1);
     

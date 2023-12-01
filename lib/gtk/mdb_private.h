@@ -205,6 +205,9 @@ struct bg_gtk_mdb_tree_s
     
   };
 
+void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
+                                        const char * hash);
+
 int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
                                const char * id);
 
@@ -215,6 +218,8 @@ void bg_gtk_mdb_array_set_flag_str(gavl_array_t * arr, const char * id, int flag
 
 list_t * bg_gtk_mdb_list_create(album_t * a);
 void bg_gtk_mdb_list_destroy(list_t * l);
+
+void bg_gtk_mdb_album_set_current(album_t * a, const char * hash);
 
 gboolean
 bg_gtk_mdb_search_equal_func(GtkTreeModel *model, gint column,

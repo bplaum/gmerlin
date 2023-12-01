@@ -332,9 +332,10 @@ static int load_directory_info(bg_mdb_backend_t * be,
           /* Load track and check for multitrack */
           gavl_dictionary_t * mi = bg_plugin_registry_load_media_info(bg_plugin_reg, child_uri, 0);
 
-          num_tracks = gavl_get_num_tracks(mi);
+          num_tracks = mi ? gavl_get_num_tracks(mi) : 0;
+          
           //          fprintf(stderr, "Got multi track file %s %d\n", child_uri, num_tracks);
-          if(mi && (num_tracks > 1))
+          if(num_tracks > 1)
             num_containers++;
           else
             num_items++;
@@ -488,6 +489,10 @@ static int load_item_info(bg_mdb_backend_t * be,
   
   const char * uri = gavl_dictionary_get_string(dirent, GAVL_META_URI);
   const char * klass = gavl_dictionary_get_string(dirent, GAVL_META_MEDIA_CLASS);
+
+  //  fprintf(stderr, "Load item info\n");
+  //  gavl_dictionary_dump(dirent, 2);
+  
   gavl_dictionary_reset(ret);
   
   /* Load directory */
@@ -497,7 +502,8 @@ static int load_item_info(bg_mdb_backend_t * be,
     return 1;
     }
   
-  if(!(mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0)))
+  if(!(mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0)) ||
+     !gavl_get_num_tracks(mi))
     {
     /* Unsupported file */
     const char * label;
@@ -508,10 +514,14 @@ static int load_item_info(bg_mdb_backend_t * be,
       label = uri;
     gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
     gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_FILE);
+
+    if(mi)
+      gavl_dictionary_destroy(mi);
+    
     return 1;
     }
-  
-  num_tracks = gavl_get_num_tracks(mi); 
+
+  num_tracks = gavl_get_num_tracks(mi);
   
   if(num_tracks > 1)
     {
@@ -530,6 +540,9 @@ static int load_item_info(bg_mdb_backend_t * be,
   
   if(mi)
     gavl_dictionary_destroy(mi);
+
+  //  fprintf(stderr, "Load item info done\n");
+
   return 1;
   }
 

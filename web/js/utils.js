@@ -1795,9 +1795,10 @@ function obj_get_id(obj)
 
 function obj_make_playqueue_id(obj)
   {
+  var hash = dict_get_string(dict_get_dictionary(obj, GAVL_META_METADATA), GAVL_META_HASH);
 //  console.log("obj_make_playqueue_id " + obj_get_id(obj));
 //  console.trace();
-  return BG_PLAYQUEUE_ID + "/" + client_id + "~" + obj_get_id(obj).replaceAll("/", "~");
+  return BG_PLAYQUEUE_ID + "/" + hash;
   }
 
 function obj_get_children(obj)

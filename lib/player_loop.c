@@ -1161,7 +1161,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           
           bg_player_source_cleanup(player->src_next);
 
-          id = bg_player_tracklist_id_from_uri(NULL, gavl_msg_get_arg_string_c(command, 0));
+          id = bg_player_tracklist_id_from_uri(gavl_msg_get_arg_string_c(command, 0));
           bg_player_tracklist_set_current_by_id(&player->tl, id);
           free(id);
           

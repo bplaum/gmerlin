@@ -2714,7 +2714,7 @@ function create_browser()
       
   ret.set_current = function(id)
     {
-    this.set_current_by_id(id);
+    this.set_current_by_hash(id);
     };
       
   ret.change_up = function()
@@ -2995,6 +2995,7 @@ function create_browser()
     {
     var r = document.createElement("div");
     r.dataset.id = obj_get_id(obj);
+    r.dataset.hash = dict_get_string(dict_get_dictionary(obj, GAVL_META_METADATA), GAVL_META_HASH);
     r.dataset.selected = "false";
     r.dataset.current  = "false";
     this.render(r, obj);
@@ -3349,41 +3350,18 @@ function create_browser()
       }
     }
 
-  ret.select_entry_by_idx = function(idx)
+  ret.set_current_by_hash = function(hash)
     {
     for(i = 0; i < this.div.childNodes.length; i++)
       {
-      if(idx == i)
-        this.div.childNodes[i].dataset.selected = true;
-      else
-        this.div.childNodes[i].dataset.selected = false;
-      }
-    
-    }
-
-  ret.set_current_by_id = function(id)
-    {
-    this.cur_id = id;
-      
-    for(i = 0; i < this.div.childNodes.length; i++)
-      {
-      if(id == this.div.childNodes[i].dataset.id)
+      if(hash == this.div.childNodes[i].dataset.hash)
+	{
         this.div.childNodes[i].dataset.current = true;
+	this.cur_id = this.div.childNodes[i].dataset.id;
+	}
       else
         this.div.childNodes[i].dataset.current = false;
       }
-    }
-
-  ret.set_current_by_idx = function(idx)
-    {
-    for(i = 0; i < this.div.childNodes.length; i++)
-      {
-      if(idx == i)
-        this.div.childNodes[i].dataset.current = true;
-      else
-        this.div.childNodes[i].dataset.current = false;
-      }
-    
     }
     
   ret.select_entry = function(id)
@@ -3983,10 +3961,10 @@ function create_player_control()
                     this.duration = dict_get_long(m, GAVL_META_APPROX_DURATION);
 		      
                     current_track_id = dict_get_string(m, GAVL_META_ID);
+                    widgets.browser.set_current(dict_get_string(m, GAVL_META_HASH));
 
                     if(playqueue_is_current())
 		      {
-                      widgets.browser.set_current(current_track_id);
                       widgets.browser.select_entry(current_track_id);
 		      }
                     else if((app_state.widget == "iteminfo") &&
