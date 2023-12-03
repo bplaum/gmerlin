@@ -45,6 +45,7 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 #define MDB_BACKEND_PODCASTS       "podcasts"
 #define MDB_BACKEND_STREAMS        "streams"
 #define MDB_BACKEND_REMOVABLE      "removable"
+#define MDB_BACKEND_RECORDER       "recorder"
 
 /* Special dictionary to store MDB specific data in
    gavl tracks. Will be removed before passed to the outer world */
@@ -125,6 +126,8 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b);
 void bg_mdb_create_streams(bg_mdb_backend_t * b);
 
 void bg_mdb_create_removable(bg_mdb_backend_t * b);
+
+void bg_mdb_create_recorder(bg_mdb_backend_t * b);
 
 
 /* id is e.g.: /upnp-2/upnp_id */

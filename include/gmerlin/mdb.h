@@ -44,6 +44,8 @@
 #define BG_MDB_ID_DIRECTORIES       "/dirs"
 #define BG_MDB_ID_PODCASTS          "/podcasts"
 #define BG_MDB_ID_PHOTOS            "/photos"
+#define BG_MDB_ID_RECORDERS         "/recorder"
+
 #define BG_MDB_ID_PLAYQUEUE         BG_PLAYQUEUE_ID
 
 /* Messages for namespace BG_MSG_NS_DB */

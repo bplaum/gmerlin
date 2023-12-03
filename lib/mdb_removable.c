@@ -232,10 +232,13 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           break;
         }
       }
-    case BG_MSG_NS_VOLUMEMANAGER:
+    case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
-        case BG_MSG_ID_VOLUME_ADDED:
+        case GAVL_CMD_QUIT:
+          return 0;
+          break;
+        case GAVL_MSG_RESOURCE_ADDED:
           {
           //          const char * id;
           const char * uri;
@@ -246,9 +249,8 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_dictionary_t vol;
           gavl_dictionary_init(&vol);
 
-          volume_id = gavl_msg_get_arg_string_c(msg, 0);
-          
-          gavl_msg_get_arg_dictionary(msg, 1, &vol);
+          volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          gavl_msg_get_arg_dictionary(msg, 0, &vol);
 
           if(!(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)))
             return 1;
@@ -281,41 +283,10 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           
           add(be, uri, klass, volume_id);
           gavl_dictionary_free(&vol);
-          
-#if 0
-          /* Store locally */
-          gavl_value_init(&vol_store_val);
-          vol_store = gavl_value_set_dictionary(&vol_store_val);
-          
-          gavl_dictionary_set_string_nocopy(vol_store, GAVL_META_ID, bg_sprintf(EXTFS_ID_PREFIX"-%"PRId64,
-                                                                                ++fs->extfs_counter));
-          
-          gavl_dictionary_set_string(vol_store, GAVL_META_URI, uri);
-          gavl_dictionary_set_string(vol_store, VOLUME_ID, id);
-          
-          gavl_array_splice_val_nocopy(&fs->extfs, -1, 0, &vol_store_val);
-          /* */
-
-          browse_object_internal(be, &obj, &vol, 0);
-          
-          m = gavl_dictionary_get_dictionary_create(&obj, GAVL_META_METADATA);
-
-          /* Keep the label */
-          gavl_dictionary_set(&vol, GAVL_META_LABEL, NULL);
-          gavl_dictionary_update_fields(m, &vol);
-          
-          bg_mdb_container_set_backend(&obj, MDB_BACKEND_FILESYSTEM);
-          
-          //          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Volume added %s", id); 
-
-          bg_mdb_add_root_container(be->ctrl.evt_sink, &obj);
-          
-          gavl_dictionary_free(&obj);
-          gavl_dictionary_free(&vol);
-#endif
           }
           break;
-        case BG_MSG_ID_VOLUME_REMOVED:
+          
+        case GAVL_MSG_RESOURCE_DELETED:
           {
           int i;
           const char * test_id;
@@ -323,7 +294,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           const gavl_dictionary_t * d;
           const gavl_dictionary_t * m;
           
-          volume_id = gavl_msg_get_arg_string_c(msg, 0);
+          volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           
           for(i = 0; i < r->removables.num_entries; i++)
             {
@@ -344,14 +315,9 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             }
           break;
           }
-        }
-      break;
-    case GAVL_MSG_NS_GENERIC:
-      switch(msg->ID)
-        {
-        case GAVL_CMD_QUIT:
-          return 0;
-          break;
+
+          
+
         }
       break;
     case BG_MSG_NS_PARAMETER:

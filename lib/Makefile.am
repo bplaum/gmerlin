@@ -52,6 +52,15 @@ dbus_cflags =
 dbus_libs = 
 endif
 
+if HAVE_PULSEAUDIO
+pulseaudio_cflags  = @PULSEAUDIO_CFLAGS@
+pulseaudio_libs    = @PULSEAUDIO_LIBS@
+else
+pulseaudio_cflags  =
+pulseaudio_libs    =
+endif
+
+
 SUBDIRS = $(x11_subdirs) upnp . $(gtk_subdirs)
 
 AM_CFLAGS = \
@@ -62,6 +71,7 @@ AM_CFLAGS = \
 @PANGO_CFLAGS@ \
 @PANGOCAIRO_CFLAGS@ \
 $(dbus_cflags) \
+$(pulseaudio_cflags) \
 $(ncurses_cflags) \
 -DLOCALE_DIR=\"$(localedir)\" \
 -DPLUGIN_DIR=\"$(plugindir)\" \
@@ -82,6 +92,7 @@ upnp/libupnp.la \
 @PANGOCAIRO_LIBS@ \
 $(dbus_libs) \
 $(ncurses_libs) \
+$(pulseaudio_libs) \
 @FREETYPE_LIBS@ \
 @XML2_LIBS@ \
 @ICONV_LIBS@ \
@@ -152,6 +163,7 @@ mdb_radiobrowser.c \
 mdb_remote.c \
 mdb_removable.c \
 mdb_podcast.c \
+mdb_recorder.c \
 mdb_sqlite.c \
 mdb_streams.c \
 mdb_thumbnail.c \
@@ -196,6 +208,7 @@ recorder.c \
 recorder_audio.c \
 recorder_video.c \
 recorder_input.c \
+recordingdevice.c \
 ringbuffer.c \
 backend.c \
 backendregistry.c \

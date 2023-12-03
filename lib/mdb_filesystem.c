@@ -1493,10 +1493,13 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
         }
       break;
       }
-    case BG_MSG_NS_VOLUMEMANAGER:
+    case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
-        case BG_MSG_ID_VOLUME_ADDED:
+        case GAVL_CMD_QUIT:
+          return 0;
+          break;
+        case GAVL_MSG_RESOURCE_ADDED:
           {
           gavl_dictionary_t obj;
           gavl_dictionary_t vol;
@@ -1508,9 +1511,9 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           gavl_dictionary_init(&vol);
           gavl_dictionary_init(&obj);
-          
-          volume_id = gavl_msg_get_arg_string_c(msg, 0);
-          gavl_msg_get_arg_dictionary(msg, 1, &vol);
+
+          volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          gavl_msg_get_arg_dictionary(msg, 0, &vol);
 
           //          fprintf(stderr, "Volume added: %s\n", volume_id);
           //          gavl_dictionary_dump(&vol, 2);
@@ -1529,7 +1532,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           add_directory(be, DIR_TYPE_FS_REMOVABLE, &idx, uri, volume_id);
           }
           break;
-        case BG_MSG_ID_VOLUME_REMOVED:
+        case GAVL_MSG_RESOURCE_DELETED:
           {
           int i;
           const char * test_id;
@@ -1537,8 +1540,8 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           const gavl_dictionary_t * d;
           const char * uri;
           
-          id = gavl_msg_get_arg_string_c(msg, 0);
-          
+          id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
           for(i = 0; i < fs->removables.num_entries; i++)
             {
             if((d = gavl_value_get_dictionary(&fs->removables.entries[i])) &&
@@ -1560,13 +1563,11 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
             }
           break;
           }
-        }
-      break;
-    case GAVL_MSG_NS_GENERIC:
-      switch(msg->ID)
-        {
-        case GAVL_CMD_QUIT:
-          return 0;
+
+
+
+
+
           break;
         }
       break;

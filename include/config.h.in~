@@ -120,9 +120,6 @@
 /* Do we have xinerama installed? */
 #undef HAVE_LIBXINERAMA
 
-/* Do we have xv installed? */
-#undef HAVE_LIBXV
-
 /* Define to 1 if you have the <linux/videodev2.h> header file. */
 #undef HAVE_LINUX_VIDEODEV2_H
 
@@ -176,6 +173,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/inotify.h> header file. */
+#undef HAVE_SYS_INOTIFY_H
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H

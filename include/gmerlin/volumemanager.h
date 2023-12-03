@@ -29,20 +29,6 @@ typedef struct bg_volume_manager_s bg_volume_manager_t;
 /* Array of strings (state variable) */
 #define BG_VOLUMEMANAGER_STATE_VOLUMES "volumes"
 
-/* BG_MSG_NS_VOLUMEMANAGER */
-
-/*
- *  arg0: id
- *  arg1: dictionary
- */
-
-#define BG_MSG_ID_VOLUME_ADDED    1
-
-/*
- *  arg0: id
- */
-
-#define BG_MSG_ID_VOLUME_REMOVED  2
 
 bg_volume_manager_t * bg_volume_manager_create();
 void bg_volume_manager_destroy(bg_volume_manager_t *);

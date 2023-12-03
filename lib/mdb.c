@@ -67,6 +67,7 @@ backends[] =
     { bg_mdb_create_podcasts,      MDB_BACKEND_PODCASTS,      "Podcasts"     },
     { bg_mdb_create_streams,       MDB_BACKEND_STREAMS,       "Streams"      },
     { bg_mdb_create_removable,     MDB_BACKEND_REMOVABLE,     "Removable"    },
+    { bg_mdb_create_recorder,      MDB_BACKEND_RECORDER,      "Recorder"    },
   };
 
 #define num_backends (sizeof(backends)/sizeof(backends[0]))
@@ -324,9 +325,9 @@ static void add_volume_func(void * priv, const char * name, const gavl_value_t *
   
   gavl_msg_init(&msg);
   
-  gavl_msg_set_id_ns(&msg, BG_MSG_ID_VOLUME_ADDED, BG_MSG_NS_VOLUMEMANAGER);
-  gavl_msg_set_arg_string(&msg, 0, name);
-  gavl_msg_set_arg_dictionary(&msg, 1, dict);
+  gavl_msg_set_id_ns(&msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
+  gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, name);
+  gavl_msg_set_arg_dictionary(&msg, 0, dict);
   
   /* Forward to backends */
 
@@ -666,13 +667,14 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         }
       break;
       }
-    case BG_MSG_NS_VOLUMEMANAGER:
+#if 0
+      case BG_MSG_NS_VOLUMEMANAGER:
       {
       int i;
       /* Forward to backends */
 
       //   fprintf(stderr, "Got remote msg\n");
-              
+      
       for(i = 0; i < num_backends; i++)
         {
         if(db->backends[i].flags & BE_FLAG_VOLUMES)
@@ -685,6 +687,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
       
       break;
       }
+#endif
     case BG_MSG_NS_STATE:
       {
       //      fprintf(stderr, "State changed\n");
@@ -722,6 +725,29 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         {
         case GAVL_CMD_QUIT:
           return 0;
+          break;
+        case GAVL_MSG_RESOURCE_ADDED:
+        case GAVL_MSG_RESOURCE_DELETED:
+          {
+          int i;
+          const char * id;
+          id = gavl_dictionary_get_string(&msg->header, GAVL_META_ID);
+          if(gavl_string_starts_with(id, GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME))
+            {
+
+            for(i = 0; i < num_backends; i++)
+              {
+              if(db->backends[i].flags & BE_FLAG_VOLUMES)
+                {
+                bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
+                //          fprintf(stderr, "Put remote msg %d\n", i);
+                }
+              }
+
+            
+            }
+          break;
+          }
         }
       break;
     case BG_MSG_NS_PARAMETER:
@@ -1653,6 +1679,7 @@ root_folders[] =
     { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,           "TV Shows",     BG_MDB_ID_TV_SHOWS,     9 },
     { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,             "Photos",       BG_MDB_ID_PHOTOS,      10 },
     { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,        "Directories",  BG_MDB_ID_DIRECTORIES, 11 },
+    { GAVL_META_MEDIA_CLASS_ROOT_RECORDERS,          "Devices",      BG_MDB_ID_RECORDERS,   12 },
 
     { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE,          "Removable",    NULL,         20 },
     { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD,  "Audio CD",     NULL,         21 },
