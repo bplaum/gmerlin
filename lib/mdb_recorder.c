@@ -95,9 +95,9 @@ static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   gavl_dictionary_t * new_m;
   recorder_priv_t * priv = b->priv;
   
-  fprintf(stderr, "add_dev\n");
-  gavl_dictionary_dump(dev, 2);
-  fprintf(stderr, "\n");
+  //  fprintf(stderr, "add_dev\n");
+  //  gavl_dictionary_dump(dev, 2);
+  //  fprintf(stderr, "\n");
   
   gavl_value_init(&new_val);
   new_dict = gavl_value_set_dictionary(&new_val);
@@ -219,7 +219,11 @@ static int handle_local_msg(void * data, gavl_msg_t * msg)
           gavl_dictionary_t dev;
           gavl_dictionary_init(&dev);
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-          fprintf(stderr, "Resource added %s\n", id);
+
+          if(gavl_get_track_idx_by_id_arr(&priv->devices, id) >= 0)
+            return 1;
+
+          //          fprintf(stderr, "Resource added %s\n", id);
           gavl_msg_get_arg_dictionary(msg, 0, &dev);
           add_dev(b, &dev);
           gavl_dictionary_free(&dev);
@@ -233,7 +237,7 @@ static int handle_local_msg(void * data, gavl_msg_t * msg)
           id = gavl_sprintf("%s/%s", BG_MDB_ID_RECORDERS,
                             gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));
 
-          fprintf(stderr, "Resource deleted %s\n", id);
+          // fprintf(stderr, "Resource deleted %s\n", id);
 
           if((idx = gavl_get_track_idx_by_id_arr(&priv->devices, id)) >= 0)
             {
@@ -241,10 +245,9 @@ static int handle_local_msg(void * data, gavl_msg_t * msg)
             bg_msg_set_splice_children(res, BG_MSG_DB_SPLICE_CHILDREN,
                                        BG_MDB_ID_RECORDERS, 1, idx, 1, NULL);
             bg_msg_sink_put(b->ctrl.evt_sink);
-
-            update_parent(b);
-
+            
             gavl_array_splice_val_nocopy(&priv->devices, idx, 1, NULL);
+            update_parent(b);
             }
           free(id);
           break;
@@ -259,8 +262,7 @@ static int handle_local_msg(void * data, gavl_msg_t * msg)
 static int ping_func_recorder(bg_mdb_backend_t * b)
   {
   recorder_priv_t * priv = b->priv;
-  bg_recording_device_registry_update(priv->reg);
-  return 1;
+  return bg_recording_device_registry_update(priv->reg);
   }
 
 static void destroy_func_recorder(bg_mdb_backend_t * b)

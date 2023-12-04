@@ -29,16 +29,11 @@
 #endif
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-
-#ifndef HAVE_INOTIFY
-#undef HAVE_LINUX_VIDEODEV2_H
-#else
-
 #include <gavl/hw_v4l2.h>
-#include <sys/inotify.h>
-
-#endif 
 #endif
+
+#include <libudev.h>
+
 
 #include <gmerlin/recordingdevice.h>
 #include <gavl/log.h>
@@ -54,6 +49,8 @@ struct bg_recording_device_registry_s
   bg_msg_sink_t * sink;
 
   char hostname[HOST_NAME_MAX+1];
+
+  int num_ops;
   
 #ifdef HAVE_PULSEAUDIO
   /* Pulseaudio */
@@ -67,9 +64,12 @@ struct bg_recording_device_registry_s
   /* Video4linux */
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-  int v4l2_fd;
-  int v4l2_wd;
+  //  int v4l2_fd;
+  //  int v4l2_wd;
   int v4l_got_initial_devs;
+
+  struct udev *udev;
+  struct udev_monitor *udev_mon;
 #endif
   
   };
@@ -98,6 +98,9 @@ static void add_device(bg_recording_device_registry_t * reg,
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
   gavl_msg_set_arg_dictionary(msg, 0, dev);
   bg_msg_sink_put(reg->sink);
+
+  reg->num_ops++;
+
   }
 
 static void del_device(bg_recording_device_registry_t * reg,
@@ -109,6 +112,9 @@ static void del_device(bg_recording_device_registry_t * reg,
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
   gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
   bg_msg_sink_put(reg->sink);
+
+  reg->num_ops++;
+
   }
 
 #ifdef HAVE_PULSEAUDIO
@@ -168,15 +174,12 @@ static void pa_subscribe_callback(pa_context *c,
   {
   bg_recording_device_registry_t * reg = userdata;
   
-  fprintf(stderr, "pa_subscribe_callback %d %d\n", type, idx);
-
   if((type & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) != PA_SUBSCRIPTION_EVENT_SOURCE)
     return;
   
   switch(type & PA_SUBSCRIPTION_EVENT_TYPE_MASK)
     {
     case PA_SUBSCRIPTION_EVENT_NEW:
-      fprintf(stderr, "added\n");
       reg->pa_op = pa_context_get_source_info_by_index(c, idx, pa_source_cb, userdata);
       break;
     case PA_SUBSCRIPTION_EVENT_REMOVE:
@@ -186,9 +189,17 @@ static void pa_subscribe_callback(pa_context *c,
       free(id);
       }
       break;
+#if 0
     case PA_SUBSCRIPTION_EVENT_CHANGE:
-      fprintf(stderr, "changed\n");
+      {
+      char * id = gavl_sprintf("pulseaudio-source-%d", idx);
+      del_device(reg, id);
+      reg->pa_op = pa_context_get_source_info_by_index(c, idx, pa_source_cb, userdata);
+      fprintf(stderr, "%d changed\n", idx);
+      free(id);
       break;
+      }
+#endif
     }
   
   }
@@ -283,9 +294,13 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
 #endif
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-  ret->v4l2_fd = inotify_init1(IN_NONBLOCK);
-  ret->v4l2_wd = inotify_add_watch(ret->v4l2_fd, "/dev", IN_CREATE | IN_DELETE);
+  //  ret->v4l2_fd = inotify_init1(IN_NONBLOCK);
+  //  ret->v4l2_wd = inotify_add_watch(ret->v4l2_fd, "/dev", IN_CREATE | IN_DELETE);
 
+  ret->udev = udev_new();
+  ret->udev_mon = udev_monitor_new_from_netlink(ret->udev, "udev");
+  udev_monitor_filter_add_match_subsystem_devtype(ret->udev_mon, "video4linux", NULL);
+  udev_monitor_enable_receiving(ret->udev_mon);
   
 #endif
   
@@ -293,76 +308,14 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
   
   }
 
-
-
-void bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
+int bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
   {
   int result = 0;
 
+  struct udev_device *dev;
 
+  reg->num_ops = 0;
   
-#ifdef HAVE_LINUX_VIDEODEV2_H
-  struct
-    {
-    struct inotify_event evt;
-    char name[NAME_MAX+32]; // might need some padding
-    } evt;
-  
-  while(1)
-    {
-    result = read(reg->v4l2_fd, &evt, sizeof(evt));
-
-    if((result < 0) && (errno == EAGAIN))
-      break;
-
-    if(result > 0)
-      {
-      if(evt.evt.mask & IN_CREATE)
-        {
-        int dummy;
-        char * path;
-        gavl_dictionary_t dict;
-        int type;
-        if(sscanf(evt.evt.name, "video%d", &dummy) != 1)
-          continue;
-
-        path = gavl_sprintf("/dev/%s", evt.evt.name);
-        
-        gavl_dictionary_init(&dict);
-        gavl_v4l2_get_device_info(path, &dict);
-        
-        if(gavl_dictionary_get_int(&dict, GAVL_V4L2_TYPE, &type) &&
-           (type == GAVL_V4L2_DEVICE_SOURCE))
-          {
-          v4l_add_device(reg, &dict);
-          fprintf(stderr, "Adding v4l device %s\n", evt.evt.name);
-          }
-        else
-          {
-          fprintf(stderr, "Not adding v4l device %s\n", evt.evt.name);
-          gavl_dictionary_dump(&dict, 2);
-          fprintf(stderr, "\n");                               
-          }
-        gavl_dictionary_free(&dict);
-        free(path);
-        
-        }
-      else if(evt.evt.mask & IN_DELETE)
-        {
-        int dummy;
-        char * uri;
-        char md5[GAVL_MD5_LENGTH];
-        if(sscanf(evt.evt.name, "video%d", &dummy) != 1)
-          continue;
-        uri = gavl_sprintf("v4l2-capture://%s/dev/%s", reg->hostname, evt.evt.name);
-        gavl_md5_buffer_str(uri, strlen(uri), md5);
-        
-        del_device(reg, md5);
-        free(uri);
-        }
-      }
-    }
-
   if(!reg->v4l_got_initial_devs)
     {
     gavl_array_t v4l2_devs;
@@ -378,10 +331,50 @@ void bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
     reg->v4l_got_initial_devs = 1;
     }
 
-  
-#endif
+  while(gavl_fd_can_read(udev_monitor_get_fd(reg->udev_mon), 0))
+    {
+    if((dev = udev_monitor_receive_device(reg->udev_mon)))
+      {
+      const char * action;
+      const char * node;
+      //      fprintf(stderr, "Got device\n");
 
+      action = udev_device_get_action(dev);
+      node   = udev_device_get_devnode(dev);
 
+      if(!strcmp(action, "add"))
+        {
+        gavl_dictionary_t dict;
+        int type = 0;
+        
+        //        fprintf(stderr, "Adding %s\n", node);
+        gavl_dictionary_init(&dict);
+        gavl_v4l2_get_device_info(node, &dict);
+        
+        if(gavl_dictionary_get_int(&dict, GAVL_V4L2_TYPE, &type) &&
+           (type == GAVL_V4L2_DEVICE_SOURCE))
+          v4l_add_device(reg, &dict);
+        
+        gavl_dictionary_free(&dict);
+        }
+      else if(!strcmp(action, "remove"))
+        {
+        char * uri;
+        char md5[GAVL_MD5_LENGTH];
+
+        uri = gavl_sprintf("v4l2-capture://%s%s", reg->hostname, node);
+        gavl_md5_buffer_str(uri, strlen(uri), md5);
+        
+        del_device(reg, md5);
+        free(uri);
+        
+        //        fprintf(stderr, "Removing %s\n", node);
+        }
+      
+      udev_device_unref(dev);
+      }
+    }
+    
 #ifdef HAVE_PULSEAUDIO
 
   if(reg->pa_ml)
@@ -402,7 +395,8 @@ void bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
     }
   
 #endif
-
+  
+  return reg->num_ops;
   }
 
 bg_msg_hub_t * bg_recording_device_registry_get_msg_hub(bg_recording_device_registry_t * reg)
@@ -423,7 +417,14 @@ void bg_recording_device_registry_destroy(bg_recording_device_registry_t * reg)
 #endif
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-  close(reg->v4l2_fd);
+  //  close(reg->v4l2_fd);
+
+
+  udev_monitor_unref(reg->udev_mon);
+  udev_unref(reg->udev);
+
+
+
 #endif
 
   free(reg);

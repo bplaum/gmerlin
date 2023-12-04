@@ -219,6 +219,13 @@ PKG_CHECK_MODULES(PANGO, pango, , AC_MSG_ERROR("pango not found"))
 PKG_CHECK_MODULES(PANGOCAIRO, pangocairo, , AC_MSG_ERROR("pangocairo not found"))
 
 dnl
+dnl libudev
+dnl
+
+PKG_CHECK_MODULES(UDEV, libudev, , AC_MSG_ERROR("libudev not found"))
+
+
+dnl
 dnl Gtk
 dnl
 

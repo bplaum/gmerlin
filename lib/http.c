@@ -603,7 +603,7 @@ int bg_http_keepalive_accept
   while(*idx < ka->num_sockets)
     {
     //    
-    if(gavl_socket_can_read(ka->sockets[*idx].fd, 0))
+    if(gavl_fd_can_read(ka->sockets[*idx].fd, 0))
       {
       ret = ka->sockets[*idx].fd;
 

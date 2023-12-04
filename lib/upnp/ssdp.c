@@ -847,7 +847,7 @@ static int handle_multicast(bg_ssdp_t * s)
   int len;
   gavl_dictionary_t h;
   const char * method;
-  while(gavl_socket_can_read(s->mcast_fd, 0))
+  while(gavl_fd_can_read(s->mcast_fd, 0))
     {
     len = gavl_udp_socket_receive(s->mcast_fd, s->buf, UDP_BUFFER_SIZE, s->addr);
     if(len <= 0)
@@ -923,7 +923,7 @@ static int handle_unicast(bg_ssdp_t * s)
   
   gavl_dictionary_init(&m);
   
-  while(gavl_socket_can_read(s->ucast_fd, 0))
+  while(gavl_fd_can_read(s->ucast_fd, 0))
     {
     len = gavl_udp_socket_receive(s->ucast_fd, s->buf, UDP_BUFFER_SIZE, s->addr);
     if(len <= 0)

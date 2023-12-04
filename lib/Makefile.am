@@ -70,6 +70,7 @@ AM_CFLAGS = \
 @CAIRO_CFLAGS@ \
 @PANGO_CFLAGS@ \
 @PANGOCAIRO_CFLAGS@ \
+@UDEV_CFLAGS@ \
 $(dbus_cflags) \
 $(pulseaudio_cflags) \
 $(ncurses_cflags) \
@@ -90,6 +91,7 @@ upnp/libupnp.la \
 @CAIRO_LIBS@ \
 @PANGO_LIBS@ \
 @PANGOCAIRO_LIBS@ \
+@UDEV_LIBS@ \
 $(dbus_libs) \
 $(ncurses_libs) \
 $(pulseaudio_libs) \

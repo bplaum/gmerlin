@@ -423,7 +423,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = /home/pix/Src/Gmerlin/gmerlin/doc/mainpage.incl /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/log.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/parameter.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/cfg_registry.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/streaminfo.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/edl.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/converters.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/plugin.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/keycodes.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/pluginregistry.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/filters.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/msgqueue.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/player.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/playermsg.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/utils.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/charset.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/subprocess.h /home/pix/Src/Gmerlin/gmerlin/include/gmerlin/visualize.h
+INPUT                  = /home/burkhard/Software/Gmerlin/gmerlin/doc/mainpage.incl /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/log.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/parameter.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/cfg_registry.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/streaminfo.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/edl.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/converters.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/plugin.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/keycodes.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/pluginregistry.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/filters.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/msgqueue.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/player.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/playermsg.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/utils.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/charset.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/subprocess.h /home/burkhard/Software/Gmerlin/gmerlin/include/gmerlin/visualize.h
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
@@ -994,7 +994,7 @@ SKIP_FUNCTION_MACROS   = YES
 # If a tag file is not located in the directory in which doxygen 
 # is run, you must also specify the path to the tagfile here.
 
-TAGFILES               = /home/pix/Src/Gmerlin/gmerlin/doc/gavl.tags=http://gmerlin.sourceforge.net/doc/gavl/
+TAGFILES               = /home/burkhard/Software/Gmerlin/gmerlin/doc/gavl.tags=http://gmerlin.sourceforge.net/doc/gavl/
 
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create 
 # a tag file that is based on the input files it reads.
