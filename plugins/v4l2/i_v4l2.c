@@ -23,16 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fcntl.h>              /* low-level i/o */
-#include <unistd.h>
-#include <errno.h>
-#include <malloc.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
+#include <gavl/hw_v4l2.h>
 
 #include <config.h>
 #include <gmerlin/translation.h>
@@ -51,28 +42,64 @@
 
 #include <gavl/metatags.h>
 
-
 /* Input module */
 
 typedef struct
   {
+  gavl_hw_context_t * hwctx;
+  gavl_v4l2_device_t * dev;
   
-  
+  gavl_dictionary_t mi;  // Media info
+  gavl_dictionary_t * s; // Stream
+
+  bg_media_source_t src;
+  bg_controllable_t ctrl;
   } v4l2_t;
-
-
-
 
 static void close_v4l(void * priv)
   {
+  v4l2_t * v4l = priv;
+  
+  if(v4l->hwctx)
+    gavl_hw_ctx_destroy(v4l->hwctx);
+
+  gavl_dictionary_free(&v4l->mi);
+  bg_media_source_cleanup(&v4l->src);
+  
+  free(v4l);
   }
 
+static int handle_cmd(void * data, gavl_msg_t * msg)
+  {
+  v4l2_t * v4l = data;
+  
+  switch(msg->NS)
+    {
+    case GAVL_MSG_NS_SRC:
+      switch(msg->ID)
+        {
+        case GAVL_CMD_SRC_START:
+          break;
+        case GAVL_CMD_SRC_PAUSE:
+          break;
+        case GAVL_CMD_SRC_RESUME:
+          break;
+        }
+      break;
+    }
+  return 1;
+  }
 
 static void * create_v4l()
   {
   v4l2_t * v4l;
 
   v4l = calloc(1, sizeof(*v4l));
+
+  bg_controllable_init(&v4l->ctrl,
+                       bg_msg_sink_create(handle_cmd, v4l, 1),
+                       bg_msg_hub_create(1));
+  
   return v4l;
   }
 
@@ -91,65 +118,25 @@ static void  destroy_v4l(void * priv)
 static const bg_parameter_info_t parameters[] =
   {
     {
-      .name =        "device_section",
-      .long_name =   TRS("Device"),
-      .type =        BG_PARAMETER_SECTION
-    },
-    {
-      .name =        "device",
-      .long_name =   TRS("V4L2 Device"),
-      .type =        BG_PARAMETER_MULTI_MENU,
-      .val_default = GAVL_VALUE_INIT_STRING("/dev/video0"),
-    },
-    {
-      .name =        "force_rw",
-      .long_name =   TRS("Force read"),
-      .type =        BG_PARAMETER_CHECKBUTTON,
-      .val_default = GAVL_VALUE_INIT_INT(1),
-      .help_string = TRS("Don't use memory mapping")
-    },
-    {
-      .name =        "res",
-      .long_name =   TRS("Resolution"),
+      .name =        "format",
+      .long_name =   TRS("Format"),
       .type =        BG_PARAMETER_SECTION,
     },
     {
-      .name =      "resolution",
-      .long_name = TRS("Resolution"),
-      .type =      BG_PARAMETER_STRINGLIST,
-      .val_default = GAVL_VALUE_INIT_STRING("qvga"),
-      .multi_names =     (char const *[]){ "qsif",
-                              "qcif", 
-                              "qvga", 
-                              "sif", 
-                              "cif", 
-                              "vga", 
-                              "user",
-                              NULL },
-      .multi_labels =     (char const *[]){ TRS("QSIF (160x112)"),
-                                   TRS("QCIF (176x144)"), 
-                                   TRS("QVGA (320x240)"), 
-                                   TRS("SIF(352x240)"), 
-                                   TRS("CIF (352x288)"), 
-                                   TRS("VGA (640x480)"), 
-                                   TRS("User defined"),
-                                   NULL },
-    },
-    {
-      .name =        "user_width",
-      .long_name =   TRS("User defined width"),
+      .name =        "width",
+      .long_name =   TRS("Width"),
       .type =        BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(720),
+      .val_default = GAVL_VALUE_INIT_INT(640),
       .val_min =     GAVL_VALUE_INIT_INT(160),
-      .val_max =     GAVL_VALUE_INIT_INT(1024),
+      .val_max =     GAVL_VALUE_INIT_INT(1920),
     },
     {
-      .name =        "user_height",
+      .name =        "height",
       .long_name =   TRS("User defined height"),
       .type =        BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(576),
+      .val_default = GAVL_VALUE_INIT_INT(480),
       .val_min =     GAVL_VALUE_INIT_INT(112),
-      .val_max =     GAVL_VALUE_INIT_INT(768),
+      .val_max =     GAVL_VALUE_INIT_INT(1080),
     },
     { /* End of parameters */ }
   };
@@ -169,15 +156,93 @@ static int get_parameter_v4l(void * priv, const char * name,
 static void set_parameter_v4l(void * priv, const char * name,
                               const gavl_value_t * val)
   {
-  v4l2_t * v4l;
-  v4l = priv;
+  //  v4l2_t * v4l;
+  //  v4l = priv;
   }
 
 static int open_v4l(void * priv, const char * location)
   {
+  int ret = 0;
   
-  return 1;
+  char * protocol = NULL;
+  char * path     = NULL;
+  char * hostname = NULL;
+  gavl_dictionary_t dev;
+
+  gavl_dictionary_t * t;
+  
+  v4l2_t * v4l;
+  v4l = priv;
+  
+  gavl_dictionary_init(&dev);
+  
+  if(!gavl_url_split(location,
+                     &protocol,
+                     NULL,
+                     NULL,
+                     &hostname,
+                     NULL,
+                     &path))
+    {
+    goto fail;
+    }
+
+  if(strcmp(protocol, "v4l2-capture"))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid protocol");
+    goto fail;
+    }
+    
+  if(!gavl_v4l2_get_device_info(path, &dev))
+    goto fail;
+
+  if((v4l->hwctx = gavl_hw_ctx_create_v4l2(&dev)))
+    goto fail;
+
+  t = gavl_append_track(&v4l->mi, NULL);
+  v4l->s = gavl_track_add_video_stream(t);
+
+  fprintf(stderr, "Open v4l\n");
+  
+  ret = 1;
+  fail:
+  gavl_dictionary_free(&dev);
+
+  if(hostname)
+    free(hostname);
+  if(path)
+    free(path);
+  if(protocol)
+    free(protocol);
+  
+    
+  return ret;
   }
+
+static char const * const protocols = "v4l4-capture";
+
+static const char * get_protocols_v4l(void * priv)
+  {
+  return protocols;
+  }
+
+static gavl_dictionary_t * get_media_info_v4l(void * priv)
+  {
+  v4l2_t * v4l;
+  v4l = priv;
+  return &v4l->mi;
+  }
+
+static bg_media_source_t * get_src_v4l(void * priv)
+  {
+  v4l2_t * v4l;
+  v4l = priv;
+
+  return &v4l->src;
+  
+  }
+
+
 
 const bg_input_plugin_t the_plugin =
   {
@@ -198,8 +263,9 @@ const bg_input_plugin_t the_plugin =
       .get_parameter =  get_parameter_v4l,
     },
     
-    .open =       open_v4l,
-    .close =      close_v4l,
+    .get_protocols = get_protocols_v4l,
+    .open          = open_v4l,
+    .close         = close_v4l,
   };
 
 /* Include this into all plugin modules exactly once
