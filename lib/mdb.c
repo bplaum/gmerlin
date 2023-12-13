@@ -731,8 +731,9 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
           {
           int i;
           const char * id;
-          id = gavl_dictionary_get_string(&msg->header, GAVL_META_ID);
-          if(gavl_string_starts_with(id, GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME))
+          id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          
+          if(id && gavl_string_starts_with(id, GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME))
             {
 
             for(i = 0; i < num_backends; i++)

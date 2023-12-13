@@ -132,7 +132,7 @@ static void remove_volume(bg_volume_manager_t * vol, const char * id)
   
   msg = bg_msg_sink_get(vol->evt_sink);
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
-  gavl_msg_set_arg_string(msg, 0, id);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
   bg_msg_sink_put(vol->evt_sink);
   
   gavl_dictionary_set(&vol->volumes, id, NULL);

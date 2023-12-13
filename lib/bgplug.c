@@ -739,7 +739,7 @@ static bg_plugin_handle_t * load_decompressor(gavl_codec_id_t id,
   /* Add decoder */
   const bg_plugin_info_t * info;
   bg_plugin_handle_t * ret;
-  info = bg_plugin_find_by_compression(id, type_mask);
+  info = bg_plugin_find_by_compression(id, 0, type_mask);
   if(!info)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
@@ -782,29 +782,29 @@ static int init_read(bg_plug_t * p)
           {
           int id;
           gavl_stream_get_id(s->h, &id);
-
+          
           if(s->source_s->action == BG_STREAM_ACTION_DECODE)
             {
             s->source_s->asrc = gavf_get_audio_source(p->g, id);
             s->source_s->psrc = NULL;
             }
-          
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
-          bg_codec_plugin_t * codec;
+          //          bg_codec_plugin_t * codec;
           /* Add decoder */
           if(!(s->codec_handle = load_decompressor(s->ci.id,
                                                    BG_PLUGIN_DECOMPRESSOR_AUDIO)))
             return 0;
 
-          codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
-
+          //          codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
+#if 0 // TODO
           s->source_s->asrc = codec->connect_decode_audio(s->codec_handle->priv,
                                                           s->source_s->psrc,
                                                           &s->ci,
                                                           s->afmt,
                                                           s->m);
+#endif
           if(!s->source_s->asrc)
             {
             gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio decoder failed");
@@ -828,24 +828,25 @@ static int init_read(bg_plug_t * p)
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
-          bg_codec_plugin_t * codec;
+          //          bg_codec_plugin_t * codec;
           /* Add decoder */
           if(!(s->codec_handle = load_decompressor(s->ci.id,
                                                    BG_PLUGIN_DECOMPRESSOR_VIDEO)))
             return 0;
-          codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
-      
+          //          codec = (bg_codec_plugin_t*)s->codec_handle->plugin;
+#if 0 // TODO
           s->source_s->vsrc = codec->connect_decode_video(s->codec_handle->priv,
                                                           s->source_s->psrc,
                                                           &s->ci,
                                                           s->vfmt,
                                                           s->m);
-          
+#endif          
           if(!s->source_s->vsrc)
             {
             gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing video decoder failed");
             return 0;
             }
+
           }
 
         break;
@@ -865,6 +866,7 @@ static int init_read(bg_plug_t * p)
           }
         else if(s->source_s->action == BG_STREAM_ACTION_DECODE)
           {
+#if 0 // TODO
           bg_codec_plugin_t * codec;
           /* Add decoder */
           if(!(s->codec_handle = load_decompressor(s->ci.id,
@@ -882,6 +884,7 @@ static int init_read(bg_plug_t * p)
             gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing overlay decoder failed");
             return 0;
             }
+#endif
           
           }
         break;
@@ -1800,6 +1803,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
                     {
                     case GAVL_STREAM_AUDIO:
                       {
+#if 0                      
                       bg_codec_plugin_t * codec;
                       /* Add decoder */
                       if(!(s->codec_handle = load_decompressor(s->ci.id,
@@ -1813,6 +1817,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
                                                                             &s->ci,
                                                                             s->afmt,
                                                                             gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+#endif
                       if(!p->src.streams[i]->asrc)
                         {
                         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio decoder failed");
@@ -1822,6 +1827,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
                       break;
                     case GAVL_STREAM_VIDEO:
                       {
+#if 0
                       bg_codec_plugin_t * codec;
                       /* Add decoder */
                       if(!(s->codec_handle = load_decompressor(s->ci.id,
@@ -1835,6 +1841,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
                                                                             &s->ci,
                                                                             s->vfmt,
                                                                             gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+#endif
                       if(!p->src.streams[i]->vsrc)
                         {
                         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio decoder failed");
@@ -1844,6 +1851,7 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
 
                     case GAVL_STREAM_OVERLAY:
                       {
+#if 0
                       bg_codec_plugin_t * codec;
                       /* Add decoder */
                       if(!(s->codec_handle = load_decompressor(s->ci.id,
@@ -1856,11 +1864,13 @@ static int handle_cmd_reader(void * data, gavl_msg_t * msg)
                                                                               &s->ci,
                                                                               s->vfmt,
                                                                               gavl_stream_get_metadata_nc(p->src.streams[i]->s));
+#endif
                       if(!p->src.streams[i]->vsrc)
                         {
                         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing overlay decoder failed");
                         return 0;
                         }
+
                       }
                       break;
                     case GAVL_STREAM_TEXT:

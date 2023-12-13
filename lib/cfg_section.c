@@ -674,7 +674,7 @@ void bg_cfg_section_get(bg_cfg_section_t * section,
   int num;
   bg_cfg_item_t * item;
 
-  if(!func)
+  if(!func || !infos)
     return;
   
   num = 0;

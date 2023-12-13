@@ -65,8 +65,6 @@ static void close_v4l(void * priv)
 
   gavl_dictionary_free(&v4l->mi);
   bg_media_source_cleanup(&v4l->src);
-  
-  free(v4l);
   }
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
@@ -79,6 +77,11 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
       switch(msg->ID)
         {
         case GAVL_CMD_SRC_START:
+          {
+          /* TODO: Load decoder */
+          bg_media_source_load_decoders(&v4l->src);
+          
+          }
           break;
         case GAVL_CMD_SRC_PAUSE:
           break;
@@ -170,6 +173,7 @@ static int open_v4l(void * priv, const char * location)
   gavl_dictionary_t dev;
 
   gavl_dictionary_t * t;
+  bg_media_source_stream_t * st;
   
   v4l2_t * v4l;
   v4l = priv;
@@ -192,17 +196,41 @@ static int open_v4l(void * priv, const char * location)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid protocol");
     goto fail;
     }
-    
+
+  if(hostname && strlen(hostname) && !gavl_host_is_us(hostname))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Hostname mismatch, device is on host %s", hostname);
+    goto fail;
+    }
+  
   if(!gavl_v4l2_get_device_info(path, &dev))
     goto fail;
 
-  if((v4l->hwctx = gavl_hw_ctx_create_v4l2(&dev)))
+  if(!(v4l->hwctx = gavl_hw_ctx_create_v4l2(&dev)))
     goto fail;
 
+  v4l->dev = gavl_hw_ctx_v4l2_get_device(v4l->hwctx);
+  
+  
   t = gavl_append_track(&v4l->mi, NULL);
-  v4l->s = gavl_track_add_video_stream(t);
+  v4l->s = gavl_track_append_video_stream(t);
 
+  if(!gavl_v4l_device_init_capture(v4l->dev, v4l->s))
+    goto fail;
+
+  bg_media_source_set_from_track(&v4l->src, t);
+
+  
+  
   fprintf(stderr, "Open v4l\n");
+
+  st = bg_media_source_get_video_stream(&v4l->src, 0);
+
+  if(!(st->vsrc = gavl_v4l2_device_get_video_source(v4l->dev)))
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got compressed output");
+    st->psrc = gavl_v4l2_device_get_packet_source(v4l->dev);
+    }
   
   ret = 1;
   fail:
@@ -215,7 +243,6 @@ static int open_v4l(void * priv, const char * location)
   if(protocol)
     free(protocol);
   
-    
   return ret;
   }
 
@@ -228,8 +255,7 @@ static const char * get_protocols_v4l(void * priv)
 
 static gavl_dictionary_t * get_media_info_v4l(void * priv)
   {
-  v4l2_t * v4l;
-  v4l = priv;
+  v4l2_t * v4l = priv;
   return &v4l->mi;
   }
 
@@ -237,12 +263,15 @@ static bg_media_source_t * get_src_v4l(void * priv)
   {
   v4l2_t * v4l;
   v4l = priv;
-
   return &v4l->src;
-  
   }
 
-
+static bg_controllable_t * get_controllable_v4l(void * priv)
+  {
+  v4l2_t * v4l;
+  v4l = priv;
+  return &v4l->ctrl;
+  }
 
 const bg_input_plugin_t the_plugin =
   {
@@ -252,8 +281,8 @@ const bg_input_plugin_t the_plugin =
       .name =          "i_v4l2",
       .long_name =     TRS("V4L2"),
       .description =   TRS("video4linux 2 recording plugin. Supports only video and no tuner decives."),
-      .type =          BG_PLUGIN_RECORDER_VIDEO,
-      .flags =         BG_PLUGIN_DEVPARAM,
+      .type =          BG_PLUGIN_INPUT,
+      .flags =         BG_PLUGIN_URL,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_v4l,
       .destroy =       destroy_v4l,
@@ -261,8 +290,11 @@ const bg_input_plugin_t the_plugin =
       .get_parameters = get_parameters_v4l,
       .set_parameter =  set_parameter_v4l,
       .get_parameter =  get_parameter_v4l,
+      .get_controllable = get_controllable_v4l,
     },
     
+    .get_media_info  = get_media_info_v4l,
+    .get_src       = get_src_v4l,
     .get_protocols = get_protocols_v4l,
     .open          = open_v4l,
     .close         = close_v4l,

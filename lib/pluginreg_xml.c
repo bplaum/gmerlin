@@ -106,6 +106,7 @@ static const char * const description_key       = "DESCRIPTION";
 static const char * const mimetypes_key         = "MIMETYPES";
 static const char * const extensions_key        = "EXTENSIONS";
 static const char * const compressions_key      = "COMPRESSIONS";
+static const char * const codec_tags_key        = "CODEC_TAGS";
 static const char * const protocols_key         = "PROTOCOLS";
 static const char * const module_filename_key   = "MODULE_FILENAME";
 static const char * const module_time_key       = "MODULE_TIME";
@@ -257,6 +258,27 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
       while(comp_list[num])
         {
         ret->compressions[num] = gavl_compression_from_short_name(comp_list[num]);
+        num++;
+        }
+      gavl_strbreak_free(comp_list);
+      }
+    else if(!BG_XML_STRCMP(cur->name, codec_tags_key))
+      {
+      int num;
+      char ** comp_list;
+
+      comp_list = gavl_strbreak(tmp_string, ' ');
+
+      num = 0;
+      while(comp_list[num])
+        num++;
+      ret->codec_tags = calloc(num+1, sizeof(*ret->codec_tags));
+
+      num = 0;
+      
+      while(comp_list[num])
+        {
+        ret->codec_tags[num] = atoi(comp_list[num]);
         num++;
         }
       gavl_strbreak_free(comp_list);
@@ -446,6 +468,28 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
       }
     
     xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)compressions_key, NULL);
+    xmlAddChild(xml_item, BG_XML_NEW_TEXT(tmp_string));
+    xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
+    free(tmp_string);
+    }
+  if(info->codec_tags)
+    {
+    int index = 0;
+    tmp_string = NULL;
+    
+    while(info->codec_tags[index])
+      {
+      char buf[16];
+      
+      if(index)
+        tmp_string = gavl_strcat(tmp_string, " ");
+      
+      snprintf(buf, 16, "%d", info->codec_tags[index]);
+      tmp_string = gavl_strcat(tmp_string, buf);
+      index++;
+      }
+    
+    xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)codec_tags_key, NULL);
     xmlAddChild(xml_item, BG_XML_NEW_TEXT(tmp_string));
     xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
     free(tmp_string);

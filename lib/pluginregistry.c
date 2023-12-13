@@ -233,6 +233,8 @@ void bg_plugin_info_destroy(bg_plugin_info_t * info)
     free(info->cmp_name);
   if(info->compressions)
     free(info->compressions);
+  if(info->codec_tags)
+    free(info->codec_tags);
   
   if(info->parameters)
     bg_parameter_info_destroy_array(info->parameters);
@@ -624,14 +626,56 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
   return NULL;
   }
 
+static const bg_plugin_info_t *
+find_by_codec_tag(uint32_t codec_tag, int typemask)
+  {
+  int i;
+  bg_plugin_info_t * info, *ret = NULL;
+  int max_priority = BG_PLUGIN_PRIORITY_MIN - 1;
+
+  info = bg_plugin_reg->entries;
+  
+  while(info)
+    {
+    if(!(info->type & typemask) ||
+       !info->codec_tags)
+      {
+      info = info->next;
+      continue;
+      }
+
+    i = 0;
+    while(info->codec_tags[i])
+      {
+      if(info->codec_tags[i] == codec_tag)
+        {
+        if(max_priority < info->priority)
+          {
+          max_priority = info->priority;
+          ret = info;
+          }
+        }
+      i++;
+      }
+    
+    info = info->next;
+    }
+  return ret;
+  
+  }
+
 const bg_plugin_info_t *
 bg_plugin_find_by_compression(gavl_codec_id_t id,
+                              uint32_t codec_tag,
                               int typemask)
   {
   int i;
   bg_plugin_info_t * info, *ret = NULL;
   int max_priority = BG_PLUGIN_PRIORITY_MIN - 1;
 
+  if(id == GAVL_CODEC_ID_EXTENDED)
+    return find_by_codec_tag(codec_tag, typemask);
+  
   info = bg_plugin_reg->entries;
   
   while(info)
@@ -924,6 +968,8 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_codec_plugin_t  * p;
     int num = 0;
     const gavl_codec_id_t * compressions;
+    const uint32_t * codec_tags;
+    
     p = (bg_codec_plugin_t*)plugin;
 
     compressions = p->get_compressions(plugin_priv);
@@ -933,6 +979,19 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     new_info->compressions = calloc(num+1, sizeof(*new_info->compressions));
     memcpy(new_info->compressions, compressions,
            num * sizeof(*new_info->compressions));
+
+    if(p->get_codec_tags)
+      {
+      num = 0;
+      codec_tags = p->get_codec_tags(plugin_priv);
+    
+      while(codec_tags[num])
+        num++;
+      new_info->codec_tags = calloc(num+1, sizeof(*new_info->codec_tags));
+      memcpy(new_info->codec_tags, codec_tags,
+             num * sizeof(*new_info->codec_tags));
+      }
+    
     }
   
   return new_info;
@@ -1628,7 +1687,7 @@ void bg_plugin_ref(bg_plugin_handle_t * h)
 static void unload_plugin(bg_plugin_handle_t * h)
   {
   bg_cfg_section_t * section;
- 
+  
   if(h->plugin->get_parameter)
     {
     section = bg_plugin_registry_get_section(bg_plugin_reg, h->info->name);

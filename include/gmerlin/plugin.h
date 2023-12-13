@@ -105,7 +105,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 36
+#define BG_PLUGIN_API_VERSION 37
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -1459,6 +1459,16 @@ struct bg_codec_plugin_s
    */
   
   const gavl_codec_id_t * (*get_compressions)(void * priv);
+
+  /** \brief Get supported codec tags
+   *  \param priv The handle returned by the create() method
+   *  \returns A list of codec tags terminated with GAVL_COMPRESSION_NONE
+   *
+   *  Codec tags are used with the compression ID GAVL_COMPRESSIO_EXTENDED
+   *  for having any compression technique.
+   */
+  
+  const uint32_t * (*get_codec_tags)(void * priv);
   
   /** \brief Connect audio encoder
    *  \param priv The handle returned by the create() method
@@ -1469,9 +1479,7 @@ struct bg_codec_plugin_s
    */
   
   gavl_audio_sink_t * (*open_encode_audio)(void * priv,
-                                           gavl_compression_info_t * ci,
-                                           gavl_audio_format_t * fmt,
-                                           gavl_dictionary_t * m);
+                                           gavl_dictionary_t * stream);
   
   /** \brief Connect video encoder
    *  \param priv The handle returned by the create() method
@@ -1482,9 +1490,7 @@ struct bg_codec_plugin_s
    */
   
   gavl_video_sink_t * (*open_encode_video)(void * priv,
-                                           gavl_compression_info_t * ci,
-                                           gavl_video_format_t * fmt,
-                                           gavl_dictionary_t * m);
+                                           gavl_dictionary_t * stream);
 
   /** \brief Connect overlay encoder
    *  \param priv The handle returned by the create() method
@@ -1495,9 +1501,7 @@ struct bg_codec_plugin_s
    */
   
   gavl_video_sink_t * (*open_encode_overlay)(void * priv,
-                                             gavl_compression_info_t * ci,
-                                             gavl_video_format_t * fmt,
-                                             gavl_dictionary_t * m);
+                                             gavl_dictionary_t * stream);
   
   /** \brief Set a packet sink
    *  \param priv The handle returned by the create() method
@@ -1514,12 +1518,10 @@ struct bg_codec_plugin_s
    *  \returns An audio source for reading uncompressed frames
    */
   
-  gavl_audio_source_t * (*connect_decode_audio)(void * priv,
-                                                gavl_packet_source_t * src,
-                                                const gavl_compression_info_t * ci,
-                                                const gavl_audio_format_t * fmt,
-                                                gavl_dictionary_t * m);
-
+  gavl_audio_source_t * (*open_decode_audio)(void * priv,
+                                             gavl_packet_source_t * src,
+                                             gavl_dictionary_t * stream);
+  
   /** \brief Connect video decoder
    *  \param priv The handle returned by the create() method
    *  \param sink Source where get the packets
@@ -1528,11 +1530,9 @@ struct bg_codec_plugin_s
    *  \returns A video source for reading uncompressed frames
    */
   
-  gavl_video_source_t * (*connect_decode_video)(void * priv,
-                                                gavl_packet_source_t * src,
-                                                const gavl_compression_info_t * ci,
-                                                const gavl_video_format_t * fmt,
-                                                gavl_dictionary_t * m);
+  gavl_video_source_t * (*open_decode_video)(void * priv,
+                                             gavl_packet_source_t * src,
+                                             gavl_dictionary_t * stream);
  
   /** \brief Connect overlay decoder
    *  \param priv The handle returned by the create() method
@@ -1542,11 +1542,9 @@ struct bg_codec_plugin_s
    *  \returns A video source for reading uncompressed overlays
    */
 
-  gavl_video_source_t * (*connect_decode_overlay)(void * priv,
-                                                gavl_packet_source_t * src,
-                                                const gavl_compression_info_t * ci,
-                                                const gavl_video_format_t * fmt,
-                                                gavl_dictionary_t * m);
+  gavl_video_source_t * (*open_decode_overlay)(void * priv,
+                                               gavl_packet_source_t * src,
+                                               gavl_dictionary_t * stream);
 
  
   /** \brief Reset a decoder

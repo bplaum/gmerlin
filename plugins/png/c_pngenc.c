@@ -150,13 +150,16 @@ static gavl_sink_status_t put_frame(void * priv,
   return gavl_packet_sink_put_packet(c->psink, &c->p);
   }
 
-static gavl_video_sink_t * open_video(void * priv,
-                                      gavl_compression_info_t * ci,
-                                      gavl_video_format_t * fmt,
-                                      gavl_dictionary_t * m)
+static gavl_video_sink_t * open_video(void * priv, gavl_dictionary_t * s)
   {
+  gavl_compression_info_t ci;
+  gavl_video_format_t * fmt;
+  gavl_dictionary_t * m;
   stream_codec_t * c = priv;
   gavl_packet_reset(&c->p);
+  
+  fmt = gavl_stream_get_video_format_nc(s);
+  m = gavl_dictionary_get_dictionary_create(s, GAVL_META_METADATA);
   
   bg_pngwriter_adjust_format(&c->png, fmt);
   gavl_video_format_copy(&c->fmt, fmt);
@@ -164,23 +167,26 @@ static gavl_video_sink_t * open_video(void * priv,
   gavl_dictionary_set_string(m, GAVL_META_SOFTWARE, "libpng-" PNG_LIBPNG_VER_STRING);
   c->vsink = gavl_video_sink_create(NULL, put_frame, c, &c->fmt);
 
-  ci->id = GAVL_CODEC_ID_PNG;
-
+  gavl_compression_info_init(&ci);
+  ci.id = GAVL_CODEC_ID_PNG;
+  gavl_stream_set_compression_info(s, &ci);
+  
   return c->vsink;
   }
 
 static gavl_video_sink_t * open_overlay(void * priv,
-                                        gavl_compression_info_t * ci,
-                                        gavl_video_format_t * fmt,
-                                        gavl_dictionary_t * m)
+                                        gavl_dictionary_t * s)
   {
+  gavl_video_format_t * fmt;
   stream_codec_t * c = priv;
   gavl_video_sink_t * ret;
 
+  fmt = gavl_stream_get_video_format_nc(s);
+  
   if(fmt->pixelformat == GAVL_PIXELFORMAT_NONE)
     fmt->pixelformat = GAVL_RGBA_32;
   
-  ret = open_video(priv, ci, fmt, m);
+  ret = open_video(priv, s);
   c->overlay = 1;
   c->frame = gavl_video_frame_create(NULL);
   return ret;

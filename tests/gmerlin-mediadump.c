@@ -80,19 +80,19 @@ int main(int argc, char ** argv)
     bg_media_source_set_audio_action(h->src, i,
                                      BG_STREAM_ACTION_DECODE);
     }
-  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_AUDIO);
+  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_VIDEO);
   for(i = 0; i < num_streams; i++)
     {
     bg_media_source_set_video_action(h->src, i,
                                      BG_STREAM_ACTION_DECODE);
     }
-  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_AUDIO);
+  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_TEXT);
   for(i = 0; i < num_streams; i++)
     {
     bg_media_source_set_text_action(h->src, i,
                                     BG_STREAM_ACTION_DECODE);
     }
-  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_AUDIO);
+  num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_OVERLAY);
   for(i = 0; i < num_streams; i++)
     {
     bg_media_source_set_overlay_action(h->src, i,
@@ -105,27 +105,46 @@ int main(int argc, char ** argv)
   
   fprintf(stderr, "Loaded track");
   gavl_dictionary_dump(ti, 2);
+  fprintf(stderr, "\n");
 
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_AUDIO);
   for(i = 0; i < num_streams; i++)
     {
     st =  bg_media_source_get_audio_stream(h->src, i);
-    gavl_audio_source_set_dst(st->asrc, 0, NULL);
-    
+
+    if(st->asrc)
+      gavl_audio_source_set_dst(st->asrc, 0, NULL);
+    else
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Audio initialisation failed");
+      return EXIT_FAILURE;
+      }
     }
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_VIDEO);
   for(i = 0; i < num_streams; i++)
     {
     st =  bg_media_source_get_video_stream(h->src, i);
-    gavl_video_source_set_dst(st->vsrc, 0, NULL);
+    if(st->vsrc)
+      gavl_video_source_set_dst(st->vsrc, 0, NULL);
+    else
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Video initialisation failed");
+      return EXIT_FAILURE;
+      }
     }
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_OVERLAY);
   for(i = 0; i < num_streams; i++)
     {
     st =  bg_media_source_get_overlay_stream(h->src, i);
-    gavl_video_source_set_dst(st->vsrc, 0, NULL);
+    if(st->vsrc)
+      gavl_video_source_set_dst(st->vsrc, 0, NULL);
+    else
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Overlay intialisation failed");
+      return EXIT_FAILURE;
+      }
     }
-
+  
   /* Read frames */
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_AUDIO);
   for(i = 0; i < num_streams; i++)

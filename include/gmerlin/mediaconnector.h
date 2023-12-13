@@ -35,6 +35,8 @@
 #define BG_MEDIACONNECTOR_FLAG_EOF     (1<<0)
 #define BG_MEDIACONNECTOR_FLAG_DISCONT (1<<1)
 
+typedef struct bg_plugin_handle_s bg_plugin_handle_t;
+
 /** \brief Stream actions
  *
  *  These describe how streams should be handled by the input
@@ -59,6 +61,8 @@ typedef struct
   {
   void * user_data;
   void (*free_user_data)(void* user_data);
+
+  bg_plugin_handle_t * codec_handle;
   
   gavl_stream_type_t type;
   
@@ -166,6 +170,9 @@ int bg_media_source_set_overlay_action(bg_media_source_t * src, int idx, bg_stre
 int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id, bg_stream_action_t action);
 
 int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type);
+
+/* Load implicit decoders */
+int bg_media_source_load_decoders(bg_media_source_t * src);
 
 /* Sink */
 

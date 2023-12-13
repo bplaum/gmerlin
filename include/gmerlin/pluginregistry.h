@@ -130,6 +130,7 @@ struct bg_plugin_info_s
   // char * protocols;       //!< Network protocols, this plugin can handle
   
   gavl_codec_id_t * compressions; //!< Compressions, this plugin can handle
+  uint32_t        * codec_tags;   //!< Codec tags, this plugin can handle
 
   char * description;     //!< Description of what the plugin does
 
@@ -358,6 +359,7 @@ bg_plugin_find_by_mimetype(const char * mimetype, int type_mask);
 
 const bg_plugin_info_t *
 bg_plugin_find_by_compression(gavl_codec_id_t id,
+                              uint32_t codec_tag,
                               int typemask);
 
 

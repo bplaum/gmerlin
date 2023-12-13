@@ -22,6 +22,10 @@
 #include <string.h>
 
 #include <gmerlin/mediaconnector.h>
+#include <gmerlin/pluginregistry.h>
+#include <gavl/log.h>
+
+#define LOG_DOMAIN "mediasrcsink"
 
 /*
  *   Values for the EOF status:
@@ -62,6 +66,10 @@ void bg_media_source_cleanup(bg_media_source_t * src)
       bg_msg_hub_destroy(src->streams[i]->msghub_priv);
     if(src->streams[i]->free_user_data && src->streams[i]->user_data)
       src->streams[i]->free_user_data(src->streams[i]->user_data);
+
+    if(src->streams[i]->codec_handle)
+      bg_plugin_unref(src->streams[i]->codec_handle);
+    
     free(src->streams[i]);
     }
   if(src->streams)
@@ -391,6 +399,93 @@ bg_msg_hub_t * bg_media_source_get_msg_hub_by_id(bg_media_source_t * src, int id
   if(!(s = bg_media_source_get_msg_stream_by_id(src, id)))
     return NULL;
   return s->msghub;
+  }
+
+static bg_plugin_handle_t * load_decoder_plugin(gavl_dictionary_t * s, uint32_t type_mask)
+  {
+  const bg_plugin_info_t * info;
+  bg_plugin_handle_t * ret = NULL;
+  gavl_compression_info_t ci;
+
+  gavl_compression_info_init(&ci);
+  gavl_stream_get_compression_info(s, &ci);
+  
+  if(!(info = bg_plugin_find_by_compression(ci.id,
+                                            ci.codec_tag,
+                                            type_mask)))
+    {
+    if(ci.codec_tag)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot find decompressor for tag %c%c%c%c",
+               (ci.codec_tag >> 24) & 0xff,
+               (ci.codec_tag >> 16) & 0xff,
+               (ci.codec_tag >> 8) & 0xff,
+               ci.codec_tag & 0xff);
+    else
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot find decompressor for %s",
+               gavl_compression_get_long_name(ci.id));
+    goto fail;
+    }
+  
+  ret = bg_plugin_load(info);
+  
+  fail:
+  gavl_compression_info_free(&ci);
+  
+  return ret;
+  
+  }
+
+int bg_media_source_load_decoders(bg_media_source_t * src)
+  {
+  int i;
+  bg_codec_plugin_t * plugin;
+
+  bg_media_source_stream_t * s;
+  
+  for(i = 0; i < src->num_streams; i++)
+    {
+    s = src->streams[i];
+    switch(s->type)
+      {
+      case GAVL_STREAM_AUDIO:
+        if((s->action == BG_STREAM_ACTION_DECODE) &&
+           (!s->asrc && s->psrc))
+          {
+          if((s->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_AUDIO)))
+            {
+            plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
+            s->asrc = plugin->open_decode_audio(s->codec_handle->priv, s->psrc, s->s);
+            }
+          }
+        break;
+      case GAVL_STREAM_VIDEO:
+        if((src->streams[i]->action == BG_STREAM_ACTION_DECODE) &&
+           (!src->streams[i]->vsrc && src->streams[i]->psrc))
+          {
+          if((src->streams[i]->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+            {
+            plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
+            s->vsrc = plugin->open_decode_video(s->codec_handle->priv, s->psrc, s->s);
+            }
+          }
+        break;
+      case GAVL_STREAM_OVERLAY:
+        if((src->streams[i]->action == BG_STREAM_ACTION_DECODE) &&
+           (!src->streams[i]->vsrc && src->streams[i]->psrc))
+          {
+          if((src->streams[i]->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+            {
+            plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
+            s->vsrc = plugin->open_decode_overlay(s->codec_handle->priv, s->psrc, s->s);
+            }
+          }
+        break;
+      default:
+        break;
+      }
+    
+    }
+  return 1;
   }
 
 int bg_media_source_set_stream_action(bg_media_source_t * src, gavl_stream_type_t type, int idx,
