@@ -1827,8 +1827,10 @@ int bg_player_advance_gapless(bg_player_t * player)
 
   /* */
   
-  player->can_seek = !!(player->src->flags & SRC_CAN_SEEK);
-  player->can_pause = !!(player->src->flags & SRC_CAN_PAUSE);
+  player->can_seek = gavl_track_can_seek(player->src->track_info);
+  player->can_pause = gavl_track_can_pause(player->src->track_info);
+
+  
   
   /* From here on, we can send the messages about the input format */
   bg_msg_hub_send_cb(player->ctrl.evt_hub, msg_gapless, &player);

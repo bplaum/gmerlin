@@ -223,7 +223,7 @@ typedef struct
   bg_controllable_t * ov_ctrl;
   bg_msg_sink_t * ov_evt_sink;
   
-  gavl_time_t last_time;
+  //  gavl_time_t last_time;
   
   gavl_video_frame_t * frame;
   
@@ -249,6 +249,8 @@ typedef struct
 #define PLAYER_SINGLE_AV_THREAD    (1<<9)
 #define PLAYER_SEEK_WINDOW         (1<<10)
 #define PLAYER_GAPLESS             (1<<11)
+#define PLAYER_IS_RECORDER         (1<<12) // Set if the source is a recording device
+#define PLAYER_SYNC_NONE           (1<<13) // Display frames as soon as they arrive
 
 /* Bits >= 16 are permanent (not cleared by playback initializations) */
 #define PLAYER_DO_REPORT_PEAK      (1<<16)
@@ -290,8 +292,6 @@ typedef struct
 #define PLAYER_MAX_THREADS 2
 
 #define SRC_HAS_TRACK    (1<<0)
-#define SRC_CAN_SEEK     (1<<1)
-#define SRC_CAN_PAUSE    (1<<2)
 
 typedef struct
   {

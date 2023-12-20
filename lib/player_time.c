@@ -46,6 +46,10 @@ void bg_player_time_init(bg_player_t * player)
     }
   else
     {
+    if((player->flags & (PLAYER_DO_AUDIO|PLAYER_DO_VIDEO|PLAYER_IS_RECORDER)) ==
+       (PLAYER_DO_VIDEO|PLAYER_IS_RECORDER))
+      player->flags |= PLAYER_SYNC_NONE;
+    
     s->sync_mode = SYNC_SOFTWARE;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with software timer");
     }

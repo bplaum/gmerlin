@@ -223,7 +223,7 @@ int bg_player_ov_init(bg_player_video_stream_t * vs)
   
   gavl_video_format_copy(&vs->output_format, gavl_video_source_get_src_format(vs->src));
 
-  vs->last_time = GAVL_TIME_UNDEFINED;
+  //  vs->last_time = GAVL_TIME_UNDEFINED;
   
   result = bg_ov_open(vs->ov, &vs->output_format, 1);
   
@@ -243,7 +243,7 @@ int bg_player_ov_init(bg_player_video_stream_t * vs)
   /* Fixme: Lets just hope, that the OSD format doesn't get changed
      by this call. Otherwise, we would need a gavl_video_converter */
   
-  vs->last_time = GAVL_TIME_UNDEFINED;
+  //  vs->last_time = GAVL_TIME_UNDEFINED;
   return result;
   }
 
@@ -287,7 +287,7 @@ void bg_player_ov_reset(bg_player_t * p)
   bg_player_video_stream_t * s = &p->video_stream;
   // fprintf(stderr, "bg_player_ov_reset\n");
   
-  s->last_time = GAVL_TIME_UNDEFINED;
+  //  s->last_time = GAVL_TIME_UNDEFINED;
   
   if(DO_SUBTITLE(p->flags))
     {
@@ -317,35 +317,6 @@ void bg_player_ov_handle_events(bg_player_video_stream_t * s)
   bg_osd_update(s->osd);
   bg_ov_handle_events(s->ov);
   }
-
-#if 0
-typedef struct
-  {
-  gavl_time_t decode_time;
-  gavl_time_t render;
-  gavl_time_t pts;
-  } frame_stats_el_t;
-
-#define FRAME_STATS_LEN 5
-
-typedef struct
-  {
-  frame_stats_el_t el[FRAME_STATS_LEN];
-  int idx;
-  } frame_stats_t;
-
-static void frame_stats_init(frame_stats_t * stats)
-  {
-  
-  }
-
-static void frame_stats_update(frame_stats_t * stats,
-                               const gavl_video_frame_t * f, const gavl_video_format_t * fmt,
-                               gavl_time_t decode_duration, gavl_time_t render_duration)
-  {
-  
-  }
-#endif
 
 static gavl_source_status_t read_frame(bg_player_t * p)
   {
@@ -384,6 +355,11 @@ static gavl_source_status_t read_frame(bg_player_t * p)
       
   s->frame_time = frame_time;
 
+  //  if(s->last_time != GAVL_TIME_UNDEFINED)
+  //    fprintf(stderr, "Last duration: %"PRId64"\n", frame_time - s->last_time);
+  
+  //  s->last_time = s->frame_time;
+  
   if(DO_STILL(p->flags))
     s->state = STATE_STILL;
   else
@@ -391,8 +367,11 @@ static gavl_source_status_t read_frame(bg_player_t * p)
     /* Subtitle handling */
     if(DO_SUBTITLE(p->flags))
       bg_subtitle_handler_update(s->sh, s->frame->timestamp);
-      
-    s->state = STATE_WAIT;
+    
+    if(p->flags & PLAYER_SYNC_NONE)
+      s->state = STATE_SHOW;
+    else
+      s->state = STATE_WAIT;
     }
   
   return GAVL_SOURCE_OK;
@@ -442,52 +421,12 @@ void * bg_player_ov_thread(void * data)
 
     if(s->state == STATE_READ)
       {
-#if 0
-      gavl_time_t frame_time;
-
-      //    fprintf(stderr, "do read\n");
-      
-      if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
-        {
-        bg_player_video_set_eof(p);
-        if(!bg_thread_wait_for_start(s->th))
-          done = 1;
-        continue;
-        }
-      
-      //      fprintf(stderr, "do read done\n");
-
-      frame_time = gavl_time_unscale(s->output_format.timescale,
-                                     s->frame->timestamp);
-
-      pthread_mutex_lock(&p->config_mutex);
-      frame_time += p->sync_offset; // Passed by user
-      pthread_mutex_unlock(&p->config_mutex);
-      
-      if(DO_STILL(p->flags) && (s->frame_time == GAVL_TIME_UNDEFINED))
-        gavl_timer_set(timer, frame_time);
-      
-      s->frame_time = frame_time;
-
-      if(DO_STILL(p->flags))
-        s->state = STATE_STILL;
-      else
-        {
-        /* Subtitle handling */
-        if(DO_SUBTITLE(p->flags))
-          bg_subtitle_handler_update(s->sh, s->frame->timestamp);
-      
-        s->state = STATE_WAIT;
-        warn_wait = 0;
-        }
-#else
       warn_wait = 0;
       if(read_frame(p) != GAVL_SOURCE_OK)
         {
         done = 1;
         continue;
         }
-#endif
       }
 
     if(s->state == STATE_WAIT)
@@ -502,6 +441,7 @@ void * bg_player_ov_thread(void * data)
       bg_debug("C: %"PRId64", F: %"PRId64", Diff: %"PRId64"\n",
                current_time, s->frame_time, s->frame_time - current_time);
 #endif
+
       
       if((diff_time >= GAVL_TIME_SCALE / 2) && !warn_wait)
         {

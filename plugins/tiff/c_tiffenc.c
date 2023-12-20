@@ -1,22 +1,22 @@
 /*****************************************************************
  * gmerlin - a general purpose multimedia framework and applications
  *
- * Copyright (c) 2001 - 2012 Members of the Gmerlin project
+ * copyright (c) 2001 - 2012 members of the gmerlin project
  * gmerlin-general@lists.sourceforge.net
  * http://gmerlin.sourceforge.net
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
+ * this program is free software: you can redistribute it and/or modify
+ * it under the terms of the gnu general public license as published by
+ * the free software foundation, either version 2 of the license, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * this program is distributed in the hope that it will be useful,
+ * but without any warranty; without even the implied warranty of
+ * merchantability or fitness for a particular purpose.  see the
+ * gnu general public license for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * you should have received a copy of the gnu general public license
+ * along with this program.  if not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
 #include <stdlib.h>
@@ -100,11 +100,14 @@ static gavl_sink_status_t put_frame(void * priv,
   }
 
 static gavl_video_sink_t * open_video(void * priv,
-                                      gavl_compression_info_t * ci,
-                                      gavl_video_format_t * fmt,
-                                      gavl_dictionary_t * m)
+                                      gavl_dictionary_t * s)
   {
   stream_codec_t * c = priv;
+  gavl_compression_info_t ci;
+  gavl_video_format_t * fmt = gavl_stream_get_video_format_nc(s);
+  
+  gavl_compression_info_init(&ci);
+  
   gavl_packet_reset(&c->p);
   if(!bg_tiff_writer_write_header(c->tiff, NULL,
                                   &c->p,
@@ -112,13 +115,17 @@ static gavl_video_sink_t * open_video(void * priv,
                                   NULL))
     return NULL;
   
-  gavl_dictionary_set_string(m, GAVL_META_SOFTWARE, TIFFGetVersion());
+  gavl_dictionary_set_string(gavl_dictionary_get_dictionary_create(s, GAVL_META_METADATA),
+                             GAVL_META_SOFTWARE, TIFFGetVersion());
+  
   gavl_video_format_copy(&c->fmt, fmt);
   c->have_header = 1;
   c->vsink = gavl_video_sink_create(NULL, put_frame, c, &c->fmt);
 
-  ci->id = GAVL_CODEC_ID_TIFF;
-
+  ci.id = GAVL_CODEC_ID_TIFF;
+  gavl_stream_set_compression_info(s, &ci);
+  gavl_compression_info_free(&ci);
+  
   return c->vsink;
   }
 

@@ -106,6 +106,8 @@ int bg_player_input_start(bg_player_t * p)
   bg_player_video_stream_t * vs = &p->video_stream;
   bg_player_subtitle_stream_t * ss = &p->subtitle_stream;
 
+  const char * klass;
+  
   //  fprintf(stderr, "bg_player_input_start\n");
 
   num_audio_streams   = gavl_track_get_num_audio_streams(p->src->track_info);
@@ -198,19 +200,23 @@ int bg_player_input_start(bg_player_t * p)
     bg_msg_hub_connect_sink(s->msghub, p->src_msg_sink);
     }
   else
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cannot connect input messages");
+  
+  if((klass = gavl_track_get_media_class(p->src->track_info)) &&
+     gavl_string_starts_with(klass, "item.recorder"))
     {
-    fprintf(stderr, "Cannot connect input messages %p\n", s);
+    p->flags |= PLAYER_IS_RECORDER;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected recording device");
     }
   
-  
-  /* */
-  
-  p->can_seek  = !!(p->src->flags & SRC_CAN_SEEK);
-  p->can_pause = !!(p->src->flags & SRC_CAN_PAUSE);
+  p->can_seek  = gavl_track_can_seek(p->src->track_info);
+  p->can_pause = gavl_track_can_seek(p->src->track_info);
   
   /* From here on, we can send the messages about the input format */
   bg_player_set_current_track(p, p->src->track_info);
 
+  
+  
   /* Set initial seek window */
   if((v = gavl_dictionary_get(p->src->metadata, GAVL_STATE_SRC_SEEK_WINDOW)))
     {
@@ -619,7 +625,7 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
 
     gavl_dictionary_free(m2);
     gavl_dictionary_move(m2, &m);
-    gavl_dictionary_set(m2, GAVL_META_MEDIA_CLASS, NULL);
+    //    gavl_dictionary_set(m2, GAVL_META_MEDIA_CLASS, NULL);
     gavl_track_finalize(src->track_info);
     }
   
@@ -642,12 +648,6 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
     goto fail;
   
   src->duration = gavl_track_get_duration(src->track_info);
-  
-  if(gavl_track_can_seek(src->track_info))
-    src->flags |= SRC_CAN_SEEK;
-  
-  if(gavl_track_can_pause(src->track_info))
-    src->flags |= SRC_CAN_PAUSE;
   
   if(!gavl_track_get_num_audio_streams(src->track_info) &&
      !gavl_track_get_num_video_streams(src->track_info))

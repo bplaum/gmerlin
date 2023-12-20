@@ -644,9 +644,13 @@ find_by_codec_tag(uint32_t codec_tag, int typemask)
       continue;
       }
 
+    fprintf(stderr, "checking: %s %p %d\n", info->name, info->codec_tags, codec_tag);
+    
     i = 0;
     while(info->codec_tags[i])
       {
+      fprintf(stderr, "checking1: %d\n", info->codec_tags[i]);
+      
       if(info->codec_tags[i] == codec_tag)
         {
         if(max_priority < info->priority)
@@ -680,13 +684,12 @@ bg_plugin_find_by_compression(gavl_codec_id_t id,
   
   while(info)
     {
-    if(!(info->type & typemask) ||
-       !info->compressions)
+    if(!(info->type & typemask) || !info->compressions)
       {
       info = info->next;
       continue;
       }
-
+    
     i = 0;
     while(info->compressions[i] != GAVL_CODEC_ID_NONE)
       {
@@ -696,11 +699,11 @@ bg_plugin_find_by_compression(gavl_codec_id_t id,
           {
           max_priority = info->priority;
           ret = info;
+          break;
           }
         }
       i++;
       }
-    
     info = info->next;
     }
   return ret;
@@ -972,14 +975,17 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     
     p = (bg_codec_plugin_t*)plugin;
 
-    compressions = p->get_compressions(plugin_priv);
+    if(p->get_compressions)
+      {
+      compressions = p->get_compressions(plugin_priv);
     
-    while(compressions[num])
-      num++;
-    new_info->compressions = calloc(num+1, sizeof(*new_info->compressions));
-    memcpy(new_info->compressions, compressions,
-           num * sizeof(*new_info->compressions));
-
+      while(compressions[num])
+        num++;
+      new_info->compressions = calloc(num+1, sizeof(*new_info->compressions));
+      memcpy(new_info->compressions, compressions,
+             num * sizeof(*new_info->compressions));
+      }
+    
     if(p->get_codec_tags)
       {
       num = 0;

@@ -150,10 +150,7 @@ function show_widget(name)
 function make_device_array(arr)
   {
   var i;
-  var local;
-  var el;
-//  console.log("make devices array " + JSON.stringify(arr));
-
+    
   for(i = 0; i < arr.length; i++)
     {
 //    console.log("make_device_array " + i + " " + JSON.stringify(arr[i]));
@@ -163,22 +160,10 @@ function make_device_array(arr)
 
     if(!arr[i].v[GAVL_META_ICON_URL])
       {
-      dict_set_string(arr[i].v, "icon-player");
+      dict_set_string(arr[i].v, GAVL_META_ICON_URL, "icon-player");
       }
     }
-
-  local = new Object();
-  dict_set_int(local, "Type", 2);
-  dict_set_string(local, GAVL_META_LABEL, "Web player");
-  dict_set_string(local, GAVL_META_ICON_URL, "icon-player");
-  dict_set_string(local, GAVL_META_URI, "local:");
-
-  el = new Object();
-  el.t = "d";
-  el.v = local;
-      
-  arr.splice(0, 0, el);
-      
+          
   return arr;
   }
 
@@ -1537,9 +1522,6 @@ function player_create()
    
   if((idx = player_uri.indexOf("://")) > 0)
     url = "ws" + player_uri.slice(idx);
-  else if(player_uri == "local:")
-    url = player_uri;
-  
       
   if(player)
     {
@@ -1570,15 +1552,7 @@ function player_create()
   else	
     ret.icon = "icon-player";
 
-  if(url == "local:")
-    {
-    console.log("create player " + url);
-
-    ret.h5p = html5player_create(ret, "audio-element", null);
-    ret.ready = true;
-    }
-  else      
-    player_create_websocket(ret, url);
+  player_create_websocket(ret, url);
 
   /* Functions */
 
@@ -1597,8 +1571,6 @@ function player_create()
     {
     if(this.ws)
       msg_send(msg, this.ws);
-    else if(this.h5p)
-      this.h5p.handle_msg(msg);
     };
 
   ret.play = function()

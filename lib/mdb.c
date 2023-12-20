@@ -2364,7 +2364,7 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
   const char * klass;
   int i = 0;
   gavl_dictionary_t * m;
-
+  
   //  fprintf(stderr, "Finalize track\n");
   //  gavl_dictionary_dump(track, 2);
   
@@ -2374,11 +2374,19 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
   gavl_dictionary_set(track, "vstreams", NULL);
   gavl_dictionary_set(track, "tstreams", NULL);
   
-  gavl_track_finalize(track);
-  
   if(!(m = gavl_track_get_metadata_nc(track)))
     return;
 
+  gavl_track_finalize(track);
+
+  if(!gavl_dictionary_get(m, GAVL_META_HASH))
+    {
+    char hash[GAVL_MD5_LENGTH];
+    const char * id = gavl_dictionary_get_string(m, GAVL_META_ID);
+    gavl_md5_buffer_str(id, strlen(id), hash);
+    gavl_dictionary_set_string(m, GAVL_META_HASH, hash);
+    }
+  
   if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
     return;
   

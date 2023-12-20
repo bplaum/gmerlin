@@ -78,9 +78,9 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
         {
         case GAVL_CMD_SRC_START:
           {
-          /* TODO: Load decoder */
+          gavl_v4l_device_start_capture(v4l->dev);
+          /* Load decoder */
           bg_media_source_load_decoders(&v4l->src);
-          
           }
           break;
         case GAVL_CMD_SRC_PAUSE:
@@ -173,6 +173,7 @@ static int open_v4l(void * priv, const char * location)
   gavl_dictionary_t dev;
 
   gavl_dictionary_t * t;
+  gavl_dictionary_t * m;
   bg_media_source_stream_t * st;
   
   v4l2_t * v4l;
@@ -211,8 +212,11 @@ static int open_v4l(void * priv, const char * location)
 
   v4l->dev = gavl_hw_ctx_v4l2_get_device(v4l->hwctx);
   
-  
   t = gavl_append_track(&v4l->mi, NULL);
+  m = gavl_track_get_metadata_nc(t);
+
+  gavl_dictionary_set_string(m, GAVL_META_LABEL, gavl_dictionary_get_string(&dev, GAVL_META_LABEL));
+  
   v4l->s = gavl_track_append_video_stream(t);
 
   if(!gavl_v4l_device_init_capture(v4l->dev, v4l->s))
@@ -231,6 +235,11 @@ static int open_v4l(void * priv, const char * location)
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got compressed output");
     st->psrc = gavl_v4l2_device_get_packet_source(v4l->dev);
     }
+
+  gavl_track_finalize(t);
+
+  /* Overwrite value from gavl_track_finalize */
+  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER);
   
   ret = 1;
   fail:

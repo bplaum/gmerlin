@@ -1064,7 +1064,7 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
 
   priv->favorites = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES, &priv->favorites_id);
 
-  fprintf(stderr, "Created favorites: %p\n", priv->favorites);
+  //  fprintf(stderr, "Created favorites: %p\n", priv->favorites);
 
   priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
   

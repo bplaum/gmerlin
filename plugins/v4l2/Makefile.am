@@ -10,21 +10,16 @@ AM_CFLAGS = \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
 
-plugin_LTLIBRARIES = i_v4l2.la ov_v4l2.la
+plugin_LTLIBRARIES = i_v4l2.la ov_v4l2.la c_v4l2.la
 
-if HAVE_V4LVCONVERT
-convert_sources = convert.c
-convert_libs = @V4LCONVERT_LIBS@
-else
-convert_sources =
-convert_libs =
-endif
-
-i_v4l2_la_SOURCES  = i_v4l2.c v4l2_common.c $(convert_sources)
+i_v4l2_la_SOURCES  = i_v4l2.c v4l2_common.c
 i_v4l2_la_LIBADD  = @MODULE_LIBADD@ $(convert_libs)
 
-ov_v4l2_la_SOURCES  = ov_v4l2.c v4l2_common.c $(convert_sources)
+ov_v4l2_la_SOURCES  = ov_v4l2.c v4l2_common.c
 ov_v4l2_la_LIBADD  = @MODULE_LIBADD@ $(convert_libs)
+
+c_v4l2_la_SOURCES  = decode_p207.c decode.c
+c_v4l2_la_LIBADD  = @MODULE_LIBADD@ $(convert_libs)
 
 
 noinst_HEADERS = v4l2_common.h convert.h

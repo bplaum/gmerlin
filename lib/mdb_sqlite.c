@@ -19,7 +19,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
 #include <config.h>
 
 #include <unistd.h>
@@ -512,21 +511,6 @@ static int has_array(const obj_table_t * tab, const char * col)
   return 0;
   }
 
-#if 0
-static int has_scan_dir(const obj_table_t * tab)
-  {
-  int i = 0;
-  
-  while(tab->cols[i].name)
-    {
-    if(!strcmp(tab->cols[i].name, META_SCAN_DIR_ID))
-      return 1;
-    i++;
-    }
-  return 0;
-  }
-#endif
-
 static const obj_table_t * get_obj_table(type_id_t id)
   {
   int i = 0;
@@ -579,12 +563,6 @@ static void append_file_nocopy(gavl_array_t * arr, char * filename, int64_t mtim
   gavl_array_splice_val_nocopy(arr, -1, 0, &val);
   }
 
-#if 0
-static void append_file(gavl_array_t * arr, const char * filename, int64_t mtime)
-  {
-  append_file_nocopy(arr, gavl_strdup(filename), mtime);
-  }
-#endif
 
 typedef struct
   {
@@ -1205,7 +1183,6 @@ static void query_images(bg_mdb_backend_t * b,
 
   }
 
-#if 1
 static gavl_dictionary_t * query_sqlite_object(bg_mdb_backend_t * b, int64_t id, type_id_t type)
   {
   char * sql;
@@ -1333,7 +1310,6 @@ static gavl_dictionary_t * query_sqlite_object(bg_mdb_backend_t * b, int64_t id,
 
   return q.obj;
   }
-#endif
 
 typedef struct
   {
