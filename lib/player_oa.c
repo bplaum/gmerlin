@@ -183,6 +183,7 @@ gavl_time_t bg_player_oa_resync(bg_player_t * p)
   return gavl_time_unscale(s->output_format.samplerate, s->frame->timestamp);
   }
 
+
 void * bg_player_oa_thread(void * data)
   {
   bg_player_audio_stream_t * s;
@@ -213,33 +214,6 @@ void * bg_player_oa_thread(void * data)
         }
       continue;
       }
-#if 0    
-    s->frame = gavl_audio_sink_get_frame(s->sink);
-    
-    if(s->send_silence)
-      {
-      if(!s->frame)
-        {
-        if(!s->mute_frame)
-          s->mute_frame = gavl_audio_frame_create(&s->output_format);
-        s->frame = s->mute_frame;
-        }
-      gavl_audio_frame_mute(s->frame, &s->output_format);
-      }
-    else
-      {
-      if(gavl_audio_source_read_frame(s->src, &s->frame) != GAVL_SOURCE_OK)
-        {
-        if(bg_player_audio_set_eof(p))
-          {
-          /* Stop here (don't send silence) */
-          if(!bg_thread_wait_for_start(s->th))
-            break;
-          }
-        continue;
-        }
-      }
-#endif
     
     process_frame(p, s->frame);
     

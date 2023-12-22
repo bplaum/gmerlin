@@ -493,6 +493,7 @@ void bg_player_time_start(bg_player_t * player);
 void bg_player_time_init(bg_player_t * player);
 void bg_player_time_reset(bg_player_t * player);
 void bg_player_time_set(bg_player_t * player, gavl_time_t time);
+
 void bg_player_broadcast_time(bg_player_t * player, gavl_time_t time);
 
 /* Set player time from stream timestamps */
@@ -600,6 +601,7 @@ gavl_time_t bg_player_oa_resync(bg_player_t * p);
 
 void bg_player_oa_cleanup(bg_player_audio_stream_t * ctx);
 void * bg_player_oa_thread(void *);
+
 
 // void bg_player_oa_set_plugin(bg_player_t * player,
 //                              bg_plugin_handle_t * handle);

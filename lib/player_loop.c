@@ -244,6 +244,12 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
   {
   gavl_value_t val;
 
+  if(p->initial_seek_time > 0)
+    {
+    time = p->initial_seek_time;
+    p->initial_seek_time = 0;
+    }
+  
   /* Initialize audio and video streams  */
   
   if(!init_streams(p))
@@ -333,6 +339,8 @@ static int init_playback(bg_player_t * p, gavl_time_t time, int state)
       bg_video_filter_chain_reset(p->video_stream.fc);
     }
 
+
+  
   bg_threads_init(p->threads, PLAYER_MAX_THREADS);
   
   if(state == BG_PLAYER_STATUS_PAUSED)
@@ -1403,9 +1411,9 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               if(pts_to_clock_time != GAVL_TIME_UNDEFINED)
                 {
                 player->initial_seek_time = last_time + pts_to_clock_time;
+                
                 gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting live stream, clock_time: %"PRId64,
                          player->initial_seek_time);
-                
                 }
               else
                 gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Restarting live stream");
@@ -1517,7 +1525,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Poor playback performance, selecting lower quality stream");
           /* Stop playback start again */
           play_cmd(player);
-          
           }
           break;
         }

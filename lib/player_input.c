@@ -184,6 +184,7 @@ int bg_player_input_start(bg_player_t * p)
     else
       p->flags |= PLAYER_DO_SUBTITLE_OVERLAY;
     }
+  
   /* Check for still image mode */
   
   if(p->flags & PLAYER_DO_VIDEO)
@@ -209,13 +210,15 @@ int bg_player_input_start(bg_player_t * p)
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected recording device");
     }
   
+  if((p->flags & (PLAYER_DO_AUDIO|PLAYER_DO_VIDEO|PLAYER_IS_RECORDER)) ==
+     (PLAYER_DO_VIDEO|PLAYER_IS_RECORDER))
+    p->flags |= PLAYER_SYNC_NONE;
+  
   p->can_seek  = gavl_track_can_seek(p->src->track_info);
   p->can_pause = gavl_track_can_seek(p->src->track_info);
   
   /* From here on, we can send the messages about the input format */
   bg_player_set_current_track(p, p->src->track_info);
-
-  
   
   /* Set initial seek window */
   if((v = gavl_dictionary_get(p->src->metadata, GAVL_STATE_SRC_SEEK_WINDOW)))
@@ -230,13 +233,6 @@ int bg_player_input_start(bg_player_t * p)
     p->dpy_time_offset = -gavl_track_get_start_time(p->src->track_info);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got source time offset: %"PRId64, p->dpy_time_offset);
-
-  if(p->initial_seek_time > 0)
-    {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Doing initial seek: %"PRId64, p->initial_seek_time);
-    bg_player_input_seek(p, p->initial_seek_time, GAVL_TIME_SCALE, -1.0);
-    p->initial_seek_time = 0;
-    }
   
   return 1;
   }
@@ -284,78 +280,8 @@ int bg_player_input_get_audio_format(bg_player_t * p)
   p->audio_stream.in_src = gavl_audio_source_create(read_audio, p, GAVL_SOURCE_SRC_ALLOC |
                                                     GAVL_SOURCE_SRC_FRAMESIZE_MAX,
                                                     &p->audio_stream.input_format);
-
-
-  
   return 1;
   }
-
-/* Video input */
-#if 0
-static gavl_source_status_t
-read_video_still(void * priv, gavl_video_frame_t ** frame)
-  {
-  gavl_source_status_t st;
-
-  bg_player_t * p = priv;
-  bg_player_video_stream_t * vs = &p->video_stream;
-  const gavl_video_format_t * format;
-  
-  format = gavl_video_source_get_dst_format(vs->in_src_int);
-  
-  if((st = gavl_video_source_read_frame(vs->in_src_int, frame)) != GAVL_SOURCE_OK)
-    return st;
-  
-  if(!DO_AUDIO(p->flags) &&
-     (p->src->duration != GAVL_TIME_UNDEFINED) &&
-     gavl_time_unscale(format->timescale,
-                       (*frame)->timestamp) > p->src->duration)
-    return GAVL_SOURCE_EOF;
-  
-#ifdef DUMP_TIMESTAMPS
-  bg_debug("Input timestamp: %"PRId64" (timescale: %d)\n",
-           gavl_time_unscale(format->timescale,
-                             (*frame)->timestamp), format->timescale);
-#endif
-  return st;
-  }
-
-static gavl_source_status_t
-read_video_subtitle_only(void * priv,
-                         gavl_video_frame_t ** frame)
-  {
-  bg_player_t * p = priv;
-  bg_player_video_stream_t * vs = &p->video_stream;
-  
-  gavl_video_frame_fill(*frame, &vs->output_format, vs->bg_color);
-
-  (*frame)->duration  = vs->output_format.frame_duration;
-  
-  (*frame)->timestamp = (int64_t)vs->frames_read * vs->output_format.frame_duration;
-  vs->frames_read++;
-  return GAVL_SOURCE_OK;
-  }
-
-static gavl_source_status_t
-read_video(void * priv, gavl_video_frame_t ** frame)
-  {
-  gavl_source_status_t st;
-  bg_player_t * p = priv;
-  bg_player_video_stream_t * vs = &p->video_stream;
-  
-  if((st = gavl_video_source_read_frame(vs->in_src_int, frame)) != GAVL_SOURCE_OK)
-    return st;
-
-#ifdef DUMP_TIMESTAMPS
-  bg_debug("Input timestamp: %"PRId64"\n",
-           gavl_time_unscale(vs->input_format.timescale,
-                              (*frame)->timestamp));
-#endif
-  vs->frames_read++;
-  
-  return st;
-  }
-#endif
 
 int bg_player_input_get_video_format(bg_player_t * p)
   {
@@ -376,26 +302,8 @@ int bg_player_input_get_video_format(bg_player_t * p)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot handle zero timescale");
     return 0;
     }
-#if 0  
-  if(DO_STILL(p->flags))
-    {
-    
-    }
-  else if(DO_SUBTITLE_ONLY(p->flags))
-    {
-    gavl_video_source_set_dst(p->video_stream.in_src_int, 0, &p->video_stream.input_format);
-    p->video_stream.in_src = gavl_video_source_create(read_video_subtitle_only, p, 0,
-                                                      &p->video_stream.input_format);
-    }
-  else
-    {
-    
-    }
-#endif
   return 1;
   }
-
-
 
 void bg_player_input_seek(bg_player_t * p,
                           gavl_time_t time, int scale, double percentage)

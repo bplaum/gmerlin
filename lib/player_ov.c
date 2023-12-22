@@ -465,7 +465,10 @@ void * bg_player_ov_thread(void * data)
       /* Drop frame */
       else if((diff_time < -GAVL_TIME_SCALE / 20) && !frames_shown) // 50 ms
         {
-        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f)", gavl_time_to_seconds(diff_time));
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f, cur: %f, frame: %f)",
+                 gavl_time_to_seconds(diff_time),
+                 gavl_time_to_seconds(current_time),
+                 gavl_time_to_seconds(s->frame_time));
         s->skip++;
         s->state = STATE_READ;
         continue;
