@@ -1064,13 +1064,6 @@ void bg_plugin_registry_list_fa(void * data, int * argc,
 void bg_plugin_registry_list_fv(void * data, int * argc,
                                 char *** _argv, int arg);
 
-void bg_plugin_registry_list_ra(void * data, int * argc,
-                                char *** _argv, int arg);
-
-void bg_plugin_registry_list_rv(void * data, int * argc,
-                                char *** _argv, int arg);
-
-
 void bg_plugin_registry_list_vis(void * data, int * argc,
                                          char *** _argv, int arg);
 

@@ -38,18 +38,30 @@ typedef struct
   int bytes_per_sample;
   int samplerate;
 
-  int64_t timestamp;
-  
-  gavl_audio_source_t * src; // Capture
-  gavl_audio_sink_t * sink;  // Playback
-
   bg_controllable_t ctrl;
+  
+  } bg_pa_common_t;
 
-  } bg_pa_t;
+typedef struct
+  {
+  /* Must be first */
+  bg_pa_common_t com;
+  gavl_dictionary_t mi;
+  bg_media_source_t source;
 
-int bg_pa_open(bg_pa_t *, int record);
-void bg_pa_close(void *);
+  int64_t timestamp;
+  } bg_pa_recorder_t;
 
-void * bg_pa_create();
-void bg_pa_destroy(void *);
+typedef struct
+  {
+  /* Must be first */
+  bg_pa_common_t com;
+  gavl_audio_sink_t * sink;  // Playback
+  } bg_pa_output_t;
+
+int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record);
+
+void bg_pa_cleanup_common(bg_pa_common_t * priv);
+void bg_pa_close_common(bg_pa_common_t * priv);
+
 bg_controllable_t * bg_pa_get_controllable(void * p);

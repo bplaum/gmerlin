@@ -26,35 +26,34 @@
 static gavl_sink_status_t
 write_func_pulse(void * p, gavl_audio_frame_t * f)
   {
-  bg_pa_t * priv;
+  bg_pa_recorder_t * priv;
   int error;
   priv = p;
 
   //  fprintf(stderr, "write frame pulse %d %d\n", f->valid_samples, priv->block_align);
   
-  pa_simple_write(priv->pa,
+  pa_simple_write(priv->com.pa,
                   f->samples.u_8,
-                  priv->block_align * f->valid_samples,
+                  priv->com.block_align * f->valid_samples,
                   &error);
   return GAVL_SINK_OK;
   }
 
-
 static int open_pulse(void * data,
                       gavl_audio_format_t * format)
   {
-  bg_pa_t * priv;
+  bg_pa_output_t * priv;
   priv = data;
 
-  gavl_audio_format_copy(&priv->format, format);
+  gavl_audio_format_copy(&priv->com.format, format);
   
-  if(!bg_pa_open(priv, 0))
+  if(!bg_pa_open(&priv->com, NULL, NULL, 0))
     return 0;
   
-  gavl_audio_format_copy(format, &priv->format);
+  gavl_audio_format_copy(format, &priv->com.format);
 
   priv->sink = gavl_audio_sink_create(NULL, write_func_pulse, priv,
-                                      &priv->format);
+                                      &priv->com.format);
   
   return 1;
   }
@@ -71,24 +70,46 @@ static void stop_pulse(void * p)
 
 static void close_pulse(void * p)
   {
-  bg_pa_close(p);
+  bg_pa_output_t * priv = p;
+  bg_pa_cleanup_common(&priv->com);
+  
+  if(priv->sink)
+    {
+    gavl_audio_sink_destroy(priv->sink);
+    priv->sink = NULL;
+    }
+  
   }
 
 static gavl_audio_sink_t * get_sink_pulse(void * p)
   {
-  bg_pa_t * priv = p;
+  bg_pa_output_t * priv = p;
   return priv->sink;
   }
 
 static int get_delay_pulse(void * p)
   {
-  bg_pa_t * priv;
+  bg_pa_output_t * priv;
   int error;
   int ret;
   priv = p;
-  ret = gavl_time_rescale(1000000, priv->format.samplerate,
-                          pa_simple_get_latency(priv->pa, &error));
+  ret = gavl_time_rescale(1000000, priv->com.format.samplerate,
+                          pa_simple_get_latency(priv->com.pa, &error));
   return ret;
+  }
+
+static void * create_pulse_output()
+  {
+  bg_pa_output_t * priv;
+  priv = calloc(1, sizeof(*priv));
+  return priv;
+  }
+
+static void destroy_pulse_output(void * priv)
+  {
+  bg_pa_output_t * p = priv;
+  bg_controllable_cleanup(&p->com.ctrl);
+  
   }
 
 const bg_oa_plugin_t the_plugin =
@@ -102,8 +123,8 @@ const bg_oa_plugin_t the_plugin =
       .type =          BG_PLUGIN_OUTPUT_AUDIO,
       .flags =         BG_PLUGIN_PLAYBACK,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
-      .create =        bg_pa_create,
-      .destroy =       bg_pa_destroy,
+      .create =        create_pulse_output,
+      .destroy =       destroy_pulse_output,
       
       //      .get_parameters = get_parameters_alsa,
       //      .set_parameter =  set_parameter_alsa,

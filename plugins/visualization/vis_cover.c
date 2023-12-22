@@ -116,7 +116,7 @@ static int load_frame(cover_t * s, const gavl_dictionary_t * track)
   if(s->frame)
     gavl_video_frame_destroy(s->frame);
   
-  if(!s->default_vfmt.image_width || !s->default_vfmt.image_height)
+  if(!s->default_vfmt.image_width || !s->default_vfmt.image_height) 
     {
     s->frame = NULL;
     }

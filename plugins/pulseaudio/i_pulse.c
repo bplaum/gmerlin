@@ -28,7 +28,7 @@
 
 static gavl_source_status_t read_func_pulse(void * p, gavl_audio_frame_t ** frame)
   {
-  bg_pa_t * priv;
+  bg_pa_recorder_t * priv;
   int error = 0;
 
   gavl_audio_frame_t * f = *frame;
@@ -36,15 +36,15 @@ static gavl_source_status_t read_func_pulse(void * p, gavl_audio_frame_t ** fram
   //  fprintf(stderr, "Read pulse 1\n");
   
   priv = p;
-  if(pa_simple_read(priv->pa, f->samples.u_8,
-                    priv->block_align * priv->format.samples_per_frame,
+  if(pa_simple_read(priv->com.pa, f->samples.u_8,
+                    priv->com.block_align * priv->com.format.samples_per_frame,
                     &error) < 0)
     {
     return GAVL_SOURCE_EOF;
     }
 
   f->timestamp = priv->timestamp;
-  f->valid_samples = priv->format.samples_per_frame;
+  f->valid_samples = priv->com.format.samples_per_frame;
 
   priv->timestamp += f->valid_samples;
 
@@ -53,13 +53,13 @@ static gavl_source_status_t read_func_pulse(void * p, gavl_audio_frame_t ** fram
   return GAVL_SOURCE_OK;
   }
 
-static void start_pulse(bg_pa_t * priv)
+static void start_pulse(bg_pa_recorder_t * priv)
   {
   int error = 0;
-  char * buffer = malloc(priv->block_align * INIT_SAMPLES);
+  char * buffer = malloc(priv->com.block_align * INIT_SAMPLES);
 
-  if(pa_simple_read(priv->pa, buffer,
-                    priv->block_align * INIT_SAMPLES,
+  if(pa_simple_read(priv->com.pa, buffer,
+                    priv->com.block_align * INIT_SAMPLES,
                     &error) < 0)
     {
     fprintf(stderr, "Couldn't get first samples\n");
@@ -71,7 +71,7 @@ static void start_pulse(bg_pa_t * priv)
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
   {
-  bg_pa_t * priv;
+  bg_pa_recorder_t * priv;
   priv = data;
   
   switch(msg->NS)
@@ -93,38 +93,77 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-static int open_pulse(void * data,
-                      gavl_audio_format_t * format,
-                      gavl_video_format_t * video_format,
-                      gavl_dictionary_t * m)
+static int open_pulse(void * data, const char * location)
   {
-  bg_pa_t * priv;
+  bg_pa_recorder_t * priv;
+  char * server = NULL;
+  char * path = NULL;
+  gavl_dictionary_t * t;
+  gavl_dictionary_t * s;
+  gavl_dictionary_t * m;
+  bg_media_source_stream_t * st;
+    
   priv = data;
-
+  
   // gavl_audio_format_copy(&priv->format, format);
-  
-  if(!bg_pa_open(priv, 1))
+
+  if(!gavl_url_split(location,
+                     NULL,
+                     NULL,
+                     NULL,
+                     &server,
+                     NULL,
+                     &path))
+    {
     return 0;
+    }
+
+  if(gavl_host_is_us(location))
+    {
+    if(!bg_pa_open(&priv->com, server, NULL, 1))
+      return 0;
+    }
+  else
+    {
+    if(!bg_pa_open(&priv->com, server, path + 1 /* skip '/' */, 1))
+      return 0;
+    }
   
-  gavl_audio_format_copy(format, &priv->format);
-  priv->src = gavl_audio_source_create(read_func_pulse, priv, 0, format);
+
+  t = gavl_append_track(&priv->mi, NULL);
+  m = gavl_track_get_metadata_nc(t);
+
+  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location);
+
+  s = gavl_track_append_audio_stream(t);
+  gavl_audio_format_copy(gavl_stream_get_audio_format_nc(s), &priv->com.format);
+  
+  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER);
+
+  bg_media_source_set_from_track(&priv->source, t);
+
+  st = bg_media_source_get_audio_stream(&priv->source, 0);
+  
+  st->asrc_priv = gavl_audio_source_create(read_func_pulse, priv, 0, &priv->com.format);
+  st->asrc = st->asrc_priv;
+  
   priv->timestamp = 0;
   return 1;
   }
 
 static void close_pulse(void * p)
   {
-  bg_pa_t * priv = p;
-  gavl_audio_source_destroy(priv->src);
-  priv->src = NULL;
+  bg_pa_recorder_t * priv = p;
+  bg_pa_close_common(&priv->com);
   
-  bg_pa_close(priv);
+  bg_media_source_cleanup(&priv->source);
+  gavl_dictionary_free(&priv->mi);
   }
 
-static gavl_audio_source_t * get_audio_source_pulse(void * p)
+static bg_media_source_t * get_source_pulse(void * p)
   {
-  bg_pa_t * priv = p;
-  return priv->src;
+  bg_pa_recorder_t * priv = p;
+  return &priv->source;
   }
 
 
@@ -153,18 +192,6 @@ static const bg_parameter_info_t parameters[] =
       .val_min =     GAVL_VALUE_INIT_INT(8000),
       .val_max =     GAVL_VALUE_INIT_INT(96000),
     },
-    {
-      .name =        "server",
-      .long_name =   TRS("Server"),
-      .type =        BG_PARAMETER_STRING,
-      .help_string = TRS("Server to connect to. Leave empty for default."),
-    },
-    {
-      .name =        "dev",
-      .long_name =   TRS("Source"),
-      .type =        BG_PARAMETER_STRING,
-      .help_string = TRS("Name of the source to open. Call \"pactl list sources\" for available sources."),
-    },
     { },
   };
 
@@ -177,7 +204,7 @@ static void
 set_parameter_pulse(void * p, const char * name,
                     const gavl_value_t * val)
   {
-  bg_pa_t * priv = p;
+  bg_pa_recorder_t * priv = p;
   
   if(!name)
     return;
@@ -185,64 +212,80 @@ set_parameter_pulse(void * p, const char * name,
   if(!strcmp(name, "channel_mode"))
     {
     if(!strcmp(val->v.str, "mono"))
-      priv->num_channels = 1;
+      priv->com.num_channels = 1;
     else if(!strcmp(val->v.str, "stereo"))
-      priv->num_channels = 2;
+      priv->com.num_channels = 2;
     }
   else if(!strcmp(name, "bits"))
     {
     if(!strcmp(val->v.str, "8"))
-      priv->bytes_per_sample = 1;
+      priv->com.bytes_per_sample = 1;
     else if(!strcmp(val->v.str, "16"))
-      priv->bytes_per_sample = 2;
+      priv->com.bytes_per_sample = 2;
     }
   else if(!strcmp(name, "samplerate"))
     {
-    priv->samplerate = val->v.i;
-    }
-  else if(!strcmp(name, "dev"))
-    {
-    priv->dev = gavl_strrep(priv->dev, val->v.str);
-    }
-  else if(!strcmp(name, "server"))
-    {
-    priv->server = gavl_strrep(priv->server, val->v.str);
+    priv->com.samplerate = val->v.i;
     }
   }
 
-static void * i_pulse_create(void)
+static void * create_pulse(void)
   {
-  bg_pa_t * p = bg_pa_create();
-  bg_controllable_init(&p->ctrl, bg_msg_sink_create(handle_cmd, p, 1),
+  bg_pa_recorder_t * p = calloc(1, sizeof(*p));
+  
+  bg_controllable_init(&p->com.ctrl, bg_msg_sink_create(handle_cmd, p, 1),
                        bg_msg_hub_create(1));
   return p;
   }
 
+static void destroy_pulse(void * priv)
+  {
+  bg_pa_recorder_t * p = priv;
+  close_pulse(p);
+  free(p);
+  }
 
-const bg_recorder_plugin_t the_plugin =
+static gavl_dictionary_t * get_media_info_pulse(void * priv)
+  {
+  bg_pa_recorder_t * p = priv;
+  return &p->mi;
+  }
+
+static char const * const protocols = "pulseaudio-source";
+
+static const char * get_protocols_pulse(void * priv)
+  {
+  return protocols;
+  }
+
+
+
+const bg_input_plugin_t the_plugin =
   {
     .common =
     {
       BG_LOCALE,
       .name =          "i_pulse",
-      .long_name =     TRS("PulseAudio"),
-      .description =   TRS("PulseAudio capture. You can specify the source, where we'll get the audio."),
-      .type =          BG_PLUGIN_RECORDER_AUDIO,
-      .flags =         0,
+      .long_name =     TRS("Pulseaudio"),
+      .description =   TRS("PulseAudio capture"),
+      .type =          BG_PLUGIN_INPUT,
+      .flags =         BG_PLUGIN_URL,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
-      .create =        i_pulse_create,
-      .destroy =       bg_pa_destroy,
+      .create =        create_pulse,
+      .destroy =       destroy_pulse,
 
       .get_parameters = get_parameters_pulse,
       .set_parameter =  set_parameter_pulse,
       .get_controllable = bg_pa_get_controllable,
     },
     
-    .open =          open_pulse,
-    .get_audio_source = get_audio_source_pulse,
-
-    .close =         close_pulse,
+    .get_media_info  = get_media_info_pulse,
+    .get_src       = get_source_pulse,
+    .get_protocols = get_protocols_pulse,
+    .open          = open_pulse,
+    .close         = close_pulse,
   };
+
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
 BG_GET_PLUGIN_API_VERSION;

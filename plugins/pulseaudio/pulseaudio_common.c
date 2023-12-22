@@ -84,7 +84,7 @@ static void init_channel_map(const gavl_audio_format_t * format,
   }
 
 
-int bg_pa_open(bg_pa_t * p, int record)
+int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record)
   {
   struct pa_sample_spec ss;
   pa_channel_map map;
@@ -200,54 +200,26 @@ int bg_pa_open(bg_pa_t * p, int record)
   return 1;
   }
 
-void bg_pa_close(void * data)
+void bg_pa_close_common(bg_pa_common_t * priv)
   {
-  bg_pa_t * priv;
-  priv = data;
   if(priv->pa)
     {
     pa_simple_free(priv->pa);
     priv->pa = NULL;
     }
-  if(priv->src)
-    {
-    gavl_audio_source_destroy(priv->src);
-    priv->src = NULL;
-    }
-  if(priv->sink)
-    {
-    gavl_audio_sink_destroy(priv->sink);
-    priv->sink = NULL;
-    }
-
-  bg_controllable_cleanup(&priv->ctrl);
-
-  }
-
-
-void * bg_pa_create()
-  {
-  bg_pa_t * priv;
-  priv = calloc(1, sizeof(*priv));
-  return priv;
-  }
-
-void bg_pa_destroy(void * p)
-  {
-  bg_pa_t * priv;
-  priv = p;
-
-  bg_pa_close(p);
   
+  }
+
+void bg_pa_cleanup_common(bg_pa_common_t * priv)
+  {
   if(priv->server)
     free(priv->server);
   if(priv->dev)
     free(priv->dev);
-  free(priv);
   }
 
 bg_controllable_t * bg_pa_get_controllable(void * p)
   {
-  bg_pa_t * priv = p;
+  bg_pa_common_t * priv = p;
   return &priv->ctrl;
   }

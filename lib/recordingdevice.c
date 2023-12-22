@@ -284,7 +284,7 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
   else
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Connection to pulseaudio failed");
-    pa_context_disconnect(ret->pa_ctx);
+    //    pa_context_disconnect(ret->pa_ctx);
     pa_context_unref(ret->pa_ctx);
     pa_mainloop_free(ret->pa_ml);
     ret->pa_ctx = NULL;
@@ -407,7 +407,7 @@ bg_msg_hub_t * bg_recording_device_registry_get_msg_hub(bg_recording_device_regi
 void bg_recording_device_registry_destroy(bg_recording_device_registry_t * reg)
   {
 #ifdef HAVE_PULSEAUDIO
-  pa_context_disconnect(reg->pa_ctx);
+  //  pa_context_disconnect(reg->pa_ctx);
   pa_context_unref(reg->pa_ctx);
   pa_mainloop_free(reg->pa_ml);
   
@@ -429,3 +429,124 @@ void bg_recording_device_registry_destroy(bg_recording_device_registry_t * reg)
 
   free(reg);
   }
+
+static int find_dev(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * str;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
+       !(strcmp(str, id)))
+      return i;
+    }
+  return -1;
+  }
+
+static int handle_message_simple(void * data, gavl_msg_t * msg)
+  {
+  gavl_array_t * arr = data;
+  switch(msg->NS)
+    {
+    case GAVL_MSG_NS_GENERIC:
+      switch(msg->ID)
+        {
+        case GAVL_MSG_RESOURCE_ADDED:
+          {
+          gavl_value_t add_val;
+          gavl_dictionary_t * add_dict;
+          const char * ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          
+          if(find_dev(arr, ctx_id) >= 0)
+            return 1;
+          
+          gavl_value_init(&add_val);
+          add_dict = gavl_value_set_dictionary(&add_val);
+          gavl_msg_get_arg_dictionary(msg, 0, add_dict);
+          gavl_dictionary_set_string(add_dict, GAVL_META_ID,
+                                     ctx_id);
+
+          //       gavl_value_dump(&add_val, 2);
+              
+          gavl_array_splice_val_nocopy(arr, -1, 0, &add_val);
+          }
+          break;
+        case GAVL_MSG_RESOURCE_DELETED:
+          {
+          int idx;
+          const char * ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          if((idx = find_dev(arr, ctx_id)) < 0)
+            return 1;
+          gavl_array_splice_val_nocopy(arr, idx, 1, NULL);
+          }
+          break;
+        }
+    }
+  return 1;
+  }
+
+gavl_array_t * bg_get_recording_devices(int timeout)
+  {
+  bg_msg_sink_t * sink;
+  bg_recording_device_registry_t * reg;
+  gavl_timer_t * timer = gavl_timer_create();
+  gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
+  gavl_array_t * ret = gavl_array_create();
+  gavl_timer_start(timer);
+  
+  sink = bg_msg_sink_create(handle_message_simple, ret, 1);
+  
+  reg = bg_recording_device_registry_create();
+
+  bg_msg_hub_connect_sink(bg_recording_device_registry_get_msg_hub(reg), sink);
+  
+  while(1)
+    {
+    if(!bg_recording_device_registry_update(reg))
+      gavl_time_delay(&delay_time);
+
+    if(gavl_timer_get(timer) / 1000 > timeout)
+      break;
+    }
+  
+  bg_recording_device_registry_destroy(reg);
+  gavl_timer_destroy(timer);
+  return ret;
+  }
+
+void bg_list_recording_devices(int timeout)
+  {
+  int i;
+  const char * klass;
+  const char * label;
+  const char * uri;
+  const gavl_dictionary_t * dict;
+  
+  gavl_array_t * arr = bg_get_recording_devices(timeout);
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    dict = gavl_value_get_dictionary(&arr->entries[i]);
+    klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
+    uri   = gavl_dictionary_get_string(dict, GAVL_META_URI);
+    label = gavl_dictionary_get_string(dict, GAVL_META_LABEL);
+
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER))
+      printf("# Audio source: %s\n", label);
+    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER))
+      printf("# Video source: %s\n", label);
+    printf("%s\n", uri);
+    }
+  
+  gavl_array_destroy(arr);
+  }
+
+void bg_opt_list_recording_sources(void * data, int * argc,
+                                   char *** _argv, int arg)
+  {
+  bg_list_recording_devices(5000);
+  }
+

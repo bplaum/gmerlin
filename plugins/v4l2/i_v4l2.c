@@ -223,8 +223,6 @@ static int open_v4l(void * priv, const char * location)
     goto fail;
 
   bg_media_source_set_from_track(&v4l->src, t);
-
-  
   
   fprintf(stderr, "Open v4l\n");
 

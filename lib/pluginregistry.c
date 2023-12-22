@@ -1881,6 +1881,9 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
     goto have_uri;
     }
   
+  if(!uri)
+    goto fail;
+  
   have_uri:
 
   if(!mimetype)
@@ -5257,21 +5260,6 @@ void bg_plugin_registry_list_fv(void * data, int * argc,
   {
   bg_plugin_registry_list_plugins(BG_PLUGIN_FILTER_VIDEO, BG_PLUGIN_FILTER_1);
   }
-
-void bg_plugin_registry_list_ra(void * data, int * argc,
-                                        char *** _argv, int arg)
-  {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_RECORDER_AUDIO, 0);
-
-  }
-
-void bg_plugin_registry_list_rv(void * data, int * argc,
-                                        char *** _argv, int arg)
-  {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_RECORDER_VIDEO, 0);
-
-  }
-
 
 void bg_plugin_registry_list_vis(void * data, int * argc,
                                          char *** _argv, int arg)

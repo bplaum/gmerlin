@@ -40,6 +40,7 @@
 #include <gmerlin/iconfont.h>
 #include <gmerlin/frontend.h>
 #include <gmerlin/application.h>
+#include <gmerlin/recordingdevice.h>
 
 #ifdef INFO_WINDOW
 #include <gtk/gtk.h>
@@ -228,6 +229,7 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = "Selects subtitle stream index (starting with 1)",
       .callback =    opt_ss,
     },
+    BG_OPT_LIST_RECORDERS,
     BG_PLUGIN_OPT_RA,
     BG_PLUGIN_OPT_RV,
     BG_PLUGIN_OPT_LIST_INPUT,
@@ -235,8 +237,6 @@ static bg_cmdline_arg_t global_options[] =
     BG_PLUGIN_OPT_LIST_OV,
     BG_PLUGIN_OPT_LIST_FA,
     BG_PLUGIN_OPT_LIST_FV,
-    BG_PLUGIN_OPT_LIST_RA,
-    BG_PLUGIN_OPT_LIST_RV,
     BG_PLUGIN_OPT_LIST_OPTIONS,
     { /* End of options */ }
   };
