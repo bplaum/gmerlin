@@ -28,12 +28,12 @@
 #include <pulse/pulseaudio.h>
 #endif
 
+// #undef HAVE_LINUX_VIDEODEV2_H
+
 #ifdef HAVE_LINUX_VIDEODEV2_H
 #include <gavl/hw_v4l2.h>
-#endif
-
 #include <libudev.h>
-
+#endif
 
 #include <gmerlin/recordingdevice.h>
 #include <gavl/log.h>
@@ -57,15 +57,13 @@ struct bg_recording_device_registry_s
   pa_mainloop *pa_ml;
   pa_operation *pa_op;
   pa_context *pa_ctx;
-  
+  int pa_ready;
   int pa_got_initial_devs;
 #endif
   
   /* Video4linux */
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-  //  int v4l2_fd;
-  //  int v4l2_wd;
   int v4l_got_initial_devs;
 
   struct udev *udev;
@@ -229,7 +227,6 @@ static void v4l_add_device(bg_recording_device_registry_t * reg,
 bg_recording_device_registry_t * bg_recording_device_registry_create()
   {
 #ifdef HAVE_PULSEAUDIO
-  int pa_ready = 0;
   pa_mainloop_api *pa_mlapi;
 #endif
   
@@ -247,11 +244,12 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
   
   pa_mlapi = pa_mainloop_get_api(ret->pa_ml);
   ret->pa_ctx = pa_context_new(pa_mlapi, "gmerlin-recording-devices");
+  fprintf(stderr, "bg_recording_device_registry_create %p\n", ret->pa_ctx);
   
   // This function connects to the pulse server
-  if(pa_context_connect(ret->pa_ctx, NULL, 0, NULL) < 0)
+  if(pa_context_connect(ret->pa_ctx, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)
     {
-    pa_ready = 2;
+    ret->pa_ready = 2;
     }
   else
     {
@@ -260,7 +258,7 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
     // modify the variable to 1 so we know when we have a connection and it's
     // ready.
     // If there's an error, the callback will set pa_ready to 2
-    pa_context_set_state_callback(ret->pa_ctx, pa_state_cb, &pa_ready);
+    pa_context_set_state_callback(ret->pa_ctx, pa_state_cb, &ret->pa_ready);
 
     // Now we'll enter into an infinite loop until we get the data we receive
     // or if there's an error
@@ -268,7 +266,7 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
       {
       // We can't do anything until PA is ready, so just iterate the mainloop
       // and continue
-      if(!pa_ready)
+      if(!ret->pa_ready)
         {
         pa_mainloop_iterate(ret->pa_ml, 1, NULL);
         continue;
@@ -279,7 +277,7 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
       }
     }
 
-  if(pa_ready == 1)
+  if(ret->pa_ready == 1)
     ret->pa_op = pa_context_get_source_info_list(ret->pa_ctx, pa_source_cb, ret);
   else
     {
@@ -312,10 +310,13 @@ int bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
   {
   int result = 0;
 
+#ifdef HAVE_LINUX_VIDEODEV2_H
   struct udev_device *dev;
-
+#endif
+  
   reg->num_ops = 0;
   
+#ifdef HAVE_LINUX_VIDEODEV2_H
   if(!reg->v4l_got_initial_devs)
     {
     gavl_array_t v4l2_devs;
@@ -374,6 +375,7 @@ int bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
       udev_device_unref(dev);
       }
     }
+#endif
     
 #ifdef HAVE_PULSEAUDIO
 
@@ -390,6 +392,7 @@ int bg_recording_device_registry_update(bg_recording_device_registry_t * reg)
         {
         pa_context_set_subscribe_callback(reg->pa_ctx, pa_subscribe_callback, reg);
         pa_context_subscribe(reg->pa_ctx, PA_SUBSCRIPTION_MASK_SOURCE, NULL, NULL);
+        reg->pa_got_initial_devs = 1;
         }
       }
     }
@@ -407,23 +410,18 @@ bg_msg_hub_t * bg_recording_device_registry_get_msg_hub(bg_recording_device_regi
 void bg_recording_device_registry_destroy(bg_recording_device_registry_t * reg)
   {
 #ifdef HAVE_PULSEAUDIO
-  //  pa_context_disconnect(reg->pa_ctx);
-  pa_context_unref(reg->pa_ctx);
-  pa_mainloop_free(reg->pa_ml);
-  
+
   if(reg->pa_op)
     pa_operation_unref(reg->pa_op);
   
+  pa_context_disconnect(reg->pa_ctx);
+  pa_context_unref(reg->pa_ctx);
+  pa_mainloop_free(reg->pa_ml);
 #endif
 
 #ifdef HAVE_LINUX_VIDEODEV2_H
-  //  close(reg->v4l2_fd);
-
-
   udev_monitor_unref(reg->udev_mon);
   udev_unref(reg->udev);
-
-
 
 #endif
 
@@ -495,23 +493,23 @@ gavl_array_t * bg_get_recording_devices(int timeout)
   gavl_timer_t * timer = gavl_timer_create();
   gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
   gavl_array_t * ret = gavl_array_create();
-  gavl_timer_start(timer);
-  
-  sink = bg_msg_sink_create(handle_message_simple, ret, 1);
+
+  //  gavl_timer_start(timer);
   
   reg = bg_recording_device_registry_create();
 
+  sink = bg_msg_sink_create(handle_message_simple, ret, 1);
   bg_msg_hub_connect_sink(bg_recording_device_registry_get_msg_hub(reg), sink);
   
-  while(1)
+  while(gavl_timer_get(timer) / 1000 < timeout)
     {
     if(!bg_recording_device_registry_update(reg))
       gavl_time_delay(&delay_time);
-
-    if(gavl_timer_get(timer) / 1000 > timeout)
-      break;
     }
   
+  bg_msg_hub_disconnect_sink(bg_recording_device_registry_get_msg_hub(reg), sink);
+  bg_msg_sink_destroy(sink);
+
   bg_recording_device_registry_destroy(reg);
   gavl_timer_destroy(timer);
   return ret;
@@ -526,6 +524,9 @@ void bg_list_recording_devices(int timeout)
   const gavl_dictionary_t * dict;
   
   gavl_array_t * arr = bg_get_recording_devices(timeout);
+
+  if(!arr)
+    return;
   
   for(i = 0; i < arr->num_entries; i++)
     {
@@ -547,6 +548,6 @@ void bg_list_recording_devices(int timeout)
 void bg_opt_list_recording_sources(void * data, int * argc,
                                    char *** _argv, int arg)
   {
-  bg_list_recording_devices(5000);
+  bg_list_recording_devices(1000);
   }
 

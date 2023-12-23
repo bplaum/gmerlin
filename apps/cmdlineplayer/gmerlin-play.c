@@ -69,26 +69,11 @@ char ** gmls = NULL;
 int gml_index = 0;
 
 
-/* Sections from the player */
-bg_cfg_section_t * audio_section;
-bg_cfg_section_t * video_section;
-bg_cfg_section_t * osd_section;
-bg_cfg_section_t * input_section;
-
-
 const bg_plugin_info_t * ov_info = NULL;
 char * window_id = NULL;
 
 int subtitle_stream = -1;
 int audio_stream    = 0;
-
-
-/* Set from player */
-const bg_parameter_info_t * osd_parameters;
-const bg_parameter_info_t * audio_parameters;
-const bg_parameter_info_t * video_parameters;
-const bg_parameter_info_t * input_parameters;
-
 
 char * track_spec = NULL;
 char * track_spec_ptr;
@@ -179,6 +164,11 @@ static bg_cmdline_arg_t global_options[] =
       .help_arg =    "<video_options>",
       .help_string = "Set video processing options",
     },
+    {
+      .arg =         "-vis",
+      .help_arg =    "<visualization options>",
+      .help_string = "Set visualization options",
+    },
     BG_PLUGIN_OPT_OA,
     BG_PLUGIN_OPT_OV,
     BG_PLUGIN_OPT_FA,
@@ -248,60 +238,9 @@ static void update_global_options()
 
   bg_cmdline_arg_set_cfg_ctx(global_options, "-osd", &cfg[BG_PLAYER_CFG_OSD]);
   bg_cmdline_arg_set_cfg_ctx(global_options, "-inopt", &cfg[BG_PLAYER_CFG_INPUT]);
-  
-  }
 
-#if 0
-static int set_track_from_spec()
-  {
-  char * rest;
-  if(*track_spec_ptr == '\0')
-    return 0;
-  
-  /* Beginning */
-  if(track_spec_ptr == track_spec)
-    {
-    current_track = strtol(track_spec_ptr, &rest, 10)-1;
-    track_spec_ptr = rest;
-    }
-  else
-    {
-    if(*track_spec_ptr == '\0')
-      return 0;
-    
-    else if(*track_spec_ptr == '-')
-      {
-      current_track++;
-      if(current_track >= num_tracks)
-        return 0;
-      
-      /* Open range */
-      if(!isdigit(*(track_spec_ptr+1)))
-        return 1;
-      
-      if(current_track+1 == atoi(track_spec_ptr+1))
-        {
-        /* End of range reached, advance pointer */
-        track_spec_ptr++;
-        // FIXME ???
-        strtol(track_spec_ptr, &rest, 10);
-        track_spec_ptr = rest;
-        }
-      }
-    else if(*track_spec_ptr == ',')
-      {
-      track_spec_ptr++;
-     
-      if(*track_spec_ptr == '\0')
-        return 0;
-     
-      current_track = strtol(track_spec_ptr, &rest, 10)-1;
-      track_spec_ptr = rest;
-      }
-    }
-  return 1;
+  bg_cmdline_arg_set_cfg_ctx(global_options, "-vis", &cfg[BG_PLAYER_CFG_VISUALIZATION]);
   }
-#endif
 
 /* Input plugin stuff */
 
@@ -311,14 +250,6 @@ static int play_track(bg_player_t * player, const char * gml)
   return 1;
   }
 
-#if 0
-static void print_time(gavl_time_t time)
-  {
-  if(!display_time)
-    return;
-  bg_print_time(stderr, time, total_time);
-  }
-#endif
 
 #ifdef INFO_WINDOW
 static gboolean idle_callback(gpointer data)

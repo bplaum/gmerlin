@@ -39,6 +39,7 @@ textrenderer \
 ladspa \
 makethumbnail \
 msgiotest \
+recordingdevices \
 ssdp \
 sqlextract \
 upnpdesc \
@@ -56,6 +57,9 @@ gmerlin_vpsnr
 
 audioplayer1_SOURCES = audioplayer1.c
 audioplayer1_LDADD = ../lib/libgmerlin.la -ldl
+
+recordingdevices_SOURCES = recordingdevices.c
+recordingdevices_LDADD = ../lib/libgmerlin.la -ldl
 
 sqlextract_SOURCES = sqlextract.c
 sqlextract_LDADD = ../lib/libgmerlin.la -ldl  @SQLITE3_LIBS@

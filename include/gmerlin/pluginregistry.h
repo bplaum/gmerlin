@@ -1089,12 +1089,6 @@ void bg_plugin_registry_opt_fa(void * data, int * argc,
 void bg_plugin_registry_opt_fv(void * data, int * argc,
                                char *** _argv, int arg);
 
-void bg_plugin_registry_opt_ra(void * data, int * argc,
-                               char *** _argv, int arg);
-
-void bg_plugin_registry_opt_rv(void * data, int * argc,
-                               char *** _argv, int arg);
-
 void bg_plugin_registry_opt_vis(void * data, int * argc,
                                 char *** _argv, int arg);
 
@@ -1174,20 +1168,6 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
   .arg =         "-list-fv", \
   .help_string = TRS("List the names of the installed video filter plugins"), \
   .callback =    bg_plugin_registry_list_fv, \
-  }
-
-#define BG_PLUGIN_OPT_LIST_RA                   \
-  { \
-  .arg =         "-list-ra", \
-  .help_string = TRS("List the names of the installed audio recorder plugins"), \
-  .callback =    bg_plugin_registry_list_ra, \
-  }
-
-#define BG_PLUGIN_OPT_LIST_RV              \
-  { \
-  .arg =         "-list-rv", \
-  .help_string = TRS("List the names of the installed video recorder plugins"), \
-  .callback =    bg_plugin_registry_list_rv, \
   }
 
 #define BG_PLUGIN_OPT_LIST_VIS \

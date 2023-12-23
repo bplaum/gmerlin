@@ -682,30 +682,6 @@ AM_CONDITIONAL(HAVE_ALSA, test x$have_alsa = xtrue)
 AC_SUBST(ALSA_REQUIRED)
 
 dnl
-dnl Jack
-dnl
-
-have_jack="false"
-
-AC_ARG_ENABLE(jack,
-              AC_HELP_STRING(--disable-jack, [Disable Jack (default: autodetect)]),
-              [case "${enableval}" in
-                 yes) test_jack=true ;;
-                 no) test_jack=false ;;
-               esac],
-	       test_jack=true)
-
-JACK_REQUIRED="0.109.2"
-
-if test x$test_jack = xtrue; then
-PKG_CHECK_MODULES(JACK, jack >= $JACK_REQUIRED, have_jack="true", have_jack="false")
-fi
-
-AC_SUBST(JACK_REQUIRED)
-
-AM_CONDITIONAL(HAVE_JACK, test x$have_jack = xtrue)
-
-dnl
 dnl OSS
 dnl
 
@@ -925,10 +901,8 @@ plugins/cdaudio/Makefile \
 plugins/edl/Makefile \
 plugins/esd/Makefile \
 plugins/gavl/Makefile \
-plugins/jack/Makefile \
 plugins/oss/Makefile \
 plugins/jpeg/Makefile \
-plugins/mikmod/Makefile \
 plugins/png/Makefile \
 plugins/pulseaudio/Makefile \
 plugins/subwriters/Makefile \
