@@ -173,10 +173,10 @@ int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record)
     stream_name =
       bg_sprintf("Gmerlin playback [%d]", getpid());
   
-  p->pa = pa_simple_new(p->server,
+  p->pa = pa_simple_new(server,
                         app_name,
                         record ? PA_STREAM_RECORD : PA_STREAM_PLAYBACK,
-                        p->dev,
+                        dev,
                         stream_name,
                         &ss,
                         &map,
@@ -212,10 +212,6 @@ void bg_pa_close_common(bg_pa_common_t * priv)
 
 void bg_pa_cleanup_common(bg_pa_common_t * priv)
   {
-  if(priv->server)
-    free(priv->server);
-  if(priv->dev)
-    free(priv->dev);
   }
 
 bg_controllable_t * bg_pa_get_controllable(void * p)

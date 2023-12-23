@@ -899,16 +899,13 @@ plugins/audiofilters/Makefile \
 plugins/x11/Makefile \
 plugins/cdaudio/Makefile \
 plugins/edl/Makefile \
-plugins/esd/Makefile \
 plugins/gavl/Makefile \
-plugins/oss/Makefile \
 plugins/jpeg/Makefile \
 plugins/png/Makefile \
 plugins/pulseaudio/Makefile \
 plugins/subwriters/Makefile \
 plugins/image/Makefile \
 plugins/tiff/Makefile \
-plugins/upnp/Makefile \
 plugins/v4l2/Makefile \
 plugins/videofilters/Makefile \
 plugins/visualization/Makefile \

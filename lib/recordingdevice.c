@@ -244,7 +244,6 @@ bg_recording_device_registry_t * bg_recording_device_registry_create()
   
   pa_mlapi = pa_mainloop_get_api(ret->pa_ml);
   ret->pa_ctx = pa_context_new(pa_mlapi, "gmerlin-recording-devices");
-  fprintf(stderr, "bg_recording_device_registry_create %p\n", ret->pa_ctx);
   
   // This function connects to the pulse server
   if(pa_context_connect(ret->pa_ctx, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)

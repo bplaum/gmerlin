@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#include <string.h>
+
 #include <pulseaudio_common.h>
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "oa_pulse"
@@ -43,8 +45,18 @@ static int open_pulse(void * data,
                       gavl_audio_format_t * format)
   {
   bg_pa_output_t * priv;
+  const char * server;
+  const char * dev;
   priv = data;
 
+  server = priv->server;
+  dev = priv->dev;
+
+  if(!strcmp(server, "default"))
+    server = NULL;
+  if(!strcmp(dev, "default"))
+    dev = NULL;
+  
   gavl_audio_format_copy(&priv->com.format, format);
   
   if(!bg_pa_open(&priv->com, NULL, NULL, 0))
@@ -109,7 +121,55 @@ static void destroy_pulse_output(void * priv)
   {
   bg_pa_output_t * p = priv;
   bg_controllable_cleanup(&p->com.ctrl);
+
+  if(p->server)
+    free(p->server);
+  if(p->dev)
+    free(p->dev);
+
+
+  }
+
+static bg_parameter_info_t parameters[] =
+  {
+    {
+      .name =        "server",
+      .long_name =   TRS("Server"),
+      .type =        BG_PARAMETER_STRING,
+      .val_default = GAVL_VALUE_INIT_STRING("default"),
+      .help_string = TRS("Pulseaudio server to use. Enter \"default\" to use system default"),
+    },
+    {
+      .name =        "sink",
+      .long_name =   TRS("Sink"),
+      .type =        BG_PARAMETER_STRING,
+      .val_default = GAVL_VALUE_INIT_STRING("default"),
+      .help_string = TRS("Pulseaudio sink to use. Call \"pactl list sinks\" for a list of available sinks. Enter \"default\" to use system default"),
+    },
+    { /* End */ }
+  };
+
+static const bg_parameter_info_t * get_parameters_pulse(void * priv)
+  {
+  return parameters;
+  }
+
+static void set_parameter_pulse(void * priv, const char * name, const gavl_value_t * val)
+  {
+  bg_pa_output_t * p = priv;
   
+  if(!name)
+    return;
+  
+  if(!strcmp(name, "server"))
+    {
+    p->server = gavl_strrep(p->server, val->v.str);
+    }
+
+  if(!strcmp(name, "sink"))
+    {
+    
+    }
   }
 
 const bg_oa_plugin_t the_plugin =
@@ -126,8 +186,8 @@ const bg_oa_plugin_t the_plugin =
       .create =        create_pulse_output,
       .destroy =       destroy_pulse_output,
       
-      //      .get_parameters = get_parameters_alsa,
-      //      .set_parameter =  set_parameter_alsa,
+      .get_parameters = get_parameters_pulse,
+      .set_parameter =  set_parameter_pulse,
     },
 
     .open =          open_pulse,

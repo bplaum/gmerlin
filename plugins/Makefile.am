@@ -4,11 +4,6 @@ else
 x11_subdirs =
 endif
 
-if HAVE_OSS
-oss_subdirs = oss
-else
-oss_subdirs =
-endif
 
 if HAVE_LIBPNG
 png_subdirs = png
@@ -71,12 +66,8 @@ gavl \
 videofilters \
 visualization \
 $(alsa_subdirs) \
-$(jack_subdirs) \
-$(lqt_subdirs) \
 $(jpeg_subdirs) \
-$(esd_subdirs) \
 $(v4l2_subdirs) \
-$(oss_subdirs) \
 $(png_subdirs) \
 $(tiff_subdirs) \
 $(x11_subdirs) \

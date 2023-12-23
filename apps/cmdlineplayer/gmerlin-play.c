@@ -220,8 +220,6 @@ static bg_cmdline_arg_t global_options[] =
       .callback =    opt_ss,
     },
     BG_OPT_LIST_RECORDERS,
-    BG_PLUGIN_OPT_RA,
-    BG_PLUGIN_OPT_RV,
     BG_PLUGIN_OPT_LIST_INPUT,
     BG_PLUGIN_OPT_LIST_OA,
     BG_PLUGIN_OPT_LIST_OV,

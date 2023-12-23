@@ -29,7 +29,6 @@
 typedef struct
   {
   struct pa_simple *pa;
-  char *server, *dev;
   int record;
   gavl_audio_format_t format;
   int block_align;
@@ -57,6 +56,8 @@ typedef struct
   /* Must be first */
   bg_pa_common_t com;
   gavl_audio_sink_t * sink;  // Playback
+  char *server;
+  char *dev;
   } bg_pa_output_t;
 
 int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record);
