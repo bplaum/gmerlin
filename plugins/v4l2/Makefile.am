@@ -9,7 +9,6 @@ AM_CFLAGS = \
 -DDOC_DIR=\"$(docdir)\" \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
-
 plugin_LTLIBRARIES = i_v4l2.la ov_v4l2.la c_v4l2.la
 
 i_v4l2_la_SOURCES  = i_v4l2.c v4l2_common.c
@@ -22,5 +21,5 @@ c_v4l2_la_SOURCES  = decode_p207.c decode.c
 c_v4l2_la_LIBADD  = @MODULE_LIBADD@ $(convert_libs)
 
 
-noinst_HEADERS = v4l2_common.h convert.h
+noinst_HEADERS = v4l2_common.h convert.h decode.h
 

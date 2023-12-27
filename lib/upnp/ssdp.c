@@ -203,7 +203,7 @@ static int flush_unicast(bg_ssdp_t * ssdp)
 
       //      fprintf(stderr, "Flush unicast %s\n%s", addr, msg_str);
       
-      if(gavl_udp_socket_send(ssdp->mcast_fd, (uint8_t*)msg_str, msg_len, ssdp->addr) < 0)
+      if(gavl_udp_socket_send(ssdp->ucast_fd, (uint8_t*)msg_str, msg_len, ssdp->addr) < 0)
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Flush unicast failed: %s", strerror(errno));
       
       gavl_array_splice_val(&ssdp->unicast_queue, i, 1, NULL);
