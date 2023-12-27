@@ -74,14 +74,14 @@
    
  */
 
-
+#if 0
 void bg_msg_set_backend_info(gavl_msg_t * msg,
                              uint32_t id, 
                              const gavl_dictionary_t * info);
 
 void bg_msg_get_backend_info(gavl_msg_t * msg,
                              gavl_dictionary_t * info);
-
+#endif
 
 
 /* */

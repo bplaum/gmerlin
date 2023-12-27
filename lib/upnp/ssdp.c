@@ -257,6 +257,11 @@ bg_ssdp_t * bg_ssdp_create(void)
   char addr_str[GAVL_SOCKET_ADDR_STR_LEN];
   bg_ssdp_t * ret = calloc(1, sizeof(*ret));
   int ttl;
+
+  gavl_socket_address_t ** interfaces;
+  /* FIXME: This always takes the first non-loopback IPV4 capable network
+     adaptor */
+  interfaces = gavl_get_network_interfaces(GAVL_NI_IPV4);
   
   ret->timer = gavl_timer_create();
   gavl_timer_start(ret->timer);
@@ -265,11 +270,13 @@ bg_ssdp_t * bg_ssdp_create(void)
   
   /* Create multicast socket */
   gavl_socket_address_set(ret->mcast_addr, "239.255.255.250", 1900, SOCK_DGRAM);
-  ret->mcast_fd = gavl_udp_socket_create_multicast(ret->mcast_addr);
+  ret->mcast_fd = gavl_udp_socket_create_multicast(ret->mcast_addr, interfaces[0]);
 
-  gavl_socket_address_set(ret->addr, "0.0.0.0", 0, SOCK_DGRAM);
-  
+  gavl_socket_address_copy(ret->addr, interfaces[0]);
   ret->ucast_fd = gavl_udp_socket_create(ret->addr);
+  
+  /* Set multicast interface for *sending* multicast datagrams */
+  gavl_udp_socket_set_multicast_interface(ret->ucast_fd, interfaces[0]);
   
   /* Set multicast TTL */
   ttl = 4;
@@ -282,6 +289,7 @@ bg_ssdp_t * bg_ssdp_create(void)
   
   ret->next_mcast_time = gavl_timer_get(ret->timer) + rand_long(GAVL_TIME_SCALE / 10, GAVL_TIME_SCALE / 5);
   
+  gavl_socket_address_destroy_array(interfaces);
   return ret;
   }
 

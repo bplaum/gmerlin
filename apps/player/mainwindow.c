@@ -788,8 +788,10 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
           const char * uri;
           gavl_dictionary_t dev;
           gavl_dictionary_init(&dev);
-          bg_msg_get_backend_info(msg, &dev);
-          //        fprintf(stderr, "gmerlin_set_backend\n");
+          gavl_msg_get_arg_dictionary_c(msg, 0, &dev);
+          
+          //          fprintf(stderr, "gmerlin_set_backend\n");
+          //          gavl_dictionary_dump(&dev, 2);
           
           if((klass = gavl_dictionary_get_string(&dev, GAVL_META_MEDIA_CLASS)) &&
               (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))

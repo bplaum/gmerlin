@@ -131,7 +131,8 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
     if(m->evt_sink)
       {
       gavl_msg_t * msg = bg_msg_sink_get(m->evt_sink);
-      bg_msg_set_backend_info(msg, BG_CMD_SET_BACKEND, dev);
+      gavl_msg_set_id_ns(msg, BG_CMD_SET_BACKEND, BG_MSG_NS_BACKEND);
+      gavl_msg_set_arg_dictionary(msg, 0, dev);
       bg_msg_sink_put(m->evt_sink);
       }
     
@@ -154,6 +155,9 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   char * markup = bg_sprintf("<span weight=\"bold\">%s</span>\n%s",
                              gavl_dictionary_get_string(dict, GAVL_META_LABEL),
                              gavl_dictionary_get_string(dict, GAVL_META_URI));
+
+  //  fprintf(stderr, "add_item:\n");
+  //  gavl_dictionary_dump(dict, 2);
   
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
        !gavl_string_starts_with(klass, m->klass) ||
@@ -200,7 +204,7 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   
   gtk_widget_show(item);
 
-  g_object_set_data(G_OBJECT(item), GAVL_META_URI, uri);
+  g_object_set_data(G_OBJECT(item), GAVL_META_ID, gavl_dictionary_get_string_nc(val_dict, GAVL_META_ID));
   
   gtk_menu_shell_append(GTK_MENU_SHELL(m->menu), item);
 
@@ -239,7 +243,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
       switch(msg->ID)
         {
         case GAVL_MSG_RESOURCE_ADDED:
-          bg_msg_get_backend_info(msg, &dict);
+          gavl_msg_get_arg_dictionary_c(msg, 0, &dict);
           gavl_dictionary_set_string(&dict, GAVL_META_ID, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));
           add_item(m, &dict);
           break;
