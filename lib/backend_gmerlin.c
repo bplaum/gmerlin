@@ -102,7 +102,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_renderer =
   {
     .name = "gmerlin media renderer",
     .uri_prefix = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://",
-    .type = BG_BACKEND_RENDERER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER,
     
     .ping    = ping_gmerlin,
     .create    = create_gmerlin,
@@ -114,7 +114,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_gmerlin_mediaserver =
     .name = "gmerlin media server",
     .uri_prefix = BG_BACKEND_URI_SCHEME_GMERLIN_MDB"://",
 
-    .type = BG_BACKEND_MEDIASERVER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_SERVER,
     
     .ping    = ping_gmerlin,
     .create    = create_gmerlin,

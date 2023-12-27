@@ -494,8 +494,8 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
                                       bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
 
-    gavl_dictionary_set_int(&local_dev, BG_BACKEND_TYPE, BG_BACKEND_MEDIASERVER);
-
+    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
+    
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
     gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "upnp");
 

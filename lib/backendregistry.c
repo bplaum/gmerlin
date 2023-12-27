@@ -223,8 +223,6 @@ void bg_backend_register_local(const gavl_dictionary_t * dev)
 
   bg_backend_registry_t * reg;
 
-  //  fprintf(stderr, "bg_backend_register_local:\n");
-  //  gavl_dictionary_dump(dev, 2);
   
   reg = bg_get_backend_registry();
   
@@ -234,9 +232,11 @@ void bg_backend_register_local(const gavl_dictionary_t * dev)
   
   gavl_dictionary_set_int(dict, BG_BACKEND_LOCAL, 1);
   bg_set_backend_id(dict);
-  
-  //  gavl_dictionary_dump(dict, 2);
-  
+
+  // fprintf(stderr, "bg_backend_register_local:\n");
+  // gavl_dictionary_dump(dict, 2);
+  // fprintf(stderr, "\n");
+    
   backend_registry_lock();
   gavl_array_splice_val_nocopy(&reg->local_devs, -1, 0, &val);
   backend_registry_unlock();
@@ -277,6 +277,12 @@ void bg_backend_add_remote(const gavl_dictionary_t * b)
   const char * protocol;
   const gavl_dictionary_t * dev;
 #endif
+
+#if 0  
+  fprintf(stderr, "backend_add_remote\n");
+  gavl_dictionary_dump(b, 2);
+  fprintf(stderr, "\n");
+#endif
   
   if(!(uri = gavl_dictionary_get_string(b, GAVL_META_URI)))
     {
@@ -290,7 +296,7 @@ void bg_backend_add_remote(const gavl_dictionary_t * b)
     return;
     }
 #ifdef REMOVE_DUPLICATES
-  id       = gavl_dictionary_get_string(b, GAVL_META_ID);
+  id       = gavl_dictionary_get_string(b, BG_BACKEND_ID);
   protocol = gavl_dictionary_get_string(b, BG_BACKEND_PROTOCOL);
 
   //  fprintf(stderr, "remove_duplicates %s %s\n", id, protocol);
@@ -299,13 +305,13 @@ void bg_backend_add_remote(const gavl_dictionary_t * b)
     {
     if(!strcmp(protocol, "gmerlin"))
       {
-      while((dev = bg_backend_by_str(GAVL_META_ID, id, 0, NULL)))
+      while((dev = bg_backend_by_str(BG_BACKEND_ID, id, 0, NULL)))
         bg_backend_del_remote(gavl_dictionary_get_string(dev, GAVL_META_URI));
       }
     else
       {
       /* Ignore this if a gmerlin device is already here */
-      if((dev = bg_backend_by_str(GAVL_META_ID, id, 0, NULL)) &&
+      if((dev = bg_backend_by_str(BG_BACKEND_ID, id, 0, NULL)) &&
          (protocol = gavl_dictionary_get_string(dev, BG_BACKEND_PROTOCOL)) &&
          !strcmp(protocol, "gmerlin"))
         return;
@@ -319,7 +325,9 @@ void bg_backend_add_remote(const gavl_dictionary_t * b)
   gavl_array_splice_val_nocopy(&bg_backend_reg->devs, -1, 0, &new_val);
 
   msg = bg_msg_sink_get(bg_backend_reg->evt_sink);
-  gavl_msg_set_id_ns(msg, BG_MSG_ADD_BACKEND, BG_MSG_NS_BACKEND);
+
+  gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_dictionary_get_string(b, GAVL_META_URI));
   gavl_msg_set_arg_dictionary(msg, 0, b);
   bg_msg_sink_put(bg_backend_reg->evt_sink);
   
@@ -334,8 +342,8 @@ void bg_backend_del_remote(const char * uri)
     return;
 
   msg = bg_msg_sink_get(bg_backend_reg->evt_sink);
-  gavl_msg_set_id_ns(msg, BG_MSG_DEL_BACKEND, BG_MSG_NS_BACKEND);
-  gavl_msg_set_arg_string(msg, 0, uri);
+  gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, uri);
   bg_msg_sink_put(bg_backend_reg->evt_sink);
   
   gavl_array_splice_val(&bg_backend_reg->devs, idx, 1, NULL);

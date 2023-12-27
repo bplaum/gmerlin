@@ -1455,7 +1455,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_mpd_player =
   {
     .name = "mpd player",
     .uri_prefix = BG_MPD_URI_SCHEME"://",
-    .type = BG_BACKEND_RENDERER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER,
     
     .handle_msg = handle_msg_mpd,
     .ping    = ping_mpd,

@@ -40,7 +40,7 @@
 
 #include <backend_priv.h>
 
-#define MAX_HOSTNAME 253
+// #define MAX_HOSTNAME 253
 
 #ifdef HAVE_DBUS
 extern const bg_remote_dev_backend_t bg_remote_dev_backend_mpris2_player;
@@ -77,59 +77,11 @@ void bg_msg_set_backend_info(gavl_msg_t * msg,
   }
 
 void bg_msg_get_backend_info(gavl_msg_t * msg,
-                                   gavl_dictionary_t * info)
+                             gavl_dictionary_t * info)
   {
   gavl_msg_get_arg_dictionary(msg, 0, info);
   }
 
-
-static const struct
-  {
-  const char * name;
-  bg_backend_type_t type;
-  }
-types[] =
-  {
-    {
-    .name = "server",
-    .type = BG_BACKEND_MEDIASERVER,
-    },
-    {
-    .name = "renderer",
-    .type = BG_BACKEND_RENDERER,
-    },
-    {
-    .name = "state",
-    .type = BG_BACKEND_STATE,
-    },
-    { /* End */ } 
-  };
-
-const char * bg_backend_type_to_string(bg_backend_type_t type)
-  {
-  int i = 0;
-
-  while(types[i].name)
-    {
-    if(types[i].type == type)
-      return types[i].name;
-    i++;
-    }
-  return NULL;
-  }
-
-bg_backend_type_t bg_backend_type_from_string(const char * type)
-  {
-  int i = 0;
-
-  while(types[i].name)
-    {
-    if(!strcmp(types[i].name, type))
-      return types[i].type;
-    i++;
-    }
-  return BG_BACKEND_NONE;
-  }
 
 
 /* remote device livecycle */
@@ -338,16 +290,15 @@ void bg_backend_handle_start(bg_backend_handle_t * be)
   be->thread_running = 1;
   }
 
-char * bg_make_backend_id(int type, char id[BG_BACKEND_ID_LEN+1])
+char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1])
   {
   char * str;
-  char hostname[MAX_HOSTNAME+1];
+  char hostname[HOST_NAME_MAX+1];
 
-  gethostname(hostname, MAX_HOSTNAME+1);
+  gethostname(hostname, HOST_NAME_MAX+1);
   /* The unique ID of a backend is: md5 of hostname-pid-type */
   
-
-  str = gavl_sprintf("%s-%d-%d", hostname, getpid(), type);
+  str = gavl_sprintf("%s-%d-%s", hostname, getpid(), klass);
   bg_get_filename_hash(str, id);
   free(str);
 
@@ -357,12 +308,12 @@ char * bg_make_backend_id(int type, char id[BG_BACKEND_ID_LEN+1])
 
 void bg_set_backend_id(gavl_dictionary_t * dict)
   {
-  int type = 0;
+  const char * klass;
   char id[BG_BACKEND_ID_LEN+1];
 
-  gavl_dictionary_get_int(dict, BG_BACKEND_TYPE, &type);
-
-  bg_make_backend_id(type, id);
+  klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
   
-  gavl_dictionary_set_string(dict, GAVL_META_ID, id);
+  bg_make_backend_id(klass, id);
+  
+  gavl_dictionary_set_string(dict, BG_BACKEND_ID, id);
   }

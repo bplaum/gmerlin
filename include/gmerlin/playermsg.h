@@ -173,6 +173,8 @@
 
 #define BG_PLAYER_CMD_NEXT_VISUALIZATION    44
 
+/* arg0: plugin_name?opt1=val1&opt2=val2 */
+#define BG_PLAYER_CMD_SET_VISUALIZATION     45
 
 /********************************
  * Messages from the player
@@ -327,6 +329,7 @@ void bg_player_next_chapter_m(gavl_msg_t * msg);
 void bg_player_prev_m(gavl_msg_t * msg);
 void bg_player_next_m(gavl_msg_t * msg);
 
+void bg_player_set_visualization(bg_msg_sink_t * sink, const char * arg);
 
 void bg_player_set_fullscreen_m(gavl_msg_t * msg, int fullscreen);
 

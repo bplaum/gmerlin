@@ -66,9 +66,7 @@ struct bg_remote_dev_backend_s
 
   /* Prefix for uris, including ://" */
   const char * uri_prefix;
-  
-  
-  bg_backend_type_t type;
+  const char * klass;
   
   /* Functions for a remote device */
   int (*handle_msg)(void * priv, // Must be bg_backend_handle_t

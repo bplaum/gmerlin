@@ -90,7 +90,7 @@ static char * label = NULL;
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
-  int type = BG_BACKEND_NONE;
+  const char * klass = NULL;
   int i;
   const gavl_dictionary_t * dev;
   gavl_array_t * arr = bg_backends_scan(3 * GAVL_TIME_SCALE);
@@ -100,8 +100,8 @@ static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   for(i = 0; i < arr->num_entries; i++)
     {
     if((dev = gavl_value_get_dictionary(&arr->entries[i])) &&
-       gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type) &&
-       (type == BG_BACKEND_RENDERER))
+       (klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS)) &&
+       !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
       {
       printf("# %s\n", gavl_dictionary_get_string(dev, GAVL_META_LABEL));
       printf("%s\n", gavl_dictionary_get_string(dev, GAVL_META_URI));

@@ -214,13 +214,12 @@ void * bg_player_oa_thread(void * data)
         }
       continue;
       }
-    
+
+        
     process_frame(p, s->frame);
     
     if(s->frame->valid_samples)
       {
-      // fprintf(stderr, "Sending frame\n");
-      // gavl_hexdump((void*)f->samples.s_16, 32, 16);
       
       if(gavl_audio_sink_put_frame(s->sink, s->frame) != GAVL_SINK_OK)
         {

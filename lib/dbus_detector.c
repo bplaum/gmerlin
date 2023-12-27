@@ -70,14 +70,14 @@ struct bg_dbus_detector_s
   } ;
 
 static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name,
-                    const char * protocol, bg_backend_type_t type)
+                    const char * protocol, const char * klass)
   {
   gavl_dictionary_t info;
   
   memset(&info, 0, sizeof(info));
   
   gavl_dictionary_set_string(&info, BG_BACKEND_PROTOCOL, protocol);
-  gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, type);
+  gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, klass);
 
   //  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
   
@@ -149,7 +149,7 @@ static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name
         free(str);
         }
       
-      gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, BG_BACKEND_RENDERER);
+      gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
       bg_backend_add_remote(&info);
       }
     
@@ -173,8 +173,8 @@ static void del_dev(bg_dbus_detector_t * d, const char * addr)
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(d->sink);
 
-  gavl_msg_set_id_ns(msg, BG_MSG_DEL_BACKEND, BG_MSG_NS_BACKEND);
-  gavl_msg_set_arg_string(msg, 0, addr);
+  gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, addr);
   
   bg_msg_sink_put(d->sink);
 
@@ -207,7 +207,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
             /* Added name */
       
             if(gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
-              add_dev(d, o_new, name + MPRIS2_NAME_PREFIX_LEN, "mpris2", BG_BACKEND_RENDERER);
+              add_dev(d, o_new, name + MPRIS2_NAME_PREFIX_LEN, "mpris2", GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
             
             }
           else if(!o_new && o_old)
@@ -310,7 +310,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
             gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
             
             gavl_dictionary_set_string(&info, BG_BACKEND_PROTOCOL, "mpd");
-            gavl_dictionary_set_int(&info, BG_BACKEND_TYPE, BG_BACKEND_RENDERER);
+            gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
 
             gavl_metadata_add_image_uri(&info,
                                         GAVL_META_ICON_URL,
@@ -320,7 +320,11 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
             
             msg1 = bg_msg_sink_get(d->sink);
 
-            bg_msg_set_backend_info(msg1, BG_MSG_ADD_BACKEND, &info);
+            //            bg_msg_set_backend_info(msg1, BG_MSG_ADD_BACKEND, &info);
+            gavl_msg_set_id_ns(msg1, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
+            gavl_dictionary_set_string(&msg1->header, GAVL_MSG_CONTEXT_ID, uri);
+            gavl_msg_set_arg_dictionary(msg1, 0, &info);
+            
             bg_msg_sink_put(d->sink);
   
             gavl_dictionary_free(&info);
@@ -393,7 +397,7 @@ static void detector_init_dbus(bg_dbus_detector_t * ret)
           {
           if(gavl_string_starts_with(str, MPRIS2_NAME_PREFIX))
             {
-            add_dev(ret, NULL, str + MPRIS2_NAME_PREFIX_LEN, "mpris2", BG_BACKEND_RENDERER);
+            add_dev(ret, NULL, str + MPRIS2_NAME_PREFIX_LEN, "mpris2", GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
             }
           }
       

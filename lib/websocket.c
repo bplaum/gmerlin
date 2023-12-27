@@ -1145,17 +1145,13 @@ int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data)
   return 1;
   }
 
-char * bg_websocket_make_path(bg_backend_type_t type)
+char * bg_websocket_make_path(const char * klass)
   {
-  const char * label = bg_backend_type_to_string(type);
-  if(label)
-    return bg_sprintf("/ws/%s", label);
-  else
-    return gavl_strdup("/ws");
+  return bg_sprintf("/ws/%s", klass);
   }
 
 bg_websocket_context_t *
-bg_websocket_context_create(bg_backend_type_t type,
+bg_websocket_context_create(const char * klass,
                             bg_http_server_t * srv,
                             const char * path,
                             bg_controllable_t * ctrl)
@@ -1171,7 +1167,7 @@ bg_websocket_context_create(bg_backend_type_t type,
   if(path)
     ctx->path = gavl_strdup(path);
   else
-    ctx->path = bg_websocket_make_path(type);
+    ctx->path = bg_websocket_make_path(klass);
   
   if(srv)
     {

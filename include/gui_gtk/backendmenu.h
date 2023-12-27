@@ -28,7 +28,7 @@
 
 typedef struct bg_gtk_backend_menu_s bg_gtk_backend_menu_t;
 
-bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(bg_backend_type_t type,
+bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
                                                    int have_local,
                                                    /* Will send BG_MSG_SET_BACKEND events */
                                                    bg_msg_sink_t * evt_sink);

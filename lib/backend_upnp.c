@@ -1770,7 +1770,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_renderer =
   {
     .name = "upnp media renderer",
     
-    .type = BG_BACKEND_RENDERER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER,
 
     .uri_prefix = BG_BACKEND_URI_SCHEME_UPNP_RENDERER"://",
     
@@ -2096,7 +2096,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_upnp_mediaserver =
     .name = "upnp media server",
     .uri_prefix = BG_BACKEND_URI_SCHEME_UPNP_SERVER"://",
 
-    .type = BG_BACKEND_MEDIASERVER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_SERVER,
 
     .handle_msg  = handle_msg_server,
     

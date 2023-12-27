@@ -35,6 +35,7 @@ typedef struct
   uint32_t ns;
   } bg_msg_desc_t;
 
+#if 0
 typedef enum
   {
     BG_BACKEND_NONE        = 0, // Not defined
@@ -45,9 +46,8 @@ typedef enum
   } bg_backend_type_t;
 
 const char * bg_backend_type_to_string(bg_backend_type_t type);
-
 bg_backend_type_t bg_backend_type_from_string(const char * type);
-
+#endif
 
 /** \defgroup messages Messages
  *  \brief Communication inside and between applications
@@ -491,16 +491,15 @@ void bg_control_cleanup(bg_control_t * c);
 
 #define BG_CMD_VISUALIZER_PAUSE       2
 
+
 // BG_MSG_NS_BACKEND
 
-#define BG_MSG_ADD_BACKEND            1
-#define BG_MSG_DEL_BACKEND            2
+// #define BG_MSG_ADD_BACKEND            1
+// #define BG_MSG_DEL_BACKEND            2
 
-
-#define BG_CMD_BACKEND_REGISTER_LOCAL 3
-#define BG_CMD_SET_BACKEND            4
-
-#define BG_MSG_BACKENDS_RESCAN        5
+#define BG_CMD_BACKEND_REGISTER_LOCAL    1
+#define BG_CMD_SET_BACKEND               2
+#define BG_MSG_BACKENDS_RESCAN           3
 
 
 /**@} */

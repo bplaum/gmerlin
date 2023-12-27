@@ -1512,8 +1512,16 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_dictionary_init(&vol);
           gavl_dictionary_init(&obj);
 
+          if(!fs->mount_removable ||
+             !gavl_msg_get_arg_dictionary(msg, 0, &vol) ||
+             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)) ||
+             !gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM))
+            {
+            gavl_dictionary_free(&vol);
+            return 1;
+            }
+          
           volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-          gavl_msg_get_arg_dictionary(msg, 0, &vol);
 
           //          fprintf(stderr, "Volume added: %s\n", volume_id);
           //          gavl_dictionary_dump(&vol, 2);
@@ -1523,8 +1531,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           uri = gavl_dictionary_get_string(&vol, GAVL_META_URI);
           
-          if(!gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM) ||
-             !fs->mount_removable || !gavl_string_starts_with(uri, "/media"))
+          if(!fs->mount_removable || !gavl_string_starts_with(uri, "/media"))
             {
             return 1;
             }
@@ -1633,7 +1640,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
 
   b->parameters = parameters;
   
-  b->flags |= (BE_FLAG_VOLUMES | BE_FLAG_RESCAN);
+  b->flags |= (BE_FLAG_RESOURCES | BE_FLAG_RESCAN);
   
   
   b->destroy = destroy_filesystem;

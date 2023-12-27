@@ -100,7 +100,8 @@ int bg_visualize_set_format_parameter(gavl_video_format_t * fmt, const char * na
 void bg_visualize_set_format(gavl_video_format_t * fmt,
                              const gavl_video_format_t * default_fmt);
 
-void bg_visualizer_set_plugin(bg_visualizer_t * v, int plugin);
+void bg_visualizer_set_plugin_by_index(bg_visualizer_t * v, int plugin);
+void bg_visualizer_set_plugin_by_string(bg_visualizer_t * v, const char * str);
 
 void bg_visualizer_pause(bg_visualizer_t * v);
 

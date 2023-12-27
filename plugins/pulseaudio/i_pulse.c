@@ -118,7 +118,13 @@ static int open_pulse(void * data, const char * location)
     return 0;
     }
 
-  if(gavl_host_is_us(location))
+  if(!strlen(server) || gavl_host_is_us(server))
+    {
+    free(server);
+    server = NULL;
+    }
+  
+  if(!strcmp(path, "/"))
     {
     if(!bg_pa_open(&priv->com, server, NULL, 1))
       return 0;
@@ -129,7 +135,6 @@ static int open_pulse(void * data, const char * location)
       return 0;
     }
   
-
   t = gavl_append_track(&priv->mi, NULL);
   m = gavl_track_get_metadata_nc(t);
 

@@ -1570,6 +1570,24 @@ bg_plugin_find_by_index(int index,
                        type_mask, flag_mask);
   }
 
+int
+bg_plugin_get_index(const char * name,
+                    uint32_t type_mask, uint32_t flag_mask)
+  {
+  int ret = 0;
+  const bg_plugin_info_t * info;
+
+  while((info = find_by_index(bg_plugin_reg->entries, ret,
+                              type_mask, flag_mask)))
+    {
+    if(!strcmp(info->name, name))
+      return ret;
+    ret++;
+    }
+  return -1;
+  }
+
+
 int bg_get_num_plugins(uint32_t type_mask, uint32_t flag_mask)
   {
   bg_plugin_info_t * info;
@@ -5500,30 +5518,6 @@ void bg_plugin_registry_opt_ov(void * data, int * argc,
     exit(-1);
     }
   parse_plugin_single((*_argv)[arg], BG_PLUGIN_OUTPUT_VIDEO);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-void bg_plugin_registry_opt_ra(void * data, int * argc,
-                               char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -ra requires an argument\n");
-    exit(-1);
-    }
-  parse_plugin_single((*_argv)[arg], BG_PLUGIN_RECORDER_AUDIO);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-void bg_plugin_registry_opt_rv(void * data, int * argc,
-                               char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -rv requires an argument\n");
-    exit(-1);
-    }
-  parse_plugin_single((*_argv)[arg], BG_PLUGIN_RECORDER_VIDEO);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 

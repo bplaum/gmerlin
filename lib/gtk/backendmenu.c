@@ -44,8 +44,8 @@ struct bg_gtk_backend_menu_s
   gavl_array_t * entries;
   bg_msg_sink_t * sink;
   bg_msg_sink_t * evt_sink;
-  
-  bg_backend_type_t type;
+
+  char * klass;
   
   gavl_array_t devs;
 
@@ -66,7 +66,7 @@ static void item_by_id_cb(GtkWidget * w, gpointer data)
   if(d->ret)
     return;
   
-  if((uri = g_object_get_data(G_OBJECT(w), GAVL_META_URI)) &&
+  if((uri = g_object_get_data(G_OBJECT(w), GAVL_META_ID)) &&
      !strcmp(uri, d->uri))
     d->ret = w;
   }
@@ -81,7 +81,7 @@ static GtkWidget * item_by_id(bg_gtk_backend_menu_t * m, const char * uri)
   return d.ret;
   }
 
-static const gavl_dictionary_t * dev_by_uri(gavl_array_t * arr, const char * uri)
+static const gavl_dictionary_t * dev_by_id(gavl_array_t * arr, const char * uri)
   {
   int i;
   const gavl_dictionary_t * dict;
@@ -90,14 +90,14 @@ static const gavl_dictionary_t * dev_by_uri(gavl_array_t * arr, const char * uri
   for(i = 0; i < arr->num_entries; i++)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
        !strcmp(str, uri))
       return dict;
     }
   return NULL;
   }
 
-static int dev_idx_by_uri(gavl_array_t * arr, const char * uri)
+static int dev_idx_by_id(gavl_array_t * arr, const char * uri)
   {
   int i;
   const gavl_dictionary_t * dict;
@@ -106,7 +106,7 @@ static int dev_idx_by_uri(gavl_array_t * arr, const char * uri)
   for(i = 0; i < arr->num_entries; i++)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (str = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
+       (str = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
        !strcmp(str, uri))
       return i;
     }
@@ -115,13 +115,13 @@ static int dev_idx_by_uri(gavl_array_t * arr, const char * uri)
 
 static void backend_menu_callback(GtkWidget * w, gpointer data)
   {
-  char * uri;
+  char * id;
   const gavl_dictionary_t * dev;
   
   bg_gtk_backend_menu_t * m = data;
 
-  if((uri = g_object_get_data(G_OBJECT(w), GAVL_META_URI)) &&
-     (dev = dev_by_uri(&m->devs, uri)))
+  if((id = g_object_get_data(G_OBJECT(w), GAVL_META_ID)) &&
+     (dev = dev_by_id(&m->devs, id)))
     {
 #if 0
     gavl_dictionary_dump(dev, 2);
@@ -147,7 +147,7 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   gavl_dictionary_t * val_dict;
   GList *children;
   char * icon = NULL;
-  int type = 0;
+  const char * klass;
   const char * var;
   int self = 0;
   
@@ -155,20 +155,17 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
                              gavl_dictionary_get_string(dict, GAVL_META_LABEL),
                              gavl_dictionary_get_string(dict, GAVL_META_URI));
   
-  if(!gavl_dictionary_get_int(dict, BG_BACKEND_TYPE, &type) ||
-     (type != m->type) ||
-     (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
+       !gavl_string_starts_with(klass, m->klass) ||
+       (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
     return;
-  
+     
   if((var = gavl_dictionary_get_string_image_max(dict, GAVL_META_ICON_URL, 48, 48, NULL)))
     icon = gavl_strdup(var);
   else if((var = gavl_dictionary_get_string(dict, GAVL_META_ICON_NAME)))
     icon = bg_sprintf("appicon:%s", var);
-  else if(type == BG_BACKEND_MEDIASERVER)
-    icon = gavl_strdup("icon:"BG_ICON_SERVER);
-  else if(type == BG_BACKEND_RENDERER)
-    icon = gavl_strdup("icon:"BG_ICON_PLAYER);
-  
+  else
+    icon = gavl_sprintf("icon:%s", bg_get_type_icon(klass));
   
   gavl_value_init(&val);
   val_dict = gavl_value_set_dictionary(&val);
@@ -226,7 +223,7 @@ static void del_item(bg_gtk_backend_menu_t * m, const char * uri)
   if((w = item_by_id(m, uri)))
     gtk_container_remove(GTK_CONTAINER(m->menu), w);
 
-  if((idx = dev_idx_by_uri(&m->devs, uri)) >= 0)
+  if((idx = dev_idx_by_id(&m->devs, uri)) >= 0)
     gavl_array_splice_val(&m->devs, idx, 1, NULL);
   }
 
@@ -238,17 +235,17 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
   
   switch(msg->NS)
     {
-    case BG_MSG_NS_BACKEND:
+    case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
-        case BG_MSG_ADD_BACKEND:
+        case GAVL_MSG_RESOURCE_ADDED:
           bg_msg_get_backend_info(msg, &dict);
+          gavl_dictionary_set_string(&dict, GAVL_META_ID, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));
           add_item(m, &dict);
           break;
-        case BG_MSG_DEL_BACKEND:
+        case GAVL_MSG_RESOURCE_DELETED:
           {
-          const char * uri = gavl_msg_get_arg_string_c(msg, 0);
-          del_item(m, uri);
+          del_item(m, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));
           }
           break;
         }
@@ -258,7 +255,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(bg_backend_type_t type,
+bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
                                                    int have_local,
                                                    /* Will send BG_MSG_SET_BACKEND events */
                                                    bg_msg_sink_t * evt_sink)
@@ -272,7 +269,7 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(bg_backend_type_t type,
 
   ret->menu    = gtk_menu_new();
   ret->entries = bg_backend_registry_get();
-  ret->type    = type;
+  ret->klass    = gavl_strdup(klass);
   ret->evt_sink = evt_sink;
 
   ret->have_local = have_local;
@@ -285,7 +282,7 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(bg_backend_type_t type,
     
     gavl_dictionary_set_string(&local_dev, GAVL_META_URI,       "local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL,     "Local");
-    gavl_dictionary_set_int(&local_dev,    BG_BACKEND_TYPE,     type);
+    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, klass);
     gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "gmerlin");
     
     add_item(ret, &local_dev);
@@ -314,6 +311,8 @@ GtkWidget * bg_gtk_backend_menu_get_widget(bg_gtk_backend_menu_t * m)
 void bg_gtk_backend_menu_destroy(bg_gtk_backend_menu_t * m)
   {
   gavl_array_free(&m->devs);
+  if(m->klass)
+    free(m->klass);
   free(m);
   }
 

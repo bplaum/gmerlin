@@ -671,6 +671,15 @@ void bg_player_underrun(bg_msg_sink_t * sink)
   bg_msg_sink_put(sink);
   }
 
+void bg_player_set_visualization(bg_msg_sink_t * sink, const char * arg)
+  {
+  gavl_msg_t * msg;
+  msg = bg_msg_sink_get(sink);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_VISUALIZATION, BG_MSG_NS_PLAYER);
+  gavl_msg_set_arg_string(msg, 0, arg);
+  bg_msg_sink_put(sink);
+  }
+
 /* Extract infos from messages */
 
 void bg_player_msg_get_audio_stream(gavl_msg_t * msg, int * idx,

@@ -111,15 +111,14 @@ char * bg_ssdp_get_device_type_nt(const bg_ssdp_root_device_t * d, int dev);
 char * bg_ssdp_get_device_uuid_nt(const bg_ssdp_root_device_t * d, int dev);
 char * bg_ssdp_get_root_nt(const bg_ssdp_root_device_t * d);
 
-bg_backend_type_t bg_ssdp_is_gmerlin_nt(const char * nt);
-
+const char * bg_ssdp_is_gmerlin_nt(const char * nt);
 
 int bg_ssdp_update(bg_ssdp_t *);
 void bg_ssdp_destroy(bg_ssdp_t *);
 
 // void bg_ssdp_browse(bg_ssdp_t *, bg_msg_sink_t * sink);
 
-void bg_create_ssdp_device(gavl_dictionary_t * desc, bg_backend_type_t type,
+void bg_create_ssdp_device(gavl_dictionary_t * desc, const char * klass,
                            const char * uri, const char * protocol);
 
 

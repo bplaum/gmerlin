@@ -99,6 +99,36 @@ static const char * get_server_label(remote_server_t * srv)
   }
 #endif
 
+static int is_us(bg_mdb_t * db, const char * url)
+  {
+  int ret = 0;
+  const char * root_url;
+
+  int port1 = 0;
+  int port2 = 0;
+  char * host1 = NULL;
+  char * host2 = NULL;
+  
+  if(!db->srv || !(root_url = bg_http_server_get_root_url(db->srv)))
+    return 0;
+
+  // fprintf(stderr, "is us: %s %s\n", url, root_url);
+  
+  if(bg_url_split(url, NULL, NULL, NULL, &host1, &port1, NULL) &&
+     bg_url_split(root_url, NULL, NULL, NULL, &host2, &port2, NULL) &&
+     !strcmp(host1, host2) &&
+     (port1 == port2))
+    ret = 1;
+  
+  if(host1)
+    free(host1);
+  if(host2)
+    free(host2);
+  
+  return ret;
+  }
+
+
 static char * make_id(remote_priv_t * priv)
   {
   return bg_sprintf("/remote-%"PRId64, ++priv->server_counter);
@@ -608,7 +638,7 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static remote_server_t * add_server(bg_mdb_backend_t * be, const gavl_dictionary_t * dict)
+static remote_server_t * add_server(bg_mdb_backend_t * be, const char * id, const gavl_dictionary_t * dict)
   {
   gavl_msg_t * msg;
   
@@ -812,28 +842,6 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
       {
       switch(msg->ID)
         {
-        case BG_MSG_ADD_BACKEND:
-          {
-          int type = BG_BACKEND_NONE;
-          gavl_dictionary_t dict;
-          gavl_dictionary_init(&dict);
-          gavl_msg_get_arg_dictionary(msg, 0, &dict);
-          
-          if(gavl_dictionary_get_int(&dict, BG_BACKEND_TYPE, &type) &&
-             (type == BG_BACKEND_MEDIASERVER))
-            //            (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&
-            //              !strcmp(protocol, "gmerlin"))
-            {
-            //            fprintf(stderr, "Add remote device %s\n", gavl_dictionary_get_string(&dict, GAVL_META_LABEL));
-            add_server(be, &dict);
-            }
-          gavl_dictionary_free(&dict);
-          }
-          break;
-        case BG_MSG_DEL_BACKEND:
-          //          fprintf(stderr, "Delete remote device %s\n", gavl_msg_get_arg_string_c(msg, 0));
-          remove_server(be, gavl_msg_get_arg_string_c(msg, 0));
-          break;
         }
       }
       break;
@@ -844,6 +852,33 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
         case GAVL_CMD_QUIT:
           return 0;
           break;
+        case GAVL_MSG_RESOURCE_ADDED:
+          {
+          const char * klass = NULL;
+          const char * uri = NULL;
+          gavl_dictionary_t dict;
+          gavl_dictionary_init(&dict);
+          gavl_msg_get_arg_dictionary(msg, 0, &dict);
+          
+          if((klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS)) &&
+             !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER) &&
+             (uri = gavl_dictionary_get_string(&dict, GAVL_META_URI)) &&
+             !is_us(be->db, uri))
+            //            (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&
+            //              !strcmp(protocol, "gmerlin"))
+            {
+            //            fprintf(stderr, "Add remote device %s\n", gavl_dictionary_get_string(&dict, GAVL_META_LABEL));
+            add_server(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID), &dict);
+            }
+          gavl_dictionary_free(&dict);
+          }
+          break;
+        case GAVL_MSG_RESOURCE_DELETED:
+          //          fprintf(stderr, "Delete remote device %s\n", gavl_msg_get_arg_string_c(msg, 0));
+          remove_server(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));
+          break;
+
+
         }
       break;
       }
@@ -914,7 +949,7 @@ void bg_mdb_create_remote(bg_mdb_backend_t * b)
   {
   remote_priv_t * priv;
   
-  b->flags |= BE_FLAG_REMOTE;
+  b->flags |= BE_FLAG_RESOURCES;
   b->ping_func    = ping_func_remote;
   b->destroy = destroy_func_remote;
   

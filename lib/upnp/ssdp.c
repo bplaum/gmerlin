@@ -31,6 +31,7 @@
 #include <gavl/metadata.h>
 #include <gavl/metatags.h>
 #include <gavl/gavlsocket.h>
+#include <gavl/metatags.h>
 
 #include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/upnp/upnputils.h>
@@ -336,10 +337,6 @@ void bg_ssdp_destroy(bg_ssdp_t * s)
     gavl_socket_close(s->mcast_fd);
   if(s->ucast_fd > 0)
     gavl_socket_close(s->ucast_fd);
-
-  
-  
-    
   
   free(s);
   }
@@ -357,7 +354,7 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
   gavl_value_t new_val;
   char ** str = NULL;
   int idx = 0;
-  int type = BG_BACKEND_NONE;
+  const char * klass = NULL;
   
   gavl_value_init(&new_val);
   
@@ -375,13 +372,13 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     {
     is_upnp = 1;
     real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, strstr(uri, "://"));
-    type = BG_BACKEND_MEDIASERVER;
+    klass = GAVL_META_MEDIA_CLASS_BACKEND_SERVER;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(gavl_string_starts_with_i(nt, UPNP_RENDERER_NT_PREFIX))
     {
     real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, strstr(uri, "://"));
-    type = BG_BACKEND_RENDERER;
+    klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER;
 
     is_upnp = 1;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp renderer: %s", (alive ? "alive" : "bye"), real_uri);
@@ -389,13 +386,13 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
   else if(!strcasecmp(nt, GMERLIN_SERVER_NT))
     {
     real_uri = gavl_strdup(uri);
-    type = BG_BACKEND_MEDIASERVER;
+    klass = GAVL_META_MEDIA_CLASS_BACKEND_SERVER;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for gmerlin server: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else if(!strcasecmp(nt, GMERLIN_RENDERER_NT))
     {
     real_uri = gavl_strdup(uri);
-    type = BG_BACKEND_RENDERER;
+    klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for gmerlin renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
   else
@@ -426,8 +423,8 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
     dict = gavl_value_set_dictionary(&new_val);
     gavl_dictionary_set_string(dict, GAVL_META_URI, real_uri);
     
-    gavl_dictionary_set_int(dict, BG_BACKEND_TYPE, type);
-    gavl_dictionary_set_string(dict, GAVL_META_ID, gavl_dictionary_get_string(header, META_ID));
+    gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS, klass);
+    gavl_dictionary_set_string(dict, BG_BACKEND_ID, gavl_dictionary_get_string(header, META_ID));
     
     if(is_upnp)
       gavl_dictionary_set_string(dict, BG_BACKEND_PROTOCOL, "upnp");
@@ -480,12 +477,12 @@ static void update_remote_device(bg_ssdp_t * s, int alive, const gavl_dictionary
 
 static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive)
   {
-  int type = 0;
   
   gavl_dictionary_t m;
   const char * uri;
+  const char * klass;
   char uuid[37];
-  const char * id = gavl_dictionary_get_string(dev, GAVL_META_ID);
+  const char * id = gavl_dictionary_get_string(dev, BG_BACKEND_ID);
   
   gavl_dictionary_init(&m);
   uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
@@ -510,7 +507,7 @@ static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int aliv
 
   bg_uri_to_uuid(uri, uuid);
   
-  gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type);
+  klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS);
   
   if(gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_RENDERER) ||
      gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_SERVER))
@@ -525,67 +522,65 @@ static void notify_dev(bg_ssdp_t * ssdp, const gavl_dictionary_t * dev, int aliv
     gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s", uuid));
     queue_multicast(ssdp, &m);
     
-    switch(type)
+
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
       {
-      case BG_BACKEND_MEDIASERVER:
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaServer:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
-        gavl_dictionary_set_string(&m, META_ID, id);
-        queue_multicast(ssdp, &m);
-        gavl_dictionary_set_string(&m, META_ID, NULL);
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaServer:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
+      gavl_dictionary_set_string(&m, META_ID, id);
+      queue_multicast(ssdp, &m);
+      gavl_dictionary_set_string(&m, META_ID, NULL);
         
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ContentDirectory:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
-        queue_multicast(ssdp, &m);
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ContentDirectory:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
+      queue_multicast(ssdp, &m);
         
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
-        queue_multicast(ssdp, &m);
-        
-        break;
-      case BG_BACKEND_RENDERER:
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaRenderer:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
-        gavl_dictionary_set_string(&m, META_ID, id);
-        queue_multicast(ssdp, &m);
-        gavl_dictionary_set_string(&m, META_ID, NULL);
-        
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
-        queue_multicast(ssdp, &m);
-
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:RenderingControl:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
-        queue_multicast(ssdp, &m);
-
-        gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:AVTransport:1");
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
-        queue_multicast(ssdp, &m);
-        
-        break;
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+      queue_multicast(ssdp, &m);
+          
       }
+    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+      {
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:device:MediaRenderer:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
+      gavl_dictionary_set_string(&m, META_ID, id);
+      queue_multicast(ssdp, &m);
+      gavl_dictionary_set_string(&m, META_ID, NULL);
+        
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:ConnectionManager:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+      queue_multicast(ssdp, &m);
 
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:RenderingControl:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
+      queue_multicast(ssdp, &m);
+
+      gavl_dictionary_set_string(&m, "NT", "urn:schemas-upnp-org:service:AVTransport:1");
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
+      queue_multicast(ssdp, &m);
+      }
+        
     }
   else
     {
     gavl_dictionary_set_string(&m, "LOCATION", uri);
-    
-    switch(type)
-      {
-      case BG_BACKEND_MEDIASERVER:
-        gavl_dictionary_set_string(&m, "NT", GMERLIN_SERVER_NT);
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
-        gavl_dictionary_set_string(&m, META_ID, id);
-        queue_multicast(ssdp, &m);
-        break;
-      case BG_BACKEND_RENDERER:
-        gavl_dictionary_set_string(&m, "NT", GMERLIN_RENDERER_NT);
-        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
-        gavl_dictionary_set_string(&m, META_ID, id);
-        queue_multicast(ssdp, &m);
-        break;
-      }
 
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
+      {
+      gavl_dictionary_set_string(&m, "NT", GMERLIN_SERVER_NT);
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
+      gavl_dictionary_set_string(&m, META_ID, id);
+      queue_multicast(ssdp, &m);
+
+      }
+    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+      {
+      gavl_dictionary_set_string(&m, "NT", GMERLIN_RENDERER_NT);
+      gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
+      gavl_dictionary_set_string(&m, META_ID, id);
+      queue_multicast(ssdp, &m);
+      }
     }
   gavl_dictionary_free(&m);
   }
@@ -639,8 +634,8 @@ static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const g
   {
   gavl_dictionary_t m;
   const char * uri;
+  const char * klass;
   char uuid[37];
-  int type = 0;
   int is_upnp = 0;
   
   gavl_dictionary_init(&m);
@@ -655,7 +650,7 @@ static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const g
 
   bg_uri_to_uuid(uri, uuid);
 
-  gavl_dictionary_get_int(dev, BG_BACKEND_TYPE, &type);
+  klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS);
 
   /* Upnp */
   if(gavl_string_starts_with(uri, BG_BACKEND_URI_SCHEME_UPNP_RENDERER) ||
@@ -682,65 +677,66 @@ static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const g
       gavl_dictionary_set_string_nocopy(&m, "ST", gavl_sprintf("uuid:%s", uuid));
       gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s", uuid));
       queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-      
-      switch(type)
+
+      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
         {
-        case BG_BACKEND_MEDIASERVER:
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaServer:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
-          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-          gavl_dictionary_set_string(&m, META_ID, NULL);
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaServer:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, META_ID, NULL);
           
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ContentDirectory:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ContentDirectory:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ContentDirectory:1", uuid));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         
-          break;
-        case BG_BACKEND_RENDERER:
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaRenderer:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
-          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-          gavl_dictionary_set_string(&m, META_ID, NULL);
+        }
+      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+        {
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaRenderer:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, META_ID, NULL);
           
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:ConnectionManager:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:ConnectionManager:1", uuid));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
 
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:RenderingControl:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:RenderingControl:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:RenderingControl:1", uuid));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
 
-          gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:AVTransport:1");
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-          
-          break;
+        gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:service:AVTransport:1");
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:service:AVTransport:1", uuid));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
         }
       
       }
     else
       {
       gavl_dictionary_set_string(&m, "LOCATION", uri);
-      switch(type)
+
+      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
         {
-        case BG_BACKEND_MEDIASERVER:
-          gavl_dictionary_set_string(&m, "ST", GMERLIN_SERVER_NT);
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
-          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-          break;
-        case BG_BACKEND_RENDERER:
-          gavl_dictionary_set_string(&m, "ST", GMERLIN_RENDERER_NT);
-          gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
-          gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_ID));
-          queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-          break;
+        gavl_dictionary_set_string(&m, "ST", GMERLIN_SERVER_NT);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
+        }
+      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+        {
+        gavl_dictionary_set_string(&m, "ST", GMERLIN_RENDERER_NT);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
         }
       }
     }
@@ -771,24 +767,19 @@ static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const g
       char ** str;
       str = gavl_strbreak(st, ':');
 
-      switch(type)
+      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
         {
-        case BG_BACKEND_MEDIASERVER:
-          if(str[3] && !strcmp(str[3], "MediaServer"))
-            {
-            gavl_dictionary_set_string(&m, "ST", st);
-            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
-            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-            }
-          break;
-        case BG_BACKEND_RENDERER:
-          if(str[3] && !strcmp(str[3], "MediaRenderer"))
-            {
-            gavl_dictionary_set_string(&m, "ST", st);
-            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
-            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-            }
-          break;
+        gavl_dictionary_set_string(&m, "ST", st);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
+        }
+      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+        {
+        gavl_dictionary_set_string(&m, "ST", st);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        
         }
       
       gavl_strbreak_free(str);
@@ -801,24 +792,17 @@ static void handle_search_dev(bg_ssdp_t * ssdp, const char * st, int mx, const g
       char ** str;
       str = gavl_strbreak(st, ':');
 
-      switch(type)
+      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
         {
-        case BG_BACKEND_MEDIASERVER:
-          if(str[3] && (!strcmp(str[3], "ContentDirectory") || !strcmp(str[3], "ConnectionManager")))
-            {
-            gavl_dictionary_set_string(&m, "ST", st);
-            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
-            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-            }
-          break;
-        case BG_BACKEND_RENDERER:
-          if(str[3] && (!strcmp(str[3], "RenderingControl") || !strcmp(str[3], "ConnectionManager") || !strcmp(str[3], "AVTransport")))
-            {
-            gavl_dictionary_set_string(&m, "ST", st);
-            gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
-            queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
-            }
-          break;
+        gavl_dictionary_set_string(&m, "ST", st);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
+        }
+      else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+        {
+        gavl_dictionary_set_string(&m, "ST", st);
+        gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, st));
+        queue_unicast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         }
       
       gavl_strbreak_free(str);

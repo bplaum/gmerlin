@@ -249,34 +249,45 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           gavl_dictionary_t vol;
           gavl_dictionary_init(&vol);
 
-          volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-          gavl_msg_get_arg_dictionary(msg, 0, &vol);
 
-          if(!(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)))
+          if(!gavl_msg_get_arg_dictionary(msg, 0, &vol) ||
+             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)) ||
+             !gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE))
+            {
+            gavl_dictionary_free(&vol);
             return 1;
+            }
 
+          volume_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           uri = gavl_dictionary_get_string(&vol, GAVL_META_URI);
 
           if(!(pos = strstr(uri, "://")))
+            {
+            gavl_dictionary_free(&vol);
             return 1;
-          
+            }
           if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD) &&
              !r->mount_audiocd)
             {
+            gavl_dictionary_free(&vol);
             return 1;
             }
           if((!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD) ||
               !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD) ||
               !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD)) &&
              !r->mount_videodisk)
+            {
+            gavl_dictionary_free(&vol);
             return 1;
-          
+            }
+
           protocol = gavl_strndup(uri, pos);
 
           if(!bg_plugin_find_by_protocol(protocol))
             {
             gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "No plugin for protocol %s", protocol);
             free(protocol);
+            gavl_dictionary_free(&vol);
             return 1;
             }
           free(protocol);
@@ -379,7 +390,7 @@ void bg_mdb_create_removable(bg_mdb_backend_t * b)
   b->priv = priv;
 
   b->parameters = parameters;
-  b->flags |= (BE_FLAG_VOLUMES);
+  b->flags |= (BE_FLAG_RESOURCES);
   
   b->destroy = destroy_removable;
 

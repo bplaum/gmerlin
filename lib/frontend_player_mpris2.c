@@ -952,7 +952,7 @@ static int create_player_mpris2(bg_frontend_t * fe,
 
   priv = calloc(1, sizeof(*priv));
 
-  bg_make_backend_id(BG_BACKEND_RENDERER, id);
+  bg_make_backend_id(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, id);
   
   priv->bus_name = gavl_sprintf("%s-%s", bus_name, id);
   
@@ -1032,7 +1032,7 @@ static int ping_player_mpris2(bg_frontend_t * fe, gavl_time_t current_time)
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
                                       bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, bus_name_real + MPRIS2_NAME_PREFIX_LEN));
 
-    gavl_dictionary_set_int(&local_dev, BG_BACKEND_TYPE, BG_BACKEND_RENDERER);
+    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
 
     gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "mpris2");

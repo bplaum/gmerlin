@@ -38,7 +38,7 @@
 typedef struct bg_websocket_context_s bg_websocket_context_t;
 typedef struct bg_websocket_connection_s bg_websocket_connection_t;
 
-char * bg_websocket_make_path(bg_backend_type_t type);
+char * bg_websocket_make_path(const char * klass);
 
 /* Server side part of the websocket implementation */
 
@@ -51,7 +51,7 @@ char * bg_websocket_make_path(bg_backend_type_t type);
 /* If srv or path are NULL, you need to call bg_websocket_context_handle_request
    from your own http handler */
 bg_websocket_context_t *
-bg_websocket_context_create(bg_backend_type_t type,
+bg_websocket_context_create(const char * klass,
                             bg_http_server_t * srv,
                             const char * path,
                             bg_controllable_t * ctrl);

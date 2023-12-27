@@ -867,7 +867,6 @@ web/css/Makefile \
 web/wallpapers/Makefile \
 apps/Makefile \
 apps/player/Makefile \
-apps/playerproxy/Makefile \
 apps/cmdlineplayer/Makefile \
 apps/cmdlinerecorder/Makefile \
 apps/transcoder/Makefile \

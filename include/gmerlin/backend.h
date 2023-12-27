@@ -39,6 +39,7 @@
 #define BG_BACKEND_ID_LEN 32 // md5 in hex
 
 #define BG_BACKEND_PROTOCOL       "Protocol"
+#define BG_BACKEND_ID             "BackendID"
 
 /* Integer 1 if the device belongs to ourselfes */
 
@@ -46,7 +47,7 @@
 
 // #define BG_BACKEND_REAL_PROTOCOL "RealProtocol"
 
-#define BG_BACKEND_TYPE         "Type"
+// #define BG_BACKEND_TYPE         "Type"
 // #define BG_BACKEND_REAL_URI "RealURI"
 #define BG_BACKEND_ROOT_URI "RootURI"
 
@@ -129,7 +130,7 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret);
 
 void bg_backend_register_local(const gavl_dictionary_t * dev);
 
-char * bg_make_backend_id(int type, char id[BG_BACKEND_ID_LEN+1]);
+char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1]);
 
 #endif //  BG_REMOTEDEV_H_INCLUDED
 

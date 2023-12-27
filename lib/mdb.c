@@ -335,40 +335,12 @@ static void add_volume_func(void * priv, const char * name, const gavl_value_t *
               
   for(i = 0; i < num_backends; i++)
     {
-    if(db->backends[i].flags & BE_FLAG_VOLUMES)
+    if(db->backends[i].flags & BE_FLAG_RESOURCES)
       bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, &msg);
     }
   gavl_msg_free(&msg);
   }
 
-static int is_us(bg_mdb_t * db, const char * url)
-  {
-  int ret = 0;
-  const char * root_url;
-
-  int port1 = 0;
-  int port2 = 0;
-  char * host1 = NULL;
-  char * host2 = NULL;
-  
-  if(!db->srv || !(root_url = bg_http_server_get_root_url(db->srv)))
-    return 0;
-
-  // fprintf(stderr, "is us: %s %s\n", url, root_url);
-  
-  if(bg_url_split(url, NULL, NULL, NULL, &host1, &port1, NULL) &&
-     bg_url_split(root_url, NULL, NULL, NULL, &host2, &port2, NULL) &&
-     !strcmp(host1, host2) &&
-     (port1 == port2))
-    ret = 1;
-  
-  if(host1)
-    free(host1);
-  if(host2)
-    free(host2);
-  
-  return ret;
-  }
 
 static void update_remote_devs_state(bg_mdb_t * db)
   {
@@ -631,6 +603,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
       /* Forward to backends */
       switch(msg->ID)
         {
+#if 0
         case BG_MSG_ADD_BACKEND:
           {
           const char * var;
@@ -653,6 +626,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case BG_MSG_DEL_BACKEND:
           update_remote_devs_state(db);
           break;
+#endif
         case BG_MSG_BACKENDS_RESCAN:
           bg_backend_registry_rescan();
           break;
@@ -662,32 +636,11 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
               
       for(i = 0; i < num_backends; i++)
         {
-        if(db->backends[i].flags & BE_FLAG_REMOTE)
+        if(db->backends[i].flags & BE_FLAG_RESOURCES)
           bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
         }
       break;
       }
-#if 0
-      case BG_MSG_NS_VOLUMEMANAGER:
-      {
-      int i;
-      /* Forward to backends */
-
-      //   fprintf(stderr, "Got remote msg\n");
-      
-      for(i = 0; i < num_backends; i++)
-        {
-        if(db->backends[i].flags & BE_FLAG_VOLUMES)
-          {
-          bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
-          //          fprintf(stderr, "Put remote msg %d\n", i);
-          }
-        }
-      //      be->flags & BE_FLAG_REMOTE
-      
-      break;
-      }
-#endif
     case BG_MSG_NS_STATE:
       {
       //      fprintf(stderr, "State changed\n");
@@ -730,22 +683,15 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case GAVL_MSG_RESOURCE_DELETED:
           {
           int i;
-          const char * id;
-          id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          update_remote_devs_state(db);
           
-          if(id && gavl_string_starts_with(id, GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME))
+          for(i = 0; i < num_backends; i++)
             {
-
-            for(i = 0; i < num_backends; i++)
+            if(db->backends[i].flags & BE_FLAG_RESOURCES)
               {
-              if(db->backends[i].flags & BE_FLAG_VOLUMES)
-                {
-                bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
-                //          fprintf(stderr, "Put remote msg %d\n", i);
-                }
+              bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
+              //          fprintf(stderr, "Put remote msg %d\n", i);
               }
-
-            
             }
           break;
           }

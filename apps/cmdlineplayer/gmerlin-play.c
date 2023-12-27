@@ -19,7 +19,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-// #define INFO_WINDOW
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,10 +41,6 @@
 #include <gmerlin/application.h>
 #include <gmerlin/recordingdevice.h>
 
-#ifdef INFO_WINDOW
-#include <gtk/gtk.h>
-#include <gui_gtk/infowindow.h>
-#endif // INFO_WINDOW
 
 #define LOG_DOMAIN "gmerlin-play"
 
@@ -60,13 +55,10 @@ bg_player_t * player;
 bg_controllable_t * player_ctrl;
 
 bg_cfg_ctx_t * cfg;
-
-
-bg_plugin_handle_t * input_handle = NULL;
 int display_time = 1;
 
-char ** gmls = NULL;
-int gml_index = 0;
+char ** uris = NULL;
+int uri_index = 0;
 
 
 const bg_plugin_info_t * ov_info = NULL;
@@ -88,7 +80,38 @@ static int do_ncurses = 0;
  *  Commandline options stuff
  */
 
+static void opt_fullscreen(void * data, int * argc, char *** _argv, int arg)
+  {
+  bg_player_set_fullscreen(player_ctrl->cmd_sink, 1);
+  }
 
+static void opt_vis(void * data, int * argc, char *** _argv, int arg)
+  {
+  char * plugin_name;
+  gavl_dictionary_t vars;
+  gavl_dictionary_init(&vars);
+  
+
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -vis requires an argument\n");
+    exit(-1);
+    }
+
+  plugin_name = gavl_strdup((*_argv)[arg]);
+  
+  gavl_url_get_vars(plugin_name, &vars);
+
+  bg_cfg_section_apply(&vars,
+                       cfg[BG_PLAYER_CFG_VISUALIZATION].p,
+                       bg_cfg_section_set_parameter_func, cfg[BG_PLAYER_CFG_VISUALIZATION].s);
+  
+  bg_player_set_visualization(player_ctrl->cmd_sink, plugin_name);
+  bg_cmdline_remove_arg(argc, _argv, arg);
+  
+  gavl_dictionary_free(&vars);
+  free(plugin_name);
+  }
 
 static void opt_nt(void * data, int * argc, char *** _argv, int arg)
   {
@@ -166,8 +189,14 @@ static bg_cmdline_arg_t global_options[] =
     },
     {
       .arg =         "-vis",
-      .help_arg =    "<visualization options>",
-      .help_string = "Set visualization options",
+      .help_arg =    "plugin_name[?option1=value1[&...]]",
+      .help_string = "Set visualization plugin",
+      .callback =    opt_vis,
+    },
+    {
+      .arg =         "-fullscreen",
+      .help_string = "Switch to fullscreen mode",
+      .callback =    opt_fullscreen,
     },
     BG_PLUGIN_OPT_OA,
     BG_PLUGIN_OPT_OV,
@@ -236,47 +265,23 @@ static void update_global_options()
 
   bg_cmdline_arg_set_cfg_ctx(global_options, "-osd", &cfg[BG_PLAYER_CFG_OSD]);
   bg_cmdline_arg_set_cfg_ctx(global_options, "-inopt", &cfg[BG_PLAYER_CFG_INPUT]);
-
-  bg_cmdline_arg_set_cfg_ctx(global_options, "-vis", &cfg[BG_PLAYER_CFG_VISUALIZATION]);
   }
 
 /* Input plugin stuff */
 
-static int play_track(bg_player_t * player, const char * gml)
+static int play_track(bg_player_t * player, const char * uri)
   {
-  bg_player_load_uri(player_ctrl->cmd_sink, gml, 1);
+  bg_player_load_uri(player_ctrl->cmd_sink, uri, 1);
   return 1;
   }
 
 
-#ifdef INFO_WINDOW
-static gboolean idle_callback(gpointer data)
-  {
-  bg_msg_t * msg;
-  bg_msg_queue_t * q = (bg_msg_queue_t *)data;
-  
-  msg = bg_msg_queue_try_lock_read(q);
-  if(!msg)
-    return TRUE;
-  
-  if(!handle_message(player, msg))
-    gtk_main_quit();
-  bg_msg_queue_unlock_read(q);
-  return TRUE;
-  }
-
-static void info_close_callback(bg_gtk_info_window_t * info_window,
-                                void * data)
-  {
-  fprintf(stderr, "Info window now closed\n");
-  }
-#endif
 
 const bg_cmdline_app_data_t app_data =
   {
     .package =  PACKAGE,
     .version =  VERSION,
-    .synopsis = TRS("[options] gml...\n"),
+    .synopsis = TRS("[options] uri...\n"),
     .help_before = TRS("Commandline mediaplayer\n"),
     .args = (bg_cmdline_arg_array_t[]) { { TRS("Options"), global_options },
                                        {  } },
@@ -294,9 +299,6 @@ const bg_cmdline_app_data_t app_data =
 int main(int argc, char ** argv)
   {
 
-#ifdef INFO_WINDOW
-  bg_gtk_info_window_t * info_window;
-#endif
   bg_cfg_section_t * cfg_section;
   gavl_timer_t * timer;
 
@@ -308,9 +310,6 @@ int main(int argc, char ** argv)
   
   bg_iconfont_init();
 
-#ifdef INFO_WINDOW
-  bg_gtk_init(&argc, &argv);
-#endif
 
   /* Create plugin regsitry */
   bg_plugins_init();
@@ -325,11 +324,6 @@ int main(int argc, char ** argv)
   
   bg_player_set_volume(player_ctrl->cmd_sink, 0.5);
   
-#ifdef INFO_WINDOW
-  info_window =
-    bg_gtk_info_window_create(player, info_close_callback, NULL);
-  bg_gtk_info_window_show(info_window);
-#endif
   
   /* Apply default options */
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "player");
@@ -367,9 +361,9 @@ int main(int argc, char ** argv)
     }
 #endif
   
-  gmls = bg_cmdline_get_locations_from_args(&argc, &argv);
+  uris = bg_cmdline_get_locations_from_args(&argc, &argv);
 
-  if(!gmls)
+  if(!uris)
     {
     fprintf(stderr, "No input files given\n");
     return 0;
@@ -387,11 +381,10 @@ int main(int argc, char ** argv)
   
   /* Play first track */
   
-  play_track(player, gmls[gml_index]);
+  play_track(player, uris[uri_index]);
   
   /* Main loop */
   
-#ifndef INFO_WINDOW
   while(1)
     {
     int result;
@@ -405,18 +398,11 @@ int main(int argc, char ** argv)
     if(!result)
       gavl_time_delay(&delay_time);
     }
-#else
-  g_timeout_add(10, idle_callback, message_queue);
-  gtk_main();
-#endif // INFO_WINDOW
-
+  
   bg_player_quit(player);
   bg_player_destroy(player);
-
-  if(input_handle)
-    bg_plugin_unref(input_handle);
   
-  bg_cfg_registry_save();
+  //  bg_cfg_registry_save();
   
   bg_plugins_cleanup();
   bg_cfg_registry_cleanup();

@@ -54,8 +54,10 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 
 /* Backend flags */
 #define BE_FLAG_DO_CACHE (1<<0)
-#define BE_FLAG_REMOTE   (1<<1) // We want remote devices
-#define BE_FLAG_VOLUMES  (1<<2) // We want volumes and drives
+// #define BE_FLAG_REMOTE   (1<<1) // We want remote devices
+// #define BE_FLAG_VOLUMES  (1<<2) // We want volumes and drives
+#define BE_FLAG_RESOURCES (1<<2) // We want volumes and drives
+
 #define BE_FLAG_RESCAN   (1<<3) // We want rescan commands
 #define BE_FLAG_CREATION_DONE   (1<<4) // We send CREATION_DONE events
 

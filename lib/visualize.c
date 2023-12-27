@@ -167,16 +167,6 @@ static const bg_parameter_info_t parameters[] =
       .val_default = GAVL_VALUE_INIT_FLOAT(30.0),
       .num_digits = 2,
     },
-    {
-      .name =        "gain",
-      .long_name =   TRS("Gain"),
-      .type =        BG_PARAMETER_SLIDER_FLOAT,
-      .val_min =     GAVL_VALUE_INIT_FLOAT(-10.0),
-      .val_max =     GAVL_VALUE_INIT_FLOAT(10.0),
-      .val_default = GAVL_VALUE_INIT_FLOAT(0.0),
-      .num_digits = 2,
-      .help_string = TRS("Gain (in dB) to apply to the audio samples before it is sent to the visualization plugin"),
-    },
     { /* End of parameters */ }
   };
 
@@ -274,8 +264,6 @@ void bg_visualizer_set_parameter(void * priv, const char * name, const gavl_valu
   {
   bg_visualizer_t * v = priv;
 
-  //  fprintf(stderr, "bg_visualizer_set_parameter %s\n", name);
-  
   if(!name)
     {
     //    load_plugin(v, bg_multi_menu_get_selected_idx(&v->plugin_cfg));
@@ -309,10 +297,6 @@ void bg_visualizer_set_parameter(void * priv, const char * name, const gavl_valu
     v->vfmt_default.frame_duration = (int)((double)GAVL_TIME_SCALE / val->v.d + 0.5);
     
     }
-  else if(!strcmp(name, "gain"))
-    {
-    
-    }
    
   }
 
@@ -329,8 +313,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
           {
           gavl_audio_format_t last_fmt;
           int idx = gavl_msg_get_arg_int(msg, 0);
-          //          fprintf(stderr, "Change visualization %d\n", idx);
-      
+          
           /* Load another visualization */
           pthread_mutex_lock(&v->audio_mutex);
 
@@ -589,7 +572,7 @@ void bg_visualizer_start(bg_visualizer_t * vis, bg_ov_t * ov)
 
 void bg_visualizer_stop(bg_visualizer_t * vis)
   {
-  fprintf(stderr, "bg_visualizer_stop %p %p\n", vis, vis->msink);
+  //  fprintf(stderr, "bg_visualizer_stop %p %p\n", vis, vis->msink);
 
   if(vis->flags & FLAG_RUNNING)
     {
@@ -818,12 +801,22 @@ void bg_visualizer_update(bg_visualizer_t * v, gavl_audio_frame_t * frame)
   gavl_audio_sink_put_frame(v->asink_ext, frame);
   }
 
-void bg_visualizer_set_plugin(bg_visualizer_t * v, int plugin)
+void bg_visualizer_set_plugin_by_index(bg_visualizer_t * v, int plugin)
   {
   gavl_msg_t * msg = bg_msg_sink_get(v->msink);
 
   gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_SET_PLUGIN, BG_MSG_NS_VISUALIZER);
   gavl_msg_set_arg_int(msg, 0, plugin);
+  bg_msg_sink_put(v->msink);
+  }
+
+void bg_visualizer_set_plugin_by_string(bg_visualizer_t * v, const char * str)
+  {
+  gavl_msg_t * msg = bg_msg_sink_get(v->msink);
+
+  gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_SET_PLUGIN, BG_MSG_NS_VISUALIZER);
+  gavl_msg_set_arg_int(msg, 0, -1);
+  gavl_msg_set_arg_string(msg, 1, str);
   bg_msg_sink_put(v->msink);
   }
   

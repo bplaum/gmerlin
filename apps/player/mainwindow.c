@@ -784,20 +784,18 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
         {
         case BG_CMD_SET_BACKEND:
           {
-          int type;
+          const char * klass;
           const char * uri;
           gavl_dictionary_t dev;
           gavl_dictionary_init(&dev);
           bg_msg_get_backend_info(msg, &dev);
           //        fprintf(stderr, "gmerlin_set_backend\n");
           
-          if(gavl_dictionary_get_int(&dev, BG_BACKEND_TYPE, &type) &&
-             (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
+          if((klass = gavl_dictionary_get_string(&dev, GAVL_META_MEDIA_CLASS)) &&
+              (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
             {
-            switch(type)
+            if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
               {
-              case BG_BACKEND_MEDIASERVER:
-
                 gmerlin_disconnect_mdb(w->g);
                 w->g->mdb_ctrl = NULL;
 
@@ -825,43 +823,40 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
 
                 if(w->g->mdb_backend)
                   bg_backend_handle_start(w->g->mdb_backend);
-
-                break;
-              case BG_BACKEND_RENDERER:
-
-                gmerlin_disconnect_player(w->g);
-                w->g->player_ctrl = NULL;
+              }
+            else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+              {
+              gmerlin_disconnect_player(w->g);
+              w->g->player_ctrl = NULL;
                 
-                if(w->g->player_backend)
-                  {
-                  bg_backend_handle_destroy(w->g->player_backend);
-                  w->g->player_backend = NULL;
-                  }
+              if(w->g->player_backend)
+                {
+                bg_backend_handle_destroy(w->g->player_backend);
+                w->g->player_backend = NULL;
+                }
                 
-                if(!strcmp(uri, "local"))
-                  w->g->player_ctrl = bg_player_get_controllable(w->g->player);
+              if(!strcmp(uri, "local"))
+                w->g->player_ctrl = bg_player_get_controllable(w->g->player);
+              else
+                {
+                char * tmp_string = bg_sprintf("%s/backend/renderer/",
+                                               bg_http_server_get_root_url(w->g->srv));
+                if((w->g->player_backend = bg_backend_handle_create(&dev, tmp_string)))
+                  w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
                 else
                   {
-                  char * tmp_string = bg_sprintf("%s/backend/renderer/",
-                                                 bg_http_server_get_root_url(w->g->srv));
-                  if((w->g->player_backend = bg_backend_handle_create(&dev, tmp_string)))
-                    w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
-                  else
-                    {
-                    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
-                    break;
-                    }
-                  
-                  free(tmp_string);
+                  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
+                  break;
                   }
+                  
+                free(tmp_string);
+                }
                 
-                gmerlin_connect_player(w->g);
+              gmerlin_connect_player(w->g);
                 
-                if(w->g->player_backend)
-                  bg_backend_handle_start(w->g->player_backend);
-                
-                break;
-              }
+              if(w->g->player_backend)
+                bg_backend_handle_start(w->g->player_backend);
+              }  
             }
           
           //          gavl_dictionary_dump(&dev, 2);

@@ -859,13 +859,13 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   /* Backend menus */
 
   ret->player_backend_menu =
-    bg_gtk_backend_menu_create(BG_BACKEND_RENDERER,
+    bg_gtk_backend_menu_create(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER,
                                1,
                                /* Will send BG_MSG_SET_BACKEND events */
                                gmerlin->mainwin.player_ctrl.evt_sink);
   
   ret->mdb_backend_menu =
-    bg_gtk_backend_menu_create(BG_BACKEND_MEDIASERVER,
+    bg_gtk_backend_menu_create(GAVL_META_MEDIA_CLASS_BACKEND_SERVER,
                                1,
                                /* Will send BG_MSG_SET_BACKEND events */
                                gmerlin->mainwin.player_ctrl.evt_sink);

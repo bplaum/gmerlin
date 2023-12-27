@@ -493,7 +493,7 @@ gavl_array_t * bg_get_recording_devices(int timeout)
   gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
   gavl_array_t * ret = gavl_array_create();
 
-  //  gavl_timer_start(timer);
+  gavl_timer_start(timer);
   
   reg = bg_recording_device_registry_create();
 

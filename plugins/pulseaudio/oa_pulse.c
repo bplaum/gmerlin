@@ -28,11 +28,11 @@
 static gavl_sink_status_t
 write_func_pulse(void * p, gavl_audio_frame_t * f)
   {
-  bg_pa_recorder_t * priv;
+  bg_pa_output_t * priv;
   int error;
   priv = p;
 
-  //  fprintf(stderr, "write frame pulse %d %d\n", f->valid_samples, priv->block_align);
+  //  fprintf(stderr, "write frame pulse %d\n", f->valid_samples);
   
   pa_simple_write(priv->com.pa,
                   f->samples.u_8,
@@ -45,8 +45,8 @@ static int open_pulse(void * data,
                       gavl_audio_format_t * format)
   {
   bg_pa_output_t * priv;
-  const char * server;
-  const char * dev;
+  char * server;
+  char * dev;
   priv = data;
 
   server = priv->server;
@@ -59,7 +59,7 @@ static int open_pulse(void * data,
   
   gavl_audio_format_copy(&priv->com.format, format);
   
-  if(!bg_pa_open(&priv->com, NULL, NULL, 0))
+  if(!bg_pa_open(&priv->com, server, dev, 0))
     return 0;
   
   gavl_audio_format_copy(format, &priv->com.format);
@@ -83,7 +83,7 @@ static void stop_pulse(void * p)
 static void close_pulse(void * p)
   {
   bg_pa_output_t * priv = p;
-  bg_pa_cleanup_common(&priv->com);
+  bg_pa_close_common(&priv->com);
   
   if(priv->sink)
     {
@@ -165,10 +165,9 @@ static void set_parameter_pulse(void * priv, const char * name, const gavl_value
     {
     p->server = gavl_strrep(p->server, val->v.str);
     }
-
-  if(!strcmp(name, "sink"))
+  else if(!strcmp(name, "sink"))
     {
-    
+    p->dev = gavl_strrep(p->dev, val->v.str);
     }
   }
 

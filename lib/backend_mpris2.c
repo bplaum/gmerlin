@@ -1349,7 +1349,7 @@ const bg_remote_dev_backend_t bg_remote_dev_backend_mpris2_player =
   {
     .name = "mpris2 player",
     .uri_prefix = BG_DBUS_MPRIS_URI_SCHEME"://",
-    .type = BG_BACKEND_RENDERER,
+    .klass = GAVL_META_MEDIA_CLASS_BACKEND_RENDERER,
     
     .handle_msg = handle_msg_mpris2,
     .ping    = ping_mpris2,

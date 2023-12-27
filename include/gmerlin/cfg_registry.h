@@ -288,7 +288,6 @@ const char * bg_cfg_section_get_name(bg_cfg_section_t * section);
 #define bg_cfg_section_set_parameter_string(s,n,v) gavl_dictionary_set_string(s,n,v)
 #define bg_cfg_section_set_parameter_time(s,n,v)   gavl_dictionary_set_long(s,n,v)
 
-
 /*
  *  Get/Set values
  */
@@ -306,6 +305,11 @@ const char * bg_cfg_section_get_name(bg_cfg_section_t * section);
 void bg_cfg_section_set_parameter(bg_cfg_section_t * section,
                                   const bg_parameter_info_t * info,
                                   const gavl_value_t * value);
+
+void bg_cfg_section_set_parameter_func(void * data,
+                                       const char * name,
+                                       const gavl_value_t * value);
+
 
 /** \ingroup cfg_section
  *  \brief Set values from an option string

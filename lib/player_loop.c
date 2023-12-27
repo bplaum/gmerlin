@@ -512,7 +512,6 @@ static void stop_cmd(bg_player_t * player, int new_state)
     gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
     bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val);
     }
-  
   }
 
 
@@ -1307,6 +1306,10 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
               stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
               break;
             }
+          /* Check whether to quit */
+          if(player->empty_mode == BG_PLAYER_EMPTY_QUIT)
+            bg_player_set_status(player, BG_PLAYER_STATUS_QUIT);
+          
           }
           break;
         case BG_PLAYER_CMD_SET_ERROR:
@@ -1341,6 +1344,29 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
         case BG_PLAYER_MSG_ACCEL:
           bg_player_accel_pressed(&player->ctrl, gavl_msg_get_arg_int(command, 0));
           break;
+        case BG_PLAYER_CMD_SET_VISUALIZATION:
+          {
+          int state = bg_player_get_status(player);
+          const char * str = gavl_msg_get_arg_string_c(command, 0);
+
+          
+          
+          if(state == BG_PLAYER_STATUS_PLAYING)
+            {
+            bg_player_stream_change_init(player);
+            }
+          
+          player->visualization_mode = bg_plugin_get_index(str,
+                                                           BG_PLUGIN_VISUALIZATION, 0);
+          bg_visualizer_set_plugin_by_index(player->visualizer, player->visualization_mode);
+          
+          if(state == BG_PLAYER_STATUS_PLAYING)
+            {
+            bg_player_stream_change_done(player);
+            }
+          
+          }
+          break;
         case BG_PLAYER_CMD_NEXT_VISUALIZATION:
           {
           int max_visualization;
@@ -1363,7 +1389,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             }
           else if(player->visualization_mode == 0)
             {
-            bg_visualizer_set_plugin(player->visualizer, player->visualization_mode);
+            bg_visualizer_set_plugin_by_index(player->visualizer, player->visualization_mode);
             /* Switch on */
             bg_player_stream_change_init(player);
             bg_player_stream_change_done(player);
@@ -1371,7 +1397,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           else
             {
             /* Change mode */
-            bg_visualizer_set_plugin(player->visualizer, player->visualization_mode);
+            bg_visualizer_set_plugin_by_index(player->visualizer, player->visualization_mode);
             }
           }
           

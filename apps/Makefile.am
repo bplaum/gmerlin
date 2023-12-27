@@ -22,7 +22,6 @@ cmdlineplayer \
 cmdlinerecorder \
 mdb-tool \
 mediainfo \
-playerproxy \
 remote \
 renderer \
 server \

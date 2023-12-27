@@ -311,6 +311,11 @@ const bg_plugin_info_t *
 bg_plugin_find_by_index(int index,
                         uint32_t type_mask, uint32_t flag_mask);
 
+int
+bg_plugin_get_index(const char * name,
+                    uint32_t type_mask, uint32_t flag_mask);
+
+
 /** \ingroup plugin_registry
  *  \brief Find a plugin by it's unique short name
  *  \param reg A plugin registry
