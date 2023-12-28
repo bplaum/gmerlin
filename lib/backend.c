@@ -68,23 +68,6 @@ remote_dev_backends[] =
     NULL,
   };
 
-#if 0
-void bg_msg_set_backend_info(gavl_msg_t * msg,
-                             uint32_t id, 
-                             const gavl_dictionary_t * info)
-  {
-  gavl_msg_set_id_ns(msg, id, BG_MSG_NS_BACKEND);
-  gavl_msg_set_arg_dictionary(msg, 0, info);
-  }
-
-void bg_msg_get_backend_info(gavl_msg_t * msg,
-                             gavl_dictionary_t * info)
-  {
-  gavl_msg_get_arg_dictionary(msg, 0, info);
-  }
-#endif
-
-
 /* remote device livecycle */
 
 int bg_backend_needs_http(const char * uri)

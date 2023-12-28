@@ -17,8 +17,7 @@ cfgtest \
 mdb-tree \
 question \
 message \
-chapter \
-vumeter
+chapter
 else
 gtk_programs =
 endif
@@ -146,8 +145,6 @@ mdb_tree_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 chapter_SOURCES = chapter.c
 chapter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
-vumeter_SOURCES = vumeter.c
-vumeter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 # visualization_SOURCES = visualization.c
 # visualization_LDADD = ../lib/libgmerlin.la

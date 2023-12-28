@@ -2280,7 +2280,7 @@ function cfg_info_set_devices(info)
     {
 //    console.log("device type " + dict_get_string(devices[i].v, "type"));
 	
-    if(dict_get_int(devices[i].v, "Type") != 2)
+    if(dict_get_string(devices[i].v, GAVL_META_MEDIA_CLASS) != GAVL_META_MEDIA_CLASS_BACKEND_RENDERER)
       continue;
 
     if(!(uri = dict_get_string(devices[i].v, "proxy")))
@@ -5159,7 +5159,7 @@ function global_init()
 
   widgets.logviewer     = create_log_viewer();
 
-  server_uri = "ws://" +  window.location.host + "/ws/server";
+  server_uri = "ws://" +  window.location.host + "/ws/" + GAVL_META_MEDIA_CLASS_BACKEND_SERVER;
   server_connection_init();
     
   widgets.browser   = create_browser();

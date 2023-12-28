@@ -19,7 +19,6 @@ endif
 
 SUBDIRS = $(player_subdirs) \
 cmdlineplayer \
-cmdlinerecorder \
 mdb-tool \
 mediainfo \
 remote \

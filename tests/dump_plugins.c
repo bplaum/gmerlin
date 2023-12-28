@@ -43,8 +43,6 @@ plugin_types[] =
     { BG_PLUGIN_INPUT, "Media input", "plugin_i" },
     { BG_PLUGIN_OUTPUT_AUDIO, "Audio output", "plugin_oa" },
     { BG_PLUGIN_OUTPUT_VIDEO, "Video output", "plugin_ov"  },
-    { BG_PLUGIN_RECORDER_AUDIO, "Audio recorder", "plugin_ra"  },
-    { BG_PLUGIN_RECORDER_VIDEO, "Video recorder", "plugin_rv"  },
     { BG_PLUGIN_ENCODER_AUDIO, "Encoders for audio", "plugin_ea"  },
     { BG_PLUGIN_ENCODER_VIDEO, "Encoders for video", "plugin_ev"  },
     { BG_PLUGIN_ENCODER_TEXT, "Encoders for text subtitles", "plugin_est"  },

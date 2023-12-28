@@ -39,7 +39,6 @@ type_names[] =
     { "Input",                   BG_PLUGIN_INPUT },
     { "OutputAudio",             BG_PLUGIN_OUTPUT_AUDIO },
     { "OutputVideo",             BG_PLUGIN_OUTPUT_VIDEO     },
-    { "AudioRecorder",           BG_PLUGIN_RECORDER_AUDIO   },
     { "VideoRecorder",           BG_PLUGIN_RECORDER_VIDEO   },
     { "EncoderAudio",            BG_PLUGIN_ENCODER_AUDIO    },
     { "EncoderVideo",            BG_PLUGIN_ENCODER_VIDEO    },

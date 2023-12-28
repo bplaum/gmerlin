@@ -105,7 +105,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 37
+#define BG_PLUGIN_API_VERSION 38
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -146,7 +146,7 @@ typedef enum
     BG_PLUGIN_INPUT                      = (1<<0), //!< Media input
     BG_PLUGIN_OUTPUT_AUDIO               = (1<<1), //!< Audio output
     BG_PLUGIN_OUTPUT_VIDEO               = (1<<2), //!< Video output
-    BG_PLUGIN_RECORDER_AUDIO             = (1<<3), //!< Audio recorder
+    //    BG_PLUGIN_RECORDER_AUDIO             = (1<<3), //!< Audio recorder
     BG_PLUGIN_RECORDER_VIDEO             = (1<<4), //!< Video recorder
     BG_PLUGIN_ENCODER_AUDIO              = (1<<5), //!< Encoder for audio only
     BG_PLUGIN_ENCODER_VIDEO              = (1<<6), //!< Encoder for video only
@@ -163,6 +163,9 @@ typedef enum
     BG_PLUGIN_DECOMPRESSOR_AUDIO         = (1<<18),  //!< Audio decompressor
     BG_PLUGIN_DECOMPRESSOR_VIDEO         = (1<<19),  //!< Video decompressor
 
+    BG_PLUGIN_BACKEND_SERVER             = (1<<20),  //!< 
+    BG_PLUGIN_BACKEND_RENDERER           = (1<<21),  //!< 
+    BG_PLUGIN_RESOURCE_DETECTOR          = (1<<22),  //!< 
   } bg_plugin_type_t;
 
 /** \ingroup plugin
@@ -1435,6 +1438,39 @@ struct bg_visualization_plugin_s
   void (*close)(void * priv);
   
   };
+
+/*
+ *  Generic plugin for external or iternal modules, which communicate
+ *  entirely via the controllable
+ */
+
+typedef struct 
+  {
+  bg_plugin_common_t common; //!< Infos and functions common to all plugin types
+
+  /* Update the internal state, send messages. A zero return value incicates that
+     nothing important happened and the client can savely sleep (e.g. for some 10s of
+     milliseconds) before calling this function again. */
+  
+  int (*update)(void * priv);
+  
+  } bg_controllable_plugin_t;
+
+typedef struct 
+  {
+  bg_plugin_common_t common; //!< Infos and functions common to all plugin types
+
+  /* Update the internal state, send messages. A zero return value incicates that
+     nothing important happened and the client can savely sleep (e.g. for some 10s of
+     milliseconds) before calling this function again. */
+  
+  int (*update)(void * priv);
+
+  int (*open)(void * priv, const char * addr);
+  
+  } bg_backend_plugin_t;
+
+
 
 /** \ingroup plugin_codec
  *  \brief typedef for codec plugin

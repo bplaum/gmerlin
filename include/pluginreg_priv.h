@@ -40,10 +40,4 @@ void bg_plugin_info_destroy(bg_plugin_info_t * info);
 bg_plugin_info_t * bg_edldec_get_info();
 bg_plugin_info_t * bg_multi_input_get_info();
 
-
-#define bg_recorder_input_name "i_recorder"
-bg_plugin_info_t *        bg_recorder_input_info(void);
-const bg_plugin_common_t* bg_recorder_input_get(void);
-void *                    bg_recorder_input_create(void);
-
 #endif // PLUGINREG_PRIV_H_INCLUDED

@@ -126,12 +126,6 @@ meta_plugins[] =
       bg_ovl2text_get,
       bg_ovl2text_create,
     },
-    {
-      bg_recorder_input_name,
-      bg_recorder_input_info,
-      bg_recorder_input_get,
-      bg_recorder_input_create,
-    },
     { /* End */ }
   };
 
