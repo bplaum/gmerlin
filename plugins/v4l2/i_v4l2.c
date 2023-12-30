@@ -31,7 +31,7 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/frametimer.h>
 
-#include "v4l2_common.h"
+// #include "v4l2_common.h"
 
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "i_v4l2"

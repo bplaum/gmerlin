@@ -893,6 +893,7 @@ lib/gtk/Makefile \
 lib/upnp/Makefile \
 lib/x11/Makefile \
 plugins/Makefile \
+plugins/resources/Makefile \
 plugins/alsa/Makefile \
 plugins/audiofilters/Makefile \
 plugins/x11/Makefile \

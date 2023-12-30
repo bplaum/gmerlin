@@ -206,6 +206,7 @@ pluginregistry.c \
 pluginreg_xml.c \
 preset.c \
 preset_xml.c \
+resourcemanager.c \
 recordingdevice.c \
 ringbuffer.c \
 backend.c \

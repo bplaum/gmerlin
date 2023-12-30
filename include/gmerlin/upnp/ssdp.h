@@ -37,42 +37,6 @@ typedef gavl_dictionary_t bg_ssdp_service_t;
 typedef gavl_dictionary_t bg_ssdp_device_t;
 typedef gavl_dictionary_t bg_ssdp_root_device_t;
 
-// BG_MSG_NS_SSDP
-
-/*
- * ARGS (for both)
- *
- * arg0: type     (string)
- * arg1: version  (int)
- * arg2: desc_url (string)
- * arg3: uuid     (string)
- */
-
-#if 0
-#define BG_SSDP_MSG_ADD_DEVICE 1
-#define BG_SSDP_MSG_DEL_DEVICE 2
-
-void bg_ssdp_msg_set_add(gavl_msg_t * msg,
-                         const char * protocol,
-                         const char * type,
-                         int version,
-                         const char * desc_url);
-
-void bg_ssdp_msg_get_add(const gavl_msg_t * msg,
-                         const char ** protocol,
-                         const char ** type,
-                         int * version,
-                         const char ** desc_url);
-
-void bg_ssdp_msg_set_del(gavl_msg_t * msg,
-                         const char * desc_url);
-
-void bg_ssdp_msg_get_del(gavl_msg_t * msg,
-                         const char ** desc_url);
-#endif
-
-
-
 bg_ssdp_device_t *
 bg_ssdp_device_add_device(bg_ssdp_root_device_t*, const char * uuid);
 

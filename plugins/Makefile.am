@@ -63,6 +63,7 @@ SUBDIRS = \
 audiofilters \
 edl \
 gavl \
+resources \
 videofilters \
 visualization \
 $(alsa_subdirs) \

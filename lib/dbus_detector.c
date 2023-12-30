@@ -422,7 +422,7 @@ static void detector_init_dbus(bg_dbus_detector_t * ret)
     
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Found avahi daemon at %s", ret->avahi_addr);
     
-    /* Create browser for mpd */    
+    /* Create browser for mpd */
     req = dbus_message_new_method_call(ret->avahi_addr, "/", "org.freedesktop.Avahi.Server",
                                        "ServiceBrowserNew");
     

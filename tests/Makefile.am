@@ -39,6 +39,7 @@ ladspa \
 makethumbnail \
 msgiotest \
 recordingdevices \
+resource \
 ssdp \
 sqlextract \
 upnpdesc \
@@ -154,6 +155,9 @@ question_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
 message_SOURCES = message.c
 message_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
+
+resource_SOURCES = resource.c
+resource_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
 server_SOURCES = server.c
 server_LDADD = ../lib/libgmerlin.la
