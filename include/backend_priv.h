@@ -122,7 +122,6 @@ gavl_dictionary_t * bg_backend_by_str(const char * key, const char * label, int 
 void bg_backend_add_remote(const gavl_dictionary_t * b);
 void bg_backend_del_remote(const char * uri);
 
-void bg_set_backend_id(gavl_dictionary_t * dict);
 
 
 #endif // BACKEND_PRIV_H_INCLUDED

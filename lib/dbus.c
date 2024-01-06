@@ -42,31 +42,6 @@
 
 #define BG_DBUS_META_INTROSPECT "$INTROSPECT"
 
-/* Backtrace stuff */
-
-#if 0
-#include <execinfo.h>
-
-void
-print_trace(void)
-  {
-  void *array[50];
-  size_t size;
-  char **strings;
-  size_t i;
-
-  size = backtrace(array, 50);
-  strings = backtrace_symbols(array, size);
-
-  fprintf(stderr, "Obtained %zd stack frames.\n", size);
-  
-  for (i = 0; i < size; i++)
-    fprintf(stderr, "%s\n", strings[i]);
-
-  free (strings);
-  }
-#endif
-
 /* */
 
 
@@ -282,13 +257,18 @@ static int dbus_iter_to_val(DBusMessageIter * iter, gavl_value_t * val)
         if(memchr(buf.buf, 0x00, buf.len) == (buf.buf + (buf.len-1)))
           gavl_value_set_string(val, (const char*)buf.buf);
         else
-          fprintf(stderr, "Invalid byte buffer\n");
-        
+          {
+          //          fprintf(stderr, "Invalid byte buffer\n");
+          //          gavl_hexdump(buf.buf, buf.len, 16);
+          gavl_value_set_string_nocopy(val, gavl_strndup((const char*)buf.buf, (const char*)(buf.buf + buf.len))); 
+          }
         gavl_buffer_free(&buf);
         }
       else
         {
         gavl_array_t * arr = NULL;
+
+        //        fprintf(stderr, "sub_type \n");
         
         arr = gavl_value_set_array(val);
 
@@ -298,8 +278,13 @@ static int dbus_iter_to_val(DBusMessageIter * iter, gavl_value_t * val)
           gavl_value_init(&subvalue);
           dbus_iter_to_val(&sub, &subvalue);
           gavl_array_splice_val_nocopy(arr, -1, 0, &subvalue);
+
+          //          fprintf(stderr, "Add to array:\n");
+          //          gavl_value_dump(&subvalue, 2);
+          
           dbus_message_iter_next(&sub);
           }
+        
         }
       
       }

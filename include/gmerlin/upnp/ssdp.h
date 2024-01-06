@@ -37,6 +37,7 @@ typedef gavl_dictionary_t bg_ssdp_service_t;
 typedef gavl_dictionary_t bg_ssdp_device_t;
 typedef gavl_dictionary_t bg_ssdp_root_device_t;
 
+
 bg_ssdp_device_t *
 bg_ssdp_device_add_device(bg_ssdp_root_device_t*, const char * uuid);
 

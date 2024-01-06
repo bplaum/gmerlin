@@ -131,6 +131,8 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret);
 void bg_backend_register_local(const gavl_dictionary_t * dev);
 
 char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1]);
+void bg_set_backend_id(gavl_dictionary_t * dict);
+
 
 #endif //  BG_REMOTEDEV_H_INCLUDED
 

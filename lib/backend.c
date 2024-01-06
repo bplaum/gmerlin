@@ -278,7 +278,7 @@ char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1])
   {
   char * str;
   char hostname[HOST_NAME_MAX+1];
-
+  
   gethostname(hostname, HOST_NAME_MAX+1);
   /* The unique ID of a backend is: md5 of hostname-pid-type */
   
@@ -296,6 +296,8 @@ void bg_set_backend_id(gavl_dictionary_t * dict)
   char id[BG_BACKEND_ID_LEN+1];
 
   klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
+  if(!gavl_string_starts_with(klass, "backend"))
+    return;
   
   bg_make_backend_id(klass, id);
   

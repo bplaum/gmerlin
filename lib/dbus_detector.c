@@ -95,9 +95,9 @@ static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name
         gavl_dictionary_set_string(&info, GAVL_META_ID, pos+1);
       }
     
-    real_name = bg_sprintf("%s%s", MPRIS2_NAME_PREFIX, name);
+    real_name = gavl_sprintf("%s%s", MPRIS2_NAME_PREFIX, name);
 
-    uri = bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, real_name + MPRIS2_NAME_PREFIX_LEN);
+    uri = gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, real_name + MPRIS2_NAME_PREFIX_LEN);
 
     if(!bg_backend_by_str(GAVL_META_URI, uri, 1, NULL))
       {
@@ -108,7 +108,7 @@ static void add_dev(bg_dbus_detector_t * d, const char * addr, const char * name
         }
           
       gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI,
-                                        bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name));
+                                        gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name));
       
       str = bg_dbus_get_string_property(d->session_conn,
                                         addr,
@@ -216,7 +216,7 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
 
             if(gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
               {
-              addr = bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name + MPRIS2_NAME_PREFIX_LEN);
+              addr = gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name + MPRIS2_NAME_PREFIX_LEN);
               del_dev(d, addr);
               free(addr);
               }
@@ -291,10 +291,10 @@ static int msg_callback_detector(void * priv, gavl_msg_t * msg)
             switch(protocol)
               {
               case AVAHI_PROTO_INET: // IPV4
-                uri = bg_sprintf("%s://%s:%d", BG_MPD_URI_SCHEME, addr, port);
+                uri = gavl_sprintf("%s://%s:%d", BG_MPD_URI_SCHEME, addr, port);
                 break;
               case AVAHI_PROTO_INET6: // IPV6
-                uri = bg_sprintf("%s://[%s]:%d", BG_MPD_URI_SCHEME, addr, port);
+                uri = gavl_sprintf("%s://[%s]:%d", BG_MPD_URI_SCHEME, addr, port);
                 break;
               }
             
@@ -439,20 +439,20 @@ static void detector_init_dbus(bg_dbus_detector_t * ret)
     if((var = gavl_msg_get_arg_string_c(res, 0)))
       {
       char * rule;
-      char * rule_common = bg_sprintf("sender='%s',type='signal',path='%s',interface='org.freedesktop.Avahi.ServiceBrowser'",
+      char * rule_common = gavl_sprintf("sender='%s',type='signal',path='%s',interface='org.freedesktop.Avahi.ServiceBrowser'",
                                       ret->avahi_addr, var);
       
       ret->mpd_browser = gavl_strdup(var);
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created MPD service browser %s", ret->mpd_browser);
       
-      rule = bg_sprintf("%s,member='ItemNew'", rule_common);
+      rule = gavl_sprintf("%s,member='ItemNew'", rule_common);
       bg_dbus_connection_add_listener(ret->system_conn,
                                       rule,
                                       ret->dbus_sink,
                                       BG_MSG_NS_PRIVATE, MSG_ID_AVAHI_SERVICE_ADDED);
       free(rule);
 
-      rule = bg_sprintf("%s,member='ItemRemove'", rule_common);
+      rule = gavl_sprintf("%s,member='ItemRemove'", rule_common);
       bg_dbus_connection_add_listener(ret->system_conn,
                                       rule,
                                       ret->dbus_sink,

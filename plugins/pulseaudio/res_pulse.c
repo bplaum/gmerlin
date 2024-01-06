@@ -278,10 +278,15 @@ static void destroy_pulse(void * priv)
 
   if(reg->pa_op)
     pa_operation_unref(reg->pa_op);
-  
-  pa_context_disconnect(reg->pa_ctx);
-  pa_context_unref(reg->pa_ctx);
-  pa_mainloop_free(reg->pa_ml);
+
+  if(reg->pa_ctx)
+    {
+    pa_context_disconnect(reg->pa_ctx);
+    pa_context_unref(reg->pa_ctx);
+    }
+  if(reg->pa_ml)
+    pa_mainloop_free(reg->pa_ml);
+
   bg_controllable_cleanup(&reg->ctrl);
   
   free(reg);
