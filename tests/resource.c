@@ -19,6 +19,7 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           gavl_msg_get_arg_dictionary_c(msg, 0, &dict);
           fprintf(stderr, "** Resource added: %s\n", id);
+          // fprintf(stderr, "%s\n", gavl_dictionary_get_string(&dict, GAVL_META_URI));
           gavl_dictionary_dump(&dict, 2);
           fprintf(stderr, "\n");
           gavl_dictionary_free(&dict);
@@ -77,6 +78,9 @@ int main(int argc, char ** argv)
   bg_resourcemanager_unpublish(gavl_dictionary_get_string(&local_res, GAVL_META_URI));
 
   gavl_time_delay(&t1);
+  
+  bg_msg_hub_disconnect_sink(ctrl->evt_hub, sink);
+  bg_msg_sink_destroy(sink);
   
   }
 

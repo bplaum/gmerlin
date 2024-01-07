@@ -18,7 +18,6 @@ didl.c \
 event.c \
 eventlistener.c \
 soap.c \
-ssdp.c \
 upnputils.c
 
 

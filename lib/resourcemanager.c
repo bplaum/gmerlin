@@ -38,6 +38,9 @@ typedef struct
 static bg_resourcemanager_t * resman = NULL;
 static pthread_mutex_t resman_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static void forward_message(gavl_msg_t * msg);
+
+
 static int find_resource_idx_by_string(int local, const char * tag, const char * val)
   {
   int i;
@@ -65,17 +68,11 @@ static int find_resource_idx_by_string(int local, const char * tag, const char *
  *  This assumes, that we never have more than one backend of the same type within the same process.
  */
 
-static void set_backend_id(gavl_dictionary_t * dict)
+char * bg_make_backend_id(const char * klass)
   {
-  const char * klass;
-  char hostname[HOST_NAME_MAX+1];
-  char hash[GAVL_MD5_LENGTH];
-
   char * str;
-
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
-     !gavl_string_starts_with(klass, "backend"))
-    return;
+  char hostname[HOST_NAME_MAX+1];
+  char * hash = malloc(GAVL_MD5_LENGTH);
   
   gethostname(hostname, HOST_NAME_MAX+1);
   
@@ -83,8 +80,18 @@ static void set_backend_id(gavl_dictionary_t * dict)
   gavl_md5_buffer_str(str, strlen(str), hash);
   free(str);
   
-  gavl_dictionary_set_string(dict, GAVL_META_HASH, hash);
+  return hash;
+  }
+
+static void set_backend_id(gavl_dictionary_t * dict)
+  {
+  const char * klass;
   
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
+     !gavl_string_starts_with(klass, "backend"))
+    return;
+  
+  gavl_dictionary_set_string_nocopy(dict, GAVL_META_HASH, bg_make_backend_id(klass));
   }
 
 static void add(int local, gavl_dictionary_t * dict, const char * id)
@@ -104,9 +111,6 @@ static void add(int local, gavl_dictionary_t * dict, const char * id)
   gavl_dictionary_copy(dict_new, dict);
   gavl_dictionary_set_string(dict_new, GAVL_META_ID, id);
 
-  if(local)
-    set_backend_id(dict_new);
-
   if(!local)
     {
     gavl_msg_t * msg;
@@ -116,7 +120,18 @@ static void add(int local, gavl_dictionary_t * dict, const char * id)
     gavl_msg_set_arg_dictionary(msg, 0, dict_new);
     bg_msg_sink_put(resman->ctrl.evt_sink);
     }
-    
+  else
+    {
+    gavl_msg_t msg;
+    gavl_msg_init(&msg);
+    set_backend_id(dict_new);
+    gavl_msg_set_id_ns(&msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
+    gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, id);
+    gavl_msg_set_arg_dictionary(&msg, 0, dict_new);
+    forward_message(&msg);
+    gavl_msg_free(&msg);
+    }
+  
   gavl_array_splice_val_nocopy(arr, -1, 0, &val);
   }
 
@@ -184,8 +199,6 @@ static int handle_msg_external(void * data, gavl_msg_t * msg)
           gavl_msg_get_arg_dictionary_c(msg, 0, &dict);
           add(1, &dict, id);
           gavl_dictionary_free(&dict);
-
-          forward_message(msg);
           
           }
           break;
@@ -224,13 +237,10 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
           {
           const char * id;
           const char * hash;
+          const char * uri;
           gavl_dictionary_t dict;
 
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-
-          /* Ignore local resources */
-          if(find_resource_idx_by_string(1, GAVL_META_ID, id) >= 0)
-            return 1;
           
           /* Ignore already added resources */
           if(find_resource_idx_by_string(0, GAVL_META_ID, id) >= 0)
@@ -239,6 +249,12 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
           gavl_dictionary_init(&dict);
           gavl_msg_get_arg_dictionary(msg, 0, &dict);
 
+          if((uri = gavl_dictionary_get_string(&dict, GAVL_META_URI)) &&
+             (find_resource_idx_by_string(1, GAVL_META_URI, uri) >= 0))
+            {
+            gavl_dictionary_free(&dict);
+            return 1;
+            }
           /* Check for backends with the same ID */
           if((hash = gavl_dictionary_get_string(&dict, GAVL_META_HASH)))
             {
@@ -255,12 +271,18 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
                 {
                 if(prio > test_prio)
                   {
+                  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Replacing resource %s with %s",
+                           gavl_dictionary_get_string(test_dict, GAVL_META_URI),
+                           gavl_dictionary_get_string(&dict, GAVL_META_URI));
                   /* Replace entry */
                   del(0, idx);
                   }
                 else if(prio < test_prio)
                   {
                   /* Leave entry */
+                  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Not adding resource %s (%s is already there)",
+                           gavl_dictionary_get_string(&dict, GAVL_META_URI),
+                           gavl_dictionary_get_string(test_dict, GAVL_META_URI));
                   return 1;
                   }
                 
@@ -275,7 +297,7 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
           fprintf(stderr, "\n");
 #endif
           add(0, &dict, id);
-
+          gavl_dictionary_free(&dict);
           }
           break;
         case GAVL_MSG_RESOURCE_DELETED:
@@ -315,12 +337,17 @@ static void * thread_func(void * data)
 
   while(1)
     {
+    pthread_mutex_lock(&resman->mutex);
+    
     result = 0;
-
+    
     /* Handle external messages */
     if(!bg_msg_sink_iteration(resman->ctrl.cmd_sink))
+      {
+      pthread_mutex_unlock(&resman->mutex);
       break;
-
+      }
+    
     result += bg_msg_sink_get_num(resman->ctrl.cmd_sink);
     
     /* Update plugins */
@@ -369,6 +396,8 @@ static void * thread_func(void * data)
       else
         i++;
       }
+
+    pthread_mutex_unlock(&resman->mutex);
     
     if(!result) // idle
       gavl_time_delay(&delay_time);
@@ -415,7 +444,10 @@ static void bg_resourcemanager_init()
   
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loaded %d plugins", resman->num_plugins);
 
+  pthread_mutex_init(&resman->mutex, NULL);
+  
   pthread_create(&resman->th, NULL, thread_func, NULL);
+  
   
   }
 
@@ -489,6 +521,161 @@ gavl_dictionary_t * bg_resource_get_by_idx(int local, int idx)
   return gavl_value_get_dictionary_nc(&arr->entries[idx]);
   }
 
+int bg_resource_idx_for_label(const gavl_array_t * arr, const char * label, int off)
+  {
+  int i;
+  const char * test_label;
+  const gavl_dictionary_t * test_dict;
+  
+  if(!(arr->num_entries - off))
+    return off;
+
+  for(i = off; i < arr->num_entries; i++)
+    {
+    if(!(test_dict = gavl_value_get_dictionary(&arr->entries[i])) ||
+       !(test_label = gavl_dictionary_get_string(test_dict, GAVL_META_LABEL)))
+      continue;
+
+    if(strcoll(label, test_label) < 0)
+      return i;
+    
+    }
+  return arr->num_entries;
+  }
+
+static int compare_func(const void * val1, const void * val2, void * priv)
+  {
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+
+  const char * str1;
+  const char * str2;
+
+  if(!(dict1 = gavl_value_get_dictionary(val1)) ||
+     !(dict2 = gavl_value_get_dictionary(val2)))
+    return 0;
+
+  if(!(str1 = gavl_dictionary_get_string(dict1, GAVL_META_LABEL)) ||
+     !(str2 = gavl_dictionary_get_string(dict2, GAVL_META_LABEL)))
+    return 0;
+
+  if(!strcmp(str1, str2))
+    {
+
+    if(!(str1 = gavl_dictionary_get_string(dict1, GAVL_META_URI)) ||
+       !(str2 = gavl_dictionary_get_string(dict2, GAVL_META_URI)))
+      return 0;
+    }
+  
+  return strcmp(str1, str2);
+  }
+
+void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t timeout, gavl_array_t * arr)
+  {
+  int i;
+  const gavl_dictionary_t  * test_dict;
+  const char  * test_klass;
+
+  gavl_time_delay(&timeout);
+  
+  pthread_mutex_lock(&resman->mutex);
+
+  for(i = 0; i < resman->remote.num_entries; i++)
+    {
+    if((test_dict = gavl_value_get_dictionary(&resman->remote.entries[i])) &&
+       (test_klass = gavl_dictionary_get_string(test_dict, GAVL_META_MEDIA_CLASS)))
+      {
+      if(full_match)
+        {
+        if(!strcmp(test_klass, klass))
+          gavl_array_splice_val(arr, -1, 0, &resman->remote.entries[i]);
+        }
+      else
+        {
+        if(gavl_string_starts_with(test_klass, klass))
+          gavl_array_splice_val(arr, -1, 0, &resman->remote.entries[i]);
+        }
+      }
+    }
+  
+  pthread_mutex_unlock(&resman->mutex);
+  gavl_array_sort(arr, compare_func, NULL);
+  
+  }
+
+
+void bg_resource_get_by_protocol(const char * protocol, int full_match, gavl_time_t timeout, gavl_array_t * arr)
+  {
+  int i;
+  const gavl_dictionary_t  * test_dict;
+  const char  * test_uri;
+
+  gavl_time_delay(&timeout);
+  
+  pthread_mutex_lock(&resman->mutex);
+
+  for(i = 0; i < resman->remote.num_entries; i++)
+    {
+    if((test_dict = gavl_value_get_dictionary(&resman->remote.entries[i])) &&
+       (test_uri = gavl_dictionary_get_string(test_dict, GAVL_META_MEDIA_CLASS)))
+      {
+      char *test_protocol = NULL;
+      if(gavl_url_split(test_uri, &test_protocol, NULL, NULL, NULL, NULL, NULL))
+        {
+        if(full_match)
+          {
+          if(!strcmp(test_protocol, protocol))
+            gavl_array_splice_val(arr, -1, 0, &resman->remote.entries[i]);
+          }
+        else
+          {
+          if(gavl_string_starts_with(test_protocol, protocol))
+            gavl_array_splice_val(arr, -1, 0, &resman->remote.entries[i]);
+          }
+        }
+      if(test_protocol)
+        free(test_protocol);
+      
+      }
+    }
+  
+  pthread_mutex_unlock(&resman->mutex);
+
+  gavl_array_sort(arr, compare_func, NULL);
+  
+  }
+
+static void list_resource_array(gavl_array_t * arr)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])))
+      {
+      printf("# %s", gavl_dictionary_get_string(dict, GAVL_META_LABEL));
+      printf("%s", gavl_dictionary_get_string(dict, GAVL_META_URI));
+      }
+    }
+  }
+
+void bg_resource_list_by_class(const char * klass, int full_match, gavl_time_t timeout)
+  {
+  gavl_array_t arr;
+  gavl_array_init(&arr);
+  bg_resource_get_by_class(klass, full_match, timeout, &arr);
+  list_resource_array(&arr);
+  gavl_array_free(&arr);
+  }
+  
+void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_time_t timeout)
+  {
+  gavl_array_t arr;
+  gavl_array_init(&arr);
+  bg_resource_get_by_protocol(protocol, full_match, timeout, &arr);
+  list_resource_array(&arr);
+  gavl_array_free(&arr);
+  }
 
 #if defined(__GNUC__)
 
@@ -517,11 +704,18 @@ static void cleanup_resources()
       if(resman->plugins[i].h)
         bg_plugin_unref(resman->plugins[i].h);
       }
+
+    if(resman->plugins)
+      free(resman->plugins);
     
     gavl_array_free(&resman->local);
     gavl_array_free(&resman->remote);
     bg_controllable_cleanup(&resman->ctrl);
-        
+
+    bg_msg_sink_destroy(resman->plugin_sink);
+
+    pthread_mutex_destroy(&resman->mutex);
+    
     free(resman);
     }
   }

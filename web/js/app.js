@@ -479,7 +479,7 @@ function server_connection_init()
                     if(!old_var)
                       init_complete();
 		    break;
-	          case "remotedevs":
+	          case "renderers":
                     old_var = devices;
                     devices = make_device_array(msg.args[3].v);
                     if(!old_var)

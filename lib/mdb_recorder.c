@@ -32,7 +32,7 @@
 typedef struct
   {
   gavl_array_t devices;
-  bg_recording_device_registry_t * reg;
+  //  bg_recording_device_registry_t * reg;
   
   gavl_dictionary_t * root;
   
@@ -88,6 +88,7 @@ static void update_parent(bg_mdb_backend_t * b)
 
 static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   {
+  const char * klass;
   int idx;
   gavl_msg_t * evt;
   gavl_value_t new_val;
@@ -95,9 +96,16 @@ static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   gavl_dictionary_t * new_m;
   recorder_priv_t * priv = b->priv;
   
-  //  fprintf(stderr, "add_dev\n");
-  //  gavl_dictionary_dump(dev, 2);
-  //  fprintf(stderr, "\n");
+  fprintf(stderr, "add_dev\n");
+  gavl_dictionary_dump(dev, 2);
+  fprintf(stderr, "\n");
+
+  if(!(klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS)))
+    return;
+  
+  if(strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER) &&
+     strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER))
+    return;
   
   gavl_value_init(&new_val);
   new_dict = gavl_value_set_dictionary(&new_val);
@@ -259,17 +267,19 @@ static int handle_local_msg(void * data, gavl_msg_t * msg)
   return 1;
   }
 
+#if 0
 static int ping_func_recorder(bg_mdb_backend_t * b)
   {
   recorder_priv_t * priv = b->priv;
   return bg_recording_device_registry_update(priv->reg);
   }
+#endif
 
 static void destroy_func_recorder(bg_mdb_backend_t * b)
   {
   recorder_priv_t * priv = b->priv;
   gavl_array_free(&priv->devices);
-  bg_recording_device_registry_destroy(priv->reg);
+  //  bg_recording_device_registry_destroy(priv->reg);
   free(priv);
   }
 
@@ -280,18 +290,20 @@ void bg_mdb_create_recorder(bg_mdb_backend_t * b)
   priv = calloc(1, sizeof(*priv));
   b->priv = priv;
   b->destroy = destroy_func_recorder;
-  b->ping_func = ping_func_recorder;
+  //  b->ping_func = ping_func_recorder;
 
+  b->flags |= BE_FLAG_RESOURCES;
+  
   priv->root = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_RECORDERS);
   bg_mdb_container_set_backend(priv->root, MDB_BACKEND_RECORDER);
 
-  priv->reg = bg_recording_device_registry_create();
+  //  priv->reg = bg_recording_device_registry_create();
 
   bg_controllable_init(&b->ctrl,
                        bg_msg_sink_create(handle_local_msg, b, 0),
                        bg_msg_hub_create(1));
   
-  bg_msg_hub_connect_sink(bg_recording_device_registry_get_msg_hub(priv->reg),
-                          b->ctrl.cmd_sink);
+  //  bg_msg_hub_connect_sink(bg_recording_device_registry_get_msg_hub(priv->reg),
+  //                          b->ctrl.cmd_sink);
   
   } 

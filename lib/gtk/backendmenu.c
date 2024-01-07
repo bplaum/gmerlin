@@ -36,12 +36,12 @@
 
 #include <gmerlin/utils.h>
 #include <gmerlin/iconfont.h>
+#include <gmerlin/resourcemanager.h>
 
 
 struct bg_gtk_backend_menu_s
   {
   GtkWidget * menu;
-  gavl_array_t * entries;
   bg_msg_sink_t * sink;
   bg_msg_sink_t * evt_sink;
 
@@ -151,19 +151,27 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   const char * klass;
   const char * var;
   int self = 0;
+  int idx = -1;
   
-  char * markup = bg_sprintf("<span weight=\"bold\">%s</span>\n%s",
-                             gavl_dictionary_get_string(dict, GAVL_META_LABEL),
-                             gavl_dictionary_get_string(dict, GAVL_META_URI));
-
+  char * markup;
+  
   //  fprintf(stderr, "add_item:\n");
   //  gavl_dictionary_dump(dict, 2);
   
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
-       !gavl_string_starts_with(klass, m->klass) ||
-       (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
+     !gavl_string_starts_with(klass, m->klass) ||
+     (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
     return;
-     
+
+  markup = bg_sprintf("<span weight=\"bold\">%s</span>\n%s",
+                      gavl_dictionary_get_string(dict, GAVL_META_LABEL),
+                      gavl_dictionary_get_string(dict, GAVL_META_URI));
+
+  if((var = gavl_dictionary_get_string(dict, GAVL_META_LABEL)))
+    {
+    idx = bg_resource_idx_for_label(&m->devs, var, m->have_local);
+    }
+  
   if((var = gavl_dictionary_get_string_image_max(dict, GAVL_META_ICON_URL, 48, 48, NULL)))
     icon = gavl_strdup(var);
   else if((var = gavl_dictionary_get_string(dict, GAVL_META_ICON_NAME)))
@@ -206,13 +214,13 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
 
   g_object_set_data(G_OBJECT(item), GAVL_META_ID, gavl_dictionary_get_string_nc(val_dict, GAVL_META_ID));
   
-  gtk_menu_shell_append(GTK_MENU_SHELL(m->menu), item);
+  gtk_menu_shell_insert(GTK_MENU_SHELL(m->menu), item, idx);
 
   g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(backend_menu_callback), m);
   
   //  fprintf(stderr, "add_item %s %s %s\n", uri, label, icon);
   //  gavl_dictionary_dump(val_dict, 2);
-  gavl_array_splice_val_nocopy(&m->devs, -1, 0, &val);
+  gavl_array_splice_val_nocopy(&m->devs, idx, 0, &val);
 
   free(markup);
   }
@@ -265,14 +273,12 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
                                                    bg_msg_sink_t * evt_sink)
   {
   bg_gtk_backend_menu_t * ret;
-  const gavl_dictionary_t * dict;
-  int i;
-  //  bg_controllable_t * ctrl;
+  bg_controllable_t * ctrl;
   
   ret = calloc(1, sizeof(*ret));
 
   ret->menu    = gtk_menu_new();
-  ret->entries = bg_backend_registry_get();
+  //  ret->entries = bg_backend_registry_get();
   ret->klass    = gavl_strdup(klass);
   ret->evt_sink = evt_sink;
 
@@ -293,16 +299,12 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
     
     gavl_dictionary_free(&local_dev);
     }
-
-  for(i = 0; i < ret->entries->num_entries; i++)
-    {
-    if((dict = gavl_value_get_dictionary(&ret->entries->entries[i])))
-      add_item(ret, dict);
-    }
   
   ret->sink = bg_msg_sink_create(handle_msg, ret, 0);
+
+  ctrl = bg_resourcemanager_get_controllable();
   
-  bg_msg_hub_connect_sink(bg_backend_registry_get_evt_hub(), ret->sink);
+  bg_msg_hub_connect_sink(ctrl->evt_hub, ret->sink);
   
   return ret;
   }

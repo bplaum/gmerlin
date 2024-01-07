@@ -20,6 +20,7 @@
 #define TXT_CLASS    "class"
 #define TXT_PATH     "path"
 #define TXT_PROTOCOL "protocol"
+#define TXT_HASH     "hash"
 
 
  enum {
@@ -95,7 +96,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
                                              "Free");
           res = bg_dbus_connection_call_method(a->conn, req);
           dbus_message_unref(req);
-          gavl_msg_free(res);
+          gavl_msg_destroy(res);
           }
           break;
         }
@@ -192,6 +193,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
                 arr = gavl_strbreak(str, '=');
                 if(arr && arr[0])
                   gavl_dictionary_set_string(&txt_dict, arr[0], arr[1]);
+                gavl_strbreak_free(arr);
                 }
               }
 
@@ -199,10 +201,6 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
             //            gavl_dictionary_dump(&txt_dict, 2);
             }
           
-          
-          gavl_dictionary_set_string(&info, GAVL_META_LABEL, name);
-          gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
-            
           //            gavl_dictionary_set_string(&info, BG_BACKEND_PROTOCOL, "mpd");
 
           if(!strcmp(type, TYPE_MPD))
@@ -231,6 +229,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
             gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
 
             gavl_dictionary_set_int(&info, BG_RESOURCE_PRIORITY, BG_RESOURCE_PRIORITY_DEFAULT);
+            gavl_dictionary_set_string(&info, GAVL_META_LABEL, name);
             }
           else if(!strcmp(type, TYPE_PULSEAUDIO_SINK))
             {
@@ -252,6 +251,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
                 }
               }
             gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
+            gavl_dictionary_set_string(&info, GAVL_META_LABEL, name);
             }
           else if(!strcmp(type, TYPE_GMERLIN))
             {
@@ -263,16 +263,18 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
 
             proto_str = gavl_dictionary_get_string(&txt_dict, TXT_PROTOCOL);
             path = gavl_dictionary_get_string(&txt_dict, TXT_PATH);
+
+            gavl_dictionary_set(&info, GAVL_META_HASH, gavl_dictionary_get(&txt_dict, TXT_HASH));
             
             if(proto_str && path)
               {
               switch(protocol)
                 {
                 case AVAHI_PROTO_INET: // IPV4
-                  uri = gavl_sprintf("%s://%s:%d/%s", proto_str, addr, port, path);
+                  uri = gavl_sprintf("%s://%s:%d%s", proto_str, addr, port, path);
                   break;
                 case AVAHI_PROTO_INET6: // IPV6
-                  uri = gavl_sprintf("%s://[%s]:%d/%s", proto_str, addr, port, path);
+                  uri = gavl_sprintf("%s://[%s]:%d%s", proto_str, addr, port, path);
                   break;
                 }
               }
@@ -295,6 +297,8 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
           gavl_dictionary_free(&info);
           gavl_array_free(&txt_arr);
           gavl_dictionary_free(&txt_dict);
+          
+          gavl_msg_destroy(res);
           
           }
           break;
@@ -369,6 +373,7 @@ static char * create_service_browser(avahi_t * a, const char * type)
                                     BG_MSG_NS_PRIVATE, MSG_ID_AVAHI_SERVICE_REMOVED);
     //    fprintf(stderr, "Added listener: %s\n", rule);
     free(rule);
+    free(rule_common);
     }
     
   gavl_msg_destroy(res);
@@ -384,7 +389,7 @@ static void append_txt_tag(DBusMessageIter * iter, const char * tag, const char 
   dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY, "y", &subiter);
   dbus_message_iter_append_fixed_array(&subiter, DBUS_TYPE_BYTE, &str, strlen(str));
   dbus_message_iter_close_container(iter, &subiter);
-  
+  free(str);
   }
 
 static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t * dict)
@@ -395,8 +400,8 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
   int port = -1;
   DBusMessage * req;
   gavl_msg_t * res;
-  char * entry_group;
-  char * host;
+  char * entry_group = NULL;
+  char * host = NULL;
   const char * uri;
   const char * klass;
   const char * type = TYPE_GMERLIN;
@@ -406,10 +411,9 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
   int gavl_protocol;
   int32_t interface;
   uint32_t flags = 0;
-  char * name;
-  char hash[GAVL_MD5_LENGTH];
+  char * name = NULL;
   DBusMessageIter iter, subiter;
-  char * hostname;
+  char * hostname = NULL;
   
   /* Warning: This breaks if the MDNS host differs from the host name */
   gethostname(hostname_buf, HOST_NAME_MAX+1);
@@ -424,8 +428,8 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
     goto fail;
   
   /* We set a name to be unique. Applications will display a nice label instead */
-  gavl_md5_buffer_str(uri, strlen(uri), hash);
-  name = gavl_sprintf("gmerlin-%s", hash);
+  
+  name = gavl_sprintf("gmerlin-%s", gavl_dictionary_get_string(dict, GAVL_META_HASH));
   
   /* We publish only selected protocols */
   if(strcmp(protocol, BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER) &&
@@ -468,19 +472,17 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
   gavl_dictionary_set_string(&a->entry_groups, id, entry_group);
 
   
-  gavl_msg_free(res);
+  gavl_msg_destroy(res);
   
   
-  fprintf(stderr, "Got entry group: %s\n", entry_group);
-
-  fprintf(stderr, "Got interface index: %d\n", interface);
+  //  fprintf(stderr, "Got entry group: %s\n", entry_group);
+  //  fprintf(stderr, "Got interface index: %d\n", interface);
 
   hostname = gavl_sprintf("%s.local", hostname_buf);
   
   //   = NULL;
   
-  fprintf(stderr, "Got hostname: %s\n", hostname);
-  
+  //  fprintf(stderr, "Got hostname: %s\n", hostname);
   
   req = dbus_message_new_method_call(a->avahi_addr, entry_group, "org.freedesktop.Avahi.EntryGroup",
                                      "AddService");
@@ -504,16 +506,17 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
   append_txt_tag(&subiter, TXT_CLASS, klass);
   append_txt_tag(&subiter, TXT_PROTOCOL, protocol);
   append_txt_tag(&subiter, TXT_PATH, path);
+  append_txt_tag(&subiter, TXT_HASH, gavl_dictionary_get_string(dict, GAVL_META_HASH));
   
   dbus_message_iter_close_container(&iter, &subiter);
-
+  
   res = bg_dbus_connection_call_method(a->conn, req);
   dbus_message_unref(req);
 
   if(!res)
     goto fail;
   
-  gavl_msg_free(res);
+  gavl_msg_destroy(res);
 
   //  fprintf(stderr, "Added service\n");
   
@@ -527,7 +530,7 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
 
   //  fprintf(stderr, "Committed service\n");
 
-  gavl_msg_free(res);
+  gavl_msg_destroy(res);
     
   fail:
   if(protocol)
@@ -578,11 +581,22 @@ static void destroy_avahi(void * priv)
   avahi_t * a = priv;
 
   gavl_dictionary_free(&a->entry_groups);
-  
+  bg_controllable_cleanup(&a->ctrl);
+
+  bg_dbus_connection_del_listeners(a->conn, a->dbus_sink);
+    
+  if(a->dbus_sink)
+    bg_msg_sink_destroy(a->dbus_sink);
+
   if(a->mpd_browser)
     free(a->mpd_browser);
   if(a->pa_sink_browser)
     free(a->pa_sink_browser);
+  if(a->gmerlin_browser)
+    free(a->gmerlin_browser);
+  if(a->avahi_addr)
+    free(a->avahi_addr);
+  
   free(a);
   }
   

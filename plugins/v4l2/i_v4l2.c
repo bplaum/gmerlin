@@ -111,7 +111,7 @@ static void  destroy_v4l(void * priv)
   v4l2_t * v4l;
   v4l = priv;
   close_v4l(priv);
-  
+  bg_controllable_cleanup(&v4l->ctrl);
   free(v4l);
   }
 

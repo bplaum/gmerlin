@@ -33,14 +33,12 @@ dump_plugins \
 extractchannel \
 insertchannel \
 ocrtest \
-remotedevreg \
 textrenderer \
 ladspa \
 makethumbnail \
 msgiotest \
 recordingdevices \
 resource \
-ssdp \
 sqlextract \
 upnpdesc \
 websocket_test \
@@ -67,14 +65,8 @@ sqlextract_LDADD = ../lib/libgmerlin.la -ldl  @SQLITE3_LIBS@
 ocrtest_SOURCES = ocrtest.c
 ocrtest_LDADD = ../lib/libgmerlin.la -ldl
 
-remotedevreg_SOURCES = remotedevreg.c
-remotedevreg_LDADD = ../lib/libgmerlin.la -ldl
-
 msgiotest_SOURCES = msgiotest.c
 msgiotest_LDADD = ../lib/libgmerlin.la -ldl
-
-ssdp_SOURCES = ssdp.c
-ssdp_LDADD = ../lib/libgmerlin.la -ldl
 
 upnpdesc_SOURCES = upnpdesc.c
 upnpdesc_LDADD = ../lib/libgmerlin.la -ldl @UUID_LIBS@ @XML2_LIBS@

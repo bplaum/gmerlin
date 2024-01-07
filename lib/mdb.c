@@ -38,6 +38,7 @@
 
 #include <gmerlin/httpserver.h>
 #include <gmerlin/cfgctx.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <httpserver_priv.h>
 
@@ -313,6 +314,7 @@ bg_cfg_ctx_t * bg_mdb_get_cfg(bg_mdb_t * db)
   return db->cfg_ext;
   }
 
+#if 0
 static void add_volume_func(void * priv, const char * name, const gavl_value_t * val)
   {
   const gavl_dictionary_t * dict;
@@ -340,42 +342,76 @@ static void add_volume_func(void * priv, const char * name, const gavl_value_t *
     }
   gavl_msg_free(&msg);
   }
+#endif
 
-
-static void update_remote_devs_state(bg_mdb_t * db)
+static int renderer_idx_by_id(bg_mdb_t * db, const char * id)
   {
   int i;
-  const char * protocol;
-
-  const gavl_dictionary_t * dict;
+  const gavl_dictionary_t * test_dict;
+  const char * test_id;
   
-  gavl_value_t state_val;
-  gavl_array_t * devs;
-
-  /* Update state */
-  devs = bg_backend_registry_get();
-
-  i = 0;
-  
-  /* Remove non-gmerlin devs */
-  while(i < devs->num_entries)
+  for(i = 0; i < db->renderers.num_entries; i++)
     {
-    if((dict = gavl_value_get_dictionary(&devs->entries[i])) &&
-       (protocol = gavl_dictionary_get_string(dict, BG_BACKEND_PROTOCOL)) &&
-       strcmp(protocol, "gmerlin"))
-      gavl_array_splice_val(devs, i, 1, NULL);
-    else
-      i++;
+    if((test_dict = gavl_value_get_dictionary(&db->renderers.entries[i])) &&
+       (test_id = gavl_dictionary_get_string(test_dict, GAVL_META_ID)) &&
+       !strcmp(test_id, id))
+      return i;
     }
+  return -1;
+  }
+
+
+static void update_remote_devs_state(bg_mdb_t * db, const gavl_msg_t * msg)
+  {
+  gavl_value_t state_val;
+
+  const char * id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+  
+  if(msg->ID == GAVL_MSG_RESOURCE_ADDED)
+    {
+    const char * var;
+    gavl_value_t add_val;
+    gavl_dictionary_t * add_dict;
+    gavl_value_init(&add_val);
+    add_dict = gavl_value_set_dictionary(&add_val);
     
+    gavl_msg_get_arg_dictionary_c(msg, 0, add_dict);
+
+    if((var = gavl_dictionary_get_string(add_dict, GAVL_META_URI)) &&
+       gavl_string_starts_with(var, BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER) &&
+       (renderer_idx_by_id(db, id) < 0))
+      {
+      int idx;
+      const char * label;
+      
+      label = gavl_dictionary_get_string(add_dict, GAVL_META_LABEL);
+      idx = bg_resource_idx_for_label(&db->renderers, label, 0);
+
+      gavl_array_splice_val_nocopy(&db->renderers, idx, 0, &add_val);
+      
+      }
+    else
+      {
+      gavl_value_free(&add_val);
+      return;
+      }
+    }
+  else // Deleted
+    {
+    int idx;
+    if((idx = renderer_idx_by_id(db, id)) >= 0)
+      gavl_array_splice_val(&db->renderers, idx, 1, NULL);
+    else
+      return;
+    }
+  
   gavl_value_init(&state_val);
-  gavl_value_set_array_nocopy(&state_val, devs);
+  gavl_array_copy(gavl_value_set_array(&state_val), &db->renderers);
 
   //  fprintf(stderr, "update_remote_devs_state %p\n", db->ctrl.evt_sink);
   
-  bg_state_set(NULL, 1, "mdb", "remotedevs", &state_val, db->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
+  bg_state_set(NULL, 1, "mdb", "renderers", &state_val, db->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
   gavl_value_free(&state_val);
-
 
   }
 
@@ -603,37 +639,13 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
       /* Forward to backends */
       switch(msg->ID)
         {
-#if 0
-        case BG_MSG_ADD_BACKEND:
-          {
-          const char * var;
-          const gavl_value_t * val;
-          const gavl_dictionary_t * dict;
-          int type;
-          update_remote_devs_state(db);
-          if((val = gavl_msg_get_arg_c(msg, 0)) &&
-             (dict = gavl_value_get_dictionary(val)) &&
-             gavl_dictionary_get_int(dict, BG_BACKEND_TYPE, &type) &&
-             (type == BG_BACKEND_MEDIASERVER) &&
-             (var = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
-             is_us(db, var))
-            {
-            //  fprintf(stderr, "Not adding %s\n", uri);
-            return 1;
-            }
-          break;
-          }
-        case BG_MSG_DEL_BACKEND:
-          update_remote_devs_state(db);
-          break;
-#endif
         case BG_MSG_BACKENDS_RESCAN:
-          bg_backend_registry_rescan();
+          //  bg_backend_registry_rescan();
           break;
         }
       
       //   fprintf(stderr, "Got remote msg\n");
-              
+      
       for(i = 0; i < num_backends; i++)
         {
         if(db->backends[i].flags & BE_FLAG_RESOURCES)
@@ -641,38 +653,6 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         }
       break;
       }
-    case BG_MSG_NS_STATE:
-      {
-      //      fprintf(stderr, "State changed\n");
-      //      gavl_msg_dump(msg, 2);
-      
-      switch(msg->ID)
-        {
-        case BG_MSG_STATE_CHANGED:
-          {
-          int last;
-          const char * ctx;
-          const char * var;
-          gavl_value_t val;
-          
-          gavl_value_init(&val);
-          gavl_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
-      
-          if(!strcmp(ctx, "volumemanager") && !strcmp(var, "volumes") && !db->volumes_added)
-            {
-            const gavl_dictionary_t * dict;
-
-            db->volumes_added = 1;
-            
-            if((dict = gavl_value_get_dictionary(&val)))
-              gavl_dictionary_foreach(dict, add_volume_func, db);
-            
-            }
-          gavl_value_free(&val);
-          }
-        }
-      }
-      break;
     case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
@@ -683,7 +663,8 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case GAVL_MSG_RESOURCE_DELETED:
           {
           int i;
-          update_remote_devs_state(db);
+          
+          update_remote_devs_state(db, msg);
           
           for(i = 0; i < num_backends; i++)
             {
@@ -1214,12 +1195,14 @@ bg_mdb_t * bg_mdb_create(const char * path,
   gavl_dictionary_t * m;
   bg_msg_sink_t * sink = NULL;
   int done = 0;
+
+  bg_controllable_t * ctrl;
   
   ret->cfg_save_time = GAVL_TIME_UNDEFINED;
   
   ret->backends = calloc(num_backends, sizeof(*ret->backends));
 
-  ret->volman = bg_volume_manager_create();
+  //  ret->volman = bg_volume_manager_create();
 
   
   ret->timer = gavl_timer_create();
@@ -1305,7 +1288,7 @@ bg_mdb_t * bg_mdb_create(const char * path,
                        bg_msg_sink_create(handle_cmd, ret, 0),
                        bg_msg_hub_create(1));
   
-  bg_msg_hub_connect_sink(bg_backend_registry_get_evt_hub() , ret->ctrl.cmd_sink);
+  //  bg_msg_hub_connect_sink(bg_backend_registry_get_evt_hub() , ret->ctrl.cmd_sink);
   
   ret->be_evt_sink = bg_msg_sink_create(handle_be_msg, ret, 0);
   /* Also need to set the client ID */
@@ -1384,7 +1367,9 @@ bg_mdb_t * bg_mdb_create(const char * path,
   bg_cfg_ctx_apply_array(ret->cfg);
   
   /* Connect volumemanager. Must be done after applying the config. */
-  bg_msg_hub_connect_sink(bg_volume_manager_get_msg_hub(ret->volman), ret->ctrl.cmd_sink);
+  ctrl = bg_resourcemanager_get_controllable();
+  
+  bg_msg_hub_connect_sink(ctrl->evt_hub, ret->ctrl.cmd_sink);
 
   /* Set some state variables */
 
@@ -1474,7 +1459,8 @@ void bg_mdb_stop(bg_mdb_t * db)
 void bg_mdb_destroy(bg_mdb_t * db)
   {
   int i;
-
+  bg_controllable_t * ctrl;
+  
   if(db->cfg_save_time != GAVL_TIME_UNDEFINED)
     {
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving config file %s", db->config_file);
@@ -1494,8 +1480,8 @@ void bg_mdb_destroy(bg_mdb_t * db)
     free(db->backends);
     }
 
-  if(db->ctrl.cmd_sink)
-    bg_msg_hub_disconnect_sink(bg_backend_registry_get_evt_hub(), db->ctrl.cmd_sink);
+  ctrl = bg_resourcemanager_get_controllable();
+  bg_msg_hub_disconnect_sink(ctrl->evt_hub, db->ctrl.cmd_sink);
   
   bg_controllable_cleanup(&db->ctrl);
 
@@ -1518,7 +1504,7 @@ void bg_mdb_destroy(bg_mdb_t * db)
   
   gavl_dictionary_free(&db->root);
 
-  bg_volume_manager_destroy(db->volman);
+  //  bg_volume_manager_destroy(db->volman);
   
   bg_mdb_cleanup_thumbnails(db);
 

@@ -274,6 +274,7 @@ void bg_backend_handle_start(bg_backend_handle_t * be)
   be->thread_running = 1;
   }
 
+#if 0
 char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1])
   {
   char * str;
@@ -289,17 +290,4 @@ char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1])
   
   return id;
   }
-
-void bg_set_backend_id(gavl_dictionary_t * dict)
-  {
-  const char * klass;
-  char id[BG_BACKEND_ID_LEN+1];
-
-  klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
-  if(!gavl_string_starts_with(klass, "backend"))
-    return;
-  
-  bg_make_backend_id(klass, id);
-  
-  gavl_dictionary_set_string(dict, BG_BACKEND_ID, id);
-  }
+#endif

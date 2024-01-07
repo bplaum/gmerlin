@@ -14,6 +14,7 @@
 #include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <gmerlin/upnp/didl.h>
 
@@ -213,7 +214,7 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
 
     /* Register local device before creating the ssdp */
     
-    bg_backend_register_local(&local_dev);
+    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
     

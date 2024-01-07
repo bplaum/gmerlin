@@ -54,6 +54,9 @@ type_names[] =
     { "VideoCompressor",         BG_PLUGIN_COMPRESSOR_VIDEO },
     { "AudioDecompressor",       BG_PLUGIN_DECOMPRESSOR_AUDIO },
     { "VideoDecompressor",       BG_PLUGIN_DECOMPRESSOR_VIDEO },
+    { "ResourceDetector",        BG_PLUGIN_RESOURCE_DETECTOR },
+    { "BackendServer",           BG_PLUGIN_BACKEND_SERVER     },
+    { "BackendRenderer",         BG_PLUGIN_BACKEND_RENDERER   },
     { NULL,                      BG_PLUGIN_NONE }
   };
 

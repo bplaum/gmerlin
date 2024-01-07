@@ -29,8 +29,7 @@ typedef struct
   int flags;
   } mpris_t;
 
-static void add_dev(mpris_t * m, const char * addr, const char * name,
-                    const char * klass)
+static void add_dev(mpris_t * m, const char * addr, const char * name)
   {
   gavl_dictionary_t info;
   char * addr_priv = NULL;
@@ -39,18 +38,18 @@ static void add_dev(mpris_t * m, const char * addr, const char * name,
   char * uri = NULL;
   gavl_msg_t * msg;
   
-  memset(&info, 0, sizeof(info));
+  gavl_dictionary_init(&info);
   
-  gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, klass);
-
+  gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  
   //  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
   
 
   if(gavl_string_starts_with(name, "gmerlin-"))
     {
     const char * pos = strrchr(name, '-');
-    if(pos && (strlen(pos + 1) == BG_BACKEND_ID_LEN))
-      gavl_dictionary_set_string(&info, GAVL_META_ID, pos+1);
+    if(pos && (strlen(pos + 1) == 32))
+      gavl_dictionary_set_string(&info, GAVL_META_HASH, pos+1);
     }
     
   real_name = gavl_sprintf("%s%s", MPRIS2_NAME_PREFIX, name);
@@ -167,7 +166,7 @@ static int handle_msg_dbus(void * priv, gavl_msg_t * msg)
             /* Added name */
       
             if(gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
-              add_dev(m, o_new, name + MPRIS2_NAME_PREFIX_LEN, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+              add_dev(m, o_new, name + MPRIS2_NAME_PREFIX_LEN);
             
             }
           else if(!o_new && o_old)
@@ -212,6 +211,13 @@ static int update_mpris(void * priv)
 static void destroy_mpris(void * priv)
   {
   mpris_t * m = priv;
+
+  bg_dbus_connection_del_listeners(m->conn, m->dbus_sink);
+
+  if(m->dbus_sink)
+    bg_msg_sink_destroy(m->dbus_sink);
+  
+  bg_controllable_cleanup(&m->ctrl);
   
   free(m);
   }

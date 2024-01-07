@@ -620,6 +620,9 @@ static void destroy_udisks2(void * priv)
     free(u->daemon_addr);
   if(u->dbus_sink)
     bg_msg_sink_destroy(u->dbus_sink);
+
+  gavl_dictionary_free(&u->drives);
+  gavl_dictionary_free(&u->block_devices);
   
   free(u);
   }

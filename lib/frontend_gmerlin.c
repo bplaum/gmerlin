@@ -6,6 +6,7 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/state.h>
 #include <gmerlin/application.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <gmerlin/upnp/ssdp.h>
 
@@ -85,8 +86,8 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
       {
       gavl_dictionary_set_array(&local_dev, GAVL_META_ICON_URL, icon_array);
       }
-
-    bg_backend_register_local(&local_dev);
+    
+    bg_resourcemanager_publish(uri, &local_dev);
     
     gavl_dictionary_free(&local_dev);
     

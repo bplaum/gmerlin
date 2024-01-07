@@ -49,6 +49,7 @@
 #include <gmerlin/bggavl.h>
 #include <gmerlin/log.h>
 #include <gmerlin/application.h>
+#include <gmerlin/resourcemanager.h>
 
 
 
@@ -90,26 +91,7 @@ static char * label = NULL;
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
-  const char * klass = NULL;
-  int i;
-  const gavl_dictionary_t * dev;
-  gavl_array_t * arr = bg_backends_scan(3 * GAVL_TIME_SCALE);
-
-  //  gavl_array_dump(arr, 2);
-
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if((dev = gavl_value_get_dictionary(&arr->entries[i])) &&
-       (klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS)) &&
-       !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
-      {
-      printf("# %s\n", gavl_dictionary_get_string(dev, GAVL_META_LABEL));
-      printf("%s\n", gavl_dictionary_get_string(dev, GAVL_META_URI));
-      }
-       
-    }
-
-  gavl_array_destroy(arr);
+  bg_resource_list_by_class(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, 1, GAVL_TIME_SCALE);
   }
   
 static void cmd_play(void * data, int * argc, char *** _argv, int arg)

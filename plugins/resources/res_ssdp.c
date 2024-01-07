@@ -354,6 +354,8 @@ static void destroy_ssdp(void * priv)
 
   gavl_array_free(&s->ucast_queue);
   gavl_array_free(&s->mcast_queue);
+
+  bg_controllable_cleanup(&s->ctrl);
   
   free(s);
   }
@@ -446,7 +448,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
     gavl_dictionary_set_string(dict, GAVL_META_URI, real_uri);
     
     gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS, klass);
-    gavl_dictionary_set_string(dict, BG_BACKEND_ID, gavl_dictionary_get_string(header, META_ID));
+    gavl_dictionary_set_string(dict, GAVL_META_HASH, gavl_dictionary_get_string(header, META_ID));
     
     if(is_upnp)
       {
@@ -557,7 +559,7 @@ static void handle_search_dev(ssdp_t * ssdp, const char * st, int mx, const gavl
         {
         gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaServer:1");
         gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaServer:1", uuid));
-        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_HASH));
         queue_ucast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         gavl_dictionary_set_string(&m, META_ID, NULL);
           
@@ -574,7 +576,7 @@ static void handle_search_dev(ssdp_t * ssdp, const char * st, int mx, const gavl
         {
         gavl_dictionary_set_string(&m, "ST", "urn:schemas-upnp-org:device:MediaRenderer:1");
         gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::urn:schemas-upnp-org:device:MediaRenderer:1", uuid));
-        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_HASH));
         queue_ucast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         gavl_dictionary_set_string(&m, META_ID, NULL);
           
@@ -601,7 +603,7 @@ static void handle_search_dev(ssdp_t * ssdp, const char * st, int mx, const gavl
         {
         gavl_dictionary_set_string(&m, "ST", GMERLIN_SERVER_NT);
         gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_SERVER_NT));
-        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_HASH));
         queue_ucast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         
         }
@@ -609,7 +611,7 @@ static void handle_search_dev(ssdp_t * ssdp, const char * st, int mx, const gavl
         {
         gavl_dictionary_set_string(&m, "ST", GMERLIN_RENDERER_NT);
         gavl_dictionary_set_string_nocopy(&m, "USN", gavl_sprintf("uuid:%s::%s", uuid, GMERLIN_RENDERER_NT));
-        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, BG_BACKEND_ID));
+        gavl_dictionary_set_string(&m, META_ID, gavl_dictionary_get_string(dev, GAVL_META_HASH));
         queue_ucast(ssdp, &m, sender, rand_long(GAVL_TIME_SCALE/100, mx * GAVL_TIME_SCALE));
         
         }
@@ -863,7 +865,7 @@ static void notify_dev(ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive)
   const char * uri;
   const char * klass;
   char uuid[37];
-  const char * id = gavl_dictionary_get_string(dev, BG_BACKEND_ID);
+  const char * id = gavl_dictionary_get_string(dev, GAVL_META_HASH);
   
   gavl_dictionary_init(&m);
   uri = gavl_dictionary_get_string(dev, GAVL_META_URI);

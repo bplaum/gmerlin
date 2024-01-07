@@ -25,6 +25,7 @@
 // #include <upnp/event.h>
 
 #include <gmerlin/frontend.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <gmerlin/utils.h>
 
@@ -499,8 +500,7 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
     gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "upnp");
 
-    
-    bg_backend_register_local(&local_dev);
+    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
     

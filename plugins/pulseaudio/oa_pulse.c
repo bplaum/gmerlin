@@ -126,8 +126,8 @@ static void destroy_pulse_output(void * priv)
     free(p->server);
   if(p->dev)
     free(p->dev);
-
-
+  
+  free(p);
   }
 
 static bg_parameter_info_t parameters[] =

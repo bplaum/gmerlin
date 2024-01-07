@@ -29,6 +29,15 @@ gavl_array_t * bg_resourcemanager_get(const char * klass);
 void bg_resourcemanager_publish(const char * id, const gavl_dictionary_t * dict);
 void bg_resourcemanager_unpublish(const char * id);
 
+int bg_resource_idx_for_label(const gavl_array_t * arr, const char * label, int off);
+
+void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t timeout, gavl_array_t * arr);
+void bg_resource_get_by_protocol(const char * protocol, int full_match, gavl_time_t timeout, gavl_array_t * arr);
+
+void bg_resource_list_by_class(const char * klass, int full_match, gavl_time_t timeout);
+void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_time_t timeout);
+
+
 /* To be used by resource plugins (i.e. from the resource detector thread) only */
 
 gavl_dictionary_t * bg_resource_get_by_id(int local, const char * id);

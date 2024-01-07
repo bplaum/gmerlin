@@ -28,7 +28,7 @@
 
 typedef struct bg_remote_dev_backend_s bg_remote_dev_backend_t;
 
-extern bg_backend_registry_t * bg_backend_reg;
+// extern bg_backend_registry_t * bg_backend_reg;
 
 #define MPRIS2_NAME_PREFIX     "org.mpris.MediaPlayer2."
 #define MPRIS2_NAME_PREFIX_LEN 23
@@ -56,7 +56,7 @@ struct bg_backend_handle_s
   pthread_t th;
   int thread_running;
 
-  char id[BG_BACKEND_ID_LEN+1];
+  char id[GAVL_MD5_LENGTH];
   
   };
 

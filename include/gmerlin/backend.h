@@ -35,11 +35,10 @@
  * http://host:8888/devproxy/<MD5 of original URL>
  */
 
-#define BG_BACKEND_PATH   "/remotedev/"
-#define BG_BACKEND_ID_LEN 32 // md5 in hex
+// #define BG_BACKEND_ID_LEN 32 // md5 in hex
 
 #define BG_BACKEND_PROTOCOL       "Protocol"
-#define BG_BACKEND_ID             "BackendID"
+// #define BG_BACKEND_ID             "BackendID"
 
 /* Integer 1 if the device belongs to ourselfes */
 
@@ -108,30 +107,13 @@ int bg_backend_handle_ping(bg_backend_handle_t * d);
 const gavl_dictionary_t * bg_backend_handle_get_info(bg_backend_handle_t * d);
 
 /* */
-typedef struct bg_backend_registry_s bg_backend_registry_t;
 
-
-bg_backend_registry_t * bg_get_backend_registry(void);
-void bg_backend_registry_rescan();
-
-
-void bg_backend_registry_set_proxy_prefix(const char * proxy_prefix);
-
-/* Returned arrays must be destroyed with bg_backend_info_destroy_array() */
-gavl_array_t * bg_backend_registry_get(void);
-
-bg_msg_hub_t * bg_backend_registry_get_evt_hub();
-
-gavl_array_t * bg_backends_scan(gavl_time_t timeout);
 
 /* Get the node info (gmerlin backends only) */
 
 int bg_backend_get_node_info(gavl_dictionary_t * ret);
 
-void bg_backend_register_local(const gavl_dictionary_t * dev);
-
-char * bg_make_backend_id(const char * klass, char id[BG_BACKEND_ID_LEN+1]);
-void bg_set_backend_id(gavl_dictionary_t * dict);
+char * bg_make_backend_id(const char * klass);
 
 
 #endif //  BG_REMOTEDEV_H_INCLUDED

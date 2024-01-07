@@ -247,6 +247,7 @@ static void destroy_pulse(void * priv)
   {
   bg_pa_recorder_t * p = priv;
   close_pulse(p);
+  bg_controllable_cleanup(&p->com.ctrl);
   free(p);
   }
 

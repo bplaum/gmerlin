@@ -228,10 +228,7 @@ struct bg_mdb_s
   bg_msg_sink_t * be_evt_sink;
   
   bg_mdb_backend_t * backends;
-
-  bg_volume_manager_t * volman;
-  int volumes_added;
-
+  
   gavl_dictionary_t root;
   
   pthread_t th;
@@ -255,9 +252,9 @@ struct bg_mdb_s
   
   gavl_msg_t * rescan_func;
   
-  //  int page_size;
-
   char * thumbs_dir;
+  
+  gavl_array_t renderers;
   
   };
 

@@ -31,6 +31,7 @@
 #include <gmerlin/application.h>
 #include <gmerlin/backend.h>
 #include <gmerlin/mdb.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <gavl/metatags.h>
 
@@ -948,11 +949,11 @@ static int create_player_mpris2(bg_frontend_t * fe,
   {
   gavl_array_t * arr;
   mpris2_t * priv;
-  char id[BG_BACKEND_ID_LEN+1];
+  char * id;
 
   priv = calloc(1, sizeof(*priv));
-
-  bg_make_backend_id(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, id);
+  
+  id = bg_make_backend_id(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
   
   priv->bus_name = gavl_sprintf("%s-%s", bus_name, id);
   
@@ -975,7 +976,8 @@ static int create_player_mpris2(bg_frontend_t * fe,
   gavl_string_array_add(arr, "file");
   gavl_string_array_add(arr, "http");
   
-
+  free(id);
+  
   return 1;
   }
 
@@ -1039,9 +1041,9 @@ static int ping_player_mpris2(bg_frontend_t * fe, gavl_time_t current_time)
 
     //    fprintf(stderr, "Register local\n");
     //    gavl_dictionary_dump(&local_dev, 2);
-    
-    bg_backend_register_local(&local_dev);
 
+    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
+    
     gavl_dictionary_free(&local_dev);
     
     bg_dbus_connection_unlock(priv->conn);
