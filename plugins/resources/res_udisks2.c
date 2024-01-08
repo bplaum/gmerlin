@@ -603,8 +603,10 @@ static void * create_udisks2()
   u->conn = bg_dbus_connection_get(DBUS_BUS_SYSTEM);
   
   if(!(u->daemon_addr = bg_dbus_get_name_owner(u->conn, "org.freedesktop.UDisks2")))
+    {
+    u->conn = NULL;
     return u;
-
+    }
   u->dbus_sink = bg_msg_sink_create(handle_dbus_msg_volume, u, 0);
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Found UDisks2 daemon at %s", u->daemon_addr);
   
@@ -636,6 +638,9 @@ static int update_udisks2(void * priv)
   gavl_dictionary_t dict;
   int ret = 0;
 
+  if(!u->conn)
+    return 0;
+  
   if(!u->initialized)
     {
     
