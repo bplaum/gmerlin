@@ -383,12 +383,15 @@ static void update_remote_devs_state(bg_mdb_t * db, const gavl_msg_t * msg)
       {
       int idx;
       const char * label;
-      
-      label = gavl_dictionary_get_string(add_dict, GAVL_META_LABEL);
-      idx = bg_resource_idx_for_label(&db->renderers, label, 0);
 
-      gavl_array_splice_val_nocopy(&db->renderers, idx, 0, &add_val);
+      //      fprintf(stderr, "Adding renderer:\n");
+      //      gavl_dictionary_dump(add_dict, 2);
       
+      if((label = gavl_dictionary_get_string(add_dict, GAVL_META_LABEL)))
+        {
+        idx = bg_resource_idx_for_label(&db->renderers, label, 0);
+        gavl_array_splice_val_nocopy(&db->renderers, idx, 0, &add_val);
+        }
       }
     else
       {

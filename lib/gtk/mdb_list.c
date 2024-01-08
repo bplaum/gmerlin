@@ -174,8 +174,6 @@ void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPi
   char * parent_id = NULL;
   GtkTreeModel * model;
 
-  //  fprintf(stderr, "bg_gtk_mdb_list_set_pixbuf %s %p\n", id, pb);
-  
   if(!id || !(parent_id = bg_mdb_get_parent_id(id)))
     goto fail;
     
@@ -553,7 +551,7 @@ static void set_entry_list(list_t * l,
 
   if(!m)
     return;
-  
+
   if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
     {
     gtk_list_store_set(GTK_LIST_STORE(model), iter,
@@ -562,6 +560,7 @@ static void set_entry_list(list_t * l,
     }
 
   markup = bg_gtk_mdb_tree_create_markup(dict, l->klass);
+  
   gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_LABEL, markup, -1);
   free(markup);
   
@@ -579,7 +578,9 @@ static void set_entry_list(list_t * l,
      (strcmp(l->klass, GAVL_META_MEDIA_CLASS_MUSICALBUM) &&
       strcmp(l->klass, GAVL_META_MEDIA_CLASS_TV_SEASON) &&
       strcmp(l->klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD)))
+    {
     bg_gtk_mdb_array_set_flag_str(&l->a->t->list_icons_to_load, id, 1);
+    }
   else
     {
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_HAS_PIXBUF, FALSE, -1);
@@ -644,7 +645,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
     }
   else
     markup = bg_sprintf("%s", gavl_dictionary_get_string(m, GAVL_META_LABEL));
-
+  
   gtk_label_set_markup(GTK_LABEL(l->menu_label), markup);
   
   g_free(markup);

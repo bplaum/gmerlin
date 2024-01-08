@@ -271,7 +271,7 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
                 {
                 if(prio > test_prio)
                   {
-                  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Replacing resource %s with %s",
+                  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Replacing resource %s with %s",
                            gavl_dictionary_get_string(test_dict, GAVL_META_URI),
                            gavl_dictionary_get_string(&dict, GAVL_META_URI));
                   /* Replace entry */
@@ -280,7 +280,7 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
                 else if(prio < test_prio)
                   {
                   /* Leave entry */
-                  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Not adding resource %s (%s is already there)",
+                  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Not adding resource %s (%s is already there)",
                            gavl_dictionary_get_string(&dict, GAVL_META_URI),
                            gavl_dictionary_get_string(test_dict, GAVL_META_URI));
                   return 1;

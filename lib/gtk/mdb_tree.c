@@ -164,7 +164,7 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
     bg_gtk_mdb_array_set_flag_str(&t->icons_to_load, id, 0);
     
     if((gavl_timer_get(timer) > GAVL_TIME_SCALE/10) || (t->icons_loading > MAX_BG_ICON_LOADS))
-      return;
+      goto end;
     
     }
 
@@ -206,9 +206,13 @@ static void load_icons(bg_gtk_mdb_tree_t * t)
     bg_gtk_mdb_array_set_flag_str(&t->list_icons_to_load, id, 0);
     
     if((gavl_timer_get(timer) > GAVL_TIME_SCALE/10) || (t->icons_loading > MAX_BG_ICON_LOADS))
-      return;
-    
+      goto end;
     }
+
+  end:
+  
+  if(timer)
+    gavl_timer_destroy(timer);
   
   return;
   }

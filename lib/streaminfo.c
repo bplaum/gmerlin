@@ -207,17 +207,22 @@ const char * bg_get_type_icon(const char * media_class)
   {
   int i = 0;
 
+  const char * ret = NULL;
+  
   while(icons[i].klass)
     {
     if(!strcmp(media_class, icons[i].klass))
-      return icons[i].icon;
+      {
+      ret = icons[i].icon;
+      break;
+      }
     i++;
     }
 
-  if(gavl_string_starts_with(media_class, "container"))
-    return BG_ICON_FOLDER;
-  
-  return NULL;
+  if(!ret && gavl_string_starts_with(media_class, "container"))
+    ret = BG_ICON_FOLDER;
+
+  return ret;
   }
 
 const char * bg_dictionary_get_id(gavl_dictionary_t * m)

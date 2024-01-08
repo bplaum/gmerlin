@@ -89,16 +89,19 @@ static void update_parent(bg_mdb_backend_t * b)
 static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   {
   const char * klass;
+  const char * uri;
   int idx;
   gavl_msg_t * evt;
   gavl_value_t new_val;
   gavl_dictionary_t * new_dict;
   gavl_dictionary_t * new_m;
+  char hash[GAVL_MD5_LENGTH];
+
   recorder_priv_t * priv = b->priv;
   
-  fprintf(stderr, "add_dev\n");
-  gavl_dictionary_dump(dev, 2);
-  fprintf(stderr, "\n");
+  //  fprintf(stderr, "add_dev\n");
+  //  gavl_dictionary_dump(dev, 2);
+  //  fprintf(stderr, "\n");
 
   if(!(klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS)))
     return;
@@ -106,15 +109,22 @@ static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   if(strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER) &&
      strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER))
     return;
+
+  if(!(uri = gavl_dictionary_get_string(dev, GAVL_META_URI)))
+    return;
+  
+  gavl_md5_buffer_str(uri, strlen(uri), hash);
   
   gavl_value_init(&new_val);
   new_dict = gavl_value_set_dictionary(&new_val);
   new_m = gavl_dictionary_get_dictionary_create(new_dict, GAVL_META_METADATA);
   gavl_dictionary_copy(new_m, dev);
 
+  gavl_dictionary_set_string(new_m, GAVL_META_HASH, hash);
+  
   gavl_dictionary_set_string_nocopy(new_m, GAVL_META_ID,
                                     gavl_sprintf("%s/%s", BG_MDB_ID_RECORDERS,
-                                                 gavl_dictionary_get_string(dev, GAVL_META_ID)));
+                                                 hash));
   gavl_metadata_add_src(new_m, GAVL_META_SRC, NULL, gavl_dictionary_get_string(dev, GAVL_META_URI));
   gavl_dictionary_set(new_m, GAVL_META_URI, NULL);
 

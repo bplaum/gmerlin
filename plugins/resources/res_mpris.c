@@ -197,6 +197,9 @@ static int update_mpris(void * priv)
   int ret = 0;
   mpris_t * m = priv;
 
+  if(!m->conn)
+    return ret;
+  
   if(!(m->flags & FLAG_INITIAL))
     {
     ret++;
@@ -212,8 +215,9 @@ static void destroy_mpris(void * priv)
   {
   mpris_t * m = priv;
 
-  bg_dbus_connection_del_listeners(m->conn, m->dbus_sink);
-
+  if(m->conn && m->dbus_sink)
+    bg_dbus_connection_del_listeners(m->conn, m->dbus_sink);
+  
   if(m->dbus_sink)
     bg_msg_sink_destroy(m->dbus_sink);
   
