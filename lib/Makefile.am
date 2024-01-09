@@ -207,7 +207,6 @@ pluginreg_xml.c \
 preset.c \
 preset_xml.c \
 resourcemanager.c \
-recordingdevice.c \
 ringbuffer.c \
 backend.c \
 backend_upnp.c \
@@ -233,7 +232,6 @@ urilist.c \
 utf8.c \
 videofilters.c \
 visualize.c \
-volumemanager.c \
 websocket.c \
 xspf.c
 

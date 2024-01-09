@@ -327,8 +327,10 @@ static void * thread_func(void * data)
   {
   int result;
   int i;
-  gavl_time_t delay_time = GAVL_TIME_SCALE / 5; // 200 ms
-  
+  gavl_time_t delay_time = GAVL_TIME_SCALE; // 200 ms
+
+  /* Delay for 1 sec to give other modules a chance to connect their
+     message sinks */
   gavl_time_delay(&delay_time);
   
   delay_time = GAVL_TIME_SCALE / 20; // 50 ms
@@ -495,6 +497,9 @@ gavl_dictionary_t * bg_resource_get_by_id(int local, const char * id)
   int idx;
   gavl_array_t * arr;
 
+  if(!resman)
+    return NULL;
+
   if(local)
     arr = &resman->local;
   else
@@ -510,6 +515,9 @@ gavl_dictionary_t * bg_resource_get_by_idx(int local, int idx)
   {
   gavl_array_t * arr;
 
+  if(!resman)
+    return NULL;
+  
   if(local)
     arr = &resman->local;
   else
@@ -675,6 +683,12 @@ void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_ti
   bg_resource_get_by_protocol(protocol, full_match, timeout, &arr);
   list_resource_array(&arr);
   gavl_array_free(&arr);
+  }
+
+void bg_opt_list_recording_sources(void * data, int * argc,
+                                   char *** _argv, int arg)
+  {
+  bg_resource_list_by_class("item.recorder.", 0, 1000);
   }
 
 #if defined(__GNUC__)

@@ -37,6 +37,9 @@ void bg_resource_get_by_protocol(const char * protocol, int full_match, gavl_tim
 void bg_resource_list_by_class(const char * klass, int full_match, gavl_time_t timeout);
 void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_time_t timeout);
 
+/* List resources */
+void bg_opt_list_recording_sources(void * data, int * argc, char *** _argv, int arg);
+
 
 /* To be used by resource plugins (i.e. from the resource detector thread) only */
 

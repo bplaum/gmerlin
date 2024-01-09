@@ -78,6 +78,7 @@ typedef struct
 /* Forward declarations */
 static int do_search(ssdp_t * s, int force);
 static int rand_long(int64_t min, int64_t max);
+static void notify_dev(ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive);
 
 
 static const char * ssdp_protocols[] =
@@ -338,8 +339,18 @@ static void * create_ssdp()
 
 static void destroy_ssdp(void * priv)
   {
+  const gavl_dictionary_t * dev;
   ssdp_t * s = priv;
 
+  int idx = 0;
+
+  while((dev = bg_resource_get_by_idx(1, idx)))
+    {
+    if(gavl_dictionary_get(dev, NEXT_NOTIFY_TIME))
+      notify_dev(s, dev, 0);
+    idx++;
+    }
+  
   flush_multicast_force(s);
   
   if(s->mcast_fd > 0)
@@ -871,6 +882,9 @@ static void notify_dev(ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive)
   uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
 
   gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Sending notification for %s", uri);
+
+  if(!alive)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sending bye for %s", uri);
   
   /* Common fields */
   gavl_http_request_init(&m, "NOTIFY", "*", "HTTP/1.1");
