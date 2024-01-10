@@ -129,6 +129,7 @@ cfg_section.c \
 cfg_xml.c \
 chapterlist.c \
 charset.c \
+cleanup.c \
 cmdline.c \
 colormatrix.c \
 control.c \

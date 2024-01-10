@@ -133,11 +133,7 @@ const char * bg_log_syslog_name()
   return syslog_name;
   }
 
-#if defined(__GNUC__)
-
-static void cleanup_log() __attribute__ ((destructor));
-
-static void cleanup_log()
+void bg_log_cleanup()
   {
   if(syslog_name)
     free(syslog_name);
@@ -154,6 +150,3 @@ static void cleanup_log()
     closelog();
     }
   }
-
-#endif
-

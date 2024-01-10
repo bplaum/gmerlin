@@ -40,6 +40,9 @@ void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_ti
 /* List resources */
 void bg_opt_list_recording_sources(void * data, int * argc, char *** _argv, int arg);
 
+/* Clean up resource manager (usually you don't need to call this) */
+void bg_resourcemanager_cleanup();
+
 
 /* To be used by resource plugins (i.e. from the resource detector thread) only */
 

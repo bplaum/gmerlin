@@ -140,6 +140,8 @@ const char * bg_log_syslog_name();
 
 void bg_log_stderr_init();
 
+void bg_log_cleanup();
+
 /** \ingroup log
  *  Flush the log queue, must be done periodically by the
  *  application

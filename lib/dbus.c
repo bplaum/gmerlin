@@ -1469,11 +1469,7 @@ void bg_dbus_set_property_local(bg_dbus_connection_t * conn,
 
   }
 
-#if defined(__GNUC__)
-
-static void cleanup_dbus() __attribute__ ((destructor));
-
-static void cleanup_dbus()
+void bg_dbus_cleanup()
   {
   dbus_lock();
   do_join = 1;
@@ -1488,6 +1484,4 @@ static void cleanup_dbus()
     bg_dbus_connection_destroy(system_conn);
   
   }
-
-#endif
 

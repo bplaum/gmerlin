@@ -43,7 +43,7 @@
 
 // Log level for ssdp messages (typically GAVL_LOG_DEBUG because they 
 // are quite noisy)
-#define LOG_LEVEL_MSG GAVL_LOG_DEBUG 
+#define LOG_LEVEL_MSG GAVL_LOG_DEBUG
 #define META_ID "GMERLIN-ID"
 
 #define MAX_AGE          1800
@@ -125,13 +125,13 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
           {
           const char * id;
           gavl_dictionary_t * dict;
-
+          
           if(!(id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID)))
             return 1;
           
           if(!(dict = bg_resource_get_by_id(1, id)))
             return 1;
-          
+
           if(!is_ssdp_local(dict))
             return 1;
 
@@ -344,8 +344,12 @@ static void destroy_ssdp(void * priv)
 
   int idx = 0;
 
+  //  fprintf(stderr, "destroy_ssdp\n");
+
   while((dev = bg_resource_get_by_idx(1, idx)))
     {
+    //    fprintf(stderr, "destroy_ssdp: %s\n", gavl_dictionary_get_string(dev, GAVL_META_URI));
+    
     if(gavl_dictionary_get(dev, NEXT_NOTIFY_TIME))
       notify_dev(s, dev, 0);
     idx++;
@@ -881,7 +885,7 @@ static void notify_dev(ssdp_t * ssdp, const gavl_dictionary_t * dev, int alive)
   gavl_dictionary_init(&m);
   uri = gavl_dictionary_get_string(dev, GAVL_META_URI);
 
-  gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Sending notification for %s", uri);
+  gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Sending notification for %s (%d)", uri, alive);
 
   if(!alive)
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sending bye for %s", uri);

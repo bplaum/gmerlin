@@ -5213,16 +5213,6 @@ void bg_plugins_init()
   bg_plugin_registry_create_1(cfg_section);
   }
 
-
-void bg_plugins_cleanup()
-  {
-  if(bg_plugin_reg)
-    {
-    bg_plugin_registry_destroy_1(bg_plugin_reg);
-    bg_plugin_reg = NULL;
-    }
-  }
-
 void bg_plugin_registry_list_plugins(bg_plugin_type_t type, int flags)
   {
   int i, num;
@@ -6131,12 +6121,6 @@ bg_track_get_current_location(const gavl_dictionary_t * dict)
   return gavl_dictionary_get_string(dict, BG_TRACK_CURRENT_LOCATION);
   }
 
-
-
-#if defined(__GNUC__)
-
-static void cleanup_plugin_registry() __attribute__ ((destructor));
-
 static void free_plugin_params(bg_parameter_info_t * info)
   {
   if(!info->name)
@@ -6145,10 +6129,14 @@ static void free_plugin_params(bg_parameter_info_t * info)
   memset(info, 0, sizeof(*info));
   }
 
-static void cleanup_plugin_registry()
+void bg_plugins_cleanup()
   {
-  bg_plugins_cleanup();
-  
+  if(bg_plugin_reg)
+    {
+    bg_plugin_registry_destroy_1(bg_plugin_reg);
+    bg_plugin_reg = NULL;
+    }
+
   free_plugin_params(info_oa);
   free_plugin_params(info_fa);
   free_plugin_params(info_ov);
@@ -6158,7 +6146,6 @@ static void cleanup_plugin_registry()
   free_plugin_params(info_ca);
   free_plugin_params(info_cv);
   free_plugin_params(info_co);
-  }
 
-#endif
+  }
 

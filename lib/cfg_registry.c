@@ -163,13 +163,3 @@ void bg_cfg_registry_save_config()
   }
   
 
-#if defined(__GNUC__)
-
-static void cleanup_cfg_registry() __attribute__ ((destructor));
-
-static void cleanup_cfg_registry()
-  {
-  bg_cfg_registry_cleanup();
-  }
-
-#endif

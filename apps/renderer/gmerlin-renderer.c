@@ -146,6 +146,8 @@ int main(int argc, char ** argv)
   /* TODO: Save state */
   
   renderer_cleanup(&s);
+  
+  bg_global_cleanup();
 
   return ret;
   }

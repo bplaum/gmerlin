@@ -748,6 +748,10 @@ char * bg_rb_resolve_uri(const char * uri);
 int bg_rb_check_uri(const char * uri);
 char  *bg_get_rb_server();
 
+/* Global cleanup function */
+void bg_global_cleanup();
+
+
 #ifdef DEBUG
 #define bg_debug(f,...) fprintf(stderr, f, __VA_ARGS__)
 #else

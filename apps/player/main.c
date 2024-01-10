@@ -186,13 +186,11 @@ int main(int argc, char ** argv)
     }
   
   gmerlin_destroy(gmerlin);
-
-  bg_plugins_cleanup();
+  
   bg_cfg_registry_save();
+
+  bg_global_cleanup();
   
-  bg_cfg_registry_cleanup();
-  
-  
-  return 0;
+  return EXIT_SUCCESS;
   }
 

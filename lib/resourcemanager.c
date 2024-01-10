@@ -111,6 +111,13 @@ static void add(int local, gavl_dictionary_t * dict, const char * id)
   gavl_dictionary_copy(dict_new, dict);
   gavl_dictionary_set_string(dict_new, GAVL_META_ID, id);
 
+  /*
+   *  Save the resource in the array *before* sending the messages because
+   *  the plugins might want to access it
+   */
+  
+  gavl_array_splice_val_nocopy(arr, -1, 0, &val);
+  
   if(!local)
     {
     gavl_msg_t * msg;
@@ -132,7 +139,6 @@ static void add(int local, gavl_dictionary_t * dict, const char * id)
     gavl_msg_free(&msg);
     }
   
-  gavl_array_splice_val_nocopy(arr, -1, 0, &val);
   }
 
 static void del(int local, int idx)
@@ -691,11 +697,7 @@ void bg_opt_list_recording_sources(void * data, int * argc,
   bg_resource_list_by_class("item.recorder.", 0, 1000);
   }
 
-#if defined(__GNUC__)
-
-static void cleanup_resources() __attribute__ ((destructor));
-
-static void cleanup_resources()
+void bg_resourcemanager_cleanup()
   {
   int i;
   
@@ -716,7 +718,9 @@ static void cleanup_resources()
     for(i = 0; i < resman->num_plugins; i++)
       {
       if(resman->plugins[i].h)
+        {
         bg_plugin_unref(resman->plugins[i].h);
+        }
       }
 
     if(resman->plugins)
@@ -732,6 +736,6 @@ static void cleanup_resources()
     
     free(resman);
     }
+  
   }
 
-#endif
