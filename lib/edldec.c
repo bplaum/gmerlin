@@ -572,6 +572,14 @@ static gavl_video_source_t * get_overlay_source(stream_t * s,
 
 /* Check if pts is inside the segment. */
 
+static int64_t next_segment_start_pts(stream_t * s)
+  {
+  if(s->seg_idx >= s->num_segs-1)
+    return GAVL_TIME_UNDEFINED;
+  else
+    return s->segs[s->seg_idx+1].dst_time;
+  }
+
 // -1: pts is before segment
 //  0: pts is inside of segment
 //  1: pts is after segment
@@ -589,9 +597,10 @@ static int check_segment(stream_t * s, int64_t pts)
 
   if(s->segs[s->seg_idx].dst_time + s->segs[s->seg_idx].dst_duration < pts)
     return 1;
-
+  
   return 0; // Inside
   }
+
 
 static void advance_segment(stream_t * s, int64_t * src_time)
   {
@@ -647,6 +656,7 @@ static gavl_source_status_t read_audio(void * priv,
   if(i > 0) // PTS is after segment
     {
     int64_t src_time;
+    //    fprintf(stderr, "Advancing audio segment\n");
     advance_segment(s, &src_time);
 
     if(s->seg_idx < s->num_segs)
@@ -666,8 +676,30 @@ static gavl_source_status_t read_audio(void * priv,
   /* Read audio */
   st = gavl_audio_source_read_frame(s->asrc_int, frame);
   if(st != GAVL_SOURCE_OK)
-    gavl_audio_frame_mute(*frame, s->afmt);
-  
+    {
+    int64_t next_pts;
+
+    /* Unexpected EOF but more segments are coming: Insert silence */
+    if((next_pts = next_segment_start_pts(s)) != GAVL_TIME_UNDEFINED)
+      {
+      s->mute_time = next_pts - s->pts;
+
+      if(s->mute_time > 0)
+        {
+        //        fprintf(stderr, "Inserting silence %"PRId64" samples\n", s->mute_time);
+        
+        /* Correct wrong segment duration so that advancing succeeds later on */
+        s->segs[s->seg_idx].dst_duration = s->pts - s->segs[s->seg_idx].dst_time;
+        
+        /* Call ourselves again */
+        return read_audio(priv, frame);
+        }
+      else
+        return st;
+      }
+    else
+      return st;
+    }
   (*frame)->timestamp = s->pts;
   (*frame)->valid_samples = truncate_duration(s, (*frame)->timestamp, (*frame)->valid_samples);
 

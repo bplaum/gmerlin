@@ -42,9 +42,6 @@ static void add_dev(mpris_t * m, const char * addr, const char * name)
   
   gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
   
-  //  fprintf(stderr, "add_dev %s %s %s %d\n", addr, name, protocol, type);
-  
-
   if(gavl_string_starts_with(name, "gmerlin-"))
     {
     const char * pos = strrchr(name, '-');
@@ -164,8 +161,14 @@ static int handle_msg_dbus(void * priv, gavl_msg_t * msg)
           if(o_new && !o_old)
             {
             /* Added name */
-      
-            if(gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
+
+            //            fprintf(stderr, "Added %s %s %s %s\n", name, o_old, o_new,
+            //                    bg_dbus_connection_get_addr(DBUS_BUS_SESSION));
+
+            
+            
+            if(strcmp(o_new, bg_dbus_connection_get_addr(DBUS_BUS_SESSION)) &&
+               gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
               add_dev(m, o_new, name + MPRIS2_NAME_PREFIX_LEN);
             
             }
