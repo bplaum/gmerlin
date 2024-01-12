@@ -56,33 +56,6 @@
 #define BG_BACKEND_URI_SCHEME_UPNP_RENDERER "upnp-renderer"
 #define BG_BACKEND_URI_SCHEME_UPNP_SERVER   "upnp-server"
 
-
-/* The registry for backends is a dictionary with the following fields:
-
-   GAVL_META_LABEL:  Label for display
-   GAVL_META_URI:    Address
-   GAVL_META_ID:     bg_get_filename_hash() of GAVL_META_URI
-   BG_BACKEND_TYPE:  BG_BACKEND_MEDIASERVER or BG_BACKEND_RENDERER (see bgmsg.h)
-   BG_BACKEND_LOCAL: Optional, 1 if backend is local to the process
-
-   BG_APP_NETWORK_ICONS: Array of icon URLs
-
-   or
-
-   BG_APP_NETWORK_ICON: Name of an application icon
-   
- */
-
-#if 0
-void bg_msg_set_backend_info(gavl_msg_t * msg,
-                             uint32_t id, 
-                             const gavl_dictionary_t * info);
-
-void bg_msg_get_backend_info(gavl_msg_t * msg,
-                             gavl_dictionary_t * info);
-#endif
-
-
 /* */
 typedef struct bg_backend_handle_s bg_backend_handle_t;
 

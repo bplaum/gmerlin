@@ -134,6 +134,15 @@ typedef void (*bg_http_server_thread_cleanup)(void * priv);
 typedef int (*bg_http_handler_t)(bg_http_connection_t * conn, void * data);
 
 bg_http_server_t * bg_http_server_create(void);
+
+/* The first server must be created before any other threads are launched.
+   It is stored in a global variable and can be accessed through bg_http_server_get();
+   Modules, which use this function (typically plugins) must add and delete their
+   own (thread safe!) callback through  bg_http_server_add_handler and
+   bg_http_server_remove_handler. They are not allowed to call any other functions */
+
+bg_http_server_t * bg_http_server_get(void);
+
 void bg_http_server_destroy(bg_http_server_t*);
 
 const bg_parameter_info_t * bg_http_server_get_parameters(bg_http_server_t *);

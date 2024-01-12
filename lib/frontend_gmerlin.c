@@ -167,7 +167,7 @@ static bg_frontend_t * frontend_create_gmerlin(bg_http_server_t * srv, bg_contro
   ret->ping_func = ping_func;
   ret->cleanup_func = frontend_cleanup_gmerlin;
   
-  p->ws = bg_websocket_context_create(klass, srv, NULL, ctrl);
+  p->ws = bg_websocket_context_create(klass, NULL, ctrl);
   p->srv = srv;
   p->klass = gavl_strdup(klass);
   

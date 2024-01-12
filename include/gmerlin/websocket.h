@@ -52,7 +52,6 @@ char * bg_websocket_make_path(const char * klass);
    from your own http handler */
 bg_websocket_context_t *
 bg_websocket_context_create(const char * klass,
-                            bg_http_server_t * srv,
                             const char * path,
                             bg_controllable_t * ctrl);
 

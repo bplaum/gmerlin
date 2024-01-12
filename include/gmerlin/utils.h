@@ -476,17 +476,6 @@ char * bg_strip_space(char * str);
  *  @{
  */
 
-
-/** \brief Do a hexdump of binary data
- *  \param data Data
- *  \param len Length
- *  \param linebreak How many bytes to print in each line before a linebreak
- *
- *  This is mostly for debugging
- */
-
-void bg_hexdump(uint8_t * data, int len, int linebreak);
-
 /** \brief Convert an audio format to a string
  *  \param format An audio format
  *  \param use_tabs 1 to use tabs for separating field names and values

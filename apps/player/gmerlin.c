@@ -94,12 +94,12 @@ static void gmerlin_apply_config(gmerlin_t * g)
   
   parameters = bg_http_server_get_parameters(g->srv);
   bg_cfg_section_apply(g->remote_section, parameters,
-                       bg_http_server_set_parameter, (void*)(g->srv));
+                       bg_http_server_set_parameter, g->srv);
 
   parameters = bg_media_dirs_get_parameters();
   bg_cfg_section_apply(g->remote_section, parameters,
-                       bg_http_server_set_parameter, (void*)(g->srv));
-
+                       bg_http_server_set_parameter, g->srv);
+  
   
   parameters = gmerlin_get_parameters(g);
 

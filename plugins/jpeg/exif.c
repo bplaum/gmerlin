@@ -595,7 +595,7 @@ static void foreach2(ExifEntry * e, void * priv)
                   exif_format_get_name(e->format));
           fprintf(stderr, "  Size:        %d\n",
                   e->size);
-          bg_hexdump(e->data, e->size, 16);
+          gavl_hexdump(e->data, e->size, 16);
 #endif
           break;
           

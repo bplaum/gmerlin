@@ -749,37 +749,6 @@ bg_websocket_connection_create(const char * url, int timeout,
   return ret;
   }
 
-#if 0
-void
-bg_websocket_connection_start(bg_websocket_connection_t * conn)
-  {
-  conn_set_state(conn, STATE_RUNNING);
-  pthread_create(&conn->th, NULL, conn_thread, conn);
-  }
-
-void
-bg_websocket_connection_stop(bg_websocket_connection_t * conn)
-  {
-  int state = conn_get_state(conn);
-
-  if(state == STATE_RUNNING)
-    {
-    /* Send quit signal */
-    
-    gavl_msg_t msg;
-    gavl_msg_init(&msg);
-    gavl_msg_set_id_ns(&msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
-
-    bg_websocket_msg_write(conn, &msg);
-    gavl_msg_free(&msg);
-
-    conn_set_state(conn, STATE_FINISHED);
-        
-    shutdown(gavf_io_get_socket(conn->io), SHUT_RD);
-    pthread_join(conn->th, NULL);
-    }
-  }
-#endif
 /*
 */
 
@@ -1152,11 +1121,11 @@ char * bg_websocket_make_path(const char * klass)
 
 bg_websocket_context_t *
 bg_websocket_context_create(const char * klass,
-                            bg_http_server_t * srv,
                             const char * path,
                             bg_controllable_t * ctrl)
   {
   int i;
+  bg_http_server_t * srv;
   bg_websocket_context_t * ctx = calloc(1, sizeof(*ctx));
   
   for(i = 0; i < BG_WEBSOCKET_MAX_CONNECTIONS; i++)
@@ -1169,7 +1138,7 @@ bg_websocket_context_create(const char * klass,
   else
     ctx->path = bg_websocket_make_path(klass);
   
-  if(srv)
+  if((srv = bg_http_server_get()))
     {
     bg_http_server_add_handler(srv,
                                bg_websocket_context_handle_request,

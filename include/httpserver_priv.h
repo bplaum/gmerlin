@@ -88,7 +88,8 @@ struct bg_http_server_s
   http_handler_t * handlers;
   int num_handlers;
   int handlers_alloc;
-
+  pthread_mutex_t handlers_mutex;
+  
   const char * server_string;
 
   gavl_timer_t * timer;
@@ -101,9 +102,8 @@ struct bg_http_server_s
   client_thread_t ** threads;
   int threads_alloc;
   int num_threads;
-  
-  pthread_mutex_t threads_mutex;
 
+  pthread_mutex_t threads_mutex;
   bg_mdb_t * mdb;
 
   header_t headers[NUM_HEADERS];
@@ -118,6 +118,8 @@ struct bg_http_server_s
   bg_lpcm_handler_t * lpcmhandler;
   bg_plug_handler_t * plughandler;
   gavl_array_t static_dirs;
+
+  
   };
 
 //int bg_http_playlist_handler_ping(bg_http_playlist_handler_t * h);

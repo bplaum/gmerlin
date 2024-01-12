@@ -1187,7 +1187,6 @@ static int handle_creation_event(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-
 bg_mdb_t * bg_mdb_create(const char * path,
                          int do_create, bg_http_server_t * srv)
   {

@@ -60,7 +60,12 @@
 
 #define WEB_ROOT DATA_DIR"/web"
 
+/* Make it globally accessible. */
+
+static bg_http_server_t * bg_http_server = NULL;
+
 /* Server */
+
 
 static const bg_parameter_info_t parameters[] =
   {
@@ -364,13 +369,27 @@ void bg_http_server_set_root_file(bg_http_server_t * s, const char * path)
   bg_http_server_add_handler(s, handle_root, BG_HTTP_PROTO_HTTP, NULL, s);
   }
 
+
+
 bg_http_server_t * bg_http_server_create(void)
   {
   bg_http_server_t * ret;
   ret = calloc(1, sizeof(*ret));
   ret->max_ka_sockets = 10;
   ret->timer = gavl_timer_create();
+
+  pthread_mutex_init(&ret->threads_mutex, NULL);
+  pthread_mutex_init(&ret->handlers_mutex, NULL);
+
+  if(!bg_http_server)
+    bg_http_server = ret;
   return ret;
+  }
+  
+/* Get server singleton */
+bg_http_server_t * bg_http_server_get(void)
+  {
+  return bg_http_server;
   }
 
 void bg_http_server_destroy(bg_http_server_t * s)
@@ -424,6 +443,10 @@ void bg_http_server_destroy(bg_http_server_t * s)
     bg_parameter_info_destroy_array(s->params);
 
   gavl_array_free(&s->static_dirs);
+
+  pthread_mutex_destroy(&s->threads_mutex);
+  pthread_mutex_destroy(&s->handlers_mutex);
+
   
   free(s);
   }
@@ -482,11 +505,17 @@ void bg_http_server_set_default_port(bg_http_server_t * s, int port)
 int bg_http_server_has_path(bg_http_server_t * s, const char * path)
   {
   int i;
+
+  pthread_mutex_lock(&s->handlers_mutex);
   for(i = 0; i < s->num_handlers; i++)
     {
     if(s->handlers[i].path && !strncmp(path, s->handlers[i].path, strlen(s->handlers[i].path)))
+      {
+      pthread_mutex_unlock(&s->handlers_mutex);
       return 1;
+      }
     }
+  pthread_mutex_unlock(&s->handlers_mutex);
   return 0;
   }
 
@@ -529,6 +558,8 @@ void bg_http_server_add_handler(bg_http_server_t * s,
                                 const char * path, // E.g. /static/ can be NULL
                                 void * data)
   {
+  pthread_mutex_lock(&s->handlers_mutex);
+  
   if(s->num_handlers + 1 > s->handlers_alloc)
     {
     s->handlers_alloc += 16;
@@ -540,6 +571,7 @@ void bg_http_server_add_handler(bg_http_server_t * s,
   s->handlers[s->num_handlers].path = gavl_strdup(path);
   s->handlers[s->num_handlers].data = data;
   s->num_handlers++;
+  pthread_mutex_unlock(&s->handlers_mutex);
   }
 
 void bg_http_server_remove_handler(bg_http_server_t * s,
@@ -548,6 +580,7 @@ void bg_http_server_remove_handler(bg_http_server_t * s,
   {
   int idx = -1;
   int i = 0;
+  pthread_mutex_lock(&s->handlers_mutex);
   while(s->handlers[i].func)
     {
     if((s->handlers[i].data == data) ||
@@ -559,8 +592,10 @@ void bg_http_server_remove_handler(bg_http_server_t * s,
     }
 
   if(idx < 0)
+    {
+    pthread_mutex_unlock(&s->handlers_mutex);
     return;
-
+    }
   if(s->handlers[idx].path)
     free(s->handlers[idx].path);
 
@@ -569,7 +604,7 @@ void bg_http_server_remove_handler(bg_http_server_t * s,
             s->handlers + idx + 1,
             sizeof(*s->handlers) * (s->num_handlers-1 - idx));
   s->num_handlers--;
-  
+  pthread_mutex_unlock(&s->handlers_mutex);
   }
 
 int bg_http_server_start(bg_http_server_t * s)
@@ -642,6 +677,8 @@ static void handle_client_connection(bg_http_server_t * s, int fd)
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got request: %s %s %s", s->req.method, s->req.path, s->req.protocol);
   
   s->req.current_time = gavl_timer_get(s->timer);
+
+  pthread_mutex_lock(&s->handlers_mutex);
   
   for(i = 0; i < s->num_handlers; i++)
     {
@@ -667,6 +704,7 @@ static void handle_client_connection(bg_http_server_t * s, int fd)
         break;
       }
     }
+  pthread_mutex_unlock(&s->handlers_mutex);
   
   if(!result) // 404
     gavl_http_response_init(&s->req.res, s->req.protocol, 404, "Not Found");

@@ -149,7 +149,6 @@ frontend_player_console.c \
 frontend_player_ncurses.c \
 frontend_player_upnp.c \
 frontend_gmerlin.c \
-hexdump.c \
 http.c \
 httpconnection.c \
 httplpcmhandler.c \

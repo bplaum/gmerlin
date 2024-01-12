@@ -135,7 +135,7 @@ int main(int argc, char ** argv)
                        bg_msg_sink_create(msg_callback, NULL, 1),
                        bg_msg_hub_create(1));
   
-  ctx = bg_websocket_context_create(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, srv, NULL, &ctrl);
+  ctx = bg_websocket_context_create(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, NULL, &ctrl);
   
   bg_http_server_start(srv);
 
