@@ -91,7 +91,8 @@ static char * label = NULL;
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
-  bg_resource_list_by_class(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, 1, GAVL_TIME_SCALE);
+  bg_resourcemanager_get_controllable();
+  bg_resource_list_by_class(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, 1, 3*GAVL_TIME_SCALE);
   }
   
 static void cmd_play(void * data, int * argc, char *** _argv, int arg)
@@ -631,7 +632,7 @@ int main(int argc, char ** argv)
   bg_frontend_t * fe_upnp = NULL;
   bg_frontend_t * fe_gmerlin = NULL;
 
-  bg_backend_handle_t * backend;
+  bg_plugin_handle_t * backend;
   
   //  bg_websocket_connection_t * remote;
   
@@ -659,19 +660,15 @@ int main(int argc, char ** argv)
   if(!remote_addr)
     remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://localhost:10101/ws/renderer";
 
-  if(bg_backend_needs_http(remote_addr) || do_gmerlin || do_upnp)
-    srv = create_server();
+  srv = create_server();
 
   gavl_dictionary_set_string(&dev, GAVL_META_URI, remote_addr);
 
   if(label)
     gavl_dictionary_set_string(&dev, GAVL_META_LABEL, label);
   
-  if(!(backend = bg_backend_handle_create(&dev, (srv ? bg_http_server_get_root_url(srv) : NULL))))
+  if(!(backend = bg_backend_handle_create(&dev)))
     goto fail;
-
-  if(bg_backend_needs_http(remote_addr))
-    bg_http_server_add_handler(srv, bg_backend_handle_handle, BG_HTTP_PROTO_HTTP, NULL, backend);
   
   backend_ctrl = bg_backend_handle_get_controllable(backend);
 
@@ -681,8 +678,6 @@ int main(int argc, char ** argv)
   
   sink = bg_msg_sink_create(handle_backend_message, NULL, 1);
   bg_msg_hub_connect_sink(backend_ctrl->evt_hub, sink);
-  
-  bg_backend_handle_start(backend);
   
   //  fprintf(stderr, "Got backend state:\n");
   //  gavl_dictionary_dump(&backend_state, 2);
@@ -705,11 +700,11 @@ int main(int argc, char ** argv)
     
     //      remote_addr
       
-    fe_upnp = bg_frontend_create_player_upnp(srv, &proxy_ctrl);
+    fe_upnp = bg_frontend_create_player_upnp(&proxy_ctrl);
     }
   
   if(do_gmerlin)
-    fe_gmerlin = bg_frontend_create_player_gmerlin(srv, &proxy_ctrl);
+    fe_gmerlin = bg_frontend_create_player_gmerlin(&proxy_ctrl);
   
   bg_cmdline_parse(commands, &argc, &argv, NULL);
   
@@ -760,8 +755,7 @@ int main(int argc, char ** argv)
     
     }
 
-  bg_backend_handle_stop(backend);
-
+  
   fail:
   
 #ifdef HAVE_NCURSES
@@ -783,7 +777,7 @@ int main(int argc, char ** argv)
     bg_http_server_destroy(srv);
 
   if(backend)
-    bg_backend_handle_destroy(backend);
+    bg_plugin_unref(backend);
 
   gavl_dictionary_free(&dev);
 

@@ -108,7 +108,10 @@ void bg_http_connection_free(bg_http_connection_t * req)
   gavl_dictionary_free(&req->url_vars);
 
   if(req->fd > 0)
-    close(req->fd);
+    {
+    gavl_socket_close(req->fd);
+    req->fd = -1;
+    }
   bg_http_connection_init(req);
   }
 
@@ -117,6 +120,7 @@ void bg_http_connection_init(bg_http_connection_t * req)
   memset(req, 0, sizeof(*req));
   req->fd = -1;
   }
+
 
 int bg_http_connection_check_keepalive(bg_http_connection_t * c)
   {

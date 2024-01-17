@@ -584,13 +584,12 @@ static int server_handle_http(bg_http_connection_t * conn, void * data)
   }
   
 void bg_upnp_event_context_init_server(gavl_dictionary_t * dict,
-                                      const char * path,
-                                      bg_http_server_t * srv)
+                                      const char * path)
   {
   server_get_vars_nc(dict);
   server_get_subscriptions(dict);
 
-  bg_http_server_add_handler(srv, server_handle_http, BG_HTTP_PROTO_HTTP, path, dict);
+  bg_http_server_add_handler(bg_http_server_get(), server_handle_http, BG_HTTP_PROTO_HTTP, path, dict);
   }
 
 void bg_upnp_event_context_server_set_value(gavl_dictionary_t * dict, const char * name,

@@ -589,6 +589,7 @@ void bg_http_server_remove_handler(bg_http_server_t * s,
       idx = i;
       break;
       }
+    i++;
     }
 
   if(idx < 0)
@@ -773,6 +774,8 @@ int bg_http_server_iteration(bg_http_server_t * s)
     ret++;
     }
 
+  
+  
   return ret;
   }
 

@@ -36,6 +36,8 @@ typedef struct bg_remote_dev_backend_s bg_remote_dev_backend_t;
 /* Hide backends, which are exported by the same process */
 #define SHADOW_LOCAL_BACKENDS
 
+#if 0
+
 struct bg_backend_handle_s
   {
   void * priv;
@@ -71,7 +73,7 @@ struct bg_remote_dev_backend_s
   /* Functions for a remote device */
   int (*handle_msg)(void * priv, // Must be bg_backend_handle_t
                     gavl_msg_t * msg);
-  int (*handle_http)(bg_backend_handle_t * dev, bg_http_connection_t * conn);
+  //  int (*handle_http)(bg_backend_handle_t * dev, bg_http_connection_t * conn);
   int (*ping)(bg_backend_handle_t * dev);
   int (*create)(bg_backend_handle_t * dev, const char * addr, const char * root_url);
   //  void (*stop)(bg_backend_handle_t * dev);
@@ -122,6 +124,7 @@ gavl_dictionary_t * bg_backend_by_str(const char * key, const char * label, int 
 void bg_backend_add_remote(const gavl_dictionary_t * b);
 void bg_backend_del_remote(const char * uri);
 
+#endif
 
 
 #endif // BACKEND_PRIV_H_INCLUDED

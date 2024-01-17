@@ -16,15 +16,8 @@ Desktop_DATA = gmerlin-player.desktop
 
 bin_PROGRAMS = gmerlin
 
-manpages = gmerlin.1
-dist_man_MANS =
-if CROSSBUILD
-else
-dist_man_MANS += $(manpages)
-endif
-#CLEANFILES = $(manpages)
 
-bin_SCRIPTS = gmerlin_launcher
+# bin_SCRIPTS = gmerlin_launcher
 
 gmerlin_SOURCES = \
 cfgdialog.c \
@@ -40,9 +33,6 @@ gmerlin.h \
 player_remote.h
 
 pkgdatadir = $(datadir)/@PACKAGE@/player
-
-gmerlin.1: gmerlin
-	$(builddir)/gmerlin -help-man > $(builddir)/gmerlin.1
 
 skin_data = \
 gmerlin-player.css

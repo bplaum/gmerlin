@@ -46,6 +46,10 @@
 
 // #define DUMP_SUBSCRIPTON
 
+static int
+event_listener_handle_http(bg_http_connection_t * conn, void * priv);
+
+
 struct bg_upnp_event_listener_s
   {
   char * path;
@@ -229,6 +233,11 @@ bg_upnp_event_listener_create(const char * event_url_remote,
     ret->path = bg_sprintf("evt/%s", name);
   else
     ret->path = bg_sprintf("/evt/%s", name);
+
+  bg_http_server_add_handler(bg_http_server_get(),
+                             event_listener_handle_http,
+                             BG_HTTP_PROTO_HTTP,
+                             ret->path, ret);
   
   ret->local_url = bg_sprintf("%s%s", url_local, ret->path);
   
@@ -275,6 +284,9 @@ bg_upnp_event_listener_create(const char * event_url_remote,
 void bg_upnp_event_listener_destroy(bg_upnp_event_listener_t * l)
   {
   unsubscribe(l);
+
+  bg_http_server_remove_handler(bg_http_server_get(),
+                                l->path, l);
   
   if(l->remote_path)
     free(l->remote_path);
@@ -365,9 +377,8 @@ int bg_upnp_event_listener_ping(bg_upnp_event_listener_t * l)
   return ret;
   }
 
-int
-bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
-                              bg_http_connection_t * conn)
+static int
+event_listener_handle_http(bg_http_connection_t * conn, void * priv)
   {
   xmlDocPtr xml_doc;
   xmlNodePtr root;
@@ -377,6 +388,9 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
   gavf_io_t * io;
 
   gavl_buffer_t buf;
+
+  bg_upnp_event_listener_t * l = priv;
+  
   gavl_buffer_init(&buf);
   
   if(strcmp(conn->method, "NOTIFY") || strcmp(conn->path, l->path))
@@ -387,7 +401,7 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
   if(!gavl_http_read_body(io, &conn->req, &buf))
     {
     gavf_io_destroy(io);
-    return 0;
+    return 1;
     }
 
   gavf_io_destroy(io);
@@ -396,7 +410,8 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
      !(root = bg_xml_find_doc_child(xml_doc, "propertyset")))
     {
     gavl_buffer_free(&buf);
-    return 0;
+    bg_http_connection_init_res(conn, "HTTP/1.1", 400, "Bad Request");
+    goto fail;
     }
   
   node = NULL;
@@ -431,6 +446,8 @@ bg_upnp_event_listener_handle(bg_upnp_event_listener_t * l,
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
   gavl_dictionary_set_string(&conn->res, "Content-Length", "0");
+
+  fail:
   
   bg_http_connection_write_res(conn);
   

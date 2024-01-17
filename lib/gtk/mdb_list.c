@@ -587,7 +587,9 @@ static void set_entry_list(list_t * l,
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_HAS_ICON, TRUE, -1);
     }
   if(gavl_track_get_gui_state(dict, GAVL_META_GUI_CURRENT))
+    {
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_CURRENT, BG_ICON_PLAY, -1);
+    }
   else
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_CURRENT, "", -1);
 
@@ -933,9 +935,14 @@ static void do_play(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * track)
   /* Set current track */
 
   msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, queue_id);
   bg_msg_sink_put(t->player_ctrl.cmd_sink);
+  
+  msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
+  bg_msg_sink_put(t->player_ctrl.cmd_sink);
+
   free(queue_id);
   }
 
@@ -2129,7 +2136,7 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
       if(!num)
         bg_gtk_mdb_browse_children(a->t, a->id);
       else
-        bg_gtk_mdb_list_splice_children(l, 0, 0, gavl_dictionary_get(a->a, GAVL_META_TRACKS), 0);
+        bg_gtk_mdb_list_splice_children(l, 0, 0, gavl_dictionary_get_nc(a->a, GAVL_META_TRACKS), 0);
       }
     }
 
@@ -2157,7 +2164,22 @@ static void selection_foreach_func(GtkTreeModel *model,
   g_free(id);
   }
 
-void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, const gavl_value_t * add,
+static void check_current(list_t * l, gavl_dictionary_t * dict)
+  {
+  const char * hash;
+  const gavl_dictionary_t * m;
+  
+  if(!l->a->t->cur)
+    return;
+
+  if((m = gavl_track_get_metadata(dict)) &&
+     (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)) &&
+     !strcmp(hash, l->a->t->cur))
+    gavl_track_set_gui_state(dict, GAVL_META_GUI_CURRENT, 1);
+  
+  }
+
+void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, gavl_value_t * add,
                                      int splice_internal)
   {
   gavl_array_t selected_rows;
@@ -2169,6 +2191,7 @@ void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, const gavl_va
   int i;
   int num_added = 0;
   int real_idx;
+  gavl_dictionary_t * dict;
   
   const gavl_array_t * arr;
   
@@ -2233,16 +2256,23 @@ void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, const gavl_va
         {
         if(is_item(arr->entries + i))
           {
+          dict = gavl_value_get_dictionary_nc(arr->entries + i);
+
+          check_current(l, dict);
+          
           gtk_list_store_insert(GTK_LIST_STORE(model), &iter, real_idx + num_added);
-          set_entry_list(l, gavl_value_get_dictionary(arr->entries + i), &iter);
+          set_entry_list(l, dict, &iter);
           num_added++;
           }
         }
       }
     else if(is_item(add))
       {
+      dict = gavl_value_get_dictionary_nc(add);
+      check_current(l, dict);
+      
       gtk_list_store_insert(GTK_LIST_STORE(model), &iter, real_idx);
-      set_entry_list(l, gavl_value_get_dictionary(add), &iter);
+      set_entry_list(l, dict, &iter);
       num_added = 1;
       }
     }

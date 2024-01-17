@@ -10,6 +10,9 @@
 
 #include <gmerlin/upnp/ssdp.h>
 
+#include <gavl/log.h>
+#define LOG_DOMAIN "frontend_gmerlin"
+
 #include <frontend_priv.h>
 
 #define FLAG_HAVE_NODE  (1<<0)
@@ -19,7 +22,6 @@ typedef struct
   {
   bg_websocket_context_t * ws;
 
-  bg_http_server_t * srv;
   char * klass;
   
   bg_msg_sink_t * msink;
@@ -49,7 +51,8 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
     const char * server_label = NULL;
     char * uri;
     const char * root_uri;
-
+    bg_http_server_t * srv;
+    
     bg_msg_hub_disconnect_sink(f->controllable->evt_hub, p->msink);
     bg_msg_sink_destroy(p->msink);
     p->msink = NULL;
@@ -61,8 +64,10 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
     
     if(!uri_scheme)
       return 1;
+
+    srv = bg_http_server_get();
     
-    root_uri = bg_http_server_get_root_url(p->srv);
+    root_uri = bg_http_server_get_root_url(srv);
     uri = bg_sprintf("%s%s/ws/%s", uri_scheme, root_uri + 4 /* ://..." */, p->klass);
     
     /* Create local device */
@@ -155,20 +160,27 @@ static int handle_message(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static bg_frontend_t * frontend_create_gmerlin(bg_http_server_t * srv, bg_controllable_t * ctrl,
+static bg_frontend_t * frontend_create_gmerlin(bg_controllable_t * ctrl,
                                                const char * klass)
   {
   bg_frontend_t * ret;
 
-  frontend_priv_t * p = calloc(1, sizeof(*p));
-  
+  frontend_priv_t * p;
+
+  if(!bg_http_server_get())
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No http server present");
+    return NULL;
+    }
+
+  p = calloc(1, sizeof(*p));
   ret = bg_frontend_create(ctrl);
 
   ret->ping_func = ping_func;
   ret->cleanup_func = frontend_cleanup_gmerlin;
   
   p->ws = bg_websocket_context_create(klass, NULL, ctrl);
-  p->srv = srv;
+  
   p->klass = gavl_strdup(klass);
   
   p->msink = bg_msg_sink_create(handle_message, p, 0);
@@ -183,12 +195,12 @@ static bg_frontend_t * frontend_create_gmerlin(bg_http_server_t * srv, bg_contro
   return ret;
   }
 
-bg_frontend_t * bg_frontend_create_mdb_gmerlin(bg_http_server_t * srv, bg_controllable_t * ctrl)
+bg_frontend_t * bg_frontend_create_mdb_gmerlin(bg_controllable_t * ctrl)
   {
-  return frontend_create_gmerlin(srv, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
+  return frontend_create_gmerlin(ctrl, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
   }
 
-bg_frontend_t * bg_frontend_create_player_gmerlin(bg_http_server_t * srv, bg_controllable_t * ctrl)
+bg_frontend_t * bg_frontend_create_player_gmerlin(bg_controllable_t * ctrl)
   {
-  return frontend_create_gmerlin(srv, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  return frontend_create_gmerlin(ctrl, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
   }

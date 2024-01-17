@@ -51,7 +51,7 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg);
 
 typedef struct
   {
-  bg_backend_handle_t * bh;
+  bg_plugin_handle_t * bh;
   
   gavl_dictionary_t dev; // Device
   bg_control_t ctrl;
@@ -327,7 +327,7 @@ static void server_free(remote_server_t * s)
   gavl_dictionary_free(&s->dev);
 
   if(s->bh)
-    bg_backend_handle_destroy(s->bh);
+    bg_plugin_unref(s->bh);
   
   bg_control_cleanup(&s->ctrl);
   gavl_dictionary_free(&s->root);
@@ -642,15 +642,15 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const char * id, cons
   {
   gavl_msg_t * msg;
   
-  const char * http_root_uri = NULL;
+  //  const char * http_root_uri = NULL;
   remote_server_t * ret;
   remote_priv_t * p = be->priv;
-  bg_backend_handle_t * bh;
+  bg_plugin_handle_t * bh;
 
   //  fprintf(stderr, "Adding server\n");
   //  gavl_dictionary_dump(dict, 2);
     
-  if(!(bh = bg_backend_handle_create(dict, http_root_uri)))
+  if(!(bh = bg_backend_handle_create(dict)))
     return NULL;
   
   if(p->num_servers >= p->servers_alloc)

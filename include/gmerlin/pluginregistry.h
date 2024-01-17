@@ -375,7 +375,7 @@ bg_plugin_find_by_compression(gavl_codec_id_t id,
  *  \returns A plugin info or NULL
  */
 const bg_plugin_info_t *
-bg_plugin_find_by_protocol(const char * protocol);
+bg_plugin_find_by_protocol(const char * protocol, int type_mask);
 
 
 /* Another method: Return long names as strings (NULL terminated) */

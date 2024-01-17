@@ -356,7 +356,7 @@ static char * create_service_browser(avahi_t * a, const char * type)
                                       a->avahi_addr, var);
       
     ret = gavl_strdup(var);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created service browser %s", ret);
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Created service browser %s", ret);
       
     rule = gavl_sprintf("%s,member='ItemNew'", rule_common);
     bg_dbus_connection_add_listener(a->conn,

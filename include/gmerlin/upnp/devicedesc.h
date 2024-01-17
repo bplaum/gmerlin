@@ -181,6 +181,9 @@ bg_upnp_device_description_get_label(xmlNodePtr dev_node);
 void 
 bg_upnp_device_description_get_icon_urls(xmlNodePtr dev_node, gavl_array_t * ret, const char * url_base);
 
+void bg_upnp_device_get_info(gavl_dictionary_t * dev, const char * uri_base, xmlNodePtr dev_node);
+
+
 int bg_upnp_device_get_node_info(gavl_dictionary_t * dev, const char * device, int version);
 
 

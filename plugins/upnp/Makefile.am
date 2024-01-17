@@ -9,9 +9,11 @@ AM_CFLAGS = \
 -DDOC_DIR=\"$(docdir)\" \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
-plugin_LTLIBRARIES = oa_upnp.la
+plugin_LTLIBRARIES = \
+be_server_upnp.la
 
-oa_upnp_la_SOURCES = oa_upnp.c
-oa_upnp_la_LIBADD = @MODULE_LIBADD@
+
+be_server_upnp_la_SOURCES = be_server_upnp.c
+be_server_upnp_la_LIBADD = @MODULE_LIBADD@
 
 

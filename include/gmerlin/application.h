@@ -15,13 +15,11 @@
 #include <gmerlin/bgmsg.h>
 #include <gmerlin/state.h>
 
-
 extern gavl_dictionary_t bg_app_vars;
 
 #define BG_APP_NAME     "Name"
 #define BG_APP_LABEL    GAVL_META_LABEL
 #define BG_APP_CFG_DIR  "configdir"
-
 
 
 /* State variables */

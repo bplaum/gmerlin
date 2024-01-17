@@ -43,8 +43,8 @@ void bg_upnp_event_listener_destroy(bg_upnp_event_listener_t *);
 
 int bg_upnp_event_listener_ping(bg_upnp_event_listener_t *);
 
-int
-bg_upnp_event_listener_handle(bg_upnp_event_listener_t *,
-                              bg_http_connection_t * conn);
+// int
+//bg_upnp_event_listener_handle(bg_upnp_event_listener_t *,
+//                              bg_http_connection_t * conn);
 
 #endif

@@ -952,6 +952,8 @@ struct bg_websocket_context_s
   
   char * path;
   char * info_json;
+  
+  pthread_mutex_t conn_mutex;
   };
 
 /* Connection */
@@ -1037,7 +1039,7 @@ static int conn_start_server(bg_websocket_connection_t * conn,
 
 /* Context */
 
-int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data)
+static int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data)
   {
   int i;
   bg_websocket_connection_t * conn = NULL;
@@ -1095,6 +1097,8 @@ int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data)
   
   /* Check for free connection */
 
+  pthread_mutex_lock(&ctx->conn_mutex);
+  
   for(i = 0; i < BG_WEBSOCKET_MAX_CONNECTIONS; i++)
     {
     if(ctx->conn[i].io)
@@ -1106,11 +1110,15 @@ int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data)
 
   if(!conn)
     {
+    pthread_mutex_unlock(&ctx->conn_mutex);
     bg_http_connection_init_res(c, c->protocol, 503, "Service Unavailable");
     return 1;
     }
   
   conn_start_server(conn, c, ctx);
+
+  pthread_mutex_unlock(&ctx->conn_mutex);
+  
   return 1;
   }
 
@@ -1127,6 +1135,8 @@ bg_websocket_context_create(const char * klass,
   int i;
   bg_http_server_t * srv;
   bg_websocket_context_t * ctx = calloc(1, sizeof(*ctx));
+
+  pthread_mutex_init(&ctx->conn_mutex, NULL);
   
   for(i = 0; i < BG_WEBSOCKET_MAX_CONNECTIONS; i++)
     conn_init(&ctx->conn[i], 0);
@@ -1154,6 +1164,8 @@ int bg_websocket_context_iteration(bg_websocket_context_t * ctx)
   {
   int i;
   int ret = 0;
+
+  pthread_mutex_lock(&ctx->conn_mutex);
   
   for(i = 0; i < BG_WEBSOCKET_MAX_CONNECTIONS; i++)
     {
@@ -1171,13 +1183,19 @@ int bg_websocket_context_iteration(bg_websocket_context_t * ctx)
       ret += bg_msg_sink_get_num(ctx->conn[i].ctrl_server.evt_sink);
       }
     }
+  
+  pthread_mutex_unlock(&ctx->conn_mutex);
+
   return ret;
   }
 
 void bg_websocket_context_destroy(bg_websocket_context_t * ctx)
   {
   int i;
-
+  bg_http_server_t * s;
+  if((s = bg_http_server_get()))
+    bg_http_server_remove_handler(s, ctx->path, ctx);
+  
   for(i = 0; i < BG_WEBSOCKET_MAX_CONNECTIONS; i++)
     conn_free(&ctx->conn[i]);
 
@@ -1185,6 +1203,7 @@ void bg_websocket_context_destroy(bg_websocket_context_t * ctx)
     free(ctx->path);
   if(ctx->info_json)
     free(ctx->info_json);
+  pthread_mutex_destroy(&ctx->conn_mutex);
   
   free(ctx);
   }

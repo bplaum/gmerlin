@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <gmerlin/player.h>
+#include <gmerlin/mdb.h>
 #include <gavl/metatags.h>
 #include <playerprivate.h>
 #include <gmerlin/iconfont.h>
@@ -31,11 +32,19 @@
 void bg_player_set_track(bg_msg_sink_t * sink, const gavl_dictionary_t * loc)
   {
   gavl_msg_t * msg;
-
   msg = bg_msg_sink_get(sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_TRACK, BG_MSG_NS_PLAYER);
-  gavl_msg_set_arg_dictionary(msg, 0, loc);
+  
+  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+    
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
+
+  gavl_msg_set_arg_int(msg, 0, 0);  // idx
+  gavl_msg_set_arg_int(msg, 1, -1); // del
+  
+  gavl_msg_set_arg_dictionary(msg, 2, loc);
+  
   bg_msg_sink_put(sink);
+  
   }
 
 void bg_player_set_next_track(bg_msg_sink_t * s, const gavl_dictionary_t * loc)
@@ -52,17 +61,46 @@ void bg_player_load_uri(bg_msg_sink_t * s,
                         const char * uri,
                         int start_playing)
   {
+  char * id;
   gavl_msg_t * msg;
+  char hash[GAVL_MD5_LENGTH];
+  gavl_dictionary_t dict;
+
+  gavl_dictionary_init(&dict);
+  
+
+  gavl_md5_buffer_str(uri, strlen(uri), hash);
+
+  gavl_track_from_location(&dict, uri);
   
   msg = bg_msg_sink_get(s);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_LOCATION, BG_MSG_NS_PLAYER);
-  gavl_msg_set_arg_string(msg, 0, uri);
-  gavl_msg_set_arg_int(msg, 1, start_playing);
+  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
+
+  gavl_msg_set_arg_int(msg, 0, 0);  // idx
+  gavl_msg_set_arg_int(msg, 1, -1); // del
+  gavl_msg_set_arg_dictionary(msg, 2, &dict);
   bg_msg_sink_put(s);
+
+  /* Set current track */
+  id = gavl_sprintf("%s/%s", BG_PLAYQUEUE_ID, hash);
+  msg = bg_msg_sink_get(s);
+
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
+  gavl_msg_set_arg_string(msg, 0, id);  // idx
+  bg_msg_sink_put(s);
+  free(id);
+
+  /* Play */
+  if(start_playing)
+    bg_player_play(s);
+  
+  gavl_dictionary_free(&dict);
+
   }
 
 void bg_player_play_track(bg_msg_sink_t * sink,
-                             const gavl_dictionary_t * dict)
+                          const gavl_dictionary_t * dict)
   {
   bg_player_set_track(sink, dict);
   bg_player_play(sink);
@@ -76,14 +114,6 @@ void bg_player_play(bg_msg_sink_t * sink)
   bg_msg_sink_put(sink);
   }
 
-void bg_player_play_by_id(bg_msg_sink_t * sink, const char * id)
-  {
-  gavl_msg_t * msg;
-  msg = bg_msg_sink_get(sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-  gavl_msg_set_arg_string(msg, 0, id);
-  bg_msg_sink_put(sink);
-  }
 
 void bg_player_stop_m(gavl_msg_t * msg)
   {

@@ -43,7 +43,7 @@ ncurses_libs    =
 endif
 
 if HAVE_DBUS
-dbus_sources = dbus.c backend_mpris2.c frontend_player_mpris2.c backend_mpd.c
+dbus_sources = dbus.c frontend_player_mpris2.c
 dbus_cflags  = @DBUS_CFLAGS@
 dbus_libs    = @DBUS_LIBS@
 else
@@ -209,8 +209,6 @@ preset_xml.c \
 resourcemanager.c \
 ringbuffer.c \
 backend.c \
-backend_upnp.c \
-backend_gmerlin.c \
 searchpath.c \
 serverstorage.c \
 sha1.c \

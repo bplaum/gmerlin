@@ -1949,23 +1949,6 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
             bg_gtk_mdb_list_splice_children(t->playqueue.list, idx, del, &add, 1);
           else
             gavl_track_splice_children(t->playqueue.a, idx, del, &add);
-
-#if 0          
-          /* Update update local playqueue (num_children) */
-
-          if(id_to_iter(GTK_TREE_VIEW(t->treeview), BG_PLAYQUEUE_ID, &iter))
-            set_entry_tree(t, t->playqueue.a, &iter);
-          
-          /* Update update tab label */
-
-          if(t->playqueue.list)
-            {
-            char * markup;
-            markup = bg_gtk_mdb_tree_create_markup(t->playqueue.a, NULL);
-            gtk_label_set_markup(GTK_LABEL(t->playqueue.list->tab_label), markup);
-            free(markup);
-            }
-#endif
           }
           break;
         case BG_MSG_DB_OBJECT_CHANGED:
@@ -1980,12 +1963,15 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
 
           if(!ctx_id) // Should not be necessary
             break;
-
+          
           bg_gtk_mdb_tree_update_node(t, ctx_id, &new_dict);
 
           set_object_array(&t->tab_albums, ctx_id, &new_dict);
           set_object_array(&t->win_albums, ctx_id, &new_dict);
           set_object_array(&t->exp_albums, ctx_id, &new_dict);
+
+          //          fprintf(stderr, "Object changed\n");
+          //          gavl_dictionary_dump(&new_dict, 2);
           
           gavl_dictionary_free(&new_dict);
           }
@@ -2020,82 +2006,17 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
               const char * hash;
               
               if((track = gavl_value_get_dictionary(&val)) &&
-                 (m = gavl_track_get_metadata(track)) &&
-                 (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
+                 (m = gavl_track_get_metadata(track)))
                 {
+                hash = gavl_dictionary_get_string(m, GAVL_META_HASH);
                 bg_gtk_mdb_album_array_set_current(&t->win_albums, hash);
                 bg_gtk_mdb_album_array_set_current(&t->tab_albums, hash);
                 bg_gtk_mdb_album_set_current(&t->playqueue, hash);
+
+                t->cur = gavl_strrep(t->cur, hash);
                 }
-              }
-            else if(!strcmp(var, BG_PLAYER_STATE_QUEUE_IDX))
-              {
-              int num, i, current;
-
-              // fprintf(stderr, "queue index changed: %d\n", val.v.i);
-              num = gavl_track_get_num_children(t->playqueue.a);
-
-              for(i = 0; i < num; i++)
-                {
-                gavl_dictionary_t * track = gavl_get_track_nc(t->playqueue.a, i);
-
-                current = gavl_track_get_gui_state(track, GAVL_META_GUI_CURRENT);
-
-                if(current)
-                  {
-                  if(i == val.v.i)
-                    {
-                    // Nothing
-                    }
-                  else
-                    {
-                    /* TODO: Update */
-                    if(t->playqueue.list)
-                      {
-                      gavl_dictionary_t new_dict;
-
-                      gavl_dictionary_init(&new_dict);
-                      gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 0);
-                      
-                      bg_gtk_mdb_album_update_track(&t->playqueue, gavl_track_get_id(track),
-                                                    &new_dict);
-                      gavl_dictionary_free(&new_dict);
-                      }
-                    else
-                      {
-                      gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 0);
-                      }
-                    }
-                  }
-                else
-                  {
-                  if(i == val.v.i)
-                    {
-                    /* TODO: Update */
-                    if(t->playqueue.list)
-                      {
-                      gavl_dictionary_t new_dict;
-
-                      gavl_dictionary_init(&new_dict);
-                      gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 1);
-                      
-                      bg_gtk_mdb_album_update_track(&t->playqueue, gavl_track_get_id(track),
-                                                    &new_dict);
-                      
-                      gavl_dictionary_free(&new_dict);
-                      }
-                    else
-                      {
-                      gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 1);
-                      }
-                    }
-                  else
-                    {
-                    // Nothing
-                    }
-                  }
-                }
-              
+              else
+                t->cur = gavl_strrep(t->cur, NULL);
               }
             }
           
@@ -2322,6 +2243,9 @@ void bg_gtk_mdb_tree_destroy(bg_gtk_mdb_tree_t * t)
   if(t->playback_id)
     free(t->playback_id);
 
+  if(t->cur)
+    free(t->cur);
+
   if(t->playqueue.a)
     gavl_dictionary_destroy(t->playqueue.a);
   
@@ -2447,7 +2371,6 @@ void bg_gtk_mdb_album_set_current(album_t * album, const char * hash)
   {
   int num, i, current;
   
-  // fprintf(stderr, "queue index changed: %d\n", val.v.i);
   num = gavl_track_get_num_children(album->a);
 
   for(i = 0; i < num; i++)
@@ -2458,31 +2381,14 @@ void bg_gtk_mdb_album_set_current(album_t * album, const char * hash)
     
     track = gavl_get_track_nc(album->a, i);
     m = gavl_track_get_metadata(track);
-    track_hash = gavl_dictionary_get_string(m, GAVL_META_HASH);
     current = gavl_track_get_gui_state(track, GAVL_META_GUI_CURRENT);
-    
-    if(current)
-      {
-      /* Update */
-      if(album->list)
-        {
-        gavl_dictionary_t new_dict;
 
-        gavl_dictionary_init(&new_dict);
-        gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 0);
-        
-        bg_gtk_mdb_album_update_track(album, gavl_track_get_id(track),
-                                      &new_dict);
-        gavl_dictionary_free(&new_dict);
-        }
-      else
-        {
-        gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 0);
-        }
-      }
-
-    if(!strcmp(hash, track_hash))
+    if(hash &&
+       (track_hash = gavl_dictionary_get_string(m, GAVL_META_HASH)) &&
+       !strcmp(hash, track_hash))
       {
+      //    fprintf(stderr, "set_current %d\n", i);
+      
       /* Update */
       if(album->list)
         {
@@ -2501,5 +2407,27 @@ void bg_gtk_mdb_album_set_current(album_t * album, const char * hash)
         gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 1);
         }
       }
+    
+    else if(current)
+      {
+      /* Update */
+      if(album->list)
+        {
+        gavl_dictionary_t new_dict;
+
+        gavl_dictionary_init(&new_dict);
+        gavl_track_set_gui_state(&new_dict, GAVL_META_GUI_CURRENT, 0);
+        
+        bg_gtk_mdb_album_update_track(album, gavl_track_get_id(track),
+                                      &new_dict);
+        gavl_dictionary_free(&new_dict);
+        }
+      else
+        {
+        gavl_track_set_gui_state(track, GAVL_META_GUI_CURRENT, 0);
+        }
+      //      fprintf(stderr, "unset_current %d\n", i);
+      }
+
     }
   }

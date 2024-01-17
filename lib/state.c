@@ -461,6 +461,38 @@ int bg_state_add_value(gavl_dictionary_t * state,
   return bg_state_clamp_value(state, ctx, var, ret);
   }
 
+int bg_state_handle_set_rel(gavl_dictionary_t * state, gavl_msg_t * msg)
+  {
+  gavl_value_t val;
+  gavl_value_t add;
+
+  const char * ctx;
+  const char * var;
+          
+  int last = 0;
+
+  if((msg->NS != BG_MSG_NS_STATE) ||
+     (msg->ID != BG_CMD_SET_STATE_REL))
+    return 0;
+  
+  gavl_value_init(&val);
+  gavl_value_init(&add);
+  
+  gavl_msg_get_state(msg, &last, &ctx, &var, &add, NULL);
+          
+  /* Add (and clamp) value */
+
+  bg_state_add_value(state, ctx, var, &add, &val);
+
+  gavl_msg_free(msg);
+  gavl_msg_init(msg);
+  gavl_msg_set_state(msg, BG_CMD_SET_STATE, last, ctx, var, &val);
+  
+  gavl_value_free(&val);
+  gavl_value_free(&add);
+  return 1;
+  }
+
 
 /* Merge */
 

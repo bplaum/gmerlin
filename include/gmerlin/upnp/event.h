@@ -9,8 +9,7 @@
 /* Event context (server /device side)*/
 
 void bg_upnp_event_context_init_server(gavl_dictionary_t * dict,
-                                      const char * dir,
-                                      bg_http_server_t * srv);
+                                      const char * dir);
 
 void bg_upnp_event_context_server_set_value(gavl_dictionary_t * dict, const char * name,
                                             const char * val,

@@ -346,8 +346,8 @@ int server_init(server_t * s)
   bg_mdb_set_root_name(s->mdb, s->label);
   
   /* Create frontends */
-  s->fe_upnp    = bg_frontend_create_mdb_upnp(s->srv, mdb_ctrl);
-  s->fe_gmerlin = bg_frontend_create_mdb_gmerlin(s->srv, mdb_ctrl);
+  s->fe_upnp    = bg_frontend_create_mdb_upnp(mdb_ctrl);
+  s->fe_gmerlin = bg_frontend_create_mdb_gmerlin(mdb_ctrl);
 
   /* Create server side storage */
   

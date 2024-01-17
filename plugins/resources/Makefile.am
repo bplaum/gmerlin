@@ -10,7 +10,7 @@ AM_CFLAGS = \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
 if HAVE_DBUS
-dbus_modules = res_udisks2.la res_avahi.la res_mpris.la
+dbus_modules = res_udisks2.la res_avahi.la
 else
 dbus_modules = 
 endif
@@ -23,15 +23,10 @@ res_udisks2_la_CFLAGS = @DBUS_CFLAGS@ $(AM_CFLAGS)
 res_udisks2_la_SOURCES = res_udisks2.c
 res_udisks2_la_LIBS = @DBUS_LIBS@
 
-res_mpris_la_CFLAGS = @DBUS_CFLAGS@ $(AM_CFLAGS)
-res_mpris_la_SOURCES = res_mpris.c
-res_mpris_la_LIBS = @DBUS_LIBS@
-
 res_avahi_la_CFLAGS = @DBUS_CFLAGS@ $(AM_CFLAGS)
 res_avahi_la_SOURCES = res_avahi.c
 res_avahi_la_LIBS = @DBUS_LIBS@
 
-res_ssdp_la_CFLAGS = @DBUS_CFLAGS@ $(AM_CFLAGS)
+res_ssdp_la_CFLAGS = $(AM_CFLAGS)
 res_ssdp_la_SOURCES = res_ssdp.c
-res_ssdp_la_LIBS = @DBUS_LIBS@
 

@@ -17,20 +17,6 @@ gmerlin_renderer_SOURCES = \
 renderer.c \
 gmerlin-renderer.c
 
-manpages = gmerlin-renderer.1
-man_MANS =
-if CROSSBUILD
-else
-man_MANS += $(manpages)
-endif
-CLEANFILES = $(manpages)
-
-# gmerlin-renderer.1: gmerlin-renderer
-#	$(builddir)/gmerlin-renderer -help-man > $(builddir)/gmerlin-renderer.1
-
-%.1: %
-	$(builddir)/$< -help-man > $(builddir)/$@
-
 
 Desktopdir = $(datadir)/applications
 Desktop_DATA = gmerlin-renderer.desktop

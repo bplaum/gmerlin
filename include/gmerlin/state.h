@@ -78,6 +78,8 @@ void bg_state_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src);
 void bg_state_apply(gavl_dictionary_t * state, bg_msg_sink_t * sink, int id);
 void bg_state_apply_ctx(gavl_dictionary_t * state, const char * ctx, bg_msg_sink_t * sink, int id);
 
+int bg_state_handle_set_rel(gavl_dictionary_t * state, gavl_msg_t * msg);
+
 int bg_state_set(gavl_dictionary_t * state,
                  int last,
                  const char * ctx,

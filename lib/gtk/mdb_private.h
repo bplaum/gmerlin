@@ -184,6 +184,7 @@ struct bg_gtk_mdb_tree_s
   gavl_array_t list_icons_to_load;
   
   char * playback_id;
+  char * cur; // Current track as hash
   
   int icons_loading; // Keeps track on how many icons are loaded in the background right now
 
@@ -243,7 +244,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * m, const char * p
 
 void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict);
 
-void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, const gavl_value_t * add, int update_dict);
+void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, gavl_value_t * add, int update_dict);
 
 void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree);
 

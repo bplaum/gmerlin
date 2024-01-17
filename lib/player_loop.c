@@ -906,8 +906,11 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
         }
       break;
     case BG_MSG_NS_STATE:
+      bg_state_handle_set_rel(&player->state, command);
+      
       switch(gavl_msg_get_id(command))
         {
+#if 0   
         case BG_CMD_SET_STATE_REL:
           {
           gavl_msg_t cmd;
@@ -939,6 +942,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           gavl_value_free(&add);
           }
           break;
+#endif
         case BG_CMD_SET_STATE:
           {
           gavl_value_t val;
@@ -1117,84 +1121,8 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
       {
       switch(command->ID)
         {
-        case BG_PLAYER_CMD_SET_TRACK:
-          {
-          int state;
-          gavl_value_t val;
-          gavl_value_init(&val);
-          
-          gavl_msg_get_arg(command, 0, &val);
-          
-          state = bg_player_get_status(player);
-          
-          switch(state)
-            {
-            case BG_PLAYER_STATUS_PLAYING:
-            case BG_PLAYER_STATUS_CHANGING:
-            case BG_PLAYER_STATUS_PAUSED:
-              stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
-              break;
-            }
-          
-          bg_player_tracklist_splice(&player->tl, 0, -1, &val, gavl_msg_get_client_id(command));
-          gavl_value_free(&val);
-          
-          /* Set current track */
-          bg_player_tracklist_set_current_by_idx(&player->tl, 0);
-          }
-          break;
-        case BG_PLAYER_CMD_SET_LOCATION:
-          {
-          char * id;
-          gavl_msg_t msg1;
-          
-          int state = bg_player_get_status(player);
-          
-          switch(state)
-            {
-            case BG_PLAYER_STATUS_PLAYING:
-            case BG_PLAYER_STATUS_CHANGING:
-            case BG_PLAYER_STATUS_PAUSED:
-              stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
-              break;
-            }
-
-          gavl_msg_init(&msg1);
-
-          /* After the last track */
-
-          bg_mdb_set_load_uri(&msg1, BG_PLAYQUEUE_ID, -1, gavl_msg_get_arg_string_c(command, 0));
-          bg_player_tracklist_handle_message(&player->tl, &msg1);
-          
-          bg_player_source_cleanup(player->src_next);
-
-          id = bg_player_tracklist_id_from_uri(gavl_msg_get_arg_string_c(command, 0));
-          bg_player_tracklist_set_current_by_id(&player->tl, id);
-          free(id);
-          
-          if(gavl_msg_get_arg_int(command, 1))
-            play_cmd(player);
-          
-          gavl_msg_free(&msg1);
-          }
-          break;
-        case BG_PLAYER_CMD_QUIT:
-          {
-          int state = bg_player_get_status(player);
-          switch(state)
-            {
-            case BG_PLAYER_STATUS_PLAYING:
-            case BG_PLAYER_STATUS_CHANGING:
-            case BG_PLAYER_STATUS_PAUSED:
-              stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
-              break;
-            }
-          return 0;
-          }
-          break;
         case BG_PLAYER_CMD_NEXT:
         case BG_PLAYER_CMD_PREV:
-        case BG_PLAYER_CMD_PLAY_BY_ID:
           {
           gavl_dictionary_t * track;
           gavl_dictionary_t * last_track = NULL;
@@ -1222,19 +1150,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             {
             if(!bg_player_tracklist_back(&player->tl))
               break;
-            }
-          else // BG_PLAYER_CMD_PLAY_BY_ID
-            {
-            const char * id = gavl_msg_get_arg_string_c(command, 0);
-            if(!bg_player_tracklist_set_current_by_id(&player->tl, id))
-              break;
-
-            if(!was_playing)
-              {
-              /* Start new playback */
-              play_cmd(player);
-              break;
-              }
             }
           
           if(was_playing)
@@ -1556,6 +1471,26 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
         }
       }
       break;
+    case GAVL_MSG_NS_GENERIC:
+      switch(command->ID)
+        {
+        case GAVL_CMD_QUIT:
+          {
+          int state = bg_player_get_status(player);
+          switch(state)
+            {
+            case BG_PLAYER_STATUS_PLAYING:
+            case BG_PLAYER_STATUS_CHANGING:
+            case BG_PLAYER_STATUS_PAUSED:
+              stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
+              break;
+            }
+          return 0;
+          }
+          break;
+        }
+      break;
+      
     }
   return 1;
   }
@@ -1757,7 +1692,7 @@ void bg_player_quit(bg_player_t *player)
   {
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(player->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_QUIT, BG_MSG_NS_PLAYER);
+  gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
   bg_msg_sink_put(player->ctrl.cmd_sink);
   
   //  pthread_cancel(player->player_thread);

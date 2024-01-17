@@ -37,11 +37,14 @@
 
 
 #include <frontend_priv.h>
-#include <backend_priv.h>
+// #include <backend_priv.h>
 
 #define MSG_ID_MPRIS2 1
 
 #define OBJ_PATH "/org/mpris/MediaPlayer2"
+
+#define MPRIS2_NAME_PREFIX     "org.mpris.MediaPlayer2."
+#define MPRIS2_NAME_PREFIX_LEN 23
 
 static const char * introspect_xml;
 

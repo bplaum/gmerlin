@@ -71,7 +71,9 @@ struct bg_http_connection_s
   int flags; 
 
   gavl_time_t current_time;
+
   };
+
 
 void bg_http_connection_free(bg_http_connection_t * conn);
 

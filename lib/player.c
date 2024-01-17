@@ -57,7 +57,6 @@ static const bg_state_var_desc_t state_vars[] =
     { BG_PLAYER_STATE_CHAPTER,              GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_MIMETYPES,       GAVL_TYPE_ARRAY },
     { BG_PLAYER_STATE_PROTOCOLS,       GAVL_TYPE_ARRAY },
-    { BG_PLAYER_STATE_LABEL,           GAVL_TYPE_STRING,     },
     { BG_PLAYER_STATE_QUEUE_IDX,       GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_QUEUE_LEN,       GAVL_TYPE_INT,        },
     { /* End */ },
@@ -191,7 +190,7 @@ static void state_init_track(gavl_dictionary_t * dict)
   bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val, NULL, 0);
   }
 
-void bg_player_state_init(gavl_dictionary_t * dict, const char * label,
+void bg_player_state_init(gavl_dictionary_t * dict,
                           const gavl_array_t * protocols, const gavl_array_t * mimetypes)
   {
   gavl_value_t val;
@@ -229,18 +228,6 @@ void bg_player_state_init(gavl_dictionary_t * dict, const char * label,
     }
   else
     bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES, NULL, NULL, 0);
-    
-  
-  if(label)
-    {
-    gavl_value_init(&val);
-    gavl_value_set_string(&val, label);
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_LABEL, &val, NULL, 0);
-    gavl_value_free(&val);
-    }
-  else
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_LABEL, NULL, NULL, 0);
-  
   
   //  fprintf(stderr, "player_state_init %s\n", label);
   //  gavl_dictionary_dump(dict, 2);
@@ -401,7 +388,7 @@ bg_player_t * bg_player_create()
   bg_plugin_registry_get_input_mimetypes(bg_plugin_reg, mimetypes_arr);
   bg_plugin_registry_get_input_protocols(bg_plugin_reg, protocols_arr);
   
-  bg_player_state_init(&ret->state, bg_app_get_label(), protocols_arr, mimetypes_arr);
+  bg_player_state_init(&ret->state, protocols_arr, mimetypes_arr);
   
   /* Create message queues */
   

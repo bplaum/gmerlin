@@ -7,6 +7,8 @@
 #include <config.h>
 
 #include <gavl/metatags.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "frontend_player_upnp"
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/upnp/soap.h>
@@ -159,7 +161,6 @@ typedef struct
   gavl_dictionary_t cm_evt;
   gavl_dictionary_t rc_evt;
   gavl_dictionary_t avt_evt;
-  bg_http_server_t * srv;
   gavl_dictionary_t state;
   char control_id[37];
 
@@ -187,7 +188,7 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     const gavl_array_t * icon_arr;
     char * icons;
     
-    char * uri = bg_sprintf("%s/upnp/renderer/desc.xml", bg_http_server_get_root_url(p->srv));
+    char * uri = bg_sprintf("%s/upnp/renderer/desc.xml", bg_http_server_get_root_url(bg_http_server_get()));
 
     gavl_dictionary_init(&local_dev);
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
@@ -615,7 +616,7 @@ static void make_track(gavl_dictionary_t * track,
      strcmp(InstanceID, "0")) \
     { \
     bg_soap_request_set_error(soap, code, "Invalid InstanceID"); \
-    bg_upnp_finish_soap_request(soap, c, priv->srv);          \
+    bg_upnp_finish_soap_request(soap, c, bg_http_server_get());  \
     return 1;  \
     }
 
@@ -684,7 +685,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       CHECK_INSTANCE_ID(702);
       
       gavl_dictionary_set_string(args_out, "CurrentMute", bg_upnp_event_context_server_get_value(&priv->rc_evt, "Mute"));
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -697,7 +698,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       CHECK_INSTANCE_ID(702);
       gavl_dictionary_set_string(args_out, "CurrentVolume",
                                  bg_upnp_event_context_server_get_value(&priv->rc_evt, "Volume"));
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       return 1;
       }
 
@@ -711,7 +712,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       CHECK_INSTANCE_ID(702);
       gavl_dictionary_set_string(args_out, "CurrentVolume",
                                  bg_upnp_event_context_server_get_value(&priv->rc_evt, "VolumeDB"));
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       return 1;
       }
     
@@ -725,7 +726,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(702);
       gavl_dictionary_set_string(args_out, "CurrentPresetNameList", "FactoryDefaults");
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -739,7 +740,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
       /* Does nothing for now */
       
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -761,7 +762,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       if(!Channel || strcmp(Channel, "Master"))
         {
         bg_soap_request_set_error(soap, 402, "Invalid Args");
-        bg_upnp_finish_soap_request(soap, c, priv->srv);
+        bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         return 1;
         }
 
@@ -770,7 +771,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       
       bg_state_set(NULL, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MUTE,
                    &val, fe->ctrl.cmd_sink, BG_CMD_SET_STATE);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       return 1;
       }
 
@@ -795,12 +796,12 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
          !DesiredVolume)
         {
         bg_soap_request_set_error(soap, 402, "Invalid Args");
-        bg_upnp_finish_soap_request(soap, c, priv->srv);
+        bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         return 1;
         }
 
       bg_player_set_volume(fe->ctrl.cmd_sink, (double)atoi(DesiredVolume) / (double)BG_PLAYER_VOLUME_INT_MAX);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     else if(!strcmp(func, "SetVolumeDB"))
       {
@@ -816,12 +817,12 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
          !DesiredVolume)
         {
         bg_soap_request_set_error(soap, 402, "Invalid Args");
-        bg_upnp_finish_soap_request(soap, c, priv->srv);
+        bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         return 1;
         }
       
       bg_player_set_volume(fe->ctrl.cmd_sink, (double)bg_player_volume_from_dB((double)atoi(DesiredVolume)/256.0));
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
 
       bg_upnp_event_context_server_set_value(&priv->rc_evt, "VolumeDB", DesiredVolume, EVT_INTERVAL);
       }
@@ -858,7 +859,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     if(!strcmp(func, "GetCurrentConnectionIDs"))
       {
       gavl_dictionary_set_string(args_out, "ConnectionIDs", BG_SOAP_ARG_EMPTY);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -882,7 +883,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_dictionary_set_string(args_out, "Source", BG_SOAP_ARG_EMPTY);
       gavl_dictionary_set_string(args_out, "Sink", priv->protocol_info);
       
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     gavl_dictionary_destroy(soap);
@@ -922,7 +923,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_dictionary_set_string(args_out, "Actions",
                                  bg_upnp_event_context_server_get_value(&priv->avt_evt, "CurrentTransportActions"));
       
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -937,7 +938,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_dictionary_set_string(args_out, "PlayMedia",      "NONE,NETWORK");
       gavl_dictionary_set_string(args_out, "RecMedia",       "NOT_IMPLEMENTED");
       gavl_dictionary_set_string(args_out, "RecQualityModes","NOT_IMPLEMENTED");
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -1000,7 +1001,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_dictionary_set_string(args_out, "AbsTime", time_str);
       gavl_dictionary_set_string(args_out, "RelCount", "2147483647");
       gavl_dictionary_set_string(args_out, "AbsCount", "2147483647");
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       
       }
 
@@ -1016,7 +1017,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_dictionary_set_string(args_out, "CurrentTransportState",  bg_upnp_event_context_server_get_value(&priv->avt_evt, "TransportState"));
       gavl_dictionary_set_string(args_out, "CurrentTransportStatus", bg_upnp_event_context_server_get_value(&priv->avt_evt, "TransportStatus"));
       gavl_dictionary_set_string(args_out, "CurrentSpeed", "1");
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -1030,7 +1031,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
       gavl_dictionary_set_string(args_out, "PlayMode", bg_upnp_event_context_server_get_value(&priv->avt_evt, "CurrentPlayMode"));
       gavl_dictionary_set_string(args_out, "RecQualityMode", "NOT_IMPLEMENTED");
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -1042,7 +1043,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(718);
       bg_player_next(fe->ctrl.cmd_sink);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -1054,7 +1055,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(718);
       bg_player_pause(fe->ctrl.cmd_sink);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -1066,7 +1067,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(718);
       bg_player_play(fe->ctrl.cmd_sink);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -1078,7 +1079,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(718);
       bg_player_prev(fe->ctrl.cmd_sink);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -1107,7 +1108,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
         //        bg_player_seek(bg_msg_sink_t * sink, gavl_time_t time, int scale)
         
         bg_player_seek(fe->ctrl.cmd_sink, t, GAVL_TIME_SCALE);
-        bg_upnp_finish_soap_request(soap, c, priv->srv);
+        bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         }
       }
     
@@ -1134,7 +1135,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "AVTransportURI", CurrentURI, EVT_INTERVAL);
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "AVTransportURIMetaData", CurrentURIMetaData, EVT_INTERVAL);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
     /*
@@ -1162,7 +1163,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "NextAVTransportURI", NextURI, EVT_INTERVAL);
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "NextAVTransportURIMetaData", NextURIMetaData, EVT_INTERVAL);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
     /*
@@ -1185,7 +1186,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
         
         bg_state_set(NULL, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MUTE,
                      &val, fe->ctrl.cmd_sink, BG_CMD_SET_STATE);
-        bg_upnp_finish_soap_request(soap, c, priv->srv);
+        bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         }
       
       }
@@ -1199,7 +1200,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       CHECK_INSTANCE_ID(718);
       bg_player_stop(fe->ctrl.cmd_sink);
-      bg_upnp_finish_soap_request(soap, c, priv->srv);
+      bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       
       }
     
@@ -1212,21 +1213,27 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
 
 bg_frontend_t *
-bg_frontend_create_player_upnp(bg_http_server_t * srv,
-                               bg_controllable_t * ctrl)
+bg_frontend_create_player_upnp(bg_controllable_t * ctrl)
   {
   uuid_t control_uuid;
   
   bg_renderer_frontend_upnp_t * priv;
+  bg_http_server_t * srv;
   
-  bg_frontend_t * ret = bg_frontend_create(ctrl);
-
+  bg_frontend_t * ret;
+  
+  if(!(srv = bg_http_server_get()))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No http server present");
+    return NULL;
+    }
+  
+  ret = bg_frontend_create(ctrl);
   ret->ping_func    =    ping_player_upnp;
   ret->cleanup_func = cleanup_player_upnp;
 
   priv = calloc(1, sizeof(*priv));
   
-  priv->srv = srv;
   ret->priv = priv;
 
   /* Initialize state variables */
@@ -1265,9 +1272,9 @@ bg_frontend_create_player_upnp(bg_http_server_t * srv,
 
   /* Add the event handlers first */
 
-  bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/renderer/cm/evt", srv);
-  bg_upnp_event_context_init_server(&priv->rc_evt, "/upnp/renderer/rc/evt", srv);
-  bg_upnp_event_context_init_server(&priv->avt_evt, "/upnp/renderer/avt/evt", srv);
+  bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/renderer/cm/evt");
+  bg_upnp_event_context_init_server(&priv->rc_evt, "/upnp/renderer/rc/evt");
+  bg_upnp_event_context_init_server(&priv->avt_evt, "/upnp/renderer/avt/evt");
   
   bg_http_server_add_handler(srv, handle_http_request, BG_HTTP_PROTO_HTTP, "/upnp/renderer/", // E.g. /static/ can be NULL
                              ret);

@@ -141,10 +141,9 @@ void renderer_init(renderer_t * s)
   bg_set_network_node_info(bg_app_get_label(), icons_arr, NULL, player_ctrl->evt_sink);
   
   /* Create frontends */
-  s->fe_gmerlin = bg_frontend_create_player_gmerlin(s->srv, player_ctrl);
+  s->fe_gmerlin = bg_frontend_create_player_gmerlin(player_ctrl);
 
-  s->fe_upnp = bg_frontend_create_player_upnp(s->srv,
-                                              player_ctrl);
+  s->fe_upnp = bg_frontend_create_player_upnp(player_ctrl);
   
 #ifdef HAVE_DBUS
   s->fe_mpris =
@@ -153,9 +152,7 @@ void renderer_init(renderer_t * s)
                                      "gmerlin-renderer");
 #endif
   
-  bg_player_state_init(&s->state, NULL, NULL, NULL);
-
-  
+  bg_player_state_init(&s->state, NULL, NULL);
   
   bg_player_run(s->player);
   bg_state_apply(&s->state, player_ctrl->cmd_sink, BG_CMD_SET_STATE);

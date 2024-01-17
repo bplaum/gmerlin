@@ -868,7 +868,6 @@ web/wallpapers/Makefile \
 apps/Makefile \
 apps/player/Makefile \
 apps/cmdlineplayer/Makefile \
-apps/cmdlinerecorder/Makefile \
 apps/transcoder/Makefile \
 apps/thumbnailer/Makefile \
 apps/mdb-tool/Makefile \
@@ -894,6 +893,7 @@ lib/upnp/Makefile \
 lib/x11/Makefile \
 plugins/Makefile \
 plugins/resources/Makefile \
+plugins/backends/Makefile \
 plugins/alsa/Makefile \
 plugins/audiofilters/Makefile \
 plugins/x11/Makefile \
@@ -905,8 +905,10 @@ plugins/png/Makefile \
 plugins/pulseaudio/Makefile \
 plugins/subwriters/Makefile \
 plugins/image/Makefile \
+plugins/mpris/Makefile \
 plugins/tiff/Makefile \
 plugins/v4l2/Makefile \
+plugins/upnp/Makefile \
 plugins/videofilters/Makefile \
 plugins/visualization/Makefile \
 plugins/visualization/glscope/Makefile \

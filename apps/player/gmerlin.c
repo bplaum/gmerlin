@@ -220,6 +220,7 @@ void gmerlin_disconnect_mdb(gmerlin_t * gmerlin)
   gmerlin->mdb_tree = NULL;
   }
 
+#if 0
 static int handle_http_backends(bg_http_connection_t * conn, void * priv)
   {
   int ret = 0;
@@ -243,6 +244,7 @@ static int handle_http_backends(bg_http_connection_t * conn, void * priv)
     }
   return ret;
   }
+#endif
 
 static int handle_http_client_config(bg_http_connection_t * conn, void * priv)
   {
@@ -594,6 +596,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   ret = calloc(1, sizeof(*ret));
 
   pthread_mutex_init(&ret->stop_mutex, NULL);
+  pthread_mutex_init(&ret->backend_mutex, NULL);
 
   /* From here we can direct log messages to the GUI */
   ret->log_window = bg_gtk_log_window_create(TR("Gmerlin player"));
@@ -729,12 +732,14 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   bg_http_server_set_root_file(ret->srv, "/static/app.html");
 
   bg_http_server_add_handler(ret->srv, server_handle_manifest, BG_HTTP_PROTO_HTTP, NULL, NULL);
-  
+
+#if 0  
   bg_http_server_add_handler(ret->srv,
                              handle_http_backends,
                              BG_HTTP_PROTO_HTTP,
                              NULL, // E.g. /static/ can be NULL
                              ret);
+#endif
   
   bg_http_server_set_static_path(ret->srv, "/static");
   bg_http_server_set_mdb(ret->srv, ret->mdb);
@@ -751,7 +756,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   
   gmerlin_create_dialog(ret);
   
-  bg_player_state_init(&ret->state, NULL, NULL, NULL);
+  bg_player_state_init(&ret->state, NULL, NULL);
   /* Apply the state before the frontends are created */
 
   if(saved_state)
@@ -769,21 +774,16 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   
   ret->upnp_renderer_frontend =
-    bg_frontend_create_player_upnp(ret->srv,
-                                   ret->player_ctrl);
+    bg_frontend_create_player_upnp(ret->player_ctrl);
   
   ret->upnp_server_frontend =
-    bg_frontend_create_mdb_upnp(ret->srv,
-                                ret->mdb_ctrl);
+    bg_frontend_create_mdb_upnp(ret->mdb_ctrl);
   
   ret->gmerlin_server_frontend =
-    bg_frontend_create_mdb_gmerlin(ret->srv,
-                                   ret->mdb_ctrl);
+    bg_frontend_create_mdb_gmerlin(ret->mdb_ctrl);
 
   ret->gmerlin_renderer_frontend =
-    bg_frontend_create_player_gmerlin(ret->srv,
-                                      ret->player_ctrl);
-  
+    bg_frontend_create_player_gmerlin(ret->player_ctrl);
   
   free(network_name);
 
@@ -822,9 +822,6 @@ void gmerlin_destroy(gmerlin_t * g)
   if(g->cfg_dialog)
     bg_dialog_destroy(g->cfg_dialog);
   
-  //  bg_lcdproc_destroy(g->lcdproc);
-  if(g->srv)
-    bg_http_server_destroy(g->srv);
 
   
 #ifdef HAVE_DBUS
@@ -854,7 +851,11 @@ void gmerlin_destroy(gmerlin_t * g)
 
   if(g->mdb)
     bg_mdb_destroy(g->mdb);
-  
+
+  //  bg_lcdproc_destroy(g->lcdproc);
+  if(g->srv)
+    bg_http_server_destroy(g->srv);
+    
   if(g->input_plugin_parameters)
     bg_parameter_info_destroy_array(g->input_plugin_parameters);
 
@@ -879,7 +880,8 @@ void gmerlin_destroy(gmerlin_t * g)
     bg_server_storage_destroy(g->client_config);
   
   pthread_mutex_destroy(&g->stop_mutex);
-
+  pthread_mutex_destroy(&g->backend_mutex);
+  
   if(g->main_menu)
     main_menu_destroy(g->main_menu);
   
@@ -919,6 +921,17 @@ static void * frontend_thread(void * data)
 
     i += bg_frontend_ping(g->gmerlin_renderer_frontend, bg_http_server_get_time(g->srv));
     i += bg_frontend_ping(g->gmerlin_server_frontend, bg_http_server_get_time(g->srv));
+
+    pthread_mutex_lock(&g->backend_mutex);
+
+    if(g->player_backend)
+      i += bg_backend_handle_ping(g->player_backend);
+
+    if(g->mdb_backend)
+      i += bg_backend_handle_ping(g->mdb_backend);
+    
+    pthread_mutex_unlock(&g->backend_mutex);
+    
     
     if(!i)
       gavl_time_delay(&delay_time);

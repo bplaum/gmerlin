@@ -2307,6 +2307,7 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
   gavl_dictionary_set(track, "astreams", NULL);
   gavl_dictionary_set(track, "vstreams", NULL);
   gavl_dictionary_set(track, "tstreams", NULL);
+  gavl_dictionary_set(track, "gui", NULL);
   
   if(!(m = gavl_track_get_metadata_nc(track)))
     return;

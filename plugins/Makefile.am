@@ -53,6 +53,13 @@ else
 pulseaudio_subdirs = 
 endif
 
+if HAVE_DBUS
+dbus_subdirs = mpris
+else
+dbus_subdirs = 
+endif
+
+
 if HAVE_CDIO
 cdio_subdirs = cdaudio
 else
@@ -61,12 +68,14 @@ endif
 
 SUBDIRS = \
 audiofilters \
+backends \
 edl \
 gavl \
 resources \
 videofilters \
 visualization \
 $(alsa_subdirs) \
+$(dbus_subdirs) \
 $(jpeg_subdirs) \
 $(v4l2_subdirs) \
 $(png_subdirs) \
@@ -74,6 +83,7 @@ $(tiff_subdirs) \
 $(x11_subdirs) \
 $(cdio_subdirs) \
 $(pulseaudio_subdirs) \
+upnp \
 wavwrite \
 image \
 subwriters

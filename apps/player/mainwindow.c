@@ -798,66 +798,64 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
             {
             if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
               {
-                gmerlin_disconnect_mdb(w->g);
-                w->g->mdb_ctrl = NULL;
+              pthread_mutex_lock(&w->g->backend_mutex);
 
-                if(w->g->mdb_backend)
-                  {
-                  bg_backend_handle_destroy(w->g->mdb_backend);
-                  w->g->mdb_backend = NULL;
-                  }
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing MDB: %s", uri);
+              
+              gmerlin_disconnect_mdb(w->g);
+              w->g->mdb_ctrl = NULL;
+
+              if(w->g->mdb_backend)
+                {
+                bg_plugin_unref(w->g->mdb_backend);
+                w->g->mdb_backend = NULL;
+                }
                 
-                if(!strcmp(uri, "local"))
-                  w->g->mdb_ctrl = bg_mdb_get_controllable(w->g->mdb);
-                else
-                  {
-                  char * tmp_string = bg_sprintf("%s/backend/server/",
-                                                 bg_http_server_get_root_url(w->g->srv));
-                  
-                  if((w->g->mdb_backend =
-                      bg_backend_handle_create(&dev, tmp_string)))
-                    w->g->mdb_ctrl = bg_backend_handle_get_controllable(w->g->mdb_backend);
+              if(!strcmp(uri, "local"))
+                w->g->mdb_ctrl = bg_mdb_get_controllable(w->g->mdb);
+              else
+                {
+                if((w->g->mdb_backend =
+                    bg_backend_handle_create(&dev)))
+                  w->g->mdb_ctrl = bg_backend_handle_get_controllable(w->g->mdb_backend);
 
-                  free(tmp_string);
-                  }
+                }
                 
-                gmerlin_connect_mdb(w->g);
+              gmerlin_connect_mdb(w->g);
 
-                if(w->g->mdb_backend)
-                  bg_backend_handle_start(w->g->mdb_backend);
+              pthread_mutex_unlock(&w->g->backend_mutex);
+
               }
             else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
               {
+              pthread_mutex_lock(&w->g->backend_mutex);
+              
               gmerlin_disconnect_player(w->g);
               w->g->player_ctrl = NULL;
                 
               if(w->g->player_backend)
                 {
-                bg_backend_handle_destroy(w->g->player_backend);
+                bg_plugin_unref(w->g->player_backend);
                 w->g->player_backend = NULL;
                 }
-                
+
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing renderer: %s", uri);
+              
               if(!strcmp(uri, "local"))
                 w->g->player_ctrl = bg_player_get_controllable(w->g->player);
               else
                 {
-                char * tmp_string = bg_sprintf("%s/backend/renderer/",
-                                               bg_http_server_get_root_url(w->g->srv));
-                if((w->g->player_backend = bg_backend_handle_create(&dev, tmp_string)))
+                if((w->g->player_backend = bg_backend_handle_create(&dev)))
                   w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
                 else
                   {
                   gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
                   break;
                   }
-                  
-                free(tmp_string);
                 }
                 
               gmerlin_connect_player(w->g);
-                
-              if(w->g->player_backend)
-                bg_backend_handle_start(w->g->player_backend);
+              pthread_mutex_unlock(&w->g->backend_mutex);
               }  
             }
           

@@ -10,7 +10,8 @@
 #include <gavl/metatags.h>
 #include <gavl/value.h>
 #include <gavl/trackinfo.h>
-
+#include <gavl/log.h>
+#define LOG_DOMAIN "frontend_mdb_upnp"
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/application.h>
@@ -58,8 +59,6 @@ typedef struct
 
   gavl_array_t requests;
 
-  bg_http_server_t * srv;
-
 
   gavl_dictionary_t state;
   
@@ -72,6 +71,8 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
   bg_frontend_t * fe = data;
 
   bg_mdb_frontend_upnp_t * priv = fe->priv;
+
+  bg_http_server_t * srv = bg_http_server_get();
   
   if(!strcmp(c->method, "GET") || !strcmp(c->method, "HEAD"))    
     {
@@ -123,13 +124,13 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       {
       //      fprintf(stderr, "Get Search Capabilities\n");
       gavl_dictionary_set_string(args_out, "SearchCaps", BG_SOAP_ARG_EMPTY);
-      bg_upnp_finish_soap_request(&soap, c, priv->srv);
+      bg_upnp_finish_soap_request(&soap, c, srv);
       }
     else if(!strcmp(func, "GetSortCapabilities"))
       {
       //      fprintf(stderr, "Get Sort Capabilities\n");
       gavl_dictionary_set_string(args_out, "SortCaps", BG_SOAP_ARG_EMPTY);
-      bg_upnp_finish_soap_request(&soap, c, priv->srv);
+      bg_upnp_finish_soap_request(&soap, c, srv);
       }
     else if(!strcmp(func, "Browse"))
       {
@@ -300,7 +301,7 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
             xmlFreeDoc(didl);
             gavl_dictionary_free(&dict);
             
-            bg_upnp_finish_soap_request(soap, &conn, p->srv);
+            bg_upnp_finish_soap_request(soap, &conn, bg_http_server_get());
             gavl_array_splice_val(&p->requests, idx, 1, NULL);
             }
           else // BG_RESP_DB_BROWSE_CHILDREN
@@ -393,7 +394,7 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
               //              fprintf(stderr, "Browse children response");
               //              gavl_dictionary_dump(args_out, 2);
               
-              bg_upnp_finish_soap_request(soap, &conn, p->srv);
+              bg_upnp_finish_soap_request(soap, &conn, bg_http_server_get());
               gavl_array_splice_val(&p->requests, idx, 1, NULL);
               
               xmlFreeDoc(didl);
@@ -473,7 +474,7 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     const char * server_label;
     char uuid_str[37];
     
-    char * uri = bg_sprintf("%s/upnp/server/desc.xml", bg_http_server_get_root_url(p->srv));
+    char * uri = bg_sprintf("%s/upnp/server/desc.xml", bg_http_server_get_root_url(bg_http_server_get()));
 
     gavl_dictionary_init(&local_dev);
     
@@ -522,11 +523,21 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
   }
 
 bg_frontend_t *
-bg_frontend_create_mdb_upnp(bg_http_server_t * srv,
-                            bg_controllable_t * ctrl)
+bg_frontend_create_mdb_upnp(bg_controllable_t * ctrl)
   {
   bg_mdb_frontend_upnp_t * priv;
-  bg_frontend_t * ret = bg_frontend_create(ctrl);
+  bg_frontend_t * ret;
+  bg_http_server_t * srv;
+  
+  if(!(srv = bg_http_server_get()))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No http server present");
+    return NULL;
+    }
+  
+  ret = bg_frontend_create(ctrl);
+
+  
   
   ret->ping_func    =    ping_mdb_upnp;
   ret->cleanup_func = cleanup_mdb_upnp;
@@ -534,7 +545,6 @@ bg_frontend_create_mdb_upnp(bg_http_server_t * srv,
   
   
   priv = calloc(1, sizeof(*priv));
-  priv->srv = srv;
   
   ret->priv = priv;
   
@@ -542,8 +552,8 @@ bg_frontend_create_mdb_upnp(bg_http_server_t * srv,
 
   /* Add the event handlers first */
 
-  bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/server/cm/evt", srv);
-  bg_upnp_event_context_init_server(&priv->cd_evt, "/upnp/server/cd/evt", srv);
+  bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/server/cm/evt");
+  bg_upnp_event_context_init_server(&priv->cd_evt, "/upnp/server/cd/evt");
   
   bg_http_server_add_handler(srv, handle_http_request, BG_HTTP_PROTO_HTTP, "/upnp/server/", // E.g. /static/ can be NULL
                              ret);

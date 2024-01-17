@@ -396,13 +396,17 @@ const bg_plugin_info_t * bg_plugin_find_by_name(const char * name)
   return find_by_name(bg_plugin_reg->entries, name);
   }
 
-const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol)
+const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol, int type_mask)
   {
   const bg_plugin_info_t * info = bg_plugin_reg->entries;
   
   while(info)
     {
-    if(info->protocols && (gavl_string_array_indexof(info->protocols, protocol) >= 0))
+    //    if(gavl_string_starts_with(info->name, "be_"))
+    //      fprintf(stderr, "%s %p\n", info->name, info->protocols);
+    
+    if((info->type & type_mask) &&
+       info->protocols && (gavl_string_array_indexof(info->protocols, protocol) >= 0))
       return info;
     info = info->next;
     }
@@ -586,7 +590,7 @@ const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
       {
       char * protocol = gavl_strndup(location, pos);
 
-      if(bg_plugin_find_by_protocol(protocol))
+      if(bg_plugin_find_by_protocol(protocol, BG_PLUGIN_INPUT))
         {
         if(idx_p)
           *idx_p = idx;
@@ -957,6 +961,17 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_string_to_string_array(iw->extensions, new_info->extensions);
     bg_string_to_string_array(iw->mimetypes, new_info->mimetypes);
     }
+  if(plugin->type & (BG_PLUGIN_BACKEND_SERVER | BG_PLUGIN_BACKEND_RENDERER))
+    {
+    bg_backend_plugin_t  * p;
+    p = (bg_backend_plugin_t*)plugin;
+
+    new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
+    bg_string_to_string_array(p->protocol, new_info->protocols);
+    
+    }
+
+
   if(plugin->type & (BG_PLUGIN_COMPRESSOR_AUDIO | \
                      BG_PLUGIN_COMPRESSOR_VIDEO | \
                      BG_PLUGIN_DECOMPRESSOR_AUDIO | \
@@ -3198,11 +3213,11 @@ static int input_plugin_load(const char * location,
                       NULL, // hostname,
                       NULL,   //  port,
                       &path))
-        info = bg_plugin_find_by_protocol(protocol);
+        info = bg_plugin_find_by_protocol(protocol, BG_PLUGIN_INPUT);
       }
     else if(!strcmp(location, "-"))
       {
-      info = bg_plugin_find_by_protocol("stdin");
+      info = bg_plugin_find_by_protocol("stdin", BG_PLUGIN_INPUT);
       }
     else
       {

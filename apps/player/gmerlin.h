@@ -230,8 +230,8 @@ struct gmerlin_s
 
   gavl_dictionary_t state;
 
-  bg_backend_handle_t * player_backend;
-  bg_backend_handle_t * mdb_backend;
+  bg_plugin_handle_t * player_backend;
+  bg_plugin_handle_t * mdb_backend;
 
 #ifdef HAVE_DBUS
   bg_frontend_t * dbus_frontend;
@@ -248,6 +248,8 @@ struct gmerlin_s
 
   gavl_dictionary_t renderer_ssdp_dev;
 
+  pthread_mutex_t backend_mutex;
+  
   int stop;
   int frontend_thread_running;
   pthread_mutex_t stop_mutex;

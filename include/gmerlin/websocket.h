@@ -56,7 +56,7 @@ bg_websocket_context_create(const char * klass,
                             bg_controllable_t * ctrl);
 
 /* Can be passed to bg_http_server_add_handler */
-int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data);
+// int bg_websocket_context_handle_request(bg_http_connection_t * c, void * data);
 
 /* Co through all client connections and send out queued events */
 int bg_websocket_context_iteration(bg_websocket_context_t * ctx);

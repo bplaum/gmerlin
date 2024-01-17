@@ -283,7 +283,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
           protocol = gavl_strndup(uri, pos);
 
-          if(!bg_plugin_find_by_protocol(protocol))
+          if(!bg_plugin_find_by_protocol(protocol, BG_PLUGIN_INPUT))
             {
             gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "No plugin for protocol %s", protocol);
             free(protocol);

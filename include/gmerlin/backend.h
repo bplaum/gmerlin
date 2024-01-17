@@ -57,30 +57,24 @@
 #define BG_BACKEND_URI_SCHEME_UPNP_SERVER   "upnp-server"
 
 /* */
-typedef struct bg_backend_handle_s bg_backend_handle_t;
 
-bg_backend_handle_t * bg_backend_handle_create(const gavl_dictionary_t * dev,
-                                               const char * url_root);
+bg_plugin_handle_t * bg_backend_handle_create(const gavl_dictionary_t * dict);
 
-int bg_backend_needs_http(const char * uri);
+// int bg_backend_needs_http(const char * uri);
 
 /* Passed to http server */
-int bg_backend_handle_handle(bg_http_connection_t * conn,
-                             void * data);
+//int bg_backend_handle_handle(bg_http_connection_t * conn,
+//                             void * data);
 
-void bg_backend_handle_destroy(bg_backend_handle_t *);
-void bg_backend_handle_stop(bg_backend_handle_t *);
+// void bg_backend_handle_destroy(bg_backend_handle_t *);
+// void bg_backend_handle_stop(bg_backend_handle_t *);
 
-bg_controllable_t * bg_backend_handle_get_controllable(bg_backend_handle_t *);
+bg_controllable_t * bg_backend_handle_get_controllable(bg_plugin_handle_t *);
+// void bg_backend_handle_start(bg_backend_handle_t * d);
 
-void bg_backend_handle_start(bg_backend_handle_t * d);
-
-int bg_backend_handle_ping(bg_backend_handle_t * d);
-
-const gavl_dictionary_t * bg_backend_handle_get_info(bg_backend_handle_t * d);
+int bg_backend_handle_ping(bg_plugin_handle_t * d);
 
 /* */
-
 
 /* Get the node info (gmerlin backends only) */
 
@@ -88,6 +82,13 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret);
 
 char * bg_make_backend_id(const char * klass);
 
+/* Gmerlin backends */
+
+void * bg_backend_gmerlin_create();
+void bg_backend_gmerlin_destroy(void *);
+int bg_backend_gmerlin_open(void *, const char * uri);
+bg_controllable_t * bg_backend_gmerlin_get_controllable(void *);
+int bg_backend_gmerlin_update(void *);
 
 #endif //  BG_REMOTEDEV_H_INCLUDED
 

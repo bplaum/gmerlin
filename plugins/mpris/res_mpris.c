@@ -11,11 +11,10 @@
 #include <gmerlin/bgdbus.h>
 #include <gmerlin/backend.h>
 #include <gmerlin/resourcemanager.h>
+#include "mpris.h"
 
 #define FLAG_INITIAL (1<<0)
 
-#define MPRIS2_NAME_PREFIX     "org.mpris.MediaPlayer2."
-#define MPRIS2_NAME_PREFIX_LEN 23
 
 #define MSG_ID_NAME_OWNER_CHANGED 1
 
@@ -51,7 +50,7 @@ static void add_dev(mpris_t * m, const char * addr, const char * name)
     
   real_name = gavl_sprintf("%s%s", MPRIS2_NAME_PREFIX, name);
 
-  uri = gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, real_name + MPRIS2_NAME_PREFIX_LEN);
+  uri = gavl_sprintf("%s://%s", MPRIS_URI_SCHEME, real_name + MPRIS2_NAME_PREFIX_LEN);
 
   if(!addr)
     {
@@ -60,7 +59,7 @@ static void add_dev(mpris_t * m, const char * addr, const char * name)
     }
   
   gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI,
-                                    gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name));
+                                    gavl_sprintf("%s://%s", MPRIS_URI_SCHEME, name));
       
   str = bg_dbus_get_string_property(m->conn,
                                     addr,
@@ -178,7 +177,7 @@ static int handle_msg_dbus(void * priv, gavl_msg_t * msg)
 
             if(gavl_string_starts_with(name, MPRIS2_NAME_PREFIX))
               {
-              // addr = gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, name + MPRIS2_NAME_PREFIX_LEN);
+              // addr = gavl_sprintf("%s://%s", MPRIS_URI_SCHEME, name + MPRIS2_NAME_PREFIX_LEN);
               del_dev(m, o_old);
               //              free(addr);
               }

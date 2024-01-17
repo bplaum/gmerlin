@@ -166,6 +166,10 @@ typedef enum
     BG_PLUGIN_BACKEND_SERVER             = (1<<20),  //!< 
     BG_PLUGIN_BACKEND_RENDERER           = (1<<21),  //!< 
     BG_PLUGIN_RESOURCE_DETECTOR          = (1<<22),  //!< 
+
+    BG_PLUGIN_FRONTEND_SERVER             = (1<<23),  //!< 
+    BG_PLUGIN_FRONTEND_RENDERER           = (1<<24),  //!< 
+
   } bg_plugin_type_t;
 
 /** \ingroup plugin
@@ -276,12 +280,9 @@ struct bg_plugin_common_s
   
   bg_get_parameter_func_t get_parameter;
 
-  /** \brief Get the control
-   *
-   *  Events from the plugin are sent as commands, events from the core
-   *  are received and can be handled
+  /** \brief Get the controllablle
    */
-
+  
   bg_controllable_t * (*get_controllable)(void * priv);
   
   };
@@ -332,7 +333,6 @@ struct bg_input_plugin_s
    *  \param priv The handle returned by the create() method
    *  \returns A space separated list of protocols
    */
-  
   const char * (*get_protocols)(void * priv);
   /** \brief Get supported mimetypes
    *  \param priv The handle returned by the create() method
@@ -1459,7 +1459,8 @@ typedef struct
 typedef struct 
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-
+  const char * protocol;
+  
   /* Update the internal state, send messages. A zero return value incicates that
      nothing important happened and the client can savely sleep (e.g. for some 10s of
      milliseconds) before calling this function again. */
@@ -1467,10 +1468,21 @@ typedef struct
   int (*update)(void * priv);
 
   int (*open)(void * priv, const char * addr);
-  
+
   } bg_backend_plugin_t;
 
-
+typedef struct 
+  {
+  bg_plugin_common_t common; //!< Infos and functions common to all plugin types
+  
+  /* Update the internal state, send messages. A zero return value incicates that
+     nothing important happened and the client can savely sleep (e.g. for some 10s of
+     milliseconds) before calling this function again. */
+  
+  int (*update)(void * priv);
+  int (*open)(void * priv, bg_controllable_t * ctrl);
+  
+  } bg_frontend_plugin_t;
 
 /** \ingroup plugin_codec
  *  \brief typedef for codec plugin

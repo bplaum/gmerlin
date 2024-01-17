@@ -333,7 +333,7 @@ static void * thread_func(void * data)
   {
   int result;
   int i;
-  gavl_time_t delay_time = GAVL_TIME_SCALE; // 200 ms
+  gavl_time_t delay_time = GAVL_TIME_SCALE; // 1000 ms
 
   /* Delay for 1 sec to give other modules a chance to connect their
      message sinks */
@@ -589,7 +589,7 @@ void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t ti
   int i;
   const gavl_dictionary_t  * test_dict;
   const char  * test_klass;
-
+  
   gavl_time_delay(&timeout);
   
   pthread_mutex_lock(&resman->mutex);
@@ -667,8 +667,8 @@ static void list_resource_array(gavl_array_t * arr)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])))
       {
-      printf("# %s", gavl_dictionary_get_string(dict, GAVL_META_LABEL));
-      printf("%s", gavl_dictionary_get_string(dict, GAVL_META_URI));
+      printf("# %s\n", gavl_dictionary_get_string(dict, GAVL_META_LABEL));
+      printf("%s\n", gavl_dictionary_get_string(dict, GAVL_META_URI));
       }
     }
   }

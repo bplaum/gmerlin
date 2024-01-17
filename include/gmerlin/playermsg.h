@@ -56,7 +56,6 @@
 
 #define BG_PLAYER_STATE_PROTOCOLS     "protocols"
 #define BG_PLAYER_STATE_MIMETYPES     "mimetypes"
-#define BG_PLAYER_STATE_LABEL         GAVL_META_LABEL
 
 #define BG_PLAYER_STATE_MODE          "mode"          // int
 #define BG_PLAYER_STATE_MUTE          "mute"          // int
@@ -123,10 +122,6 @@
 
 #define BG_PLAYER_CMD_SET_ERROR     3
 
-/* Quit playback thread (used by bg_player_quit()) */
-
-#define BG_PLAYER_CMD_QUIT          4
-
 /* Change output plugins, arg1 is plugin handle of the opened plugin */
 
 #define BG_PLAYER_CMD_NEXT          5
@@ -158,18 +153,8 @@
 /* arg0: Track ID (string) */
 #define BG_PLAYER_CMD_SET_CURRENT_TRACK    40
 
-/* arg0: track (dictionary)        */
-/* arg1: start_playing (int) */
-
-#define BG_PLAYER_CMD_SET_TRACK           41
-
-/* arg0: uri (string)        */
-/* arg1: start_playing (int) */
-
-#define BG_PLAYER_CMD_SET_LOCATION         42
-
 /* arg0: ID of the track to select */
-#define BG_PLAYER_CMD_PLAY_BY_ID           43
+// #define BG_PLAYER_CMD_PLAY_BY_ID           43
 
 #define BG_PLAYER_CMD_NEXT_VISUALIZATION    44
 

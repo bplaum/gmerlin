@@ -16,16 +16,6 @@ Desktop_DATA = gmerlin-remote.desktop
 
 bin_PROGRAMS = gmerlin-remote
 
-manpages = gmerlin-remote.1
-dist_man_MANS =
-if CROSSBUILD
-else
-dist_man_MANS += $(manpages)
-endif
-#CLEANFILES = $(manpages)
-
-gmerlin-remote.1: gmerlin-remote
-	$(builddir)/gmerlin-remote -help-man > $(builddir)/gmerlin-remote.1
 
 gmerlin_remote_SOURCES = \
 gmerlin-remote.c

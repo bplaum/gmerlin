@@ -478,7 +478,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
     else
       gavl_array_splice_array(list, idx, del, val->v.array);
     }
-  else // GAVL_TYPE_ARRAY
+  else // GAVL_TYPE_DICTIONARY
     {
     if(!val || !can_add(l, val, idx, del, client_id))
       {

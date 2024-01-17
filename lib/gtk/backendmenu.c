@@ -124,10 +124,10 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
      (dev = dev_by_id(&m->devs, id)))
     {
 #if 0
+    fprintf(stderr, "Backend selected %s\n", id);
     gavl_dictionary_dump(dev, 2);
     fprintf(stderr, "\n");
 #endif
-    //    fprintf(stderr, "Sel backend: %p\n", m->evt_sink);
     if(m->evt_sink)
       {
       gavl_msg_t * msg = bg_msg_sink_get(m->evt_sink);
@@ -155,14 +155,14 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   
   char * markup;
   
-  //  fprintf(stderr, "add_item:\n");
-  //  gavl_dictionary_dump(dict, 2);
-  
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
      !gavl_string_starts_with(klass, m->klass) ||
      (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
     return;
 
+  //  fprintf(stderr, "add_item:\n");
+  //  gavl_dictionary_dump(dict, 2);
+  
   markup = bg_sprintf("<span weight=\"bold\">%s</span>\n%s",
                       gavl_dictionary_get_string(dict, GAVL_META_LABEL),
                       gavl_dictionary_get_string(dict, GAVL_META_URI));
@@ -289,11 +289,11 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
     /* Prepend local device */
     gavl_dictionary_t local_dev;
     gavl_dictionary_init(&local_dev);
-    
+
+    gavl_dictionary_set_string(&local_dev, GAVL_META_ID,       "local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_URI,       "local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL,     "Local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, klass);
-    gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "gmerlin");
     
     add_item(ret, &local_dev);
     

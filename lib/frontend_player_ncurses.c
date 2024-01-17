@@ -616,9 +616,14 @@ static void play_track(bg_frontend_t * fe, int idx)
   const gavl_dictionary_t * track = gavl_get_track(&p->tracks, idx);
               
   msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, gavl_track_get_id(track)); // ID
   bg_msg_sink_put(fe->ctrl.cmd_sink);
+
+  msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
+  bg_msg_sink_put(fe->ctrl.cmd_sink);
+  
   }
 
 static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
