@@ -940,7 +940,6 @@ void gmerlin_run(gmerlin_t * g, const char ** locations)
   tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(g->srv));
   gavl_dictionary_set(&root_metadata, GAVL_META_ICON_URL, NULL);
   bg_array_add_application_icons(icons_arr, tmp_string, "player");
-  bg_app_add_application_icons(tmp_string, "player");
   
   free(tmp_string);
 

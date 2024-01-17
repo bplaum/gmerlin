@@ -951,8 +951,6 @@ struct bg_websocket_context_s
   bg_controllable_t * ctrl;
   
   char * path;
-  char * info_json;
-  
   pthread_mutex_t conn_mutex;
   };
 
@@ -1052,40 +1050,44 @@ static int bg_websocket_context_handle_request(bg_http_connection_t * c, void * 
     int len;
     //    fprintf(stderr, "Node info requested\n");
 
-    if(!ctx->info_json)
+    const char * str;
+    gavl_dictionary_t node;
+    const char * info_json;
+    struct json_object * json = json_object_new_object();
+
+    gavl_dictionary_init(&node);
+
+    if((str = bg_app_get_icon_name()))
       {
-      const gavl_array_t * icons;
-      const char * str;
-      gavl_dictionary_t node;
-      struct json_object * json = json_object_new_object();
-      
-      gavl_dictionary_init(&node);
-
-      if((icons = bg_app_get_application_icons()))
-        gavl_dictionary_set_array(&node, GAVL_META_ICON_URL, icons);
-
-      if((str = bg_app_get_label()))
-        gavl_dictionary_set_string(&node, GAVL_META_LABEL, str);
-
-      bg_dictionary_to_json(&node, json);
-      
-      ctx->info_json = gavl_strdup(json_object_to_json_string_ext(json, 0));
-      json_object_put(json);
-
-      //   fprintf(stderr, "Node info requested %s\n", ctx->info_json);
+      gavl_array_t icons;
+      char * prefix = gavl_sprintf("http://%s/static/icons/", gavl_dictionary_get_string(&c->req, "Host"));
+      gavl_array_init(&icons);
+    bg_array_add_application_icons(&icons, prefix, str);
+      free(prefix);
+      gavl_dictionary_set_array(&node, GAVL_META_ICON_URL, &icons);
+      gavl_array_free(&icons);
       }
+    
+    if((str = bg_app_get_label()))
+      gavl_dictionary_set_string(&node, GAVL_META_LABEL, str);
 
-    len = strlen(ctx->info_json);
+    bg_dictionary_to_json(&node, json);
+      
+    info_json = json_object_to_json_string_ext(json, 0);
+    
+    len = strlen(info_json);
     
     bg_http_connection_init_res(c, c->protocol, 200, "OK");
     gavl_dictionary_set_string(&c->res, "Content-Type", "application/json");
     gavl_dictionary_set_int(&c->res, "Content-Length", len);
     if(!bg_http_connection_write_res(c) ||
-       (gavl_socket_write_data(c->fd, ctx->info_json, len) < len))
+       (gavl_socket_write_data(c->fd, info_json, len) < len))
       {
       bg_http_connection_clear_keepalive(c);
       return 0;
       }
+    
+    json_object_put(json);
     
     return 1;
     }
@@ -1201,8 +1203,6 @@ void bg_websocket_context_destroy(bg_websocket_context_t * ctx)
 
   if(ctx->path)
     free(ctx->path);
-  if(ctx->info_json)
-    free(ctx->info_json);
   pthread_mutex_destroy(&ctx->conn_mutex);
   
   free(ctx);

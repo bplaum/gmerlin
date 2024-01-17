@@ -369,7 +369,6 @@ int server_init(server_t * s)
   tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(s->srv));
   gavl_dictionary_set(&root_metadata, GAVL_META_ICON_URL, NULL);
   bg_dictionary_add_application_icons(&root_metadata, tmp_string, "server");
-  bg_app_add_application_icons(tmp_string, "server");
   
   free(tmp_string);
   

@@ -49,10 +49,12 @@ const char * bg_app_get_config_dir();
 void bg_app_set_config_dir(const char * p);
 // void bg_app_set_window_icon(const char * icon);
 
-void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, const char * name);
-const gavl_array_t * bg_app_get_application_icons();
 
-void bg_app_add_application_icons(const char * prefix, const char * name);
+void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, const char * name);
+
+
+// const gavl_array_t * bg_app_get_application_icons();
+// void bg_app_add_application_icons(const char * prefix, const char * name);
 
 void bg_dictionary_add_application_icons(gavl_dictionary_t * dict,
                                          const char * prefix,
