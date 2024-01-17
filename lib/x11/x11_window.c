@@ -1010,7 +1010,7 @@ static int create_window(bg_x11_window_t * w,
 
   const char * title;
   const gavl_value_t * title_val;
-  const char * icon_file;
+  char * icon_file;
   
   if((!w->dpy) && !open_display(w))
     return 0;
@@ -1077,7 +1077,7 @@ static int create_window(bg_x11_window_t * w,
   XSetLineAttributes(w->dpy, w->gc, 3, LineSolid, CapButt, JoinBevel);
 
   /* Icon */
-  if((icon_file = bg_app_get_window_icon()))
+  if((icon_file = bg_app_get_icon_file()))
     {
     gavl_video_frame_t * icon = NULL;
     gavl_video_format_t icon_format;
@@ -1100,7 +1100,8 @@ static int create_window(bg_x11_window_t * w,
       }
     else
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't load icon file %s", icon_file);
-       
+
+    free(icon_file);
     }
   else
     {

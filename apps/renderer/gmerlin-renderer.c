@@ -102,7 +102,7 @@ int main(int argc, char ** argv)
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   renderer_t s;
 
-  bg_app_init("gmerlin-renderer", TRS("Gmerlin media renderer"));
+  bg_app_init("gmerlin-renderer", TRS("Gmerlin renderer"), "renderer");
   
   bg_handle_sigint();
   bg_iconfont_init();

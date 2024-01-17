@@ -152,7 +152,7 @@ int main(int argc, char ** argv)
   
   gavl_dictionary_t metadata;
 
-  bg_app_init("gmerlin_imgconvert", TRS("Gmerlin image converter"));
+  bg_app_init("gmerlin_imgconvert", TRS("Gmerlin image converter"), NULL);
   
   conversion_section =
     bg_cfg_section_create_from_parameters("conversion",

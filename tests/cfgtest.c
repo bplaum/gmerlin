@@ -626,7 +626,7 @@ int main(int argc, char ** argv)
   bg_dialog_t * test_dialog;
   bg_cfg_registry_t * registry;
 
-  bg_app_init("cfgtest", "cfgtester");
+  bg_app_init("cfgtest", "cfgtester", NULL);
 
   
   bg_iconfont_init();
@@ -648,7 +648,7 @@ int main(int argc, char ** argv)
   
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
   
-  bg_gtk_init(&argc, &argv, NULL);
+  bg_gtk_init(&argc, &argv);
   
   //  test_dialog = bg_dialog_create(section, set_param, NULL, info, "Test dialog");
 

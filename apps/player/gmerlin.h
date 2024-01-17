@@ -48,10 +48,6 @@
 
 typedef struct gmerlin_s gmerlin_t;
 
-/* Class hints */
-
-#define WINDOW_ICON  "player_icon.png"
-
 /* Main menu */
 
 typedef struct main_menu_s main_menu_t;

@@ -220,32 +220,6 @@ void gmerlin_disconnect_mdb(gmerlin_t * gmerlin)
   gmerlin->mdb_tree = NULL;
   }
 
-#if 0
-static int handle_http_backends(bg_http_connection_t * conn, void * priv)
-  {
-  int ret = 0;
-  
-  gmerlin_t * g = priv;
-  
-  if(!gavl_string_starts_with(conn->path, "/backend/"))
-    return 0; 
-
-  conn->path += 9;
-
-  if(g->player_backend && gavl_string_starts_with(conn->path, "renderer/"))
-    {
-    conn->path += 9;
-    ret += bg_backend_handle_handle(conn, g->player_backend);
-    }
-  else if(g->mdb_backend && gavl_string_starts_with(conn->path, "server/"))
-    {
-    conn->path += 7;
-    ret += bg_backend_handle_handle(conn, g->player_backend);
-    }
-  return ret;
-  }
-#endif
-
 static int handle_http_client_config(bg_http_connection_t * conn, void * priv)
   {
   gmerlin_t * g = priv;
@@ -962,7 +936,6 @@ void gmerlin_run(gmerlin_t * g, const char ** locations)
 
   gavl_value_init(&icons_val);
   icons_arr = gavl_value_set_array(&icons_val);
-
   
   tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(g->srv));
   gavl_dictionary_set(&root_metadata, GAVL_META_ICON_URL, NULL);

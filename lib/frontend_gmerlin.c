@@ -84,8 +84,7 @@ static int ping_func(bg_frontend_t * f, gavl_time_t current_time)
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
 
     gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, p->klass);
-    gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "gmerlin");
-
+    
     if((val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL)) &&
        (icon_array = gavl_value_get_array(val)))
       {

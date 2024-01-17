@@ -79,7 +79,7 @@ int main(int argc, char ** argv)
   {
   transcoder_window_t * win;
 
-  bg_app_init("gmerlin_transcoder", TRS("Gmerlin transcoder"));
+  bg_app_init("gmerlin_transcoder", TRS("Gmerlin transcoder"), "transcoder_icon");
   
   bg_iconfont_init();
 
@@ -94,7 +94,7 @@ int main(int argc, char ** argv)
 
   bg_cmdline_init(&app_data);
 
-  bg_gtk_init(&argc, &argv, "transcoder_icon.png");
+  bg_gtk_init(&argc, &argv);
   win = transcoder_window_create();
   bg_cmdline_parse(args, &argc, &argv, win);
   

@@ -1,24 +1,30 @@
+#include <config.h>
+
 
 #include <gavl/gavl.h>
 #include <gavl/value.h>
 #include <gavl/metatags.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "application"
 
 #include <gmerlin/application.h>
 #include <gmerlin/utils.h>
 
-#define WINDOW_ICON "window_icon"
+// #define WINDOW_ICON "window_icon"
 
 /* Application support */
 
 gavl_dictionary_t bg_app_vars;
 
 void bg_app_init(const char * app_name,
-                         const char * app_label)
+                 const char * app_label,
+                 const char * icon_name)
   {
   gavl_dictionary_init(&bg_app_vars);
 
   gavl_dictionary_set_string(&bg_app_vars, BG_APP_NAME, app_name);
   gavl_dictionary_set_string(&bg_app_vars, BG_APP_LABEL, app_label);
+  gavl_dictionary_set_string(&bg_app_vars, BG_APP_ICON_NAME, icon_name);
   }
 
 const char * bg_app_get_name()
@@ -31,6 +37,40 @@ const char * bg_app_get_label()
   return gavl_dictionary_get_string(&bg_app_vars, BG_APP_LABEL);
   }
 
+const char * bg_app_get_icon_name()
+  {
+  return gavl_dictionary_get_string(&bg_app_vars, BG_APP_ICON_NAME);
+  }
+
+char * bg_app_get_icon_file()
+  {
+  char * ret;
+  char * tmp_string;
+  const char * name = bg_app_get_icon_name();
+
+  if(!name)
+    return NULL;
+  
+  /* /web/icons/<name>_48.png */
+
+  tmp_string = gavl_sprintf("%s_48.png", name);
+  ret = bg_search_file_read("web/icons", tmp_string);
+  free(tmp_string);
+
+  if(!ret)
+    {
+    /* /icons/<name>_icon.png */
+  
+    tmp_string = gavl_sprintf("%s_icon.png", name);
+    ret = bg_search_file_read("icons", tmp_string);
+    free(tmp_string);
+    }
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got icon file: %s", ret);
+  return ret;
+  }
+
+#if 0
 const char * bg_app_get_window_icon()
   {
   return gavl_dictionary_get_string(&bg_app_vars, WINDOW_ICON);
@@ -40,6 +80,9 @@ void bg_app_set_window_icon(const char * str)
   {
   gavl_dictionary_set_string(&bg_app_vars, WINDOW_ICON, str);
   }
+
+#endif
+
 
 const char * config_dir_default = "generic";
 
@@ -86,12 +129,9 @@ void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, con
   else
     slash = "";
   
-  add_application_icon(arr, bg_sprintf("%s%s%s_16.png", prefix, slash, name), 16, "image/png");
   add_application_icon(arr, bg_sprintf("%s%s%s_48.png", prefix, slash, name), 48, "image/png");
-  add_application_icon(arr, bg_sprintf("%s%s%s_48.bmp", prefix, slash, name), 48, "image/bmp");
   add_application_icon(arr, bg_sprintf("%s%s%s_48.jpg", prefix, slash, name), 48, "image/jpeg");
   add_application_icon(arr, bg_sprintf("%s%s%s_96.png", prefix, slash, name), 96, "image/png");
-  add_application_icon(arr, bg_sprintf("%s%s%s_96.bmp", prefix, slash, name), 96, "image/bmp");
   add_application_icon(arr, bg_sprintf("%s%s%s_96.jpg", prefix, slash, name), 96, "image/jpeg");
   }
 
@@ -104,7 +144,6 @@ void bg_app_add_application_icons(const char * prefix,
 const gavl_array_t * bg_app_get_application_icons()
   {
   return gavl_dictionary_get_array(&bg_app_vars, GAVL_META_ICON_URL);
-  // bg_dictionary_add_application_icons(&bg_app_vars, prefix, name);
   };
 
 void bg_dictionary_add_application_icons(gavl_dictionary_t * m,

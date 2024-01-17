@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   server_t s;
 
-  bg_app_init("gmerlin-server", TRS("Gmerlin media server"));
+  bg_app_init("gmerlin-server", TRS("Gmerlin media server"), "server");
   
   /* Make strcasecmp work */
   setlocale(LC_COLLATE, "");

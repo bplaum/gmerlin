@@ -37,8 +37,7 @@ cairo_surface_t * bg_gtk_pixbuf_scale_alpha(cairo_surface_t * src,
 GdkPixbuf * bg_gtk_pixbuf_from_frame(gavl_video_format_t * format,
                                      gavl_video_frame_t * frame);
 
-void bg_gtk_init(int * argc, char *** argv, 
-                 const char * default_window_icon);
+void bg_gtk_init(int * argc, char *** argv);
 
 cairo_surface_t * bg_gdk_pixbuf_render_pixmap_and_mask(GdkPixbuf *pixbuf);
 

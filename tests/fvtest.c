@@ -181,7 +181,7 @@ int main(int argc, char ** argv)
 
   gavl_timer_t * timer = gavl_timer_create();
 
-  bg_app_init("fvtest", "Video filter chain test");
+  bg_app_init("fvtest", "Video filter chain test", NULL);
 
   bg_plugins_init("generic");
   

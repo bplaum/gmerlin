@@ -640,7 +640,7 @@ int main(int argc, char ** argv)
 
   gavl_dictionary_init(&dev);
   
-  bg_app_init("gmerlin-remote", TRS("Gmerlin remote control"));
+  bg_app_init("gmerlin-remote", TRS("Gmerlin remote control"), "remote");
   
   setlocale(LC_ALL, "");
   setlocale(LC_NUMERIC, "C");

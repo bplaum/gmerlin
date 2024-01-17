@@ -27,7 +27,7 @@
 int main(int argc, char ** argv)
   {
   int ans;
-  bg_gtk_init(&argc, &argv, NULL);
+  bg_gtk_init(&argc, &argv);
  
   ans = bg_gtk_question("Switch coffemachine to backwards\rOr not?", NULL);
 

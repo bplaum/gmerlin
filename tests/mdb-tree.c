@@ -100,7 +100,7 @@ int main(int argc, char ** argv)
   
   bg_iconfont_init();
 
-  bg_app_init("mdb-tree", TRS("GUI tree editor"));
+  bg_app_init("mdb-tree", TRS("GUI tree editor"), NULL);
 
 
   /* Create registries */

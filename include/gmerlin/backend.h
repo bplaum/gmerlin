@@ -35,20 +35,7 @@
  * http://host:8888/devproxy/<MD5 of original URL>
  */
 
-// #define BG_BACKEND_ID_LEN 32 // md5 in hex
-
-#define BG_BACKEND_PROTOCOL       "Protocol"
-// #define BG_BACKEND_ID             "BackendID"
-
 /* Integer 1 if the device belongs to ourselfes */
-
-#define BG_BACKEND_LOCAL         "Local"
-
-// #define BG_BACKEND_REAL_PROTOCOL "RealProtocol"
-
-// #define BG_BACKEND_TYPE         "Type"
-// #define BG_BACKEND_REAL_URI "RealURI"
-#define BG_BACKEND_ROOT_URI "RootURI"
 
 #define BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER "gmerlin-renderer"
 #define BG_BACKEND_URI_SCHEME_GMERLIN_MDB      "gmerlin-mdb"

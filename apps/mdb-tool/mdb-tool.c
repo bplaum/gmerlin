@@ -241,7 +241,7 @@ int main(int argc, char ** argv)
   {
   //  gavl_time_t t = GAVL_TIME_SCALE / 20;
 
-  bg_app_init("mdb-tool", TRS("Manipulate Media DB"));
+  bg_app_init("mdb-tool", TRS("Manipulate Media DB"), NULL);
   
   bg_cmdline_init(&app_data);
   

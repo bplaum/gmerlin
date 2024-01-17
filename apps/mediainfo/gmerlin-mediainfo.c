@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
   gavl_dictionary_t * mi;
   
   /* Handle commandline options */
-  bg_app_init("gmerlin-mediainfo", TRS("Print media information"));
+  bg_app_init("gmerlin-mediainfo", TRS("Print media information"), NULL);
   
   bg_cmdline_init(&app_data);
   bg_cmdline_parse(global_options, &argc, &argv, NULL);

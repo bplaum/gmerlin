@@ -150,14 +150,12 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   char * icon = NULL;
   const char * klass;
   const char * var;
-  int self = 0;
   int idx = -1;
   
   char * markup;
   
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
-     !gavl_string_starts_with(klass, m->klass) ||
-     (m->have_local && gavl_dictionary_get_int(dict, BG_BACKEND_LOCAL, &self) && self))
+     !gavl_string_starts_with(klass, m->klass))
     return;
 
   //  fprintf(stderr, "add_item:\n");

@@ -132,20 +132,19 @@ cairo_surface_t * bg_gtk_pixbuf_scale_alpha(cairo_surface_t * src,
 GdkPixbuf * bg_gtk_window_icon_pixbuf = NULL;
 
 
-static void set_default_window_icon(const char * icon)
+static void set_default_window_icon(void)
   {
-  char * tmp;
-  tmp = bg_search_file_read("icons", icon);
+  char * tmp = bg_app_get_icon_file();
+  
   if(tmp)
     {
     if(bg_gtk_window_icon_pixbuf)
       g_object_unref(bg_gtk_window_icon_pixbuf);
     bg_gtk_window_icon_pixbuf = gdk_pixbuf_new_from_file(tmp, NULL);
-    bg_app_set_window_icon(tmp);
-    free(tmp);
-
+    
     gtk_window_set_default_icon(bg_gtk_window_icon_pixbuf);
-
+    
+    free(tmp);
     }
   }
 
@@ -158,8 +157,7 @@ GtkWidget * bg_gtk_window_new(GtkWindowType type)
   }
 
 
-void bg_gtk_init(int * argc, char *** argv, 
-                 const char * default_window_icon)
+void bg_gtk_init(int * argc, char *** argv)
   {
   gtk_init(argc, argv);
 
@@ -167,8 +165,8 @@ void bg_gtk_init(int * argc, char *** argv,
   setlocale(LC_NUMERIC, "C");
 
   /* Set the default window icon */
-  set_default_window_icon(default_window_icon);
-
+  set_default_window_icon();
+  
   }
 
 cairo_surface_t * bg_gdk_pixbuf_render_pixmap_and_mask(GdkPixbuf *pixbuf)

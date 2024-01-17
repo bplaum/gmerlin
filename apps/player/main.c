@@ -122,7 +122,7 @@ int main(int argc, char ** argv)
   int have_state = 0;
   gavl_dictionary_t state;
 
-  bg_app_init("gmerlin", TRS("Gmerlin Player"));
+  bg_app_init("gmerlin", TRS("Gmerlin Player"), "player");
 
   srand(time(NULL));
   
@@ -141,7 +141,7 @@ int main(int argc, char ** argv)
   srand(time(NULL));
   
   bg_translation_init();
-  bg_gtk_init(&argc, &argv, WINDOW_ICON);
+  bg_gtk_init(&argc, &argv);
 
   bg_cfg_registry_init("player");
   bg_plugins_init();

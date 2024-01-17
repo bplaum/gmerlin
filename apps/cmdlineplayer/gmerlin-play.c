@@ -302,7 +302,7 @@ int main(int argc, char ** argv)
   bg_cfg_section_t * cfg_section;
   gavl_timer_t * timer;
 
-  bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"));
+  bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"), "renderer");
   
 
   timer = gavl_timer_create();

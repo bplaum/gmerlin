@@ -119,7 +119,7 @@ int main(int argc, char ** argv)
   const char * root_url;
   bg_http_server_t * srv;
 
-  bg_app_init("websocket_test", TRS("Websocket tester"));
+  bg_app_init("websocket_test", TRS("Websocket tester"), NULL);
 
   
   bg_handle_sigint();

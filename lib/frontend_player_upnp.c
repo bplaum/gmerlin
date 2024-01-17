@@ -202,8 +202,6 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
 
-    gavl_dictionary_set_string(&local_dev, BG_BACKEND_PROTOCOL, "upnp");
-    
     if((val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL)) &&
        (icon_arr = gavl_value_get_array(val)))
       {

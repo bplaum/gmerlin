@@ -145,7 +145,7 @@ int main(int argc, char ** argv)
 
   gavl_video_source_t * src;
 
-  bg_app_init("gmerlin-video-thumbnailer", "Video thumbnailer");
+  bg_app_init("gmerlin-video-thumbnailer", "Video thumbnailer", NULL);
   
   memset(&metadata, 0, sizeof(metadata));
   

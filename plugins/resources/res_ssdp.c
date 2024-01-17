@@ -467,12 +467,10 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
     
     if(is_upnp)
       {
-      gavl_dictionary_set_string(dict, BG_BACKEND_PROTOCOL, "upnp");
       gavl_dictionary_set_int(dict, BG_RESOURCE_PRIORITY, BG_RESOURCE_PRIORITY_DEFAULT);
       }
     else
       {
-      gavl_dictionary_set_string(dict, BG_BACKEND_PROTOCOL, "gmerlin");
       gavl_dictionary_set_int(dict, BG_RESOURCE_PRIORITY, BG_RESOURCE_PRIORITY_MAX);
       }
     if(is_upnp)
