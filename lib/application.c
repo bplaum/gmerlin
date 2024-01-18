@@ -139,33 +139,3 @@ void bg_dictionary_add_application_icons(gavl_dictionary_t * m,
   gavl_dictionary_set_nocopy(m, GAVL_META_ICON_URL, &val);
   }
 
-void bg_set_network_node_info(const char * node_name, const gavl_array_t * icons, const char * icon,
-                              bg_msg_sink_t * sink)
-  {
-  gavl_array_t * arr;
-  
-  gavl_value_t val;
-
-  gavl_value_init(&val);
-  gavl_value_set_string(&val, node_name);
-  
-  bg_state_set(NULL, 0, BG_APP_STATE_NETWORK_NODE, GAVL_META_LABEL, &val, sink, BG_MSG_STATE_CHANGED);
-
-  gavl_value_reset(&val);
-
-  if(icons)
-    {
-    arr = gavl_value_set_array(&val);
-    gavl_array_copy(arr, icons);
-
-    bg_state_set(NULL, 1, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL, &val, sink, BG_MSG_STATE_CHANGED);
-    }
-  else if(icon)
-    {
-    gavl_value_set_string(&val, icon);
-    bg_state_set(NULL, 1, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_NAME, &val, sink, BG_MSG_STATE_CHANGED);
-    }
-  
-  gavl_value_free(&val);
-  }
-  

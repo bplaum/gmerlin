@@ -171,6 +171,10 @@ bg_mdb_t * bg_mdb_create(const char * path,
 
 void bg_mdb_merge_root_metadata(bg_mdb_t * db, const gavl_dictionary_t * m);
 
+/* To be called after the root uri of the http server is known */
+void bg_mdb_set_root_icons(bg_mdb_t * db);
+
+
 void bg_mdb_destroy(bg_mdb_t * db);
 void bg_mdb_stop(bg_mdb_t * db);
 

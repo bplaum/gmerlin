@@ -1034,7 +1034,8 @@ static int ping_player_mpris2(bg_frontend_t * fe, gavl_time_t current_time)
     /* TODO: Register local device. Must be done before releasing the lock */
 
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                      bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME, bus_name_real + MPRIS2_NAME_PREFIX_LEN));
+                                      bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
+                                                 bus_name_real + MPRIS2_NAME_PREFIX_LEN));
 
     gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);

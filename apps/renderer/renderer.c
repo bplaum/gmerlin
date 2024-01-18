@@ -59,11 +59,9 @@ void renderer_init(renderer_t * s)
   gavl_dictionary_t * section;
   const gavl_value_t * uuid_val;
   const char * uuid = NULL;
-  char * tmp_string = NULL;
   bg_controllable_t * player_ctrl;
 
   gavl_value_t icons_val;
-  gavl_array_t * icons_arr;
 
   gavl_value_init(&icons_val);
     
@@ -128,16 +126,6 @@ void renderer_init(renderer_t * s)
   /* Start http part */
   bg_http_server_set_static_path(s->srv, "/static");
   bg_http_server_start(s->srv);
-
-  /* Generate icons */
-  icons_arr = gavl_value_set_array(&icons_val);
-
-  tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(s->srv));
-  bg_array_add_application_icons(icons_arr, tmp_string, "renderer");
-
-  free(tmp_string);
-
-  bg_set_network_node_info(bg_app_get_label(), icons_arr, NULL, player_ctrl->evt_sink);
   
   /* Create frontends */
   s->fe_gmerlin = bg_frontend_create_player_gmerlin(player_ctrl);

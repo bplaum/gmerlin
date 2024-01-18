@@ -23,15 +23,6 @@ extern gavl_dictionary_t bg_app_vars;
 #define BG_APP_ICON_NAME "IconName"
 
 
-/* State variables */
-
-#define BG_APP_STATE_NETWORK_NODE "Node"
-
-// #define BG_APP_NETWORK_ICONS     GAVL_META_ICON_URL
-// #define BG_APP_NETWORK_ICON_NAME GAVL_META_ICON_NAME
-
-// #define BG_APP_NETWORK_NAME      GAVL_META_LABEL
-
 void bg_app_init(const char * name,
                  const char * label,
                  const char * icon_name);
@@ -60,10 +51,5 @@ void bg_dictionary_add_application_icons(gavl_dictionary_t * dict,
                                          const char * prefix,
                                          const char * name);
 
-/* Call this once with the sink, which will send the events to the websocket context */
-
-void bg_set_network_node_info(const char * node_name, const gavl_array_t * icons, const char * icon_name,
-                              bg_msg_sink_t * sink);
- 
 
 #endif // BG_APPLICATION_H_INCLUDED

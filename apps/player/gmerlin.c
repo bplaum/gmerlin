@@ -556,15 +556,8 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   {
   gmerlin_t * ret;
   bg_cfg_section_t * cfg_section;
-  char * network_name;
   char * tmp_string;
 
-  gavl_dictionary_t * node_vars = gavl_dictionary_get_dictionary_create(&bg_app_vars, BG_APP_STATE_NETWORK_NODE);
-  
-  network_name = bg_sprintf("Gmerlin player");
-
-  gavl_dictionary_set_string(node_vars, GAVL_META_LABEL, network_name);
-  
   //  gavl_dictionary_t root_metadata;
   
   ret = calloc(1, sizeof(*ret));
@@ -652,7 +645,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
                    "delete_event",
                    G_CALLBACK(delete_callback), ret);
   
-  bg_mdb_set_root_name(ret->mdb, network_name);
+  bg_mdb_set_root_name(ret->mdb, bg_app_get_label());
   
   ret->cfg_mdb = bg_mdb_get_cfg(ret->mdb);
   
@@ -759,8 +752,6 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   ret->gmerlin_renderer_frontend =
     bg_frontend_create_player_gmerlin(ret->player_ctrl);
   
-  free(network_name);
-
   ret->main_menu = main_menu_create(ret);
 
   gtk_widget_show(ret->mdb_window);
@@ -916,13 +907,11 @@ static void * frontend_thread(void * data)
 
 void gmerlin_run(gmerlin_t * g, const char ** locations)
   {
-  const char * label;
   gavl_value_t icons_val;
   gavl_array_t * icons_arr;
   
   char * tmp_string;
   gavl_dictionary_t root_metadata;
-  gavl_dictionary_t * node_vars;
   
   gmerlin_apply_config(g);
   gmerlin_apply_state(g); 
@@ -947,13 +936,6 @@ void gmerlin_run(gmerlin_t * g, const char ** locations)
   
   bg_mdb_merge_root_metadata(g->mdb, &root_metadata);
   gavl_dictionary_free(&root_metadata);
-  
-  node_vars = gavl_dictionary_get_dictionary_create(&bg_app_vars, BG_APP_STATE_NETWORK_NODE);
-  
-  label = gavl_dictionary_get_string(node_vars, GAVL_META_LABEL);
-  
-  bg_set_network_node_info(label, icons_arr, NULL, g->player_ctrl->evt_sink);
-  bg_set_network_node_info(label, icons_arr, NULL, g->mdb_ctrl->evt_sink);
   
   
   /* */

@@ -262,12 +262,10 @@ int server_init(server_t * s)
   {
   char * tmp_string;
   bg_controllable_t * mdb_ctrl;
-  gavl_dictionary_t root_metadata;
   gavl_dictionary_t * section;
   const gavl_value_t * uuid_val;
   const char * uuid = NULL;
 
-  gavl_dictionary_init(&root_metadata);
   
   memset(s, 0, sizeof(*s));
   
@@ -361,23 +359,8 @@ int server_init(server_t * s)
   
   /* Start http part */
   bg_http_server_start(s->srv);
-
-  /* TODO: Maybe add PID and hostname */
-
-  /* Add icons with absolute URLs */
   
-  tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(s->srv));
-  gavl_dictionary_set(&root_metadata, GAVL_META_ICON_URL, NULL);
-  bg_dictionary_add_application_icons(&root_metadata, tmp_string, "server");
-  
-  free(tmp_string);
-  
-  bg_mdb_merge_root_metadata(s->mdb, &root_metadata);
-  
-  bg_set_network_node_info(s->label, gavl_dictionary_get_array(&root_metadata, GAVL_META_ICON_URL),
-                           NULL, mdb_ctrl->evt_sink);
-  
-  gavl_dictionary_free(&root_metadata);
+  bg_mdb_set_root_icons(s->mdb);
   
   return 1;
   }

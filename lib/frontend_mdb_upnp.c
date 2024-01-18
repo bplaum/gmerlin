@@ -47,7 +47,6 @@ static const char * cd_desc;
 /* ConnectionManager */
 static const char * cm_desc;
 
-#define FLAG_HAVE_NODE  (1<<0)
 #define FLAG_REGISTERED (1<<1)
 
 typedef struct 
@@ -427,9 +426,6 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
           
           gavl_value_free(&val);
           
-          if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
-            p->flags |= FLAG_HAVE_NODE;
-
           
           }
           break;
@@ -464,46 +460,55 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
   
   bg_mdb_frontend_upnp_t * p = fe->priv;
 
-  if((p->flags & FLAG_HAVE_NODE) && !(p->flags & FLAG_REGISTERED))
+  if(!(p->flags & FLAG_REGISTERED))
     {
-    const gavl_value_t * val;
-    const gavl_array_t * icon_arr = NULL;
     char * icons;
     gavl_dictionary_t local_dev;
     
     const char * server_label;
+    const char * icon_name;
+    const char * root_uri;
+    
     char uuid_str[37];
     
-    char * uri = bg_sprintf("%s/upnp/server/desc.xml", bg_http_server_get_root_url(bg_http_server_get()));
+    char * uri;
+
+    root_uri = bg_http_server_get_root_url(bg_http_server_get());
+    
+    uri = bg_sprintf("%s/upnp/server/desc.xml", root_uri);
 
     gavl_dictionary_init(&local_dev);
     
     if(!(server_label = bg_app_get_label()))
       return 0;
 
-    if((val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL)) &&
-       (icon_arr = gavl_value_get_array(val)))
+    if((icon_name = bg_app_get_icon_name()))
       {
-      icons = bg_upnp_create_icon_list(icon_arr);
-      gavl_dictionary_set_array(&local_dev, GAVL_META_ICON_URL, icon_arr);
+      gavl_array_t icon_arr;
+      char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
+      gavl_array_init(&icon_arr);
+      bg_array_add_application_icons(&icon_arr, prefix, icon_name);
+      icons = bg_upnp_create_icon_list(&icon_arr);
+      gavl_array_free(&icon_arr);
+      free(prefix);
       }
     else
       icons = gavl_strdup("");
-
+    
     /* Register local device */
 
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
                                       bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
-
-    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
     
+    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
-
-    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
     
     p->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+
+    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
+
     free(icons);
     free(uri);
 
@@ -583,9 +588,9 @@ static const char * dev_desc =
 "    <manufacturerURL>http://gmerlin.sourceforge.net</manufacturerURL>"
 "    <modelName>Gmerlin Media Server</modelName>"
 "    <modelDescription></modelDescription>"
-"    <modelNumber></modelNumber>"
+"    <modelNumber>"VERSION"</modelNumber>"
 "    <modelURL>http://gmerlin.sourceforge.net</modelURL>"
-"    <serialNumber></serialNumber>"
+"    <serialNumber>"VERSION"</serialNumber>"
 "%s"  
 "    <serviceList>"
 "      <service>"

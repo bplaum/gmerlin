@@ -150,7 +150,6 @@ static const char * avt_desc;
 static const char * cm_desc;
 static const char * rc_desc;
 
-#define FLAG_HAVE_NODE  (1<<0)
 #define FLAG_REGISTERED (1<<1)
 
 typedef struct 
@@ -177,18 +176,23 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
 
   //  fprintf(stderr, "ping_player_upnp %s\n", p->protocol_info);
   
-  if((p->flags & FLAG_HAVE_NODE) && !(p->flags & FLAG_REGISTERED) && p->protocol_info)
+  if(!(p->flags & FLAG_REGISTERED) && p->protocol_info)
     {
     gavl_dictionary_t local_dev;
     
-    const gavl_value_t * val;
     const char * server_label;
+    const char * root_uri;
+    const char * icon_name;
     char uuid_str[37];
 
-    const gavl_array_t * icon_arr;
     char * icons;
     
-    char * uri = bg_sprintf("%s/upnp/renderer/desc.xml", bg_http_server_get_root_url(bg_http_server_get()));
+    char * uri;
+    
+    root_uri = bg_http_server_get_root_url(bg_http_server_get());
+    
+    uri = bg_sprintf("%s/upnp/renderer/desc.xml", root_uri);
+
 
     gavl_dictionary_init(&local_dev);
     gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
@@ -201,20 +205,23 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
 
-    if((val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL)) &&
-       (icon_arr = gavl_value_get_array(val)))
+    if((icon_name = bg_app_get_icon_name()))
       {
-      icons = bg_upnp_create_icon_list(icon_arr);
-      gavl_dictionary_set_array(&local_dev, GAVL_META_ICON_URL, icon_arr);
+      gavl_array_t icon_arr;
+      char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
+      gavl_array_init(&icon_arr);
+      bg_array_add_application_icons(&icon_arr, prefix, icon_name);
+      icons = bg_upnp_create_icon_list(&icon_arr);
+      gavl_array_free(&icon_arr);
+      free(prefix);
       }
     else
       icons = gavl_strdup("");
-
-    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
-    
     p->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+    
+    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     free(uri);
     free(icons);
@@ -562,16 +569,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
               }
             }
 
-          else if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE) && (!var || last))
-            {
-            p->flags |= FLAG_HAVE_NODE;
-            }
-            
-          /* Send events */
-          //          bg_upnp_event_context_server_set_value(gavl_dictionary_t * dict, const char * name,
-          //                                                 const char * val,
-          //                                                 gavl_time_t update_interval)          
-            
+          
           gavl_value_free(&val);
           }
           break;

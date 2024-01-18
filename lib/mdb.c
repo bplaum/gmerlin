@@ -39,6 +39,7 @@
 #include <gmerlin/httpserver.h>
 #include <gmerlin/cfgctx.h>
 #include <gmerlin/resourcemanager.h>
+#include <gmerlin/application.h>
 
 #include <httpserver_priv.h>
 
@@ -1144,6 +1145,34 @@ void bg_mdb_merge_root_metadata(bg_mdb_t * db, const gavl_dictionary_t * m)
   gavl_dictionary_free(m_root);
   gavl_dictionary_move(m_root, &m_new);
   }
+
+void bg_mdb_set_root_icons(bg_mdb_t * db)
+  {
+  char * tmp_string;
+  gavl_array_t icons;
+  gavl_dictionary_t * m_root;
+  const char * icon_name;
+  
+  if(!db->srv)
+    return;
+
+  if(!(icon_name = bg_app_get_icon_name()))
+    return;
+  
+  m_root = gavl_dictionary_get_dictionary_nc(&db->root, GAVL_META_METADATA);
+
+  tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(db->srv));
+
+  gavl_array_init(&icons);
+  bg_array_add_application_icons(&icons, tmp_string, icon_name);
+  gavl_dictionary_set_array(m_root, GAVL_META_ICON_URL, &icons);
+  
+  free(tmp_string);
+  gavl_array_free(&icons);
+
+  
+  }
+
 
 /* Set mimetypes state */
 static void set_state_mimetypes(bg_mdb_t * db)
