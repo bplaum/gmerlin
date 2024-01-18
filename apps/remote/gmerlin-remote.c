@@ -82,10 +82,7 @@ static int do_mpris = 0;
 static int do_gmerlin = 0;
 static int do_upnp    = 0;
 
-static int have_state = 0;
-
 bg_http_server_t * srv = NULL;
-bg_controllable_t proxy_ctrl;
 
 static char * label = NULL;
 
@@ -517,107 +514,11 @@ static bg_http_server_t * create_server()
   return ret;
   }
 
-static int handle_backend_message(void * data, gavl_msg_t * msg)
-  {
-  if((msg->NS == BG_MSG_NS_STATE) &&
-     (msg->ID == BG_MSG_STATE_CHANGED))
-    {
-    const char * ctx = NULL;
-    const char * var = NULL;
-    int last = 0;
-    gavl_value_t val;
-    
-    gavl_value_init(&val);
 
-    gavl_msg_get_state(msg, &last, &ctx, &var, &val, NULL);
-    
-    //    fprintf(stderr, "Got backend message\n");
-    //    gavl_msg_dump(msg, 2);
-    
-    if(last && !strcmp(ctx, BG_APP_STATE_NETWORK_NODE))
-      have_state = 1;
-
-    /* Send application icon via proxy */
-    if(!strcmp(ctx, BG_APP_STATE_NETWORK_NODE))
-      {
-      if(!strcmp(var, GAVL_META_LABEL))
-        {
-        gavl_msg_t * msg1;
-        gavl_value_t name_val;
-        gavl_value_init(&name_val);
-
-        
-        gavl_value_set_string_nocopy(&name_val, bg_sprintf("%s (via proxy)", gavl_value_get_string(&val)));
-        
-        msg1 = bg_msg_sink_get(proxy_ctrl.evt_sink);
-                                     
-        gavl_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_LABEL, &name_val);
-        gavl_dictionary_copy(&msg1->header, &msg->header);
-        bg_msg_sink_put(proxy_ctrl.evt_sink);
-        return 1;
-        }
-      else if(!strcmp(var, GAVL_META_ICON_NAME) && srv)
-        {
-        gavl_value_t val_1;
-        gavl_array_t * arr;
-        gavl_msg_t * msg1;
-
-        gavl_value_t url_val;
-        gavl_dictionary_t * url;
-
-        fprintf(stderr, "Icon name: %s\n", gavl_value_get_string(&val));
-        
-        msg1 = bg_msg_sink_get(proxy_ctrl.evt_sink);
-        
-        /* TODO: Set Icon URI */
-        gavl_value_init(&val_1);
-        arr = gavl_value_set_array(&val_1);
-        
-        gavl_value_init(&url_val);
-        url = gavl_value_set_dictionary(&url_val);
-
-        gavl_dictionary_set_string_nocopy(url, GAVL_META_URI,
-                                          bg_sprintf("%s" BG_HTTP_APPICON_PATH "%s.png",
-                                                     bg_http_server_get_root_url(srv),
-                                                     gavl_value_get_string(&val)));
-        
-        gavl_dictionary_set_string(url, GAVL_META_MIMETYPE, "image/png");
-        gavl_dictionary_set_int(url, GAVL_META_WIDTH, 48);
-        gavl_dictionary_set_int(url, GAVL_META_HEIGHT, 48);
-
-        gavl_array_splice_val_nocopy(arr, 0, 0, &url_val);
-
-        //  fprintf(stderr, "Icon arr:\n");
-        //  gavl_array_dump(arr, 2);
-        
-
-        gavl_msg_set_state_nocopy(msg1, BG_MSG_STATE_CHANGED, last, ctx, GAVL_META_ICON_URL, &val_1);
-        
-        gavl_dictionary_copy(&msg1->header, &msg->header);
-        bg_msg_sink_put(proxy_ctrl.evt_sink);
-        return 1;
-        }
-      
-      }
-
-    gavl_value_free(&val);
-    }
-  
-  bg_msg_sink_put_copy(proxy_ctrl.evt_sink, msg);
-  
-  return 1;
-  }
-
-static int handle_frontend_command(void * data, gavl_msg_t * msg)
-  {
-  bg_msg_sink_put_copy(backend_ctrl->cmd_sink, msg);
-  return 1;
-  }
 
 int main(int argc, char ** argv)
   {
   gavl_dictionary_t dev;
-  bg_msg_sink_t * sink;
 
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50;
 
@@ -671,26 +572,17 @@ int main(int argc, char ** argv)
     goto fail;
   
   backend_ctrl = bg_backend_handle_get_controllable(backend);
-
-  bg_controllable_init(&proxy_ctrl,
-                       bg_msg_sink_create(handle_frontend_command, NULL, 1),
-                       bg_msg_hub_create(1));
   
-  sink = bg_msg_sink_create(handle_backend_message, NULL, 1);
-  bg_msg_hub_connect_sink(backend_ctrl->evt_hub, sink);
-  
-  //  fprintf(stderr, "Got backend state:\n");
-  //  gavl_dictionary_dump(&backend_state, 2);
   
   /* Create frontends */
 #ifdef HAVE_NCURSES
   if(do_ncurses)
-    fe_ncurses = bg_frontend_create_player_ncurses(&proxy_ctrl);
+    fe_ncurses = bg_frontend_create_player_ncurses(backend_ctrl);
 #endif
 
 #ifdef HAVE_DBUS
   if(do_mpris)
-    fe_mpris = bg_frontend_create_player_mpris2(&proxy_ctrl,
+    fe_mpris = bg_frontend_create_player_mpris2(backend_ctrl,
                                                 "org.mpris.MediaPlayer2.gmerlin-remote",
                                                 "gmerlin-remote");
 #endif
@@ -700,11 +592,11 @@ int main(int argc, char ** argv)
     
     //      remote_addr
       
-    fe_upnp = bg_frontend_create_player_upnp(&proxy_ctrl);
+    fe_upnp = bg_frontend_create_player_upnp(backend_ctrl);
     }
   
   if(do_gmerlin)
-    fe_gmerlin = bg_frontend_create_player_gmerlin(&proxy_ctrl);
+    fe_gmerlin = bg_frontend_create_player_gmerlin(backend_ctrl);
   
   bg_cmdline_parse(commands, &argc, &argv, NULL);
   
@@ -727,6 +619,8 @@ int main(int argc, char ** argv)
 
       bg_msg_sink_iteration(backend_ctrl->evt_sink);
       ret += bg_msg_sink_get_num(backend_ctrl->evt_sink);
+
+      ret += bg_backend_handle_ping(backend);
       
 #ifdef HAVE_NCURSES
       if(fe_ncurses)

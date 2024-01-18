@@ -122,18 +122,6 @@ void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, con
   add_application_icon(arr, bg_sprintf("%s%s%s_96.jpg", prefix, slash, name), 96, "image/jpeg");
   }
 
-#if 0
-void bg_app_add_application_icons(const char * prefix,
-                                  const char * name)
-  {
-  bg_dictionary_add_application_icons(&bg_app_vars, prefix, name);
-  };
-
-const gavl_array_t * bg_app_get_application_icons()
-  {
-  return gavl_dictionary_get_array(&bg_app_vars, GAVL_META_ICON_URL);
-  };
-#endif
 
 void bg_dictionary_add_application_icons(gavl_dictionary_t * m,
                                          const char * prefix,

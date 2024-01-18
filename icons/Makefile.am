@@ -3,21 +3,15 @@ pkgdatadir = $(datadir)/gmerlin/icons
 
 icons = \
 config_16.png \
-close_16.png \
-fullscreen_16.png \
 info_16.png \
-log_16.png \
 player_icon.png \
 plugincfg_icon.png \
-record_16.png \
 recorder_icon.png \
 refresh_16.png \
 renderer_icon.png \
 server_icon.png \
-snapshot_16.png \
 transcoder_icon.png \
-visualizer_icon.png \
-windowed_16.png 
+visualizer_icon.png
 
 pkgdata_DATA = $(icons)
 

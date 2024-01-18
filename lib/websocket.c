@@ -1062,7 +1062,7 @@ static int bg_websocket_context_handle_request(bg_http_connection_t * c, void * 
       gavl_array_t icons;
       char * prefix = gavl_sprintf("http://%s/static/icons/", gavl_dictionary_get_string(&c->req, "Host"));
       gavl_array_init(&icons);
-    bg_array_add_application_icons(&icons, prefix, str);
+      bg_array_add_application_icons(&icons, prefix, str);
       free(prefix);
       gavl_dictionary_set_array(&node, GAVL_META_ICON_URL, &icons);
       gavl_array_free(&icons);

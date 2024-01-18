@@ -478,8 +478,7 @@ static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
 
     gavl_dictionary_init(&local_dev);
     
-    if(!(val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_LABEL)) ||
-       !(server_label = gavl_value_get_string(val)))
+    if(!(server_label = bg_app_get_label()))
       return 0;
 
     if((val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_ICON_URL)) &&

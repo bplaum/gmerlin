@@ -66,4 +66,4 @@ void bg_set_network_node_info(const char * node_name, const gavl_array_t * icons
                               bg_msg_sink_t * sink);
  
 
-#endif  
+#endif // BG_APPLICATION_H_INCLUDED

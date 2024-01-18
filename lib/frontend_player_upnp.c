@@ -195,9 +195,8 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
                                       bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, uri + 7));
 
     gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
-    
-    if(!(val = bg_state_get(&p->state, BG_APP_STATE_NETWORK_NODE, GAVL_META_LABEL)) ||
-       !(server_label = gavl_value_get_string(val)))
+
+    if(!(server_label = bg_app_get_label()))
       return 0;
     
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
@@ -211,8 +210,6 @@ static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
     else
       icons = gavl_strdup("");
 
-    /* Register local device before creating the ssdp */
-    
     bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
     bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
