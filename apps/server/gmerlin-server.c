@@ -24,6 +24,8 @@
 #include <config.h>
 
 #include "server.h"
+#include <gavl/log.h>
+#define LOG_DOMAIN "gmerlin-server"
 
 #include <gmerlin/cfgctx.h>
 #include <gmerlin/cmdline.h>
@@ -36,11 +38,36 @@
 
 #include <signal.h>
 
+gavl_array_t fe_arr;
+
+static void opt_fe(void * data, int * argc, char *** argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
+  }
+
 static bg_cmdline_arg_t global_options[] =
   {
    BG_OPT_LOAD_CONFIG,
    BG_OPT_SAVE_CONFIG, 
-   { /* End */ }
+    {
+      .arg =         "-fe",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of frontends. Use -list-fe to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe,
+    },
+    {
+      .arg =         "-list-fe",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_mdb,
+    },
+    { /* End */ }
   };
 
 const bg_cmdline_app_data_t app_data =
@@ -67,6 +94,9 @@ int main(int argc, char ** argv)
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   server_t s;
 
+  gavl_array_init(&fe_arr);
+  bg_frontend_set_option(&fe_arr, "mdb_gmerlin,mdb_upnp");
+
   bg_app_init("gmerlin-server", TRS("Gmerlin media server"), "server");
   
   /* Make strcasecmp work */
@@ -83,7 +113,7 @@ int main(int argc, char ** argv)
   bg_cmdline_init(&app_data);
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
   
-  result = server_init(&s);
+  result = server_init(&s, &fe_arr);
 
   bg_cfg_registry_save_config();
   

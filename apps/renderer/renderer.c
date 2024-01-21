@@ -54,7 +54,7 @@ static const bg_parameter_info_t parameters[] =
   };
 
 
-void renderer_init(renderer_t * s)
+void renderer_init(renderer_t * s, gavl_array_t * fe_arr)
   {
   gavl_dictionary_t * section;
   const gavl_value_t * uuid_val;
@@ -128,18 +128,10 @@ void renderer_init(renderer_t * s)
   bg_http_server_start(s->srv);
   
   /* Create frontends */
-  s->fe_gmerlin = bg_frontend_create_player_gmerlin(player_ctrl);
-
-  s->fe_upnp = bg_frontend_create_player_upnp(player_ctrl);
+  s->frontends = bg_frontends_create(player_ctrl,
+                                     BG_PLUGIN_FRONTEND_RENDERER, fe_arr, &s->num_frontends);
   
-#ifdef HAVE_DBUS
-  s->fe_mpris =
-    bg_frontend_create_player_mpris2(player_ctrl,
-                                     "org.mpris.MediaPlayer2.gmerlin-renderer",
-                                     "gmerlin-renderer");
-#endif
-  
-  bg_player_state_init(&s->state, NULL, NULL);
+  bg_player_state_init(&s->state);
   
   bg_player_run(s->player);
   bg_state_apply(&s->state, player_ctrl->cmd_sink, BG_CMD_SET_STATE);
@@ -160,19 +152,11 @@ void renderer_cleanup(renderer_t * s)
     free(s->state_file);
     }
 
-  if(s->fe_upnp)
-    bg_frontend_destroy(s->fe_upnp);
-
-  if(s->fe_gmerlin)
-    bg_frontend_destroy(s->fe_gmerlin);
-
-#ifdef HAVE_DBUS
-  if(s->fe_mpris)
-    bg_frontend_destroy(s->fe_mpris);
-#endif
   
   gavl_dictionary_free(&s->state);
 
+  bg_frontends_destroy(s->frontends, s->num_frontends);
+  
   if(s->parameters)
     bg_parameter_info_destroy_array(s->parameters);
 
@@ -186,20 +170,10 @@ void renderer_cleanup(renderer_t * s)
 int renderer_iteration(renderer_t * s)
   {
   int ret = 0;
-  gavl_time_t t = bg_http_server_get_time(s->srv);
   
   ret += bg_http_server_iteration(s->srv);
-  
-  if(s->fe_upnp)
-    ret += bg_frontend_ping(s->fe_upnp, t);
 
-  if(s->fe_gmerlin)
-    ret += bg_frontend_ping(s->fe_gmerlin, t);
-
-#ifdef HAVE_DBUS
-  if(s->fe_mpris)
-    ret += bg_frontend_ping(s->fe_mpris, t);
-#endif
+  ret += bg_frontends_ping(s->frontends, s->num_frontends);
   
   return ret;
   }

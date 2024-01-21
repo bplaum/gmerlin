@@ -470,7 +470,9 @@ int bg_state_handle_set_rel(gavl_dictionary_t * state, gavl_msg_t * msg)
   const char * var;
           
   int last = 0;
-
+  
+  gavl_msg_t new_msg;
+  
   if((msg->NS != BG_MSG_NS_STATE) ||
      (msg->ID != BG_CMD_SET_STATE_REL))
     return 0;
@@ -484,9 +486,10 @@ int bg_state_handle_set_rel(gavl_dictionary_t * state, gavl_msg_t * msg)
 
   bg_state_add_value(state, ctx, var, &add, &val);
 
+  gavl_msg_init(&new_msg);
+  gavl_msg_set_state(&new_msg, BG_CMD_SET_STATE, last, ctx, var, &val);
   gavl_msg_free(msg);
-  gavl_msg_init(msg);
-  gavl_msg_set_state(msg, BG_CMD_SET_STATE, last, ctx, var, &val);
+  gavl_msg_copy(msg, &new_msg);
   
   gavl_value_free(&val);
   gavl_value_free(&add);

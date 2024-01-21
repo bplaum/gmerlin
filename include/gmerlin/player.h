@@ -98,8 +98,7 @@ int bg_player_tracklist_set_current_by_id(bg_player_tracklist_t * l, const char 
 
 void bg_player_tracklist_clear(bg_player_tracklist_t * l);
 
-void bg_player_state_init(gavl_dictionary_t * dict,
-                          const gavl_array_t * protocols, const gavl_array_t * mimetypes);
+void bg_player_state_init(gavl_dictionary_t * dict);
 
 void bg_player_state_reset(gavl_dictionary_t * dict);
 

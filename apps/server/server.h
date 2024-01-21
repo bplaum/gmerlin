@@ -17,9 +17,9 @@ typedef struct
   bg_http_server_t * srv;
   bg_mdb_t * mdb;
 
-  bg_frontend_t * fe_upnp;
-  bg_frontend_t * fe_gmerlin;
-
+  bg_frontend_t ** frontends;
+  int num_frontends;
+  
   bg_parameter_info_t * parameters;
 
   char * vardir;
@@ -31,7 +31,7 @@ typedef struct
   char * state_file;
   } server_t;
 
-int server_init(server_t * s);
+int server_init(server_t * s, gavl_array_t * fe_arr);
 
 
 void server_cleanup(server_t * s);

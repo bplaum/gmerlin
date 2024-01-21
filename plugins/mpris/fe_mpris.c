@@ -21,6 +21,8 @@
 
 #include <string.h>
 
+#include <config.h>
+#include <gmerlin/translation.h>
 
 #include <gmerlin/frontend.h>
 #include <gmerlin/bgdbus.h>
@@ -205,8 +207,11 @@ typedef struct
   int track_counter;
 
   char * bus_name;
+
+  bg_controllable_t * ctrl;
   
   } mpris2_t;
+
 
 static const char * mode_to_loop_status(int gmerlin_mode)
   {
@@ -248,12 +253,10 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
   {
   const char * interface;
   const char * member;
-  bg_frontend_t * fe;
   mpris2_t * p;
   char * error_msg = NULL;
   
-  fe = priv;
-  p = fe->priv;
+  p = priv;
 
   //  fprintf(stderr, "Handle dbus message\n");
   //  gavl_msg_dump(msg, 2);
@@ -320,7 +323,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
           if(!loop_status)
             loop_status = "None";
 
-          msg1 = bg_msg_sink_get(fe->ctrl.cmd_sink);
+          msg1 = bg_msg_sink_get(p->ctrl->cmd_sink);
 
           gavl_value_init(&v);
           gavl_value_set_int(&v, get_gmerlin_mode(shuffle, loop_status));
@@ -331,7 +334,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
                            BG_PLAYER_STATE_MODE,
                            &v);
           
-          bg_msg_sink_put(fe->ctrl.cmd_sink);
+          bg_msg_sink_put(p->ctrl->cmd_sink);
           }
         else if(!strcmp(prop_name, "Shuffle"))
           {
@@ -346,7 +349,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
           if(!loop_status)
             loop_status = "None";
 
-          msg1 = bg_msg_sink_get(fe->ctrl.cmd_sink);
+          msg1 = bg_msg_sink_get(p->ctrl->cmd_sink);
 
           gavl_value_init(&v);
           gavl_value_set_int(&v, get_gmerlin_mode(shuffle, loop_status));
@@ -357,7 +360,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
                            BG_PLAYER_STATE_MODE,
                            &v);
           
-          bg_msg_sink_put(fe->ctrl.cmd_sink);
+          bg_msg_sink_put(p->ctrl->cmd_sink);
           }
 #if 0 // Nop
         else if(!strcmp(prop_name, "Rate"))
@@ -367,7 +370,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
 #endif
         else if(!strcmp(prop_name, "Volume"))
           {
-          bg_player_set_volume(fe->ctrl.cmd_sink, gavl_msg_get_arg_float(msg, 2));
+          bg_player_set_volume(p->ctrl->cmd_sink, gavl_msg_get_arg_float(msg, 2));
           }
         else
           {
@@ -440,30 +443,30 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     {
     if(!strcmp(member, "Next"))
       {
-      bg_player_next(fe->ctrl.cmd_sink);
+      bg_player_next(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "Previous"))
       {
-      bg_player_prev(fe->ctrl.cmd_sink);
+      bg_player_prev(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "Pause"))
       {
       const char * var;
       if((var = gavl_dictionary_get_string(&p->player_prop, "PlaybackStatus")) &&
          !strcmp(var, "Playing"))
-        bg_player_pause(fe->ctrl.cmd_sink);
+        bg_player_pause(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "PlayPause"))
       {
-      bg_player_pause(fe->ctrl.cmd_sink);
+      bg_player_pause(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "Stop"))
       {
-      bg_player_stop(fe->ctrl.cmd_sink);
+      bg_player_stop(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "Play"))
       {
-      bg_player_play(fe->ctrl.cmd_sink);
+      bg_player_play(p->ctrl->cmd_sink);
       }
     else if(!strcmp(member, "Seek"))
       {
@@ -482,7 +485,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       t   = gavl_msg_get_arg_long(msg, 1);
       
       //      fprintf(stderr, "SetPosition %s %"PRId64"\n", str, t);
-      bg_player_seek(fe->ctrl.cmd_sink, t, GAVL_TIME_SCALE);
+      bg_player_seek(p->ctrl->cmd_sink, t, GAVL_TIME_SCALE);
       }
     else if(!strcmp(member, "OpenUri"))
       {
@@ -615,7 +618,7 @@ static void track_to_metadata(const gavl_dictionary_t * src, gavl_dictionary_t *
 
 /* Handle message from player */
 
-static void add_track(bg_frontend_t * fe, const gavl_dictionary_t * track, int idx)
+static void add_track(void * priv, const gavl_dictionary_t * track, int idx)
   {
   char * mpris_id;
   gavl_value_t metadata_val;
@@ -626,7 +629,7 @@ static void add_track(bg_frontend_t * fe, const gavl_dictionary_t * track, int i
   
   DBusMessageIter iter;
   DBusMessage * msg;
-  mpris2_t * p = fe->priv;
+  mpris2_t * p = priv;
 
   track_ids = gavl_dictionary_get_array_nc(&p->tracklist_prop, "Tracks");
   
@@ -669,8 +672,7 @@ static void add_track(bg_frontend_t * fe, const gavl_dictionary_t * track, int i
 
 static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
   {
-  bg_frontend_t * fe = priv;
-  mpris2_t * p = fe->priv;
+  mpris2_t * p = priv;
   
   switch(msg->NS)
     {
@@ -821,16 +823,6 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
                 {
                 }
               }
-            else if(!strcmp(var, BG_PLAYER_STATE_MIMETYPES))
-              {
-              int i;
-              const gavl_array_t * arr = gavl_value_get_array(&val);
-              
-              for(i = 0; i < arr->num_entries; i++)
-                {
-                
-                }
-              }
             }
           
           /* Send events */
@@ -891,7 +883,7 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
           /* Add tracks */
           if(add.type == GAVL_TYPE_DICTIONARY)
             {
-            add_track(fe, gavl_value_get_dictionary(&add), idx);
+            add_track(priv, gavl_value_get_dictionary(&add), idx);
             }
           if(add.type == GAVL_TYPE_ARRAY)
             {
@@ -904,7 +896,7 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
               {
               if((dict = gavl_value_get_dictionary(&arr->entries[i])))
                 {
-                add_track(fe, dict, idx + added);
+                add_track(priv, dict, idx + added);
                 added++;
                 }
               }
@@ -945,134 +937,18 @@ static int handle_player_message_mpris(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-
-static int create_player_mpris2(bg_frontend_t * fe,
-                                const char * bus_name,
-                                const char * desktop_file)
-  {
-  gavl_array_t * arr;
-  mpris2_t * priv;
-  char * id;
-
-  priv = calloc(1, sizeof(*priv));
-  
-  id = bg_make_backend_id(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
-  
-  priv->bus_name = gavl_sprintf("%s-%s", bus_name, id);
-  
-  priv->conn = bg_dbus_connection_get(DBUS_BUS_SESSION);
-  
-  bg_control_init(&fe->ctrl, bg_msg_sink_create(handle_player_message_mpris, fe, 0));
-  
-  fe->priv = priv;
-  
-  bg_dbus_properties_init(root_properties, &priv->root_prop);
-  bg_dbus_properties_init(player_properties, &priv->player_prop);
-  bg_dbus_properties_init(tracklist_properties, &priv->tracklist_prop);
-
-  gavl_dictionary_get_array_create(&priv->tracklist_prop, "Tracks");
-  
-  gavl_dictionary_set_string(&priv->root_prop, "DesktopEntry", desktop_file);
-
-  arr = gavl_dictionary_get_array_create(&priv->root_prop, "SupportedUriSchemes");
-  
-  gavl_string_array_add(arr, "file");
-  gavl_string_array_add(arr, "http");
-  
-  free(id);
-  
-  return 1;
-  }
-
-static int ping_player_mpris2(bg_frontend_t * fe, gavl_time_t current_time)
+static int ping_mpris2(void * data)
   {
   int ret = 0;
-  mpris2_t * priv = fe->priv;
-  const gavl_value_t * val;
-  const gavl_array_t * mimetypes;
-  const char * server_label;
-  gavl_array_t * arr; 
+  mpris2_t * priv = data;
   
-  if(!priv->dbus_sink &&
-     (server_label = bg_app_get_label()) &&
-     (val = bg_state_get(&priv->state, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES)) &&
-     (mimetypes = gavl_value_get_array(val)))
-    {
-    gavl_dictionary_t local_dev;
-    char * bus_name_real;
-
-    gavl_dictionary_init(&local_dev);
-    
-    gavl_dictionary_set_string(&priv->root_prop, "Identity", server_label);
-
-    arr = gavl_dictionary_get_array_create(&priv->root_prop, "SupportedMimeTypes");
-    
-    gavl_array_copy(arr, mimetypes);
-    
-    priv->dbus_sink = bg_msg_sink_create(handle_msg_mpris2, fe, 0);
-
-#if 0    
-    fprintf(stderr, "Creating dbus object: %s\n", server_label);
-    gavl_dictionary_dump(&priv->root_prop, 2);
-    fprintf(stderr, "State\n");
-    gavl_dictionary_dump(&priv->state, 2);
-    
-    fprintf(stderr, "registering object\n");
-#endif
-    
-    /* Register object */
-    bg_dbus_register_object(priv->conn, OBJ_PATH,
-                            priv->dbus_sink, introspect_xml);
-    
-    
-    /* Request name: From now on we are visible */
-
-    bg_dbus_connection_lock(priv->conn);
-    
-    bus_name_real = bg_dbus_connection_request_name(priv->conn, priv->bus_name);
-    
-    /* TODO: Register local device. Must be done before releasing the lock */
-
-    gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                      bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
-                                                 bus_name_real + MPRIS2_NAME_PREFIX_LEN));
-
-    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
-    gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
-
-
-    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
-    
-    gavl_dictionary_free(&local_dev);
-    
-    bg_dbus_connection_unlock(priv->conn);
-    
-
-    //    fprintf(stderr, "registering object done\n");
-
-    
-    //  fprintf(stderr, "Got bus name: %s\n", bus_name_real);
-    if(bus_name_real)
-      free(bus_name_real);
-
-    /* Apply the state we habe so far */
-    
-    bg_state_apply(&priv->state, fe->ctrl.evt_sink, BG_MSG_STATE_CHANGED);
-    }
-  
-  if(priv->dbus_sink)
-    {
-    bg_msg_sink_iteration(priv->dbus_sink);
-    ret += bg_msg_sink_get_num(priv->dbus_sink);
-    }
-  
-  bg_msg_sink_iteration(fe->ctrl.evt_sink);
-  ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
+  bg_msg_sink_iteration(priv->dbus_sink);
+  ret += bg_msg_sink_get_num(priv->dbus_sink);
   
   return ret;
   }
 
-static void cleanup_player_mpris2(void * data)
+static void destroy_mpris2(void * data)
   {
   mpris2_t * priv = data;
   
@@ -1093,6 +969,7 @@ static void cleanup_player_mpris2(void * data)
   free(priv);
   }
 
+#if 0
 bg_frontend_t *
 bg_frontend_create_player_mpris2(bg_controllable_t * ctrl,
                                  const char * bus_name,
@@ -1114,6 +991,139 @@ bg_frontend_create_player_mpris2(bg_controllable_t * ctrl,
   
   return ret;
   }
+#endif
+
+static void * create_mpris2()
+  {
+  
+  gavl_array_t * arr;
+  char * id;
+  mpris2_t * priv;
+  const char * name;
+  char * bus_name;
+  priv = calloc(1, sizeof(*priv));
+  
+  id = bg_make_backend_id(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+
+  name = bg_app_get_name();
+  bus_name = gavl_sprintf("org.mpris.MediaPlayer2.%s", name);
+  
+  priv->bus_name = gavl_sprintf("%s-%s", bus_name, id);
+  
+  priv->conn = bg_dbus_connection_get(DBUS_BUS_SESSION);
+  
+  
+  bg_dbus_properties_init(root_properties, &priv->root_prop);
+  bg_dbus_properties_init(player_properties, &priv->player_prop);
+  bg_dbus_properties_init(tracklist_properties, &priv->tracklist_prop);
+
+  gavl_dictionary_get_array_create(&priv->tracklist_prop, "Tracks");
+  
+  gavl_dictionary_set_string(&priv->root_prop, "DesktopEntry", name);
+
+  /* Protocols */
+  arr = gavl_dictionary_get_array_create(&priv->root_prop, "SupportedUriSchemes");
+  
+  gavl_string_array_add(arr, "file");
+  gavl_string_array_add(arr, "http");
+
+  /* mimetypes */
+
+  arr = gavl_dictionary_get_array_create(&priv->root_prop, "SupportedMimeTypes");
+  gavl_array_copy(arr, bg_plugin_registry_get_input_mimetypes());
+  
+  free(id);
+  free(bus_name);
+
+  return priv;
+  }
+
+static int open_mpris2(void * data, bg_controllable_t * ctrl)
+  {
+  const char * label;
+  gavl_dictionary_t local_dev;
+  char * bus_name_real;
+  mpris2_t * priv = data;
+  
+  label = bg_app_get_label();
+  
+  gavl_dictionary_init(&local_dev);
+    
+  gavl_dictionary_set_string(&priv->root_prop, "Identity", label);
+  
+  priv->dbus_sink = bg_msg_sink_create(handle_msg_mpris2, priv, 0);
+
+#if 0    
+  fprintf(stderr, "Creating dbus object: %s\n", server_label);
+  gavl_dictionary_dump(&priv->root_prop, 2);
+  fprintf(stderr, "State\n");
+  gavl_dictionary_dump(&priv->state, 2);
+    
+  fprintf(stderr, "registering object\n");
+#endif
+    
+  /* Register object */
+  bg_dbus_register_object(priv->conn, OBJ_PATH,
+                          priv->dbus_sink, introspect_xml);
+    
+    
+  /* Request name: From now on we are visible */
+
+  bg_dbus_connection_lock(priv->conn);
+    
+  bus_name_real = bg_dbus_connection_request_name(priv->conn, priv->bus_name);
+    
+  /* TODO: Register local device. Must be done before releasing the lock */
+
+  gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
+                                    bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
+                                               bus_name_real + MPRIS2_NAME_PREFIX_LEN));
+
+  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, label);
+
+
+  bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
+    
+  gavl_dictionary_free(&local_dev);
+    
+  bg_dbus_connection_unlock(priv->conn);
+    
+
+  //    fprintf(stderr, "registering object done\n");
+
+    
+  //  fprintf(stderr, "Got bus name: %s\n", bus_name_real);
+  if(bus_name_real)
+    free(bus_name_real);
+
+  
+  return 1;
+  }
+
+bg_frontend_plugin_t the_plugin =
+  {
+    .common =
+    {
+      BG_LOCALE,
+      .name =      "fe_mpris",
+      .long_name = TRS("Mpris2 frontend"),
+      .description = TRS("Makes gmerlin controllable via Mpris2"),
+      .type =     BG_PLUGIN_FRONTEND_RENDERER,
+      .flags =    0,
+      .create =   create_mpris2,
+      .destroy =   destroy_mpris2,
+      .priority =         1,
+    },
+    .handle_message = handle_player_message_mpris,
+    .update = ping_mpris2,
+    .open = open_mpris2,
+  };
+
+/* Include this into all plugin modules exactly once
+   to let the plugin loader obtain the API version */
+BG_GET_PLUGIN_API_VERSION;
+
 
 static const char * introspect_xml =
 "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\" \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">"

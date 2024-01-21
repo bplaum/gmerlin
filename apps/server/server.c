@@ -258,15 +258,14 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
   }
 
 
-int server_init(server_t * s)
+int server_init(server_t * s, gavl_array_t * fe_arr)
   {
   char * tmp_string;
   bg_controllable_t * mdb_ctrl;
   gavl_dictionary_t * section;
   const gavl_value_t * uuid_val;
   const char * uuid = NULL;
-
-  
+    
   memset(s, 0, sizeof(*s));
   
   s->srv = bg_http_server_create();
@@ -343,10 +342,6 @@ int server_init(server_t * s)
   
   bg_mdb_set_root_name(s->mdb, s->label);
   
-  /* Create frontends */
-  s->fe_upnp    = bg_frontend_create_mdb_upnp(mdb_ctrl);
-  s->fe_gmerlin = bg_frontend_create_mdb_gmerlin(mdb_ctrl);
-
   /* Create server side storage */
   
   tmp_string = bg_sprintf("%s/storage", s->vardir);
@@ -362,6 +357,10 @@ int server_init(server_t * s)
   
   bg_mdb_set_root_icons(s->mdb);
   
+  /* Create frontends */
+  s->frontends =   bg_frontends_create(mdb_ctrl,
+                                       BG_PLUGIN_FRONTEND_MDB, fe_arr, &s->num_frontends);
+
   return 1;
   }
 
@@ -371,10 +370,6 @@ void server_cleanup(server_t * s)
     bg_mdb_stop(s->mdb);
 
   
-  if(s->fe_upnp)
-    bg_frontend_destroy(s->fe_upnp);
-  if(s->fe_gmerlin)
-    bg_frontend_destroy(s->fe_gmerlin);
 
   if(s->mdb)
     bg_mdb_destroy(s->mdb);
@@ -412,15 +407,9 @@ int server_iteration(server_t * s)
   {
   int ret = 0;
 
-  gavl_time_t t = bg_http_server_get_time(s->srv);
-  
   ret += bg_http_server_iteration(s->srv);
-  
-  if(s->fe_upnp)
-    ret += bg_frontend_ping(s->fe_upnp, t);
 
-  if(s->fe_gmerlin)
-    ret += bg_frontend_ping(s->fe_gmerlin, t);
+  ret += bg_frontends_ping(s->frontends, s->num_frontends);
   
   return ret;
   }

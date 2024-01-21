@@ -783,7 +783,8 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   
   ret->ping_func    =    ping_player_ncurses;
   ret->cleanup_func = cleanup_player_ncurses;
-
+  ret->handle_message = handle_player_message_ncurses;
+  
   priv = calloc(1, sizeof(*priv));
   
   ret->priv = priv;
@@ -807,11 +808,7 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   
   wbkgdset(priv->tracks_win, COLOR_PAIR(1));
   
-  //  scrollok(priv->tracks_win, TRUE);
-  //  idlok(priv->tracks_win, TRUE);
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message_ncurses, ret, 0));
-
   priv->ncurses_sink = bg_msg_sink_create(handle_ncurses_message, ret, 1);
   
   bg_frontend_init(ret);

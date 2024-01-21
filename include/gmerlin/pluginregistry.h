@@ -1037,11 +1037,9 @@ void bg_ov_plugin_set_visible(bg_plugin_handle_t * h, int visible);
 void bg_ov_plugin_set_window_title(bg_plugin_handle_t * h, const char * window_title);
 
 
-void bg_plugin_registry_get_input_mimetypes(bg_plugin_registry_t * reg,
-                                            gavl_array_t * ret);
+const gavl_array_t * bg_plugin_registry_get_input_mimetypes(void);
 
-void bg_plugin_registry_get_input_protocols(bg_plugin_registry_t * reg,
-                                            gavl_array_t * ret);
+const gavl_array_t * bg_plugin_registry_get_input_protocols(void);
 
 int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dictionary_t * next, int * next_idx);
 
@@ -1068,6 +1066,12 @@ void bg_plugin_registry_list_fa(void * data, int * argc,
 
 void bg_plugin_registry_list_fv(void * data, int * argc,
                                 char *** _argv, int arg);
+
+void bg_plugin_registry_list_fe_renderer(void * data, int * argc,
+                                         char *** _argv, int arg);
+void bg_plugin_registry_list_fe_mdb(void * data, int * argc,
+                                    char *** _argv, int arg);
+
 
 void bg_plugin_registry_list_vis(void * data, int * argc,
                                          char *** _argv, int arg);

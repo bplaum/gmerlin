@@ -723,7 +723,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   
   gmerlin_create_dialog(ret);
   
-  bg_player_state_init(&ret->state, NULL, NULL);
+  bg_player_state_init(&ret->state);
   /* Apply the state before the frontends are created */
 
   if(saved_state)
@@ -731,26 +731,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
     bg_state_merge(&ret->state, saved_state);
     bg_player_state_reset(&ret->state);
     }
-  
-#ifdef HAVE_DBUS
-  ret->dbus_frontend =
-    bg_frontend_create_player_mpris2(ret->player_ctrl,
-                                     "org.mpris.MediaPlayer2.gmerlin-player",
-                                     "gmerlin-player");
-#endif
 
-  
-  ret->upnp_renderer_frontend =
-    bg_frontend_create_player_upnp(ret->player_ctrl);
-  
-  ret->upnp_server_frontend =
-    bg_frontend_create_mdb_upnp(ret->mdb_ctrl);
-  
-  ret->gmerlin_server_frontend =
-    bg_frontend_create_mdb_gmerlin(ret->mdb_ctrl);
-
-  ret->gmerlin_renderer_frontend =
-    bg_frontend_create_player_gmerlin(ret->player_ctrl);
   
   ret->main_menu = main_menu_create(ret);
 
@@ -787,24 +768,9 @@ void gmerlin_destroy(gmerlin_t * g)
   if(g->cfg_dialog)
     bg_dialog_destroy(g->cfg_dialog);
   
-
+  bg_frontends_destroy(g->mdb_frontends, g->num_mdb_frontends);
+  bg_frontends_destroy(g->renderer_frontends, g->num_renderer_frontends);
   
-#ifdef HAVE_DBUS
-  if(g->dbus_frontend)
-    bg_frontend_destroy(g->dbus_frontend);
-#endif
-
-  if(g->upnp_server_frontend)
-    bg_frontend_destroy(g->upnp_server_frontend);
-
-  if(g->upnp_renderer_frontend)
-    bg_frontend_destroy(g->upnp_renderer_frontend);
-
-  if(g->gmerlin_server_frontend)
-    bg_frontend_destroy(g->gmerlin_server_frontend);
-
-  if(g->gmerlin_renderer_frontend)
-    bg_frontend_destroy(g->gmerlin_renderer_frontend);
   
   if(g->player)
     bg_player_destroy(g->player);
@@ -876,17 +842,10 @@ static void * frontend_thread(void * data)
     /* Handle remote control */
     i += bg_http_server_iteration(g->srv);
 
+    i += bg_frontends_ping(g->renderer_frontends, g->num_renderer_frontends);
+    i += bg_frontends_ping(g->mdb_frontends, g->num_mdb_frontends);
 
-#ifdef HAVE_DBUS
-    i += bg_frontend_ping(g->dbus_frontend, bg_http_server_get_time(g->srv));
-#endif
-
-    i += bg_frontend_ping(g->upnp_renderer_frontend, bg_http_server_get_time(g->srv));
-    i += bg_frontend_ping(g->upnp_server_frontend, bg_http_server_get_time(g->srv));
-
-    i += bg_frontend_ping(g->gmerlin_renderer_frontend, bg_http_server_get_time(g->srv));
-    i += bg_frontend_ping(g->gmerlin_server_frontend, bg_http_server_get_time(g->srv));
-
+    
     pthread_mutex_lock(&g->backend_mutex);
 
     if(g->player_backend)
@@ -905,7 +864,8 @@ static void * frontend_thread(void * data)
   return NULL;
   }
 
-void gmerlin_run(gmerlin_t * g, const char ** locations)
+void gmerlin_run(gmerlin_t * g, const char ** locations,
+                 gavl_array_t * fe_arr_mdb, gavl_array_t * fe_arr_renderer)
   {
   gavl_value_t icons_val;
   gavl_array_t * icons_arr;
@@ -917,6 +877,13 @@ void gmerlin_run(gmerlin_t * g, const char ** locations)
   gmerlin_apply_state(g); 
     
   bg_http_server_start(g->srv);
+
+  g->renderer_frontends = bg_frontends_create(g->player_ctrl,
+                                              BG_PLUGIN_FRONTEND_RENDERER,
+                                              fe_arr_renderer, &g->num_renderer_frontends);
+  
+  g->mdb_frontends = bg_frontends_create(g->mdb_ctrl,
+                                         BG_PLUGIN_FRONTEND_MDB, fe_arr_mdb, &g->num_mdb_frontends);
 
   
   gavl_dictionary_init(&root_metadata);

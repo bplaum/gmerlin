@@ -68,23 +68,11 @@ static int local_port = 0;
 
 bg_controllable_t * backend_ctrl = NULL;
 
-
-int interactive = 0;
-
-#ifdef HAVE_NCURSES
-static int do_ncurses = 0;
-#endif
-
-#ifdef HAVE_DBUS
-static int do_mpris = 0;
-#endif
-
-static int do_gmerlin = 0;
-static int do_upnp    = 0;
-
 bg_http_server_t * srv = NULL;
 
 static char * label = NULL;
+
+static gavl_array_t fe_arr;
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
@@ -352,6 +340,17 @@ bg_cmdline_arg_t commands[] =
     { /* End of options */ }
   };
 
+static void opt_fe(void * data, int * argc, char *** argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
+  }
 
 static void opt_addr(void * data, int * argc, char *** argv, int arg)
   {
@@ -391,33 +390,6 @@ static void opt_label(void * data, int * argc, char *** argv, int arg)
   }
 
 
-#ifdef HAVE_NCURSES
-static void opt_nc(void * data, int * argc, char *** argv, int arg)
-  {
-  do_ncurses = 1;
-  interactive = 1;
-  }
-#endif
-
-#ifdef HAVE_DBUS
-static void opt_mpris(void * data, int * argc, char *** argv, int arg)
-  {
-  do_mpris = 1;
-  interactive = 1;
-  }
-#endif
-
-static void opt_upnp(void * data, int * argc, char *** argv, int arg)
-  {
-  do_upnp = 1;
-  interactive = 1;
-  }
-
-static void opt_gmerlin(void * data, int * argc, char *** argv, int arg)
-  {
-  do_gmerlin = 1;
-  interactive = 1;
-  }
 
 static bg_cmdline_arg_t global_options[] =
   {
@@ -443,29 +415,16 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = TRS("Label to use"),
       .callback =    opt_label,
     },
-#ifdef HAVE_NCURSES
     {
-      .arg =         "-nc",
-      .help_string = TRS("Use ncurses frontend"),
-      .callback =    opt_nc,
-    },
-#endif
-#ifdef HAVE_DBUS
-    {
-      .arg =         "-mpris",
-      .help_string = TRS("Use mpris frontend"),
-      .callback =    opt_mpris,
-    },
-#endif
-    {
-      .arg =         "-upnp",
-      .help_string = TRS("Use upnp frontend"),
-      .callback =    opt_upnp,
+      .arg =         "-fe",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of frontends. Use -list-fe to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe,
     },
     {
-      .arg =         "-gmerlin",
-      .help_string = TRS("Use websocket based gmerlin frontend"),
-      .callback =    opt_gmerlin,
+      .arg =         "-list-fe",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_renderer,
     },
     { /* End of options */ }
   };
@@ -522,21 +481,15 @@ int main(int argc, char ** argv)
 
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50;
 
-#ifdef HAVE_NCURSES
-  bg_frontend_t * fe_ncurses = NULL;
-#endif
-
-#ifdef HAVE_DBUS
-  bg_frontend_t * fe_mpris = NULL;
-#endif
-
-  bg_frontend_t * fe_upnp = NULL;
-  bg_frontend_t * fe_gmerlin = NULL;
-
+  bg_frontend_t ** frontends = NULL;
+  int num_frontends = 0;
+  
   bg_plugin_handle_t * backend;
   
   //  bg_websocket_connection_t * remote;
   
+  gavl_array_init(&fe_arr);
+    
   bg_plugins_init();
 
   gavl_dictionary_init(&dev);
@@ -572,35 +525,13 @@ int main(int argc, char ** argv)
     goto fail;
   
   backend_ctrl = bg_backend_handle_get_controllable(backend);
-  
-  
-  /* Create frontends */
-#ifdef HAVE_NCURSES
-  if(do_ncurses)
-    fe_ncurses = bg_frontend_create_player_ncurses(backend_ctrl);
-#endif
-
-#ifdef HAVE_DBUS
-  if(do_mpris)
-    fe_mpris = bg_frontend_create_player_mpris2(backend_ctrl,
-                                                "org.mpris.MediaPlayer2.gmerlin-remote",
-                                                "gmerlin-remote");
-#endif
     
-  if(do_upnp)
-    {
-    
-    //      remote_addr
-      
-    fe_upnp = bg_frontend_create_player_upnp(backend_ctrl);
-    }
-  
-  if(do_gmerlin)
-    fe_gmerlin = bg_frontend_create_player_gmerlin(backend_ctrl);
-  
   bg_cmdline_parse(commands, &argc, &argv, NULL);
+
+  frontends = bg_frontends_create(backend_ctrl,
+                                  BG_PLUGIN_FRONTEND_RENDERER, &fe_arr, &num_frontends);
   
-  if(interactive)
+  if(num_frontends > 0)
     {
     gavl_timer_t * timer;
     int ret;
@@ -621,23 +552,9 @@ int main(int argc, char ** argv)
       ret += bg_msg_sink_get_num(backend_ctrl->evt_sink);
 
       ret += bg_backend_handle_ping(backend);
+
+      ret +=  bg_frontends_ping(frontends, num_frontends);
       
-#ifdef HAVE_NCURSES
-      if(fe_ncurses)
-        ret += bg_frontend_ping(fe_ncurses, gavl_timer_get(timer));
-#endif
-      
-#ifdef HAVE_DBUS
-      if(fe_mpris)
-        ret += bg_frontend_ping(fe_mpris, gavl_timer_get(timer));
-#endif
-
-      if(fe_upnp)
-        ret += bg_frontend_ping(fe_upnp, gavl_timer_get(timer));
-
-      if(fe_gmerlin)
-        ret += bg_frontend_ping(fe_gmerlin, gavl_timer_get(timer));
-
       if(srv)
         ret += bg_http_server_iteration(srv);
       
@@ -652,21 +569,8 @@ int main(int argc, char ** argv)
   
   fail:
   
-#ifdef HAVE_NCURSES
-  if(fe_ncurses)
-    bg_frontend_destroy(fe_ncurses);
-#endif
+  bg_frontends_destroy(frontends, num_frontends);
   
-#ifdef HAVE_DBUS
-  if(fe_mpris)
-    bg_frontend_destroy(fe_mpris);
-#endif
-  
-  if(fe_upnp)
-    bg_frontend_destroy(fe_upnp);
-  if(fe_gmerlin)
-    bg_frontend_destroy(fe_gmerlin);
-
   if(srv)
     bg_http_server_destroy(srv);
 

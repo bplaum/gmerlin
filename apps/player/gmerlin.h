@@ -229,21 +229,13 @@ struct gmerlin_s
   bg_plugin_handle_t * player_backend;
   bg_plugin_handle_t * mdb_backend;
 
-#ifdef HAVE_DBUS
-  bg_frontend_t * dbus_frontend;
-#endif
+  bg_frontend_t ** renderer_frontends;
+  int num_renderer_frontends;
 
-  /* Upnp stuff */
-  bg_frontend_t * upnp_renderer_frontend;
-  bg_frontend_t * upnp_server_frontend;
-
-  bg_frontend_t * gmerlin_renderer_frontend;
-  bg_frontend_t * gmerlin_server_frontend;
+  bg_frontend_t ** mdb_frontends;
+  int num_mdb_frontends;
   
-  bg_ssdp_t * renderer_ssdp;
-
-  gavl_dictionary_t renderer_ssdp_dev;
-
+  
   pthread_mutex_t backend_mutex;
   
   int stop;
@@ -269,7 +261,8 @@ void gmerlin_play_device(gmerlin_t * g, const char * device);
 
 void gmerlin_destroy(gmerlin_t*);
 
-void gmerlin_run(gmerlin_t*, const char ** locations);
+void gmerlin_run(gmerlin_t*, const char ** locations,
+                           gavl_array_t * fe_arr_mdb, gavl_array_t * fe_arr_renderer);
 
 // void gmerlin_set_next_track(gmerlin_t * g);
 

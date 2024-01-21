@@ -54,8 +54,8 @@
 
 /* Some read-only variables */
 
-#define BG_PLAYER_STATE_PROTOCOLS     "protocols"
-#define BG_PLAYER_STATE_MIMETYPES     "mimetypes"
+// #define BG_PLAYER_STATE_PROTOCOLS     "protocols"
+//#define BG_PLAYER_STATE_MIMETYPES     "mimetypes"
 
 #define BG_PLAYER_STATE_MODE          "mode"          // int
 #define BG_PLAYER_STATE_MUTE          "mute"          // int

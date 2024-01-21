@@ -894,6 +894,7 @@ lib/x11/Makefile \
 plugins/Makefile \
 plugins/resources/Makefile \
 plugins/backends/Makefile \
+plugins/frontends/Makefile \
 plugins/alsa/Makefile \
 plugins/audiofilters/Makefile \
 plugins/x11/Makefile \

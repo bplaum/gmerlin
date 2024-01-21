@@ -43,7 +43,7 @@ ncurses_libs    =
 endif
 
 if HAVE_DBUS
-dbus_sources = dbus.c frontend_player_mpris2.c
+dbus_sources = dbus.c 
 dbus_cflags  = @DBUS_CFLAGS@
 dbus_libs    = @DBUS_LIBS@
 else
@@ -144,10 +144,6 @@ flaccover.c \
 formats.c \
 frametimer.c \
 frontend.c \
-frontend_mdb_upnp.c \
-frontend_player_console.c \
-frontend_player_ncurses.c \
-frontend_player_upnp.c \
 frontend_gmerlin.c \
 http.c \
 httpconnection.c \

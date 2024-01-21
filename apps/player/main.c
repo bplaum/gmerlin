@@ -57,6 +57,34 @@
 
 static char * db_path = NULL;
 
+static gavl_array_t fe_arr_mdb;
+static gavl_array_t fe_arr_renderer;
+
+static void opt_fe_renderer(void * data, int * argc, char *** argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe-renderer requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr_renderer, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
+  }
+
+static void opt_fe_mdb(void * data, int * argc, char *** argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe-mdb requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr_mdb, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
+  }
+
+
 static void opt_db(void * data, int * argc, char *** _argv, int arg)
   {
   if(arg >= *argc)
@@ -78,6 +106,30 @@ static bg_cmdline_arg_t cmdline_args[] =
       .help_string = "Use other database path",
       .callback =    opt_db,
     },
+    {
+      .arg =         "-fe-mdb",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of database frontends. Use -list-fe-mdb to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe_mdb,
+    },
+    {
+      .arg =         "-list-fe-mdb",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_mdb,
+    },
+    {
+      .arg =         "-fe-renderer",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of renderer frontends. Use -list-fe-mdb to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe_renderer,
+    },
+    {
+      .arg =         "-list-fe-renderer",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_renderer,
+    },
+
+    
     BG_PLUGIN_OPT_OA,
     BG_PLUGIN_OPT_OV,
     BG_PLUGIN_OPT_FA,
@@ -122,6 +174,12 @@ int main(int argc, char ** argv)
   int have_state = 0;
   gavl_dictionary_t state;
 
+  gavl_array_init(&fe_arr_mdb);
+  bg_frontend_set_option(&fe_arr_mdb, "mdb_gmerlin,mdb_upnp");
+    
+  gavl_array_init(&fe_arr_renderer);
+  bg_frontend_set_option(&fe_arr_renderer, "renderer_gmerlin,renderer_upnp,mpris");
+  
   bg_app_init("gmerlin", TRS("Gmerlin Player"), "player");
 
   srand(time(NULL));
@@ -170,7 +228,7 @@ int main(int argc, char ** argv)
   
   locations = bg_cmdline_get_locations_from_args(&argc, &argv);
   
-  gmerlin_run(gmerlin, (const char**)locations);
+  gmerlin_run(gmerlin, (const char**)locations, &fe_arr_mdb, &fe_arr_renderer);
 
   /* Save plugin state */
   

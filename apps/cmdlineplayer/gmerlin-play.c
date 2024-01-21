@@ -70,7 +70,8 @@ int audio_stream    = 0;
 char * track_spec = NULL;
 char * track_spec_ptr;
 
-static bg_frontend_t * frontend = NULL;
+static bg_frontend_t ** frontends = NULL;
+int num_frontends = 0;
 
 #ifdef HAVE_NCURSES
 static int do_ncurses = 0;
@@ -298,10 +299,14 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
-
   bg_cfg_section_t * cfg_section;
   gavl_timer_t * timer;
 
+  gavl_array_t fe;
+  
+  gavl_array_init(&fe);
+  bg_frontend_set_option(&fe, "console");
+  
   bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"), "renderer");
   
 
@@ -347,19 +352,14 @@ int main(int argc, char ** argv)
   bg_cfg_ctx_apply_array(cfg);
   
   /* Create frontend */
-  
-#ifdef HAVE_NCURSES
+
   if(do_ncurses)
-    {
-    frontend = bg_frontend_create_player_ncurses(player_ctrl);
-    }
+    gavl_string_array_add(&fe, "ncurses");
   else
-    {
-#endif
-    frontend = bg_frontend_create_player_console(player_ctrl, display_time);
-#ifdef HAVE_NCURSES
-    }
-#endif
+    gavl_string_array_add(&fe, "console");
+
+  frontends = bg_frontends_create(player_ctrl,
+                                  BG_PLUGIN_FRONTEND_RENDERER, &fe, &num_frontends);
   
   uris = bg_cmdline_get_locations_from_args(&argc, &argv);
 
@@ -390,11 +390,8 @@ int main(int argc, char ** argv)
     int result;
     gavl_time_t delay_time = GAVL_TIME_SCALE / 100;
 
-    result = bg_frontend_ping(frontend, gavl_timer_get(timer));
-
-    if(bg_frontend_finished(frontend))
-      break;
-
+    result = bg_frontends_ping(frontends, num_frontends);
+    
     if(!result)
       gavl_time_delay(&delay_time);
     }

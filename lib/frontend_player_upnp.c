@@ -1225,6 +1225,8 @@ bg_frontend_create_player_upnp(bg_controllable_t * ctrl)
   ret->ping_func    =    ping_player_upnp;
   ret->cleanup_func = cleanup_player_upnp;
 
+  ret->handle_message = handle_player_message_upnp;
+  
   priv = calloc(1, sizeof(*priv));
   
   ret->priv = priv;
@@ -1261,8 +1263,6 @@ bg_frontend_create_player_upnp(bg_controllable_t * ctrl)
   uuid_generate(control_uuid);
   uuid_unparse(control_uuid, priv->control_id);
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_player_message_upnp, ret, 0));
-
   /* Add the event handlers first */
 
   bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/renderer/cm/evt");

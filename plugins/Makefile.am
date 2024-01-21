@@ -69,6 +69,7 @@ endif
 SUBDIRS = \
 audiofilters \
 backends \
+frontends \
 edl \
 gavl \
 resources \

@@ -23,13 +23,9 @@ typedef struct
 
   bg_http_server_t * srv;
   
-  bg_frontend_t * fe_gmerlin;
-  bg_frontend_t * fe_upnp;
-
-#ifdef HAVE_DBUS
-  bg_frontend_t * fe_mpris;
-#endif
- 
+  bg_frontend_t ** frontends;
+  int num_frontends;
+  
   bg_parameter_info_t * parameters;
 
   char * vardir;
@@ -38,7 +34,7 @@ typedef struct
   char * state_file;
   } renderer_t;
 
-void renderer_init(renderer_t * s);
+void renderer_init(renderer_t * s, gavl_array_t * fe_arr);
 
 
 void renderer_cleanup(renderer_t * s);

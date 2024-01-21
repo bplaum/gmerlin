@@ -230,8 +230,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
 static int handle_mdb_message(void * priv, gavl_msg_t * msg)
   {
-  bg_frontend_t * fe = priv;
-  bg_mdb_frontend_upnp_t * p = fe->priv;
+  bg_mdb_frontend_upnp_t * p = priv;
   
   switch(msg->NS)
     {
@@ -544,15 +543,13 @@ bg_frontend_create_mdb_upnp(bg_controllable_t * ctrl)
   
   ret->ping_func    =    ping_mdb_upnp;
   ret->cleanup_func = cleanup_mdb_upnp;
-  
+  ret->handle_message = handle_mdb_message;
   
   
   priv = calloc(1, sizeof(*priv));
   
   ret->priv = priv;
   
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_mdb_message, ret, 0));
-
   /* Add the event handlers first */
 
   bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/server/cm/evt");

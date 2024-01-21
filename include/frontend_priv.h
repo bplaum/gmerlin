@@ -5,10 +5,15 @@
 
 struct bg_frontend_s
   {
-  void * priv;                // Private data
+  bg_plugin_handle_t * handle;
+  
+  bg_msg_sink_t * evt_sink; // Handle event from backend
+  
+  //   void * priv;                // Private data
 
-  int (*ping_func)(bg_frontend_t*, gavl_time_t current_time);
-  void (*cleanup_func)(void * priv);
+  //  int (*ping_func)(void * priv);
+  //  void (*cleanup_func)(void * priv);
+  //  int (*handle_message)(void * priv, gavl_msg_t * msg);
   
   bg_controllable_t * controllable;
   
@@ -18,8 +23,10 @@ struct bg_frontend_s
   int flags;
   };
 
-bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable);
-void bg_frontend_init(bg_frontend_t *);
+bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int type_mask,
+                                   const char * plugin_name);
+
+// void bg_frontend_init(bg_frontend_t *);
 
   
 #endif // FRONTEND_PRIV_H_INCLUDED

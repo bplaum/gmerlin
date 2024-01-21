@@ -25,6 +25,8 @@
 
 #include <gmerlin/cfgctx.h>
 #include <gmerlin/cmdline.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "gmerlin-renderer"
 
 #include <gmerlin/translation.h>
 #include <gmerlin/utils.h>
@@ -35,6 +37,20 @@
 #include <signal.h>
 
 static char * save_config = NULL;
+static gavl_array_t fe_arr;
+
+static void opt_fe(void * data, int * argc, char *** argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
+  }
+
 
 static bg_cmdline_arg_t global_options[] =
   {
@@ -74,6 +90,17 @@ static bg_cmdline_arg_t global_options[] =
       .help_arg =    "<options>",
       .help_string = TRS("OSD Options"),
     },
+    {
+      .arg =         "-fe",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of frontends. Use -list-fe to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe,
+    },
+    {
+      .arg =         "-list-fe",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_renderer,
+    },
     { /* End */ }
   };
 
@@ -102,6 +129,9 @@ int main(int argc, char ** argv)
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   renderer_t s;
 
+  gavl_array_init(&fe_arr);
+  bg_frontend_set_option(&fe_arr, "renderer_gmerlin,renderer_upnp,mpris");
+  
   bg_app_init("gmerlin-renderer", TRS("Gmerlin renderer"), "renderer");
   
   bg_handle_sigint();
@@ -113,14 +143,12 @@ int main(int argc, char ** argv)
   bg_cfg_registry = gavl_dictionary_create();
   bg_plugins_init();
 
-  
+  /* Pre-initialize the frontends */
   
   bg_cmdline_init(&app_data);
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
 
-
-  
-  renderer_init(&s);
+  renderer_init(&s, &fe_arr);
     
   if(save_config)
     {

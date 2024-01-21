@@ -163,12 +163,12 @@ typedef enum
     BG_PLUGIN_DECOMPRESSOR_AUDIO         = (1<<18),  //!< Audio decompressor
     BG_PLUGIN_DECOMPRESSOR_VIDEO         = (1<<19),  //!< Video decompressor
 
-    BG_PLUGIN_BACKEND_SERVER             = (1<<20),  //!< 
+    BG_PLUGIN_BACKEND_MDB                = (1<<20),  //!< 
     BG_PLUGIN_BACKEND_RENDERER           = (1<<21),  //!< 
     BG_PLUGIN_RESOURCE_DETECTOR          = (1<<22),  //!< 
 
-    BG_PLUGIN_FRONTEND_SERVER             = (1<<23),  //!< 
-    BG_PLUGIN_FRONTEND_RENDERER           = (1<<24),  //!< 
+    BG_PLUGIN_FRONTEND_MDB               = (1<<23),  //!< 
+    BG_PLUGIN_FRONTEND_RENDERER          = (1<<24),  //!< 
 
   } bg_plugin_type_t;
 
@@ -1481,6 +1481,8 @@ typedef struct
   
   int (*update)(void * priv);
   int (*open)(void * priv, bg_controllable_t * ctrl);
+
+  int (*handle_message)(void * priv, gavl_msg_t * msg);
   
   } bg_frontend_plugin_t;
 

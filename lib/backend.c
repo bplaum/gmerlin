@@ -59,7 +59,7 @@ bg_backend_handle_create(const gavl_dictionary_t * dev)
   if(!gavl_url_split(uri, &protocol, NULL, NULL, NULL, NULL, NULL))
     goto fail;
   
-  if(!(info = bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_SERVER | BG_PLUGIN_BACKEND_RENDERER)))
+  if(!(info = bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_MDB | BG_PLUGIN_BACKEND_RENDERER)))
     goto fail;
 
   if(!(ret = bg_plugin_load(info)))

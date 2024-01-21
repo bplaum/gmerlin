@@ -137,6 +137,9 @@ struct bg_plugin_registry_s
   
   gavl_dictionary_t * state;
   pthread_mutex_t state_mutex;
+
+  gavl_array_t * input_mimetypes;
+  gavl_array_t * input_protocols;
   };
 
 
@@ -240,7 +243,7 @@ void bg_plugin_info_destroy(bg_plugin_info_t * info)
     bg_parameter_info_destroy_array(info->text_parameters);
   if(info->overlay_parameters)
     bg_parameter_info_destroy_array(info->overlay_parameters);
-  
+
   free(info);
   }
 
@@ -961,7 +964,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_string_to_string_array(iw->extensions, new_info->extensions);
     bg_string_to_string_array(iw->mimetypes, new_info->mimetypes);
     }
-  if(plugin->type & (BG_PLUGIN_BACKEND_SERVER | BG_PLUGIN_BACKEND_RENDERER))
+  if(plugin->type & (BG_PLUGIN_BACKEND_MDB | BG_PLUGIN_BACKEND_RENDERER))
     {
     bg_backend_plugin_t  * p;
     p = (bg_backend_plugin_t*)plugin;
@@ -1513,6 +1516,11 @@ void bg_plugin_registry_destroy_1(bg_plugin_registry_t * reg)
     info = reg->entries;
     }
   pthread_mutex_destroy(&reg->state_mutex);
+
+  if(reg->input_protocols)
+    gavl_array_destroy(reg->input_protocols);
+  if(reg->input_mimetypes)
+    gavl_array_destroy(reg->input_mimetypes);
   
   free(reg);
   }
@@ -5001,44 +5009,55 @@ void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, i
 
   }
 
-void bg_plugin_registry_get_input_mimetypes(bg_plugin_registry_t * reg,
-                                            gavl_array_t * ret)
+const gavl_array_t * bg_plugin_registry_get_input_mimetypes()
   {
   int i, j;
   int num_plugins;
   const bg_plugin_info_t * info;
-  
-  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
-  for(i = 0; i < num_plugins; i++)
-    {
-    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
 
-    if(!info->mimetypes)
-      continue;
+  if(!bg_plugin_reg->input_mimetypes)
+    {
+    bg_plugin_reg->input_mimetypes = gavl_array_create();
+
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    for(i = 0; i < num_plugins; i++)
+      {
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+
+      if(!info->mimetypes)
+        continue;
     
-    for(j = 0; j < info->mimetypes->num_entries; j++)
-      gavl_string_array_add(ret, gavl_string_array_get(info->mimetypes, j));
+      for(j = 0; j < info->mimetypes->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->input_mimetypes, gavl_string_array_get(info->mimetypes, j));
+      }
     }
+  
+  return bg_plugin_reg->input_mimetypes;
   }
 
-void bg_plugin_registry_get_input_protocols(bg_plugin_registry_t * reg,
-                                            gavl_array_t * ret)
+const gavl_array_t * bg_plugin_registry_get_input_protocols()
   {
   int i, j;
   int num_plugins;
   const bg_plugin_info_t * info;
-  
-  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
-  for(i = 0; i < num_plugins; i++)
-    {
-    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
 
-    if(!info->protocols)
-      continue;
+  if(!bg_plugin_reg->input_protocols)
+    {
+    bg_plugin_reg->input_protocols = gavl_array_create();
     
-    for(j = 0; j < info->protocols->num_entries; j++)
-      gavl_string_array_add(ret, gavl_string_array_get(info->protocols, j));
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    for(i = 0; i < num_plugins; i++)
+      {
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+      
+      if(!info->protocols)
+        continue;
+      
+      for(j = 0; j < info->protocols->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->input_protocols, gavl_string_array_get(info->protocols, j));
+      }
     }
+  return bg_plugin_reg->input_protocols;
   }
 
 int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dictionary_t * next, int * next_idx)
@@ -5253,6 +5272,18 @@ void bg_plugin_registry_list_oa(void * data, int * argc,
                                         char *** _argv, int arg)
   {
   bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_AUDIO, BG_PLUGIN_PLAYBACK);
+  }
+
+void bg_plugin_registry_list_fe_renderer(void * data, int * argc,
+                                         char *** _argv, int arg)
+  {
+  bg_plugin_registry_list_plugins(BG_PLUGIN_FRONTEND_RENDERER, 0);
+  }
+
+void bg_plugin_registry_list_fe_mdb(void * data, int * argc,
+                                    char *** _argv, int arg)
+  {
+  bg_plugin_registry_list_plugins(BG_PLUGIN_FRONTEND_MDB, 0);
   }
 
 

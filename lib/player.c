@@ -55,8 +55,6 @@ static const bg_state_var_desc_t state_vars[] =
     { BG_PLAYER_STATE_VIDEO_STREAM_USER,    GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_SUBTITLE_STREAM_USER, GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_CHAPTER,              GAVL_TYPE_INT,        },
-    { BG_PLAYER_STATE_MIMETYPES,       GAVL_TYPE_ARRAY },
-    { BG_PLAYER_STATE_PROTOCOLS,       GAVL_TYPE_ARRAY },
     { BG_PLAYER_STATE_QUEUE_IDX,       GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_QUEUE_LEN,       GAVL_TYPE_INT,        },
     { /* End */ },
@@ -190,11 +188,8 @@ static void state_init_track(gavl_dictionary_t * dict)
   bg_state_set(dict, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val, NULL, 0);
   }
 
-void bg_player_state_init(gavl_dictionary_t * dict,
-                          const gavl_array_t * protocols, const gavl_array_t * mimetypes)
+void bg_player_state_init(gavl_dictionary_t * dict)
   {
-  gavl_value_t val;
-  gavl_array_t * arr;
     
   bg_state_init_ctx(dict, BG_PLAYER_STATE_CTX, state_vars);
   
@@ -206,28 +201,6 @@ void bg_player_state_init(gavl_dictionary_t * dict,
                            BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
                            0.0, 1.0);
 
-  if(protocols)
-    {
-    gavl_value_init(&val);
-    arr = gavl_value_set_array(&val);
-    gavl_array_copy(arr, protocols);
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_PROTOCOLS, &val, NULL, 0);
-    gavl_value_free(&val);
-    }
-  else
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_PROTOCOLS, NULL, NULL, 0);
-    
-  
-  if(mimetypes)
-    {
-    gavl_value_init(&val);
-    arr = gavl_value_set_array(&val);
-    gavl_array_copy(arr, mimetypes);
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES, &val, NULL, 0);
-    gavl_value_free(&val);
-    }
-  else
-    bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES, NULL, NULL, 0);
   
   //  fprintf(stderr, "player_state_init %s\n", label);
   //  gavl_dictionary_dump(dict, 2);
@@ -246,15 +219,11 @@ const char * bg_player_track_get_uri(gavl_dictionary_t * state, const gavl_dicti
   int idx = 0;
   const gavl_dictionary_t * m = gavl_track_get_metadata(track);
 
-  const gavl_value_t * val;
   const gavl_array_t * mimetypes = NULL;
   const gavl_array_t * protocols = NULL;
   
-  if((val = bg_state_get(state, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MIMETYPES)))
-    mimetypes = gavl_value_get_array(val);
-
-  if((val = bg_state_get(state, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_PROTOCOLS)))
-    protocols = gavl_value_get_array(val);
+  mimetypes = bg_plugin_registry_get_input_mimetypes();
+  protocols = bg_plugin_registry_get_input_protocols();
   
   while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, &mimetype, &uri))
     {
@@ -358,11 +327,6 @@ void bg_player_apply_cmdline(bg_cfg_ctx_t * ctx)
 
 bg_player_t * bg_player_create()
   {
-  gavl_value_t mimetypes_val;
-  gavl_array_t * mimetypes_arr;
-
-  gavl_value_t protocols_val;
-  gavl_array_t * protocols_arr;
   
   bg_player_t * ret;
   
@@ -379,16 +343,7 @@ bg_player_t * bg_player_create()
   
   ret->visualization_mode = -1;
   
-  gavl_value_init(&mimetypes_val);
-  gavl_value_init(&protocols_val);
-
-  mimetypes_arr = gavl_value_set_array(&mimetypes_val);
-  protocols_arr = gavl_value_set_array(&protocols_val);
-
-  bg_plugin_registry_get_input_mimetypes(bg_plugin_reg, mimetypes_arr);
-  bg_plugin_registry_get_input_protocols(bg_plugin_reg, protocols_arr);
-  
-  bg_player_state_init(&ret->state, protocols_arr, mimetypes_arr);
+  bg_player_state_init(&ret->state);
   
   /* Create message queues */
   
@@ -507,8 +462,6 @@ bg_player_t * bg_player_create()
                   bg_player_set_visualization_parameter,
                   ret);
 
-  gavl_value_free(&mimetypes_val);
-  gavl_value_free(&protocols_val);
   
   return ret;
   }
