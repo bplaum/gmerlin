@@ -140,7 +140,7 @@ int main(int argc, char ** argv)
       gavl_video_source_set_dst(st->vsrc, 0, NULL);
     else
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Overlay intialisation failed");
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Overlay initialisation failed");
       return EXIT_FAILURE;
       }
     }

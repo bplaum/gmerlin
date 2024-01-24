@@ -2567,7 +2567,7 @@ static bg_parameter_info_t stream_source_params[] =
       .name = GAVL_META_URI,
       .long_name = TRS("Location"),
       .type = BG_PARAMETER_STRING,
-      .help_string = TRS("Location can be a local file, an http(s) URI in a suppored playlist format (e.g. m3u). Use the special URI radiobrowser:// for importing stations from radio-browser.info or iptv-org:// for iptv-org"),
+      .help_string = TRS("Location can be a local file, an http(s) URI in a supported playlist format (e.g. m3u). Use the special URI radiobrowser:// for importing stations from radio-browser.info or iptv-org:// for iptv-org"),
     },
     { /* End */ }
   };

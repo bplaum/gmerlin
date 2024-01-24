@@ -1085,7 +1085,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
     
     if(!(local_filename =  bg_http_download(uri, prefix)))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Dowloading poster %s failed", uri);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading poster %s failed", uri);
       goto fail;
       }
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved poster %s to %s", uri, local_filename);
@@ -1101,7 +1101,7 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
 
     if(!(local_filename = bg_http_download(uri, prefix)))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Dowloading media %s failed", uri);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading media %s failed", uri);
       goto fail;
       }
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved media %s to %s", uri, local_filename);
