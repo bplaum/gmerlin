@@ -152,7 +152,7 @@ static void add(bg_mdb_backend_t * b, const char * uri, const char * klass, cons
   }
 
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_removable(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
   removable_t * r = be->priv;
@@ -395,6 +395,6 @@ void bg_mdb_create_removable(bg_mdb_backend_t * b)
   b->destroy = destroy_removable;
 
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_removable, b, 0),
                        bg_msg_hub_create(1));
   }

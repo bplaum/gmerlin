@@ -13,6 +13,7 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "frontend_mdb_upnp"
 
+#include <gmerlin/translation.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/application.h>
 
@@ -47,8 +48,6 @@ static const char * cd_desc;
 /* ConnectionManager */
 static const char * cm_desc;
 
-#define FLAG_REGISTERED (1<<1)
-
 typedef struct 
   {
   char * desc;
@@ -58,18 +57,16 @@ typedef struct
 
   gavl_array_t requests;
 
-
   gavl_dictionary_t state;
+
+  bg_control_t control;
   
-  int flags;
   } bg_mdb_frontend_upnp_t;
 
 
-static int handle_http_request(bg_http_connection_t * c, void * data)
+static int handle_http_mdb_upnp(bg_http_connection_t * c, void * data)
   {
-  bg_frontend_t * fe = data;
-
-  bg_mdb_frontend_upnp_t * priv = fe->priv;
+  bg_mdb_frontend_upnp_t * priv = data;
 
   bg_http_server_t * srv = bg_http_server_get();
   
@@ -151,7 +148,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       //      fprintf(stderr, "Browse(%s %s)\n", ObjectID, BrowseFlag);
       
       /* 1. Generate request message */
-      msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
+      msg = bg_msg_sink_get(priv->control.cmd_sink);
 
       if(!strcmp(BrowseFlag, "BrowseMetadata"))
         {
@@ -198,7 +195,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       //      gavl_dictionary_dump(req, 2);
       
       /* 3. Send request message */
-      bg_msg_sink_put(fe->ctrl.cmd_sink);
+      bg_msg_sink_put(priv->control.cmd_sink);
       }
     gavl_dictionary_free(&soap);
     }
@@ -228,7 +225,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
   return 1;
   }
 
-static int handle_mdb_message(void * priv, gavl_msg_t * msg)
+static int handle_mdb_message_upnp(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_frontend_upnp_t * p = priv;
   
@@ -437,7 +434,7 @@ static int handle_mdb_message(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static void cleanup_mdb_upnp(void * priv)
+static void destroy_mdb_upnp(void * priv)
   {
   bg_mdb_frontend_upnp_t * p = priv;
 
@@ -453,118 +450,136 @@ static void cleanup_mdb_upnp(void * priv)
   free(p);
   }
 
-static int ping_mdb_upnp(bg_frontend_t * fe, gavl_time_t current_time)
+/* New Functions */
+
+static int open_mdb_upnp(void * data, bg_controllable_t * ctrl)
   {
-  int ret = 0;
-  
-  bg_mdb_frontend_upnp_t * p = fe->priv;
-
-  if(!(p->flags & FLAG_REGISTERED))
-    {
-    char * icons;
-    gavl_dictionary_t local_dev;
-    
-    const char * server_label;
-    const char * icon_name;
-    const char * root_uri;
-    
-    char uuid_str[37];
-    
-    char * uri;
-
-    root_uri = bg_http_server_get_root_url(bg_http_server_get());
-    
-    uri = bg_sprintf("%s/upnp/server/desc.xml", root_uri);
-
-    gavl_dictionary_init(&local_dev);
-    
-    if(!(server_label = bg_app_get_label()))
-      return 0;
-
-    if((icon_name = bg_app_get_icon_name()))
-      {
-      gavl_array_t icon_arr;
-      char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
-      gavl_array_init(&icon_arr);
-      bg_array_add_application_icons(&icon_arr, prefix, icon_name);
-      icons = bg_upnp_create_icon_list(&icon_arr);
-      gavl_array_free(&icon_arr);
-      free(prefix);
-      }
-    else
-      icons = gavl_strdup("");
-    
-    /* Register local device */
-
-    gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                      bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
-    
-    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
-    gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
-    
-    bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
-    
-    p->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
-
-    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
-
-    free(icons);
-    free(uri);
-
-    gavl_dictionary_free(&local_dev);
-
-    p->flags |= FLAG_REGISTERED;
-    
-    ret++;
-    }
-  
-  bg_msg_sink_iteration(fe->ctrl.evt_sink);
-  ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
-
-  return ret;
-  }
-
-bg_frontend_t *
-bg_frontend_create_mdb_upnp(bg_controllable_t * ctrl)
-  {
-  bg_mdb_frontend_upnp_t * priv;
-  bg_frontend_t * ret;
   bg_http_server_t * srv;
+  bg_mdb_frontend_upnp_t * priv = data;
+
+  char * icons;
+  gavl_dictionary_t local_dev;
+    
+  const char * server_label;
+  const char * icon_name;
+  const char * root_uri;
+    
+  char uuid_str[37];
+    
+  char * uri;
+
   
   if(!(srv = bg_http_server_get()))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No http server present");
-    return NULL;
+    return 0;
     }
-  
-  ret = bg_frontend_create(ctrl);
 
+  bg_control_init(&priv->control, bg_msg_sink_create(handle_mdb_message_upnp, priv, 0));
+  bg_controllable_connect(ctrl, &priv->control);
   
-  
-  ret->ping_func    =    ping_mdb_upnp;
-  ret->cleanup_func = cleanup_mdb_upnp;
-  ret->handle_message = handle_mdb_message;
-  
-  
-  priv = calloc(1, sizeof(*priv));
-  
-  ret->priv = priv;
-  
+  //  priv->controllable = ctrl;
+
   /* Add the event handlers first */
-
   bg_upnp_event_context_init_server(&priv->cm_evt, "/upnp/server/cm/evt");
   bg_upnp_event_context_init_server(&priv->cd_evt, "/upnp/server/cd/evt");
   
-  bg_http_server_add_handler(srv, handle_http_request, BG_HTTP_PROTO_HTTP, "/upnp/server/", // E.g. /static/ can be NULL
-                             ret);
+  bg_http_server_add_handler(srv, handle_http_mdb_upnp,
+                             BG_HTTP_PROTO_HTTP, "/upnp/server/", // E.g. /static/ can be NULL
+                             priv);
+  
+  /* Publish device */
 
-  bg_frontend_init(ret);
+  root_uri = bg_http_server_get_root_url(bg_http_server_get());
+    
+  uri = bg_sprintf("%s/upnp/server/desc.xml", root_uri);
 
-  bg_controllable_connect(ctrl, &ret->ctrl);
+  gavl_dictionary_init(&local_dev);
+    
+  if(!(server_label = bg_app_get_label()))
+    return 0;
+
+  if((icon_name = bg_app_get_icon_name()))
+    {
+    gavl_array_t icon_arr;
+    char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
+    gavl_array_init(&icon_arr);
+    bg_array_add_application_icons(&icon_arr, prefix, icon_name);
+    icons = bg_upnp_create_icon_list(&icon_arr);
+    gavl_array_free(&icon_arr);
+    free(prefix);
+    }
+  else
+    icons = gavl_strdup("");
+    
+  /* Register local device */
+
+  gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
+                                    bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
+    
+  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
+  gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
+    
+  bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
+    
+  priv->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+
+  bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
+
+  free(icons);
+  free(uri);
+
+  gavl_dictionary_free(&local_dev);
+  return 1;
+  }
+
+static void * create_mdb_upnp()
+  {
+  bg_mdb_frontend_upnp_t * priv;
+  priv = calloc(1, sizeof(*priv));
 
   
+  
+  return priv;
+  }
+
+static int ping_mdb_upnp(void * data)
+  {
+  int ret = 0;
+  bg_mdb_frontend_upnp_t * priv = data;
+  bg_msg_sink_iteration(priv->control.evt_sink);
+  ret += bg_msg_sink_get_num(priv->control.evt_sink);
   return ret;
   }
+
+
+/* Plugin */
+
+bg_frontend_plugin_t the_plugin =
+  {
+    .common =
+    {
+      BG_LOCALE,
+      .name =      "fe_mdb_upnp",
+      .long_name = TRS("Upnp dlna access"),
+      .description = TRS("Launch an Upnp media server for accessing the media DB."),
+      .type =     BG_PLUGIN_FRONTEND_MDB,
+      .flags =    0,
+      .create =   create_mdb_upnp,
+      .destroy =   destroy_mdb_upnp,
+      .priority =         1,
+    },
+    //    .handle_message = handle_mdb_message,
+    .update = ping_mdb_upnp,
+    .open = open_mdb_upnp,
+  };
+
+/* Include this into all plugin modules exactly once
+   to let the plugin loader obtain the API version */
+BG_GET_PLUGIN_API_VERSION;
+
+
+
 
 /* Descriptions */
 

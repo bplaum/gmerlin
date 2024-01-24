@@ -366,8 +366,13 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
   gavl_msg_t * msg1;
   const char * remote_id;
 
-  //  fprintf(stderr, "Handle remote message\n");
-  //  gavl_msg_dump(msg, 2);
+  
+  if((msg->NS == BG_MSG_NS_DB) &&
+     (msg->ID == BG_RESP_DB_BROWSE_OBJECT))
+    {
+    fprintf(stderr, "Handle remote message\n");
+    gavl_msg_dump(msg, 2);
+    }
   
 #if 0  
   if((msg->NS == BG_MSG_NS_DB) &&
@@ -530,8 +535,8 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
                !(root_m = gavl_track_get_metadata_nc(&s->root)))
               return 1;
 
-            // fprintf(stderr, "mdb_remote: BG_RESP_DB_BROWSE_OBJECT %s\n", gavl_dictionary_get_string(root_m, GAVL_META_LABEL) );
-            //         gavl_dictionary_dump(root_m, 2);
+            fprintf(stderr, "mdb_remote: BG_RESP_DB_BROWSE_OBJECT %s\n", gavl_dictionary_get_string(root_m, GAVL_META_LABEL) );
+            gavl_dictionary_dump(root_m, 2);
             
             /* Correct some fields */
             gavl_dictionary_set_string(root_m,
@@ -651,8 +656,10 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const char * id, cons
   //  gavl_dictionary_dump(dict, 2);
     
   if(!(bh = bg_backend_handle_create(dict)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Creating backend handle failed");
     return NULL;
-  
+    }
   if(p->num_servers >= p->servers_alloc)
     {
     p->servers_alloc = p->num_servers + 16;
@@ -673,7 +680,7 @@ static remote_server_t * add_server(bg_mdb_backend_t * be, const char * id, cons
   ret->be = be;
 
   bg_control_init(&ret->ctrl,
-                  bg_msg_sink_create(handle_remote_msg, ret, 0));
+                  bg_msg_sink_create(handle_remote_msg, ret, 1));
   
   bg_controllable_connect(bg_backend_handle_get_controllable(ret->bh), &ret->ctrl);
   
@@ -896,7 +903,7 @@ static int ping_func_remote(bg_mdb_backend_t * b)
 
   while(i < priv->num_servers)
     {
-
+    
     bg_msg_sink_iteration(priv->servers[i].ctrl.evt_sink);
     ret += bg_msg_sink_get_num(priv->servers[i].ctrl.evt_sink);
 

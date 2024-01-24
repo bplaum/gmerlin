@@ -1411,6 +1411,12 @@ void bg_dbus_set_property_local(bg_dbus_connection_t * conn,
                                 gavl_dictionary_t * dict,
                                 int send_msg)
   {
+#if 0
+  fprintf(stderr, "Set property %s, msg: %d\n", name, send_msg);
+  gavl_value_dump(val, 2);
+  fprintf(stderr, "\n");
+#endif
+  
   if(dict && val)
     gavl_dictionary_set(dict, name, val);
 

@@ -15,13 +15,9 @@
 
 #include <frontend_priv.h>
 
-#define FLAG_REGISTERED (1<<0)
-
 typedef struct
   {
   bg_websocket_context_t * ws;
-
-  int flags;
 
   } frontend_priv_t;
 
@@ -29,14 +25,7 @@ int bg_frontend_gmerlin_ping(void * data)
   {
   int ret = 0;
   frontend_priv_t * p = data;
-
-  if(!(p->flags & FLAG_REGISTERED))
-    {
-    
-    }
-  
   ret += bg_websocket_context_iteration(p->ws);
-
   return ret;
   }
 
@@ -87,7 +76,6 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
     
   if(!uri_scheme)
     return 1;
-
     
   root_uri = bg_http_server_get_root_url(srv);
   uri = bg_sprintf("%s%s/ws/%s", uri_scheme, root_uri + 4 /* ://..." */, klass);

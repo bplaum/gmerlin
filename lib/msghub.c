@@ -120,7 +120,6 @@ bg_msg_hub_destroy(bg_msg_hub_t * h)
 
 void bg_msg_hub_connect_sink(bg_msg_hub_t * h, bg_msg_sink_t * sink)
   {
-  //  fprintf(stderr, "bg_msg_hub_connect_sink: %p %p\n", h, sink);
   pthread_mutex_lock(&h->mutex);
 
   if(h->num_sinks + 1 > h->sinks_alloc)

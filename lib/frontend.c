@@ -43,9 +43,8 @@ bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int type_ma
     goto fail;
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loaded frontend %s", info->name);
-  
-  ret->evt_sink = bg_msg_sink_create(plugin->handle_message, ret->handle->priv, 0);
 
+  
   if(real_name)
     free(real_name);
   
@@ -76,8 +75,6 @@ int bg_frontend_ping(bg_frontend_t * f)
   if(plugin->update)
     ret += plugin->update(f->handle->priv);
 
-  bg_msg_sink_iteration(f->evt_sink);
-  ret += bg_msg_sink_get_num(f->evt_sink);
   
   return ret;
   }

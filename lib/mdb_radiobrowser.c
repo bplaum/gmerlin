@@ -711,7 +711,7 @@ static const char * get_orig_id(const gavl_array_t * arr, const char * md5, int 
   }
 
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
   {
   gavl_msg_t * res;
   bg_mdb_backend_t * be = priv;
@@ -1265,7 +1265,7 @@ void bg_mdb_create_radio_browser(bg_mdb_backend_t * b)
   bg_mdb_container_set_backend(child, MDB_BACKEND_RADIO_BROWSER);
   
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_radiobrowser, b, 0),
                        bg_msg_hub_create(1));
   
   b->priv = priv;

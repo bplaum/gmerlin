@@ -96,7 +96,7 @@ static void opt_db(void * data, int * argc, char *** _argv, int arg)
   db_path = (*_argv)[arg];
   bg_cmdline_remove_arg(argc, _argv, arg);
 
-  fprintf(stderr, "Usinf db path from commandline: %s\n", db_path);
+  fprintf(stderr, "Using db path from commandline: %s\n", db_path);
   }
 
 static bg_cmdline_arg_t cmdline_args[] =

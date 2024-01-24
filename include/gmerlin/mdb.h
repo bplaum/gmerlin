@@ -166,8 +166,7 @@
       
 typedef struct bg_mdb_s bg_mdb_t;
 
-bg_mdb_t * bg_mdb_create(const char * path,
-                         int create, bg_http_server_t * srv);
+bg_mdb_t * bg_mdb_create(const char * path, int create, int * locked);
 
 void bg_mdb_merge_root_metadata(bg_mdb_t * db, const gavl_dictionary_t * m);
 

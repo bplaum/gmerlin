@@ -6188,7 +6188,7 @@ static void make_thumbnails(bg_mdb_backend_t * be)
   free(sql);
   }
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_sqlite(void * priv, gavl_msg_t * msg)
   {
   sqlite_priv_t * s;
   
@@ -6626,7 +6626,7 @@ void bg_mdb_create_sqlite(bg_mdb_backend_t * b)
   bg_sqlite_init_strcoll(priv->db);
   
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_sqlite, b, 0),
                        bg_msg_hub_create(1));
 
   if(!exists && !create_tables(b))

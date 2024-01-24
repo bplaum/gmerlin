@@ -404,7 +404,10 @@ void bg_msg_sink_set_id(bg_msg_sink_t * sink, const char * id)
 
 int bg_msg_sink_has_id(bg_msg_sink_t * sink, const char * id)
   {
-  if(!sink->id || !id || !strcmp(sink->id, "*") || !strcmp(id, "*") || (sink->id && !strcmp(id, sink->id)))
+  if(!id)
+    return 1;
+  
+  if(sink->id && (!strcmp(id, sink->id) || !strcmp(sink->id, "*")))
     return 1;
   
   return bg_msg_routing_table_get(sink, id);

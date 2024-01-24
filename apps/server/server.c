@@ -318,7 +318,7 @@ int server_init(server_t * s, gavl_array_t * fe_arr)
   else
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using saved uuid: %s", uuid);
   
-  if(!(s->mdb = bg_mdb_create(s->dbpath, 0, s->srv)))
+  if(!(s->mdb = bg_mdb_create(s->dbpath, 0, NULL)))
     return 0;
   
   bg_http_server_set_mdb(s->srv, s->mdb);
@@ -402,7 +402,7 @@ void server_cleanup(server_t * s)
     }
   gavl_dictionary_free(&s->state);
   }
-  
+
 int server_iteration(server_t * s)
   {
   int ret = 0;

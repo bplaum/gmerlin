@@ -53,7 +53,7 @@ static int ensure_mdb(int do_create)
       if(!(conn = bg_websocket_connection_create(path, 3000, NULL)))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't connect to %s", path);
-        return EXIT_FAILURE;
+        return 0;
         }
       mdb_ctrl = bg_websocket_connection_get_controllable(conn);
       }

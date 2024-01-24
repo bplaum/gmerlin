@@ -394,13 +394,13 @@ static void * firstrun_thread_func(void * data)
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creating initial database");
   
-  mdb = bg_mdb_create(win->dbpath, 1, win->g->srv);
+  mdb = bg_mdb_create(win->dbpath, 1, NULL);
 
 #if 0
   bg_mdb_stop(mdb);
   bg_mdb_destroy(mdb);
   
-  mdb = bg_mdb_create(win->dbpath, 0, win->g->srv);
+  mdb = bg_mdb_create(win->dbpath, 0, win->g->srv, NULL);
 #endif
   
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created initial database");
@@ -557,7 +557,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   gmerlin_t * ret;
   bg_cfg_section_t * cfg_section;
   char * tmp_string;
-
+  int locked = 0;
   //  gavl_dictionary_t root_metadata;
   
   ret = calloc(1, sizeof(*ret));
@@ -632,9 +632,24 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   /* Media DB */
   
-  if(!(ret->mdb = bg_mdb_create(db_path, 0, ret->srv)) &&
-     !firstrun(ret, db_path))
-    goto fail;
+  if(!(ret->mdb = bg_mdb_create(db_path, 0, &locked)))
+    {
+    if(locked)
+      {
+      GtkWidget * dialog =
+        gtk_message_dialog_new(NULL,
+                               0,
+                               GTK_MESSAGE_ERROR,
+                               GTK_BUTTONS_CLOSE,
+                               "Database is locked by another process. Use the -db option for choosing another database.");
+      gtk_dialog_run (GTK_DIALOG (dialog));
+      gtk_widget_destroy (dialog);
+      goto fail;
+      }
+    else if(!firstrun(ret, db_path))
+      goto fail;
+    }
+     
   
   bg_cfg_section_apply(ret->logwindow_section,
                        bg_gtk_log_window_get_parameters(ret->log_window),

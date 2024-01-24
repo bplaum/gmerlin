@@ -1445,7 +1445,7 @@ static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int i
   
   }
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
   fs_t * fs = be->priv;
@@ -1646,7 +1646,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   b->destroy = destroy_filesystem;
 
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_filesystem, b, 0),
                        bg_msg_hub_create(1));
   
   /* Add children */

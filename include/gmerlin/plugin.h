@@ -1482,7 +1482,7 @@ typedef struct
   int (*update)(void * priv);
   int (*open)(void * priv, bg_controllable_t * ctrl);
 
-  int (*handle_message)(void * priv, gavl_msg_t * msg);
+  //  int (*handle_message)(void * priv, gavl_msg_t * msg);
   
   } bg_frontend_plugin_t;
 

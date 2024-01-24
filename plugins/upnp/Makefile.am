@@ -10,10 +10,13 @@ AM_CFLAGS = \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
 plugin_LTLIBRARIES = \
-be_server_upnp.la
+be_mdb_upnp.la  \
+fe_mdb_upnp.la
 
+fe_mdb_upnp_la_SOURCES = fe_mdb_upnp.c
+fe_mdb_upnp_la_LIBADD = @MODULE_LIBADD@
 
-be_server_upnp_la_SOURCES = be_server_upnp.c
-be_server_upnp_la_LIBADD = @MODULE_LIBADD@
+be_mdb_upnp_la_SOURCES = be_mdb_upnp.c
+be_mdb_upnp_la_LIBADD = @MODULE_LIBADD@
 
 

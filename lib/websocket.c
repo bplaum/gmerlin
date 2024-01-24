@@ -70,13 +70,6 @@
 /**************************************************************
  * Common for server and client
  **************************************************************/
-#if 0
-typedef struct
-  {
-  gavl_buffer_t b;
-  int type;
-  } bg_websocket_msg_t;
-#endif
 
 typedef struct
   {
@@ -505,6 +498,12 @@ static int msg_write_cb(void * data, gavl_msg_t * msg)
   char * str = NULL;
   uint64_t len = 0;
   bg_websocket_connection_t * conn = data;
+
+  /*  
+  fprintf(stderr, "msg_write_cb:\n");
+  gavl_msg_dump(msg, 2);
+  fprintf(stderr, "\n");
+  */
   
   str = bg_msg_to_json_str(msg);
   len = strlen(str);
@@ -687,8 +686,10 @@ bg_websocket_connection_create(const char * url, int timeout,
   gavl_dictionary_set_string(&req, "Sec-WebSocket-Version",  "13");
 
   if((fd = gavl_socket_connect_inet(addr, timeout)) < 0)
+    {
+    fprintf(stderr, "Bla 1\n");
     goto fail;
-
+    }
   //  setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
   
   io = gavf_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
@@ -699,8 +700,10 @@ bg_websocket_connection_create(const char * url, int timeout,
     goto fail;
     }
   if(!gavl_http_response_read(io, &res))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading response failed");
     goto fail;
-  
+    }
   /* Check response */
   if((gavl_http_response_get_status_int(&res) != 101) ||
      !(var = gavl_dictionary_get_string(&res, "Connection")) ||
@@ -711,8 +714,11 @@ bg_websocket_connection_create(const char * url, int timeout,
      strcasecmp(var, key_res) ||
      !(var = gavl_dictionary_get_string(&res, "Sec-WebSocket-Protocol")) ||
      strcasecmp(var, "json"))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got response: %d %s",
+             gavl_http_response_get_status_int(&res), gavl_http_response_get_status_str(&res));
     goto fail;
-
+    }
   /* From here on, we assume things to go smoothly */
   
   ret = calloc(1, sizeof(*ret));

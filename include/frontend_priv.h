@@ -6,20 +6,19 @@
 struct bg_frontend_s
   {
   bg_plugin_handle_t * handle;
+
+  bg_control_t ctrl;
   
-  bg_msg_sink_t * evt_sink; // Handle event from backend
+  //  bg_msg_sink_t * evt_sink; // Handle event from backend
   
   //   void * priv;                // Private data
 
   //  int (*ping_func)(void * priv);
   //  void (*cleanup_func)(void * priv);
-  //  int (*handle_message)(void * priv, gavl_msg_t * msg);
+  // int (*handle_message)(void * priv, gavl_msg_t * msg);
   
   bg_controllable_t * controllable;
   
-  // Initialized by backend
-  bg_control_t ctrl;
-
   int flags;
   };
 

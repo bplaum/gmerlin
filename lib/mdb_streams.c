@@ -2330,7 +2330,7 @@ static int add_source_str(bg_mdb_backend_t * be, const char * label, const char 
   }
 
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_streams(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
   streams_t * s = be->priv;
@@ -2717,7 +2717,7 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
     init_sources(b);
   
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_streams, b, 0),
                        bg_msg_hub_create(1));
   
   b->destroy = destroy_streams;

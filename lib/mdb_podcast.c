@@ -1281,7 +1281,7 @@ static void browse_object(bg_mdb_backend_t * b, gavl_msg_t * msg, const parsed_i
   }
 
   
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_podcast(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * b = priv;
   podcasts_t * p = b->priv;
@@ -1659,7 +1659,7 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b)
 
   
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_podcast, b, 0),
                        bg_msg_hub_create(1));
   
   priv->dir = bg_sprintf("%s/%s", b->db->path, "podcasts");

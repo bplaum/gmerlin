@@ -315,35 +315,6 @@ bg_cfg_ctx_t * bg_mdb_get_cfg(bg_mdb_t * db)
   return db->cfg_ext;
   }
 
-#if 0
-static void add_volume_func(void * priv, const char * name, const gavl_value_t * val)
-  {
-  const gavl_dictionary_t * dict;
-  int i;
-  gavl_msg_t msg;
-  bg_mdb_t * db = priv;
-
-  if(!(dict = gavl_value_get_dictionary(val)))
-    return;
-  
-  gavl_msg_init(&msg);
-  
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
-  gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, name);
-  gavl_msg_set_arg_dictionary(&msg, 0, dict);
-  
-  /* Forward to backends */
-
-      //   fprintf(stderr, "Got remote msg\n");
-              
-  for(i = 0; i < num_backends; i++)
-    {
-    if(db->backends[i].flags & BE_FLAG_RESOURCES)
-      bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, &msg);
-    }
-  gavl_msg_free(&msg);
-  }
-#endif
 
 static int renderer_idx_by_id(bg_mdb_t * db, const char * id)
   {
@@ -360,7 +331,6 @@ static int renderer_idx_by_id(bg_mdb_t * db, const char * id)
     }
   return -1;
   }
-
 
 static void update_remote_devs_state(bg_mdb_t * db, const gavl_msg_t * msg)
   {
@@ -627,8 +597,8 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             gavl_msg_t * res = bg_msg_sink_get(db->ctrl.evt_sink);
             bg_mdb_set_browse_obj_response(res, obj, msg, -1, -1);
 
-            // fprintf(stderr, "Sending response %d %d:\n", res->ID, res->NS);
-            //         gavl_msg_dump(res, 2);
+            //            fprintf(stderr, "Sending response %d %d:\n", res->ID, res->NS);
+            //            gavl_msg_dump(res, 2);
 
             bg_msg_sink_put(db->ctrl.evt_sink);
             
@@ -1107,6 +1077,8 @@ static void * mdb_thread(void * data)
   while(1)
     {
     ops = 0;
+
+    //    fprintf(stderr, "Blupp\n");
     
     /* Check for stop */
     if(!bg_msg_sink_iteration(mdb->ctrl.cmd_sink))
@@ -1216,8 +1188,7 @@ static int handle_creation_event(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-bg_mdb_t * bg_mdb_create(const char * path,
-                         int do_create, bg_http_server_t * srv)
+bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
   {
   int i;
   int idx;
@@ -1228,6 +1199,9 @@ bg_mdb_t * bg_mdb_create(const char * path,
   int done = 0;
 
   bg_controllable_t * ctrl;
+
+  if(locked)
+    *locked = 0;
   
   ret->cfg_save_time = GAVL_TIME_UNDEFINED;
   
@@ -1238,7 +1212,7 @@ bg_mdb_t * bg_mdb_create(const char * path,
   
   ret->timer = gavl_timer_create();
   
-  ret->srv = srv;
+  ret->srv = bg_http_server_get();
   
   if(ret->srv)
     ret->dirs = bg_http_server_get_media_dirs(ret->srv);
@@ -1300,6 +1274,10 @@ bg_mdb_t * bg_mdb_create(const char * path,
   if(!(ret->dirlock = bg_lock_directory(ret->path)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't lock database");
+    
+    if(locked)
+      *locked = 1;
+    
     goto fail;
     }
   
@@ -1318,8 +1296,6 @@ bg_mdb_t * bg_mdb_create(const char * path,
   bg_controllable_init(&ret->ctrl,
                        bg_msg_sink_create(handle_cmd, ret, 0),
                        bg_msg_hub_create(1));
-  
-  //  bg_msg_hub_connect_sink(bg_backend_registry_get_evt_hub() , ret->ctrl.cmd_sink);
   
   ret->be_evt_sink = bg_msg_sink_create(handle_be_msg, ret, 0);
   /* Also need to set the client ID */

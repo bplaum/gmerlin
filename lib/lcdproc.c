@@ -54,7 +54,7 @@ static const char * const name_name                = "name";
 static const char * const time_name                = "time";
 
 
-static int handle_msg(void * priv, gavl_msg_t * msg);
+static int handle_msg_lcdproc(void * priv, gavl_msg_t * msg);
 
 
 
@@ -156,7 +156,7 @@ bg_lcdproc_t * bg_lcdproc_create(bg_player_t * player)
   ret = calloc(1, sizeof(*ret));
   ret->fd = -1;
 
-  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_msg, ret, 0));
+  bg_control_init(&ret->ctrl, bg_msg_sink_create(handle_msg_lcdproc, ret, 0));
   
   pthread_mutex_init(&ret->config_mutex, NULL);
   pthread_mutex_init(&ret->state_mutex, NULL);
@@ -703,7 +703,7 @@ static int destroy_descriptions(bg_lcdproc_t * l)
   return 0;
   }
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_lcdproc(void * priv, gavl_msg_t * msg)
   {
   gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
 

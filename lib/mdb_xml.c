@@ -779,7 +779,7 @@ static int browse_children(bg_mdb_backend_t * b, const char * id, gavl_array_t *
   
   }
 
-static int handle_msg(void * priv, gavl_msg_t * msg)
+static int handle_msg_xml(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * b = priv;
   
@@ -1069,7 +1069,7 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
   priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
   
   bg_controllable_init(&b->ctrl,
-                       bg_msg_sink_create(handle_msg, b, 0),
+                       bg_msg_sink_create(handle_msg_xml, b, 0),
                        bg_msg_hub_create(1));
   
   b->destroy = destroy_xml;
