@@ -367,14 +367,14 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
   const char * remote_id;
 
   
+  
+#if 0  
   if((msg->NS == BG_MSG_NS_DB) &&
      (msg->ID == BG_RESP_DB_BROWSE_OBJECT))
     {
     fprintf(stderr, "Handle remote message\n");
     gavl_msg_dump(msg, 2);
     }
-  
-#if 0  
   if((msg->NS == BG_MSG_NS_DB) &&
      ((msg->ID == BG_RESP_DB_BROWSE_OBJECT)))
     {
@@ -535,9 +535,11 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
                !(root_m = gavl_track_get_metadata_nc(&s->root)))
               return 1;
 
-            fprintf(stderr, "mdb_remote: BG_RESP_DB_BROWSE_OBJECT %s\n", gavl_dictionary_get_string(root_m, GAVL_META_LABEL) );
+#if 0            
+            fprintf(stderr, "mdb_remote: BG_RESP_DB_BROWSE_OBJECT %s\n",
+                    gavl_dictionary_get_string(root_m, GAVL_META_LABEL) );
             gavl_dictionary_dump(root_m, 2);
-            
+#endif       
             /* Correct some fields */
             gavl_dictionary_set_string(root_m,
                                        GAVL_META_MEDIA_CLASS,

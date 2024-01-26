@@ -1017,6 +1017,7 @@ static void * create_mpris2()
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not connect to session bus"); 
     free(priv);
+    return NULL;
     }
   
   name = bg_app_get_name();

@@ -375,7 +375,7 @@ static bg_dbus_connection_t * bg_dbus_connection_create(DBusBusType type)
   
   if(dbus_error_is_set(&err))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Canntot connect to %s bus: %s",
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot connect to %s bus: %s",
            ((type == DBUS_BUS_SESSION) ? "session" : "system"),
            err.message); 
     goto fail;

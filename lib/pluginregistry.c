@@ -1057,13 +1057,17 @@ static bg_plugin_info_t * get_info(void * test_module,
   
   /* Get parameters */
 
-  plugin_priv = plugin->create();
+  if(!(plugin_priv = plugin->create()))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Plugin creation failed");
+    return NULL;
+    }
+  
   new_info = plugin_info_create(plugin, plugin_priv, filename);
   plugin->destroy(plugin_priv);
   
   return new_info;
   }
-
 
 static bg_plugin_info_t *
 scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,

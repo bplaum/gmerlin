@@ -1624,6 +1624,9 @@ static void * player_thread(void * data)
     if(!actions)
       gavl_time_delay(&player->wait_time);
     }
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Player thread finished");
+  
   return NULL;
   }
 
@@ -1695,7 +1698,6 @@ void bg_player_quit(bg_player_t *player)
   gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
   bg_msg_sink_put(player->ctrl.cmd_sink);
   
-  //  pthread_cancel(player->player_thread);
   pthread_join(player->player_thread, NULL);
   }
 

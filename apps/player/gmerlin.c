@@ -786,10 +786,11 @@ void gmerlin_destroy(gmerlin_t * g)
   bg_frontends_destroy(g->mdb_frontends, g->num_mdb_frontends);
   bg_frontends_destroy(g->renderer_frontends, g->num_renderer_frontends);
   
-  
   if(g->player)
+    {
+    bg_player_quit(g->player);
     bg_player_destroy(g->player);
-  
+    }
   /* Process last messages (state is stored here) */
 
   if(g->mainwin.player_ctrl.evt_sink)
