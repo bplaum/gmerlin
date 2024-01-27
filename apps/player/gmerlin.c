@@ -891,9 +891,9 @@ void gmerlin_run(gmerlin_t * g, const char ** locations,
   
   gmerlin_apply_config(g);
   gmerlin_apply_state(g); 
-    
+  
   bg_http_server_start(g->srv);
-
+#if 1
   g->renderer_frontends = bg_frontends_create(g->player_ctrl,
                                               BG_PLUGIN_FRONTEND_RENDERER,
                                               fe_arr_renderer, &g->num_renderer_frontends);
@@ -901,7 +901,7 @@ void gmerlin_run(gmerlin_t * g, const char ** locations,
   g->mdb_frontends = bg_frontends_create(g->mdb_ctrl,
                                          BG_PLUGIN_FRONTEND_MDB, fe_arr_mdb, &g->num_mdb_frontends);
 
-  
+#endif
   gavl_dictionary_init(&root_metadata);
   
   /* Add icons with absolute URLs and the network node name */
@@ -935,11 +935,7 @@ void gmerlin_run(gmerlin_t * g, const char ** locations,
   main_window_show(&g->mainwin);
   
   gtk_main();
-
-  /* The following saves the coords */
   
-  bg_player_quit(g->player);
-
   gmerlin_get_config(g);
 
   }

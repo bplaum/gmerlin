@@ -78,6 +78,7 @@ static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
   bg_resourcemanager_get_controllable();
   bg_resource_list_by_class(GAVL_META_MEDIA_CLASS_BACKEND_RENDERER, 1, 3*GAVL_TIME_SCALE);
+  exit(EXIT_SUCCESS);
   }
   
 static void cmd_play(void * data, int * argc, char *** _argv, int arg)
@@ -512,7 +513,7 @@ int main(int argc, char ** argv)
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
   
   if(!remote_addr)
-    remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://localhost:10101/ws/renderer";
+    remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://localhost:10101/ws/"GAVL_META_MEDIA_CLASS_BACKEND_RENDERER;
 
   srv = create_server();
 
