@@ -589,7 +589,12 @@ void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t ti
   int i;
   const gavl_dictionary_t  * test_dict;
   const char  * test_klass;
+
+  if(!resman)
+    bg_resourcemanager_init();
   
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Scanning for resources for %.2f seconds please wait",
+           gavl_time_to_seconds(timeout));
   gavl_time_delay(&timeout);
   
   pthread_mutex_lock(&resman->mutex);
