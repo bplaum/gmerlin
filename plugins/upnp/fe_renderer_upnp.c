@@ -543,8 +543,8 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
   
   bg_renderer_frontend_upnp_t * priv = data;
 
-  fprintf(stderr, "Handle http request\n");
-  gavl_dictionary_dump(&c->req, 2);
+  //  fprintf(stderr, "Handle http request\n");
+  //  gavl_dictionary_dump(&c->req, 2);
   
   if(!strcmp(c->method, "GET") || !strcmp(c->method, "HEAD"))    
     {

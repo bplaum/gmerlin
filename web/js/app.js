@@ -5159,7 +5159,7 @@ function global_init()
 
   widgets.logviewer     = create_log_viewer();
 
-  server_uri = "ws://" +  window.location.host + "/ws/" + GAVL_META_MEDIA_CLASS_BACKEND_SERVER;
+  server_uri = "ws://" +  window.location.host + "/ws/" + GAVL_META_MEDIA_CLASS_BACKEND_MDB;
   server_connection_init();
     
   widgets.browser   = create_browser();
