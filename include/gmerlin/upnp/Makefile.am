@@ -6,8 +6,7 @@ didl.h \
 event.h \
 eventlistener.h \
 servicedesc.h \
-soap.h \
-ssdp.h
+soap.h
 
 
 noinst_HEADERS = 
