@@ -865,9 +865,8 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
                                gmerlin->mainwin.player_ctrl.evt_sink);
   
   ret->mdb_backend_menu =
-    bg_gtk_backend_menu_create(GAVL_META_MEDIA_CLASS_BACKEND_SERVER,
-                               1,
-                               /* Will send BG_MSG_SET_BACKEND events */
+    bg_gtk_backend_menu_create(GAVL_META_MEDIA_CLASS_BACKEND_MDB,
+                               1, /* Will send BG_MSG_SET_BACKEND events */
                                gmerlin->mainwin.player_ctrl.evt_sink);
   
   /* Main menu */

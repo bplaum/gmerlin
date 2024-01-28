@@ -796,7 +796,7 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
           if((klass = gavl_dictionary_get_string(&dev, GAVL_META_MEDIA_CLASS)) &&
               (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
             {
-            if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
+            if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
               {
               pthread_mutex_lock(&w->g->backend_mutex);
 

@@ -870,7 +870,7 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
           gavl_msg_get_arg_dictionary(msg, 0, &dict);
           
           if((klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS)) &&
-             !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER) &&
+             !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB) &&
              (uri = gavl_dictionary_get_string(&dict, GAVL_META_URI)) &&
              !is_us(be->db, uri))
             //            (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&

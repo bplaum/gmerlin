@@ -71,7 +71,7 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
   
   if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
     uri_scheme = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER;
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_SERVER))
+  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
     uri_scheme = BG_BACKEND_URI_SCHEME_GMERLIN_MDB;
     
   if(!uri_scheme)
@@ -103,7 +103,7 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
 
 int bg_frontend_gmerlin_open_mdb(void * data, bg_controllable_t * ctrl)
   {
-  return frontend_gmerlin_open(data, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_SERVER);
+  return frontend_gmerlin_open(data, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_MDB);
   }
 
 int bg_frontend_gmerlin_open_renderer(void * data, bg_controllable_t * ctrl)

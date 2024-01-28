@@ -94,6 +94,61 @@ static void set_backend_id(gavl_dictionary_t * dict)
   gavl_dictionary_set_string_nocopy(dict, GAVL_META_HASH, bg_make_backend_id(klass));
   }
 
+static int resource_supported(const gavl_dictionary_t * dict)
+  {
+  int ret = 0;
+  char * protocol = NULL;
+  const char * klass;
+
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+    return 0;
+
+  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+    {
+    const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+    
+    if(!uri)
+      goto fail;
+    
+    if(!gavl_url_split(uri, &protocol, NULL, NULL, NULL, NULL, NULL))
+      goto fail;
+    
+    if(!bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_RENDERER))
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No plugin found for resource %s", uri);
+      goto fail;
+      }
+    ret = 1;
+    }
+  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
+    {
+    const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+    
+    if(!uri)
+      goto fail;
+    
+    if(!gavl_url_split(uri, &protocol, NULL, NULL, NULL, NULL, NULL))
+      goto fail;
+    
+    if(!bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_MDB))
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No plugin found for resource %s", uri);
+      goto fail;
+      }
+    ret = 1;
+    }
+  else
+    {
+    ret = 1;
+    }
+
+  fail:
+  if(protocol)
+    free(protocol);
+  
+  return ret;
+  }
+
 static void add(int local, gavl_dictionary_t * dict, const char * id)
   {
   gavl_value_t val;
@@ -117,19 +172,24 @@ static void add(int local, gavl_dictionary_t * dict, const char * id)
    */
   
   gavl_array_splice_val_nocopy(arr, -1, 0, &val);
-  
+      
   if(!local)
     {
     gavl_msg_t * msg;
-    msg = bg_msg_sink_get(resman->ctrl.evt_sink);
-    gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
-    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
-    gavl_msg_set_arg_dictionary(msg, 0, dict_new);
-    bg_msg_sink_put(resman->ctrl.evt_sink);
+
+    if(resource_supported(dict_new))
+      {
+      msg = bg_msg_sink_get(resman->ctrl.evt_sink);
+      gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
+      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
+      gavl_msg_set_arg_dictionary(msg, 0, dict_new);
+      bg_msg_sink_put(resman->ctrl.evt_sink);
+      }
     }
   else
     {
     gavl_msg_t msg;
+
     gavl_msg_init(&msg);
     set_backend_id(dict_new);
     gavl_msg_set_id_ns(&msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
@@ -155,7 +215,8 @@ static void del(int local, int idx)
     const gavl_dictionary_t * dict;
 
     if((dict = gavl_value_get_dictionary(&arr->entries[idx])) &&
-       (id = gavl_dictionary_get_string(dict, GAVL_META_ID)))
+       (id = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
+       resource_supported(dict))
       {
       gavl_msg_t * msg;
       msg = bg_msg_sink_get(resman->ctrl.evt_sink);

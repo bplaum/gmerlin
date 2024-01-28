@@ -23,4 +23,3 @@ fe_mdb_upnp_la_LIBADD = @MODULE_LIBADD@
 be_mdb_upnp_la_SOURCES = be_mdb_upnp.c
 be_mdb_upnp_la_LIBADD = @MODULE_LIBADD@
 
-
