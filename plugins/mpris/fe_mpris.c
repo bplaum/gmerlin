@@ -279,7 +279,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       {
       prop_name = gavl_msg_get_arg_string_c(msg, 1);
 
-      fprintf(stderr, "Get property %s %s\n", prop_iface, prop_name);
+      //      fprintf(stderr, "Get property %s %s\n", prop_iface, prop_name);
       
       if(!strcmp(prop_iface, "org.mpris.MediaPlayer2"))
         bg_dbus_property_get(root_properties, &p->root_prop, prop_name, msg, p->conn);

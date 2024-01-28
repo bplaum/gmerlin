@@ -10,6 +10,7 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "frontend_player_upnp"
 
+#include <gmerlin/translation.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/upnp/soap.h>
 #include <gmerlin/upnp/upnputils.h>
@@ -150,7 +151,7 @@ static const char * avt_desc;
 static const char * cm_desc;
 static const char * rc_desc;
 
-#define FLAG_REGISTERED (1<<1)
+// #define FLAG_REGISTERED (1<<1)
 
 typedef struct 
   {
@@ -165,84 +166,29 @@ typedef struct
 
   char * next_uri;
 
-  int flags;
+  bg_control_t ctrl;
   
   } bg_renderer_frontend_upnp_t;
 
-static int ping_player_upnp(bg_frontend_t * fe, gavl_time_t current_time)
+static int ping_renderer_upnp(void * data)
   {
   int ret = 0;
-  bg_renderer_frontend_upnp_t * p = fe->priv;
+  bg_renderer_frontend_upnp_t * p = data;
 
   //  fprintf(stderr, "ping_player_upnp %s\n", p->protocol_info);
   
-  if(!(p->flags & FLAG_REGISTERED) && p->protocol_info)
-    {
-    gavl_dictionary_t local_dev;
-    
-    const char * server_label;
-    const char * root_uri;
-    const char * icon_name;
-    char uuid_str[37];
-
-    char * icons;
-    
-    char * uri;
-    
-    root_uri = bg_http_server_get_root_url(bg_http_server_get());
-    
-    uri = bg_sprintf("%s/upnp/renderer/desc.xml", root_uri);
-
-
-    gavl_dictionary_init(&local_dev);
-    gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                      bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, uri + 7));
-
-    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
-
-    if(!(server_label = bg_app_get_label()))
-      return 0;
-    
-    gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
-
-    if((icon_name = bg_app_get_icon_name()))
-      {
-      gavl_array_t icon_arr;
-      char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
-      gavl_array_init(&icon_arr);
-      bg_array_add_application_icons(&icon_arr, prefix, icon_name);
-      icons = bg_upnp_create_icon_list(&icon_arr);
-      gavl_array_free(&icon_arr);
-      free(prefix);
-      }
-    else
-      icons = gavl_strdup("");
-    
-    bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
-    p->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
-    
-    bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
-    
-    free(uri);
-    free(icons);
-    ret++;
-
-    gavl_dictionary_free(&local_dev);
-    p->flags |= FLAG_REGISTERED;
-    }
+  bg_msg_sink_iteration(p->ctrl.evt_sink);
   
-  bg_msg_sink_iteration(fe->ctrl.evt_sink);
+  ret += bg_msg_sink_get_num(p->ctrl.evt_sink);
   
-  ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
-  
-  ret += bg_upnp_event_context_server_update(&p->cm_evt, current_time);
-  ret += bg_upnp_event_context_server_update(&p->rc_evt, current_time);
-  ret += bg_upnp_event_context_server_update(&p->avt_evt, current_time);
+  ret += bg_upnp_event_context_server_update(&p->cm_evt);
+  ret += bg_upnp_event_context_server_update(&p->rc_evt);
+  ret += bg_upnp_event_context_server_update(&p->avt_evt);
   
   return ret;
   }
 
-static void cleanup_player_upnp(void * priv)
+static void destroy_renderer_upnp(void * priv)
   {
   bg_renderer_frontend_upnp_t * p = priv;
 
@@ -353,8 +299,7 @@ static int player_mode_to_gmerlin(const char * upnp_mode)
 
 static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
   {
-  bg_frontend_t * fe = priv;
-  bg_renderer_frontend_upnp_t * p = fe->priv;
+  bg_renderer_frontend_upnp_t * p = priv;
   
   switch(msg->NS)
     {
@@ -546,29 +491,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
                 free(str);
                 }
               }
-            else if(!strcmp(var, BG_PLAYER_STATE_MIMETYPES))
-              {
-              if(!p->protocol_info)
-                {
-                char * tmp_string;
-                int i;
-                const gavl_array_t * arr = gavl_value_get_array(&val);
-
-                for(i = 0; i < arr->num_entries; i++)
-                  {
-                  if(i)
-                    p->protocol_info = gavl_strcat(p->protocol_info, ",");
-
-                  tmp_string = bg_sprintf("http-get:*:%s:*", gavl_string_array_get(arr, i));
-                  p->protocol_info = gavl_strcat(p->protocol_info, tmp_string);
-                  free(tmp_string);
-                  }
-                
-                }
-              
-              }
             }
-
           
           gavl_value_free(&val);
           }
@@ -618,9 +541,10 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
   {
   const char * InstanceID;
   
-  bg_frontend_t * fe = data;
+  bg_renderer_frontend_upnp_t * priv = data;
 
-  bg_renderer_frontend_upnp_t * priv = fe->priv;
+  fprintf(stderr, "Handle http request\n");
+  gavl_dictionary_dump(&c->req, 2);
   
   if(!strcmp(c->method, "GET") || !strcmp(c->method, "HEAD"))    
     {
@@ -763,7 +687,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       gavl_value_set_int(&val, bg_upnp_parse_bool(DesiredMute));
       
       bg_state_set(NULL, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MUTE,
-                   &val, fe->ctrl.cmd_sink, BG_CMD_SET_STATE);
+                   &val, priv->ctrl.cmd_sink, BG_CMD_SET_STATE);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       return 1;
       }
@@ -793,7 +717,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
         return 1;
         }
 
-      bg_player_set_volume(fe->ctrl.cmd_sink, (double)atoi(DesiredVolume) / (double)BG_PLAYER_VOLUME_INT_MAX);
+      bg_player_set_volume(priv->ctrl.cmd_sink, (double)atoi(DesiredVolume) / (double)BG_PLAYER_VOLUME_INT_MAX);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     else if(!strcmp(func, "SetVolumeDB"))
@@ -814,7 +738,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
         return 1;
         }
       
-      bg_player_set_volume(fe->ctrl.cmd_sink, (double)bg_player_volume_from_dB((double)atoi(DesiredVolume)/256.0));
+      bg_player_set_volume(priv->ctrl.cmd_sink, (double)bg_player_volume_from_dB((double)atoi(DesiredVolume)/256.0));
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
 
       bg_upnp_event_context_server_set_value(&priv->rc_evt, "VolumeDB", DesiredVolume, EVT_INTERVAL);
@@ -1035,7 +959,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "Next"))
       {
       CHECK_INSTANCE_ID(718);
-      bg_player_next(fe->ctrl.cmd_sink);
+      bg_player_next(priv->ctrl.cmd_sink);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
     
@@ -1047,7 +971,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "Pause"))
       {
       CHECK_INSTANCE_ID(718);
-      bg_player_pause(fe->ctrl.cmd_sink);
+      bg_player_pause(priv->ctrl.cmd_sink);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
@@ -1059,7 +983,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "Play"))
       {
       CHECK_INSTANCE_ID(718);
-      bg_player_play(fe->ctrl.cmd_sink);
+      bg_player_play(priv->ctrl.cmd_sink);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
@@ -1071,7 +995,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "Previous"))
       {
       CHECK_INSTANCE_ID(718);
-      bg_player_prev(fe->ctrl.cmd_sink);
+      bg_player_prev(priv->ctrl.cmd_sink);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       }
 
@@ -1100,7 +1024,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
         //        bg_player_seek(bg_msg_sink_t * sink, gavl_time_t time, int scale)
         
-        bg_player_seek(fe->ctrl.cmd_sink, t, GAVL_TIME_SCALE);
+        bg_player_seek(priv->ctrl.cmd_sink, t, GAVL_TIME_SCALE);
         bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         }
       }
@@ -1123,7 +1047,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
 
       gavl_dictionary_init(&track);
       make_track(&track, CurrentURI, CurrentURIMetaData);
-      bg_player_set_track(fe->ctrl.cmd_sink, &track);
+      bg_player_set_track(priv->ctrl.cmd_sink, &track);
       gavl_dictionary_free(&track);
       
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "AVTransportURI", CurrentURI, EVT_INTERVAL);
@@ -1151,7 +1075,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
       
       gavl_dictionary_init(&track);
       make_track(&track, NextURI, NextURIMetaData);
-      bg_player_set_next_track(fe->ctrl.cmd_sink, &track);
+      bg_player_set_next_track(priv->ctrl.cmd_sink, &track);
       gavl_dictionary_free(&track);
 
       bg_upnp_event_context_server_set_value(&priv->avt_evt, "NextAVTransportURI", NextURI, EVT_INTERVAL);
@@ -1178,7 +1102,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
         gavl_value_set_int(&val, mode);
         
         bg_state_set(NULL, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_MUTE,
-                     &val, fe->ctrl.cmd_sink, BG_CMD_SET_STATE);
+                     &val, priv->ctrl.cmd_sink, BG_CMD_SET_STATE);
         bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
         }
       
@@ -1192,7 +1116,7 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
     else if(!strcmp(func, "Stop"))
       {
       CHECK_INSTANCE_ID(718);
-      bg_player_stop(fe->ctrl.cmd_sink);
+      bg_player_stop(priv->ctrl.cmd_sink);
       bg_upnp_finish_soap_request(soap, c, bg_http_server_get());
       
       }
@@ -1203,34 +1127,46 @@ static int handle_http_request(bg_http_connection_t * c, void * data)
   return 0; // 404
   }
 
+static void * create_renderer_upnp()
+  {
+  bg_renderer_frontend_upnp_t * priv;
+  priv = calloc(1, sizeof(*priv));
+  return priv;
+  }
 
-
-bg_frontend_t *
-bg_frontend_create_player_upnp(bg_controllable_t * ctrl)
+static int open_renderer_upnp(void * data, bg_controllable_t * ctrl)
   {
   uuid_t control_uuid;
   
-  bg_renderer_frontend_upnp_t * priv;
   bg_http_server_t * srv;
+
+  gavl_dictionary_t local_dev;
+    
+  const char * server_label;
+  const char * root_uri;
+  const char * icon_name;
+  char uuid_str[37];
+
+  char * icons;
+    
+  char * uri;
+
+  char * tmp_string;
+  int i;
+  const gavl_array_t * arr;
   
-  bg_frontend_t * ret;
+  
+  bg_renderer_frontend_upnp_t * priv = data;
   
   if(!(srv = bg_http_server_get()))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No http server present");
-    return NULL;
+    return 0;
     }
-  
-  ret = bg_frontend_create(ctrl);
-  ret->ping_func    =    ping_player_upnp;
-  ret->cleanup_func = cleanup_player_upnp;
 
-  ret->handle_message = handle_player_message_upnp;
+  bg_control_init(&priv->ctrl, bg_msg_sink_create(handle_player_message_upnp, priv, 0));
+  bg_controllable_connect(ctrl, &priv->ctrl);
   
-  priv = calloc(1, sizeof(*priv));
-  
-  ret->priv = priv;
-
   /* Initialize state variables */
   
   bg_upnp_event_context_server_set_value(&priv->avt_evt, "TransportState",               "NO_MEDIA_PRESENT", EVT_INTERVAL);
@@ -1270,14 +1206,88 @@ bg_frontend_create_player_upnp(bg_controllable_t * ctrl)
   bg_upnp_event_context_init_server(&priv->avt_evt, "/upnp/renderer/avt/evt");
   
   bg_http_server_add_handler(srv, handle_http_request, BG_HTTP_PROTO_HTTP, "/upnp/renderer/", // E.g. /static/ can be NULL
-                             ret);
-
-  bg_frontend_init(ret);
-
-  bg_controllable_connect(ctrl, &ret->ctrl);
+                             priv);
   
-  return ret;
+  /* Register local device */
+
+    
+  root_uri = bg_http_server_get_root_url(bg_http_server_get());
+  
+  uri = bg_sprintf("%s/upnp/renderer/desc.xml", root_uri);
+
+
+  gavl_dictionary_init(&local_dev);
+  gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
+                                    bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, uri + 7));
+
+  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+
+  if(!(server_label = bg_app_get_label()))
+    return 0;
+    
+  gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
+
+  if((icon_name = bg_app_get_icon_name()))
+    {
+    gavl_array_t icon_arr;
+    char * prefix = gavl_sprintf("%s/static/icons/", root_uri);
+    gavl_array_init(&icon_arr);
+    bg_array_add_application_icons(&icon_arr, prefix, icon_name);
+    icons = bg_upnp_create_icon_list(&icon_arr);
+    gavl_array_free(&icon_arr);
+    free(prefix);
+    }
+  else
+    icons = gavl_strdup("");
+    
+  bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
+  priv->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+    
+  bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
+    
+  free(uri);
+  free(icons);
+  
+  gavl_dictionary_free(&local_dev);
+
+  /* Get protocol info */
+  
+  arr = bg_plugin_registry_get_input_mimetypes();
+                
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if(i)
+      priv->protocol_info = gavl_strcat(priv->protocol_info, ",");
+
+    tmp_string = bg_sprintf("http-get:*:%s:*", gavl_string_array_get(arr, i));
+    priv->protocol_info = gavl_strcat(priv->protocol_info, tmp_string);
+    free(tmp_string);
+    }
+  return 1;
   }
+
+bg_frontend_plugin_t the_plugin =
+  {
+    .common =
+    {
+      BG_LOCALE,
+      .name =      "fe_renderer_upnp",
+      .long_name = TRS("Control gmerlin rendereres from Upnp clients"),
+      .description = TRS("Makes gmerlin controllable via Upnp"),
+      .type =     BG_PLUGIN_FRONTEND_RENDERER,
+      .flags =    0,
+      .create =   create_renderer_upnp,
+      .destroy =   destroy_renderer_upnp,
+      .priority =         1,
+    },
+    .update = ping_renderer_upnp,
+    .open = open_renderer_upnp,
+  };
+
+/* Include this into all plugin modules exactly once
+   to let the plugin loader obtain the API version */
+BG_GET_PLUGIN_API_VERSION;
+
 
 /* Device description */
 

@@ -566,6 +566,7 @@ void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl)
   xmlNodePtr child;
   const char * gavl_name;
   char * var;
+  int have_hash = 0;
   
   gavl_dictionary_t * m = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
   
@@ -641,6 +642,15 @@ void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl)
           tmp_string = bg_uri_to_string(bg_xml_node_get_text_content(child), -1);
           
           dict = gavl_metadata_add_src(m, GAVL_META_SRC, fields[2], tmp_string);
+
+          if(!have_hash)
+            {
+            char hash[GAVL_MD5_LENGTH];
+            gavl_md5_buffer_str(tmp_string, strlen(tmp_string), hash);
+            gavl_dictionary_set_string(m, GAVL_META_HASH, hash);
+            have_hash = 1;
+            }
+          
           free(tmp_string);
           }
         gavl_strbreak_free(fields);

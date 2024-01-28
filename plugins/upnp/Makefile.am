@@ -11,7 +11,11 @@ AM_CFLAGS = \
 
 plugin_LTLIBRARIES = \
 be_mdb_upnp.la  \
-fe_mdb_upnp.la
+fe_mdb_upnp.la  \
+fe_renderer_upnp.la
+
+fe_renderer_upnp_la_SOURCES = fe_renderer_upnp.c
+fe_renderer_upnp_la_LIBADD = @MODULE_LIBADD@
 
 fe_mdb_upnp_la_SOURCES = fe_mdb_upnp.c
 fe_mdb_upnp_la_LIBADD = @MODULE_LIBADD@

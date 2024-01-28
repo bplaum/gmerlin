@@ -19,8 +19,7 @@ const char * bg_upnp_event_context_server_get_value(const gavl_dictionary_t * di
 
 /* Send moderate events */
 
-int bg_upnp_event_context_server_update(gavl_dictionary_t * dict,
-                                          gavl_time_t current_time);
+int bg_upnp_event_context_server_update(gavl_dictionary_t * dict);
 
 /* Event context (client / control side) */
 

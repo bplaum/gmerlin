@@ -98,6 +98,8 @@ flag_names[] =
     { "Overlays",       BG_PLUGIN_HANDLES_OVERLAYS },
     { "GAVFIO",                  BG_PLUGIN_GAVF_IO            },
     { "Unsupported",    BG_PLUGIN_UNSUPPORTED     },
+    { "NeedsHTTP",      BG_PLUGIN_NEEDS_HTTP_SERVER     },
+    { "NeedsTerminal",  BG_PLUGIN_NEEDS_TERMINAL  },
     { NULL,    0                                  },
   };
 

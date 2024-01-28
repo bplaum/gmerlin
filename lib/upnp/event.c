@@ -380,7 +380,7 @@ static int get_timeout_seconds(const char * timeout, int * ret)
 
 static int add_subscription(gavl_dictionary_t * dict,
                             bg_http_connection_t * conn,
-                            const char * callback, const char * timeout, gavl_time_t current_time)
+                            const char * callback, const char * timeout)
   {
   const char * start, *end;
   uuid_t uuid;
@@ -392,7 +392,7 @@ static int add_subscription(gavl_dictionary_t * dict,
   gavl_array_t * arr;
   char uuid_str[37];
   gavl_dictionary_t * s;
-  
+  gavl_time_t current_time = gavl_time_get_monotonic();
   arr = server_get_subscriptions(dict);
 
   gavl_value_init(&val);
@@ -511,7 +511,7 @@ static int server_handle_http(bg_http_connection_t * conn, void * data)
       if(!strcmp(nt, "upnp:event"))
         {
         
-        add_subscription(dict, conn, callback, timeout, conn->current_time);
+        add_subscription(dict, conn, callback, timeout);
         return 1;
         }
       else
@@ -633,8 +633,7 @@ const char * bg_upnp_event_context_server_get_value(const gavl_dictionary_t * di
 
 /* Send moderate events */
 
-int bg_upnp_event_context_server_update(gavl_dictionary_t * dict,
-                                        gavl_time_t current_time)
+int bg_upnp_event_context_server_update(gavl_dictionary_t * dict)
 
 
   {
@@ -646,6 +645,8 @@ int bg_upnp_event_context_server_update(gavl_dictionary_t * dict,
   gavl_dictionary_t * es;
 
   gavl_time_t expire_time;
+
+  gavl_time_t current_time = gavl_time_get_monotonic();
   
   arr = server_get_subscriptions(dict);
   
@@ -674,6 +675,8 @@ int bg_upnp_event_context_server_update(gavl_dictionary_t * dict,
     {
     i = 0;
 
+    //    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Sending event");
+    
     //    fprintf(stderr, "Sending event: %s\n", event);
     
     while(i < arr->num_entries)

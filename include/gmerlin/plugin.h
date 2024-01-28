@@ -88,12 +88,15 @@
 #define BG_PLUGIN_TUNER            (1<<9)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
 #define BG_PLUGIN_FILTER_1        (1<<10)  //!< Plugin acts as a filter with one input
 #define BG_PLUGIN_EMBED_WINDOW    (1<<11)  //!< Plugin can embed it's window into another application
-// #define BG_PLUGIN_PP              (1<<14)  //!< Postprocessor
+
 #define BG_PLUGIN_CALLBACKS       (1<<15)  //!< Plugin can be opened from callbacks
 #define BG_PLUGIN_BROADCAST       (1<<16)  //!< Plugin can broadcasts (e.g. webstreams)
 #define BG_PLUGIN_DEVPARAM        (1<<17)  //!< Plugin has pluggable devices as parameters, which must be updated regurarly
 #define BG_PLUGIN_OV_STILL        (1<<18)  //!< OV plugin supports still images
 #define BG_PLUGIN_GAVF_IO         (1<<19)  //!< Plugin can read/write to/from a gavf I/O handle
+
+#define BG_PLUGIN_NEEDS_HTTP_SERVER (1<<20) //!< Plugin needs a global http server instance
+#define BG_PLUGIN_NEEDS_TERMINAL    (1<<21) //!< Plugin accesses the terminal (only one plugin can to this at once)
 
 #define BG_PLUGIN_HANDLES_OVERLAYS   (1<<23)  //!< Plugin compresses overlays
 
