@@ -23,14 +23,14 @@ typedef struct
   int display_time;
   int time_active;
   gavl_time_t total_time;
+
+  bg_control_t ctrl;
   
   } bg_player_frontend_console_t;
 
 #if 1
-static void print_time(bg_frontend_t * fe, gavl_time_t time)
+static void print_time(bg_player_frontend_console_t * priv, gavl_time_t time)
   {
-  bg_player_frontend_console_t * priv = fe->priv;
-  
   if(!priv->display_time)
     return;
   bg_print_time(stderr, time, priv->total_time);
@@ -68,7 +68,7 @@ static int handle_player_message_console(void * data,
               gavl_time_t t = GAVL_TIME_UNDEFINED;
               if(!gavl_value_get_long(&val, &t))
                 return 1;
-              print_time(fe, t);
+              print_time(priv, t);
               }
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
@@ -97,9 +97,6 @@ static int handle_player_message_console(void * data,
                   break;
                 case BG_PLAYER_STATUS_PAUSED:
                   break;
-                case BG_PLAYER_STATUS_QUIT:
-                  fe->flags |= BG_FRONTEND_FLAG_FINISHED;
-                  break;
                 }
               
               break;
@@ -116,13 +113,11 @@ static int handle_player_message_console(void * data,
               priv->total_time = GAVL_TIME_UNDEFINED;
               gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &priv->total_time);
               
-              //              fprintf(stderr, "Track:\n");
-              //              gavl_dictionary_dump(track, 2);
+              fprintf(stderr, "Track changed:\n");
+              gavl_dictionary_dump(m, 2);
+              fprintf(stderr, "\n");
               }
             else if(!strcmp(var, BG_PLAYER_STATE_MODE))          // int
-              {
-              }
-            else if(!strcmp(var, BG_PLAYER_STATE_MUTE))          // int
               {
               }
             else if(!strcmp(var, BG_PLAYER_STATE_AUDIO_STREAM_CURRENT))          // int
@@ -175,47 +170,64 @@ static int handle_player_message_console(void * data,
   return 1;
   }
 
-static int ping_player_console(bg_frontend_t * fe, gavl_time_t current_time)
+static int ping_renderer_console(void * data)
   {
   int ret = 0;
-  //  bg_player_frontend_console_t * p = fe->priv;
+  bg_player_frontend_console_t * p = data;
 
   /* Handle player message */
-  bg_msg_sink_iteration(fe->ctrl.evt_sink);
-  ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
+  bg_msg_sink_iteration(p->ctrl.evt_sink);
+  ret += bg_msg_sink_get_num(p->ctrl.evt_sink);
   
   return ret;
   }
 
-static void cleanup_player_console(void * priv)
+static void destroy_renderer_console(void * priv)
   {
   bg_player_frontend_console_t * p = priv;
+  bg_control_cleanup(&p->ctrl);
   free(p);
   }
 
 
-bg_frontend_t *
-bg_frontend_create_player_console(bg_controllable_t * ctrl, int display_time)
+static int open_renderer_console(void * data,
+                                 bg_controllable_t * ctrl)
+  {
+  bg_player_frontend_console_t * priv = data;
+  
+  bg_control_init(&priv->ctrl, bg_msg_sink_create(handle_player_message_console, priv, 0));
+  bg_controllable_connect(ctrl, &priv->ctrl);
+
+  return 1;
+
+  }
+
+static void * create_renderer_console()
   {
   bg_player_frontend_console_t * priv;
-  
-  bg_frontend_t * ret = bg_frontend_create(ctrl);
-
-  ret->ping_func    =    ping_player_console;
-  ret->cleanup_func = cleanup_player_console;
-  ret->handle_message = handle_player_message_console;
-  
   priv = calloc(1, sizeof(*priv));
-
-  priv->display_time = display_time;
-  
-  ret->priv = priv;
-
-  /* Initialize state variables */
-  
-  bg_frontend_init(ret);
-
-  bg_controllable_connect(ctrl, &ret->ctrl);
-  
-  return ret;
+  priv->display_time = 1;
+  return priv;
   }
+
+bg_frontend_plugin_t the_plugin =
+  {
+    .common =
+    {
+      BG_LOCALE,
+      .name =      "fe_renderer_console",
+      .long_name = TRS("Console frontend"),
+      .description = TRS("Console frontend for commandline applications"),
+      .type =     BG_PLUGIN_FRONTEND_RENDERER,
+      .flags =    BG_PLUGIN_NEEDS_TERMINAL,
+      .create =   create_renderer_console,
+      .destroy =   destroy_renderer_console,
+      .priority =         1,
+    },
+    .update = ping_renderer_console,
+    .open = open_renderer_console,
+  };
+
+/* Include this into all plugin modules exactly once
+   to let the plugin loader obtain the API version */
+BG_GET_PLUGIN_API_VERSION;

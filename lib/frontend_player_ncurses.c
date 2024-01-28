@@ -18,7 +18,6 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/mdb.h>
 
-#ifdef HAVE_NCURSES
 #include <bgncurses.h>
 
 #include <frontend_priv.h>
@@ -826,12 +825,3 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   return ret;
   }
 
-
-#else
-bg_frontend_t *
-bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
-  {
-  fprintf(stderr, "Ncurses library not available. Recompile with ncurses support\n");
-  return NULL;
-  }
-#endif
