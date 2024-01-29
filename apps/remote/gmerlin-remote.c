@@ -67,12 +67,20 @@ static int local_port = 0;
 
 
 bg_controllable_t * backend_ctrl = NULL;
+bg_plugin_handle_t * backend = NULL;
 
 bg_http_server_t * srv = NULL;
 
 static char * label = NULL;
 
 static gavl_array_t fe_arr;
+
+static void flush_command()
+  {
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 1");
+  while(bg_backend_handle_ping(backend) > 0)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 2");
+  }
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
   {
@@ -89,6 +97,7 @@ static void cmd_play(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_PLAY);
   
   bg_msg_sink_put(backend_ctrl->cmd_sink);
+  flush_command();
   }
 
 static void cmd_next(void * data, int * argc, char *** _argv, int arg)
@@ -99,7 +108,7 @@ static void cmd_next(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_NEXT);
   
   bg_msg_sink_put(backend_ctrl->cmd_sink);
-
+  flush_command();
   }
 
 static void cmd_prev(void * data, int * argc, char *** _argv, int arg)
@@ -111,6 +120,7 @@ static void cmd_prev(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_PREV);
   
   bg_msg_sink_put(backend_ctrl->cmd_sink);
+  flush_command();
   }
 
 static void cmd_stop(void * data, int * argc, char *** _argv, int arg)
@@ -121,6 +131,7 @@ static void cmd_stop(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_set_arg_int(msg, 0, BG_PLAYER_ACCEL_STOP);
 
   bg_msg_sink_put(backend_ctrl->cmd_sink);
+  flush_command();
   }
 
 static void cmd_toggle_mute(void * data, int * argc, char *** _argv, int arg)
@@ -134,6 +145,7 @@ static void cmd_pause(void * data, int * argc, char *** _argv, int arg)
   gavl_msg_t * msg = bg_msg_sink_get(backend_ctrl->cmd_sink);
   bg_player_pause_m(msg);
   bg_msg_sink_put(backend_ctrl->cmd_sink);
+  flush_command();
   }
 
 static void cmd_addplay(void * data, int * argc, char *** _argv, int arg)
@@ -150,6 +162,7 @@ static void cmd_addplay(void * data, int * argc, char *** _argv, int arg)
 
   bg_player_load_uri(backend_ctrl->cmd_sink, argv[arg], 1);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_add(void * data, int * argc, char *** _argv, int arg)
@@ -163,6 +176,7 @@ static void cmd_add(void * data, int * argc, char *** _argv, int arg)
 
   bg_player_load_uri(backend_ctrl->cmd_sink, argv[arg], 0);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_volume(void * data, int * argc, char *** _argv, int arg)
@@ -180,6 +194,7 @@ static void cmd_volume(void * data, int * argc, char *** _argv, int arg)
   bg_player_set_volume_m(msg, vol);
   bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_volume_rel(void * data, int * argc, char *** _argv, int arg)
@@ -198,6 +213,7 @@ static void cmd_volume_rel(void * data, int * argc, char *** _argv, int arg)
   bg_player_set_volume_rel_m(msg, vol);
   bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_seek_rel(void * data, int * argc, char *** _argv, int arg)
@@ -217,6 +233,7 @@ static void cmd_seek_rel(void * data, int * argc, char *** _argv, int arg)
   bg_player_seek_rel_m(msg, gavl_seconds_to_time(diff));
   bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_seek_perc(void * data, int * argc, char *** _argv, int arg)
@@ -235,6 +252,7 @@ static void cmd_seek_perc(void * data, int * argc, char *** _argv, int arg)
   bg_player_seek_perc_m(msg, perc / 100.0);
   bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 static void cmd_chapter(void * data, int * argc, char *** _argv, int arg)
@@ -260,6 +278,7 @@ static void cmd_chapter(void * data, int * argc, char *** _argv, int arg)
     }
   bg_msg_sink_put(backend_ctrl->cmd_sink);
   bg_cmdline_remove_arg(argc, _argv, arg);
+  flush_command();
   }
 
 bg_cmdline_arg_t commands[] =
@@ -485,7 +504,6 @@ int main(int argc, char ** argv)
   bg_frontend_t ** frontends = NULL;
   int num_frontends = 0;
   
-  bg_plugin_handle_t * backend;
   
   //  bg_websocket_connection_t * remote;
   
