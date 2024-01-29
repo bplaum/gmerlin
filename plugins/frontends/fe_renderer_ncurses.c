@@ -13,7 +13,7 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 
-#define LOG_DOMAIN "player_ncurses"
+#define LOG_DOMAIN "renderer_ncurses"
 
 #include <gmerlin/utils.h>
 #include <gmerlin/mdb.h>
@@ -56,20 +56,22 @@ typedef struct
   int current;
   
   int scroll_offset;
+
+  bg_control_t ctrl;
+  bg_controllable_t * controllable;
   
   } bg_player_frontend_ncurses_t;
 
-static void set_selected(bg_frontend_t * fe, int new_selected);
-static void set_current(bg_frontend_t * fe, int new_current);
+static void set_selected(bg_player_frontend_ncurses_t * p, int new_selected);
+static void set_current(bg_player_frontend_ncurses_t * p, int new_current);
 static void fill_space(WINDOW * win, int line, int col_start, int col_end);
 
-static void update_current_track(bg_frontend_t * fe)
+static void update_current_track(bg_player_frontend_ncurses_t * p)
   {
   const gavl_dictionary_t * m;
   const char * var;
   int new_current;
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
+  
   m = gavl_track_get_metadata(&p->current_track);
   
   /* Print label */
@@ -101,20 +103,18 @@ static void update_current_track(bg_frontend_t * fe)
 
     if((var = gavl_track_get_id(&p->current_track)) &&
        ((new_current = gavl_get_track_idx_by_id(&p->tracks, var)) >= 0))
-      set_current(fe, new_current);
+      set_current(p, new_current);
     
     }
     
   }
 
-static void draw_seek_slider(bg_frontend_t * fe)
+static void draw_seek_slider(bg_player_frontend_ncurses_t * p)
   {
   int i;
   int pos;
   int len;
   
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
   len = p->win_w - 2;
 
   pos = (int)(p->perc * len + 0.5);
@@ -133,11 +133,10 @@ static void draw_seek_slider(bg_frontend_t * fe)
   
   }
 
-static void draw_status(bg_frontend_t * fe)
+static void draw_status(bg_player_frontend_ncurses_t * p)
   {
   const char * status_str = NULL;
 
-  bg_player_frontend_ncurses_t * p = fe->priv;
   switch(p->status)
     {
     case BG_PLAYER_STATUS_STOPPED:
@@ -172,15 +171,13 @@ static void fill_space(WINDOW * win, int line, int col_start, int col_end)
     mvwprintw(win, line, i, " ");
   }
 
-static void draw_track(bg_frontend_t * fe, int idx, int selected, int current)
+static void draw_track(bg_player_frontend_ncurses_t * p, int idx, int selected, int current)
   {
   gavl_time_t duration = GAVL_TIME_UNDEFINED;
   const char * var;
   const gavl_dictionary_t * m;
   char str[GAVL_TIME_STRING_LEN];
   const gavl_dictionary_t * track;
-
-  bg_player_frontend_ncurses_t * p = fe->priv;
 
   if(!(track = gavl_get_track(&p->tracks, idx)))
     {
@@ -218,10 +215,9 @@ static void draw_track(bg_frontend_t * fe, int idx, int selected, int current)
     wattroff(p->tracks_win, A_BOLD);
   }
 
-static void draw_tracks(bg_frontend_t * fe)
+static void draw_tracks(bg_player_frontend_ncurses_t * p)
   {
   int i;
-  bg_player_frontend_ncurses_t * p = fe->priv;
   int num_tracks = gavl_get_num_tracks(&p->tracks);
   
   for(i = p->scroll_offset; i < p->scroll_offset + p->tracks_win_rect.h; i++)
@@ -230,7 +226,7 @@ static void draw_tracks(bg_frontend_t * fe)
       break;
     
     /* Print label */
-    draw_track(fe, i, (i == p->selected), (i == p->current));
+    draw_track(p, i, (i == p->selected), (i == p->current));
 
     // fprintf(stderr, "Draw track: %d %d\n", i, i - p->scroll_offset);
     
@@ -244,10 +240,8 @@ static void draw_tracks(bg_frontend_t * fe)
   wrefresh(p->tracks_win);
   }
 
-static void redraw(bg_frontend_t * fe)
+static void redraw(bg_player_frontend_ncurses_t * p)
   {
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
   werase(stdscr);
   wrefresh(stdscr);
 
@@ -264,12 +258,12 @@ static void redraw(bg_frontend_t * fe)
   
   werase(p->player_win);
   box(p->player_win, 0, 0); 
-  update_current_track(fe);
+  update_current_track(p);
 
   wrefresh(p->player_win);
 
-  draw_seek_slider(fe);
-  draw_status(fe);
+  draw_seek_slider(p);
+  draw_status(p);
 
   /* Tracks win */
   werase(p->tracks_win);
@@ -277,17 +271,17 @@ static void redraw(bg_frontend_t * fe)
   wrefresh(p->tracks_win);
   
   /* Draw tracks */
-  draw_tracks(fe);
+  draw_tracks(p);
   }
 
-static int ping_player_ncurses(bg_frontend_t * fe, gavl_time_t current_time)
+static int ping_renderer_ncurses(void * data)
   {
   int ret = 0;
-  bg_player_frontend_ncurses_t * p = fe->priv;
+  bg_player_frontend_ncurses_t * p = data;
 
   /* Handle player message */
-  bg_msg_sink_iteration(fe->ctrl.evt_sink);
-  ret += bg_msg_sink_get_num(fe->ctrl.evt_sink);
+  bg_msg_sink_iteration(p->ctrl.evt_sink);
+  ret += bg_msg_sink_get_num(p->ctrl.evt_sink);
 
   p->num_ncurses_msg = 0;
 
@@ -295,16 +289,16 @@ static int ping_player_ncurses(bg_frontend_t * fe, gavl_time_t current_time)
   
   ret += p->num_ncurses_msg;
   
-    
   return ret;
   }
 
-static void cleanup_player_ncurses(void * priv)
+static void destroy_renderer_ncurses(void * priv)
   {
   bg_player_frontend_ncurses_t * p = priv;
 
-  bg_ncurses_cleanup();
-
+  if(p->controllable)
+    bg_ncurses_cleanup();
+  
   if(p->ncurses_sink)
     bg_msg_sink_destroy(p->ncurses_sink);
   
@@ -316,8 +310,7 @@ static void cleanup_player_ncurses(void * priv)
 
 static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
   {
-  bg_frontend_t * fe = priv;
-  bg_player_frontend_ncurses_t * p = fe->priv;
+  bg_player_frontend_ncurses_t * p = priv;
   
   switch(msg->NS)
     {
@@ -358,7 +351,7 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
             if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))          // float
               {
               if(gavl_value_get_float(&val, &p->perc) && (p->perc >= 0.0))
-                draw_seek_slider(fe);
+                draw_seek_slider(p);
               }
             else if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
@@ -368,13 +361,7 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
               if(!gavl_value_get_int(&val, &p->status))
                 return 1;
 
-              if(p->status == BG_PLAYER_STATUS_QUIT)
-                {
-                fe->flags |= BG_FRONTEND_FLAG_FINISHED;
-                return 1;
-                }
-              
-              draw_status(fe);
+              draw_status(p);
 
               
               
@@ -390,7 +377,7 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
               gavl_dictionary_reset(&p->current_track);
               gavl_dictionary_copy(&p->current_track, track);
               
-              update_current_track(fe);
+              update_current_track(p);
               wrefresh(p->player_win);
               
               // fprintf(stderr, "Track:\n");
@@ -472,13 +459,13 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
           //          p->selected = -1; // Otherwise set_selected() returns early
           p->scroll_offset = 0;
           
-          draw_tracks(fe);
+          draw_tracks(p);
 
           if((id = gavl_track_get_id(&p->current_track)) &&
              ((current = gavl_get_track_idx_by_id(&p->tracks, id)) >= 0))
-            set_current(fe, current);
+            set_current(p, current);
           
-          set_selected(fe, 0);
+          set_selected(p, 0);
           }
           break;
         case BG_MSG_DB_OBJECT_CHANGED:
@@ -492,12 +479,10 @@ static int handle_player_message_ncurses(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-static int scroll_to(bg_frontend_t * fe, int position)
+static int scroll_to(bg_player_frontend_ncurses_t * p, int position)
   {
   int delta = 0;
   
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
   if(position - p->scroll_offset > p->tracks_win_rect.h - 1)
     {
     delta = position - p->scroll_offset - p->tracks_win_rect.h + 1;
@@ -518,22 +503,20 @@ static int scroll_to(bg_frontend_t * fe, int position)
   
   // wscrl(p->tracks_win, delta);
   p->scroll_offset += delta;
-  draw_tracks(fe);
+  draw_tracks(p);
   return 1;
   }
 
-static void set_selected(bg_frontend_t * fe, int new_selected)
+static void set_selected(bg_player_frontend_ncurses_t * p, int new_selected)
   {
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
   if(p->selected == new_selected)
     return;
 
-  scroll_to(fe, new_selected);
+  scroll_to(p, new_selected);
   
-  draw_track(fe, p->selected, 0, (p->current == p->selected));
+  draw_track(p, p->selected, 0, (p->current == p->selected));
   p->selected = new_selected;
-  draw_track(fe, p->selected, 1, (p->current == p->selected));
+  draw_track(p, p->selected, 1, (p->current == p->selected));
   
   mvwprintw(p->tracks_win, p->tracks_frame_rect.h-1, 1, "[ %03d / %03d ]",
             p->selected + 1, gavl_get_num_tracks(&p->tracks));
@@ -541,17 +524,15 @@ static void set_selected(bg_frontend_t * fe, int new_selected)
   wrefresh(p->tracks_win);
   }
 
-static void set_current(bg_frontend_t * fe, int new_current)
+static void set_current(bg_player_frontend_ncurses_t * p, int new_current)
   {
-  bg_player_frontend_ncurses_t * p = fe->priv;
-
   if(p->current == new_current)
     return;
 
-  draw_track(fe, p->current, (p->current == p->selected), 0);
+  draw_track(p, p->current, (p->current == p->selected), 0);
 
   p->current = new_current;
-  draw_track(fe, p->current, (p->current == p->selected), 1);
+  draw_track(p, p->current, (p->current == p->selected), 1);
   wrefresh(p->tracks_win);
 
   mvwprintw(p->player_win, 2, p->player_win_rect.w-18, "[ %03d / %03d ]",
@@ -608,27 +589,25 @@ static float seek_clicked(bg_player_frontend_ncurses_t * p, int x, int y)
 
 
 
-static void play_track(bg_frontend_t * fe, int idx)
+static void play_track(bg_player_frontend_ncurses_t * p, int idx)
   {
   gavl_msg_t * msg;
-  bg_player_frontend_ncurses_t * p = fe->priv;
   const gavl_dictionary_t * track = gavl_get_track(&p->tracks, idx);
               
-  msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
+  msg = bg_msg_sink_get(p->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, gavl_track_get_id(track)); // ID
-  bg_msg_sink_put(fe->ctrl.cmd_sink);
+  bg_msg_sink_put(p->ctrl.cmd_sink);
 
-  msg = bg_msg_sink_get(fe->ctrl.cmd_sink);
+  msg = bg_msg_sink_get(p->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
-  bg_msg_sink_put(fe->ctrl.cmd_sink);
+  bg_msg_sink_put(p->ctrl.cmd_sink);
   
   }
 
 static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
   {
-  bg_frontend_t * fe = priv;
-  bg_player_frontend_ncurses_t * p = fe->priv;
+  bg_player_frontend_ncurses_t * p = priv;
 
   p->num_ncurses_msg++;
   
@@ -650,7 +629,7 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
           if(bg_accelerator_array_has_accel(bg_player_accels,
                                             key, mask, &accel_id))
             {
-            bg_player_accel_pressed(fe->controllable, accel_id);
+            bg_player_accel_pressed(p->controllable, accel_id);
             return 1;
             }
           switch(key)
@@ -660,7 +639,7 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
               int new_selected = p->selected - 1;
 
               if(new_selected >= 0)
-                set_selected(fe, new_selected);
+                set_selected(p, new_selected);
               }
               break;
             case GAVL_KEY_DOWN:
@@ -669,7 +648,7 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
               int num_tracks = gavl_get_num_tracks(&p->tracks);
               
               if(new_selected < num_tracks)
-                set_selected(fe, new_selected);
+                set_selected(p, new_selected);
               }
               break;
             case GAVL_KEY_PAGE_UP:
@@ -677,7 +656,7 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
               int new_selected = p->selected - (p->tracks_win_rect.h-1);
               if(new_selected < 0)
                 new_selected = 0;
-              set_selected(fe, new_selected);
+              set_selected(p, new_selected);
               }
               break;
             case GAVL_KEY_PAGE_DOWN:
@@ -688,17 +667,17 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
               if(new_selected >= num_tracks)
                 new_selected = num_tracks - 1;
 
-              set_selected(fe, new_selected);
+              set_selected(p, new_selected);
               }
               break;
             case GAVL_KEY_HOME:
-              set_selected(fe, 0);
+              set_selected(p, 0);
               break;
             case GAVL_KEY_END:
-              set_selected(fe, gavl_get_num_tracks(&p->tracks) -1);
+              set_selected(p, gavl_get_num_tracks(&p->tracks) -1);
               break;
             case GAVL_KEY_RETURN:
-              play_track(fe, p->selected);
+              play_track(p, p->selected);
               break;
             case GAVL_KEY_q:
               /* Quit (send artifical sigint) */
@@ -710,7 +689,7 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
           {
           p->win_w = gavl_msg_get_arg_int(msg, 2);
           p->win_h = gavl_msg_get_arg_int(msg, 3);
-          redraw(fe);
+          redraw(p);
           }
           break;
         case GAVL_MSG_GUI_BUTTON_PRESS:
@@ -729,13 +708,13 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
              !mask)
             {
             //            fprintf(stderr, "Clicked track %d\n", idx);
-            set_selected(fe, idx);
+            set_selected(p, idx);
             }
 
           else if((perc = seek_clicked(p, x, y)) && 
                   (button == 1) && !mask)
             {
-            bg_player_seek_perc(fe->ctrl.cmd_sink, perc);
+            bg_player_seek_perc(p->ctrl.cmd_sink, perc);
             }
           }
           break;
@@ -754,8 +733,8 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
              !mask)
             {
             //            fprintf(stderr, "Doubleclicked track %d\n", idx);
-            set_selected(fe, idx);
-            play_track(fe, p->selected);
+            set_selected(p, idx);
+            play_track(p, p->selected);
             }
           
           }
@@ -768,26 +747,23 @@ static int handle_ncurses_message(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
-bg_frontend_t *
-bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
+static void *
+create_renderer_ncurses(void)
   {
   bg_player_frontend_ncurses_t * priv;
-  bg_frontend_t * ret;
+  priv = calloc(1, sizeof(*priv));
+  return priv;
+  }
+
+static int
+open_renderer_ncurses(void * data, bg_controllable_t * ctrl)
+  {
   gavl_msg_t * msg;
+  bg_player_frontend_ncurses_t * priv = data;
   
   if(!bg_ncurses_init())
-    return NULL;
+    return 0;
   
-  ret = bg_frontend_create(ctrl);
-  
-  ret->ping_func    =    ping_player_ncurses;
-  ret->cleanup_func = cleanup_player_ncurses;
-  ret->handle_message = handle_player_message_ncurses;
-  
-  priv = calloc(1, sizeof(*priv));
-  
-  ret->priv = priv;
-
   priv->player_win_rect.x = 0;
   priv->player_win_rect.y = 0;
   
@@ -807,21 +783,42 @@ bg_frontend_create_player_ncurses(bg_controllable_t * ctrl)
   
   wbkgdset(priv->tracks_win, COLOR_PAIR(1));
   
-  
-  priv->ncurses_sink = bg_msg_sink_create(handle_ncurses_message, ret, 1);
-  
-  bg_frontend_init(ret);
+  priv->ncurses_sink = bg_msg_sink_create(handle_ncurses_message, priv, 1);
 
-  bg_controllable_connect(ctrl, &ret->ctrl);
-
+  bg_control_init(&priv->ctrl, bg_msg_sink_create(handle_player_message_ncurses, priv, 0));
+    
+  bg_controllable_connect(ctrl, &priv->ctrl);
+  priv->controllable = ctrl;
+  
   /* Get track list */
-  msg = bg_msg_sink_get(ret->ctrl.cmd_sink);
+  msg = bg_msg_sink_get(priv->ctrl.cmd_sink);
 
   bg_mdb_set_browse_children_request(msg, BG_PLAYQUEUE_ID, 0, -1, 0);
   //  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
   
-  bg_msg_sink_put(ret->ctrl.cmd_sink);
+  bg_msg_sink_put(priv->ctrl.cmd_sink);
   
-  return ret;
+  return 1;
   }
 
+bg_frontend_plugin_t the_plugin =
+  {
+    .common =
+    {
+      BG_LOCALE,
+      .name =      "fe_renderer_ncurses",
+      .long_name = TRS("ncurses frontend"),
+      .description = TRS("ncurses based player fronntend"),
+      .type =     BG_PLUGIN_FRONTEND_RENDERER,
+      .flags =    BG_PLUGIN_NEEDS_TERMINAL,
+      .create =   create_renderer_ncurses,
+      .destroy =   destroy_renderer_ncurses,
+      .priority =  1,
+    },
+    .update = ping_renderer_ncurses,
+    .open = open_renderer_ncurses,
+  };
+
+/* Include this into all plugin modules exactly once
+   to let the plugin loader obtain the API version */
+BG_GET_PLUGIN_API_VERSION;
