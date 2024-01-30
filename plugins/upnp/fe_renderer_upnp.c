@@ -28,8 +28,6 @@
 
 #include <gmerlin/utils.h>
 
-#include <frontend_priv.h>
-
 /* https://stackoverflow.com/questions/5459868/c-preprocessor-concatenate-int-to-string */
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)

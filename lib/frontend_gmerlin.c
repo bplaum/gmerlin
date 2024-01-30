@@ -13,8 +13,6 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "frontend_gmerlin"
 
-#include <frontend_priv.h>
-
 typedef struct
   {
   bg_websocket_context_t * ws;

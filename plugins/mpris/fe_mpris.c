@@ -41,10 +41,6 @@
 
 #include <gavl/metatags.h>
 
-
-#include <frontend_priv.h>
-// #include <backend_priv.h>
-
 #define MSG_ID_MPRIS2 1
 
 #define OBJ_PATH "/org/mpris/MediaPlayer2"
@@ -279,8 +275,6 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       {
       prop_name = gavl_msg_get_arg_string_c(msg, 1);
 
-      //      fprintf(stderr, "Get property %s %s\n", prop_iface, prop_name);
-      
       if(!strcmp(prop_iface, "org.mpris.MediaPlayer2"))
         bg_dbus_property_get(root_properties, &p->root_prop, prop_name, msg, p->conn);
       else if(!strcmp(prop_iface, "org.mpris.MediaPlayer2.TrackList"))
@@ -982,29 +976,6 @@ static void destroy_mpris2(void * data)
   free(priv);
   }
 
-#if 0
-bg_frontend_t *
-bg_frontend_create_player_mpris2(bg_controllable_t * ctrl,
-                                 const char * bus_name,
-                                 const char * desktop_file)
-  {
-  bg_frontend_t * ret = bg_frontend_create(ctrl);
-
-  if(!create_player_mpris2(ret, bus_name, desktop_file))
-    {
-    bg_frontend_destroy(ret);
-    return NULL;
-    }
-  
-  ret->ping_func    =    ping_player_mpris2;
-  ret->cleanup_func = cleanup_player_mpris2;
-  
-  bg_frontend_init(ret);
-  bg_controllable_connect(ctrl, &ret->ctrl);
-  
-  return ret;
-  }
-#endif
 
 static void * create_mpris2()
   {

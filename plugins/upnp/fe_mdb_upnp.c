@@ -33,10 +33,6 @@
 
 #include <gmerlin/mdb.h>
 
-
-#include <frontend_priv.h>
-
-
 /* Emulate a media server */
 
 /* upnp frontend for the media server */

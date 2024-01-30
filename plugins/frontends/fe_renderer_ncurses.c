@@ -20,8 +20,6 @@
 
 #include <bgncurses.h>
 
-#include <frontend_priv.h>
-
 #define WIDGET_PLAYER  0
 #define WIDGET_BROWSER 1
 

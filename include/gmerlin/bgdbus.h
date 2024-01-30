@@ -116,10 +116,6 @@ char * bg_dbus_get_name_owner(bg_dbus_connection_t * conn,
                               const char * name);
 
 
-/* Mpris2 frontend */
-bg_frontend_t *
-bg_frontend_create_player_mpris2(bg_controllable_t * ctrl);
-
 
 typedef struct
   {

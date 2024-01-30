@@ -12,8 +12,6 @@
 
 #include <gmerlin/bggavl.h>
 
-#include <frontend_priv.h>
-
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "consoleplayer"

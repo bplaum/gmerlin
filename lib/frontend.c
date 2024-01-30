@@ -7,12 +7,16 @@
 #define LOG_DOMAIN "frontend"
 
 #include <gmerlin/frontend.h>
-#include <frontend_priv.h>
 
 #include <gavl/log.h>
 
+struct bg_frontend_s
+  {
+  bg_plugin_handle_t * handle;
 
-bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int type_mask, const char * plugin_name)
+  };
+
+static bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int type_mask, const char * plugin_name)
   {
   char * real_name = NULL;
   bg_frontend_plugin_t * plugin;
@@ -79,10 +83,6 @@ int bg_frontend_ping(bg_frontend_t * f)
   return ret;
   }
 
-int bg_frontend_finished(bg_frontend_t * f)
-  {
-  return !!(f->flags & BG_FRONTEND_FLAG_FINISHED);
-  }
 
 /* Array of frontends */
 

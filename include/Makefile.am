@@ -14,7 +14,6 @@ bgladspa.h \
 bgsqlite.h \
 float_cast.h \
 frei0r.h \
-frontend_priv.h \
 gavfenc.h \
 ladspa.h \
 language_table.h \
