@@ -14,7 +14,6 @@
 #include <gmerlin/parameter.h>
 #include <gmerlin/upnp/soap.h>
 #include <gmerlin/upnp/upnputils.h>
-#include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
 #include <gmerlin/resourcemanager.h>

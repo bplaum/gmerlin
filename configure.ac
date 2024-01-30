@@ -630,26 +630,6 @@ AM_CONDITIONAL(HAVE_LIBCDDB, test x$have_cddb = xtrue)
 AC_SUBST(LIBCDDB_REQUIRED)
 
 
-dnl
-dnl ESounD
-dnl
-
-ESD_REQUIRED="0.2.19"
-have_esd=false
-AC_ARG_ENABLE(esd,
-              AC_HELP_STRING(--disable-esd, [Disable EsounD (default: autodetect)]),
-              [case "${enableval}" in
-                 yes) test_esd=true ;;
-                 no) test_esd=false ;;
-               esac],
-	       test_esd=true)
-
-if test x$test_esd = xtrue; then
-AM_PATH_ESD($ESD_REQUIRED, have_esd=true, have_esd=false)
-fi
-
-AM_CONDITIONAL(HAVE_ESD,           test x$have_esd = xtrue)
-AC_SUBST(ESD_REQUIRED)
 
 dnl
 dnl ALSA
@@ -779,19 +759,6 @@ AC_ARG_ENABLE(thumbnailer,
 
 AM_CONDITIONAL(HAVE_THUMBNAILER, test x$have_thumbnailer = xtrue)
 
-dnl
-dnl Toys
-dnl
-
-AC_ARG_ENABLE(toys,
-              AC_HELP_STRING(--enable-toys, [Enable some non multimedia toys (default: disabled)]),
-              [case "${enableval}" in
-                 yes) have_toys=true ;;
-                 no) have_toys=false ;;
-               esac],
-	       have_toys=false)
-
-AM_CONDITIONAL(HAVE_TOYS, test x$have_toys = xtrue)
 
 dnl
 dnl CFLAGS
@@ -929,34 +896,12 @@ fi
 echo
 echo "=== Plugins: ======================================"
 
-echo -n "EsounD:              "
-if test "x$have_esd" = "xtrue"; then
-echo "Yes (CFLAGS=$ESD_CFLAGS LIBS=$ESD_LIBS)"
-else
-if test "x$test_esd" = "xtrue"; then
-echo "Missing (Go to http://www.tux.org/~ricdude/EsounD.html)"
-else
-echo "Disabled"
-fi
-fi
-
 echo -n "Alsa:                "
 if test "x$have_alsa" = "xtrue"; then
 echo "Yes (CFLAGS=$ALSA_CFLAGS LIBS=$ALSA_LIBS)"
 else
 if test "x$test_alsa" = "xtrue"; then
 echo "Missing (Go to http://www.alsa-project.org/)"
-else
-echo "Disabled"
-fi
-fi
-
-echo -n "Jack:                "
-if test "x$have_jack" = "xtrue"; then
-echo "Yes (CFLAGS=$JACK_CFLAGS LIBS=$JACK_LIBS)"
-else
-if test "x$test_jack" = "xtrue"; then
-echo "Missing (Go to http://jackit.sourceforge.net/)"
 else
 echo "Disabled"
 fi
@@ -1038,7 +983,6 @@ else
 echo "Disabled"
 fi
 fi
-
 
 echo -n "X11:                 "
 if test "x$have_x" = "xtrue"; then
@@ -1174,12 +1118,6 @@ else
 echo "Disabled"
 fi
 
-echo -n "Additional toys:     "
-if test "x$have_toys" = "xtrue"; then
-echo "Enabled"
-else
-echo "Disabled"
-fi
 
 echo
 echo "If you installed a library but it was not detected, check the file INSTALL"

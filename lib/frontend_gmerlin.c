@@ -8,8 +8,6 @@
 #include <gmerlin/application.h>
 #include <gmerlin/resourcemanager.h>
 
-#include <gmerlin/upnp/ssdp.h>
-
 #include <gavl/log.h>
 #define LOG_DOMAIN "frontend_gmerlin"
 

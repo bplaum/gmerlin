@@ -23,18 +23,6 @@ else
 v4l2_subdirs =
 endif
 
-# if HAVE_V4L
-# v4l_subdirs = v4l
-# else
-# v4l_subdirs =
-# endif
-
-if HAVE_ESD
-esd_subdirs = esd
-else
-esd_subdirs =
-endif
-
 if HAVE_LIBJPEG
 jpeg_subdirs = jpeg
 else

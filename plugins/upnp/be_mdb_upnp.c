@@ -10,6 +10,8 @@
 
 #include <gmerlin/bgmsg.h>
 #include <gmerlin/mdb.h>
+#include <gmerlin/upnp/upnputils.h>
+
 #include <gmerlin/upnp/soap.h>
 #include <gmerlin/upnp/devicedesc.h>
 #include <gmerlin/upnp/didl.h>

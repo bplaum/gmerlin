@@ -40,7 +40,6 @@
 
 #define LOG_DOMAIN "backend"
 
-#include <backend_priv.h>
 
 bg_plugin_handle_t *
 bg_backend_handle_create(const gavl_dictionary_t * dev)

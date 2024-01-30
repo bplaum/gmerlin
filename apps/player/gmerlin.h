@@ -37,8 +37,6 @@
 
 #include <gmerlin/cfg_dialog.h>
 
-#include <gmerlin/upnp/ssdp.h>
-
 #ifdef HAVE_DBUS
 #include <gmerlin/bgdbus.h>
 #endif

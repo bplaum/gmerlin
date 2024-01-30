@@ -40,8 +40,6 @@
 #define BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER "gmerlin-renderer"
 #define BG_BACKEND_URI_SCHEME_GMERLIN_MDB      "gmerlin-mdb"
 
-#define BG_BACKEND_URI_SCHEME_UPNP_RENDERER "upnp-renderer"
-#define BG_BACKEND_URI_SCHEME_UPNP_SERVER   "upnp-server"
 
 /* */
 

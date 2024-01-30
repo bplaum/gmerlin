@@ -3,6 +3,10 @@
 
 #include <gmerlin/httpserver.h>
 
+#define BG_BACKEND_URI_SCHEME_UPNP_RENDERER "upnp-renderer"
+#define BG_BACKEND_URI_SCHEME_UPNP_SERVER   "upnp-server"
+
+
 char * bg_upnp_id_from_upnp(const char * id);
 char * bg_upnp_id_to_upnp(const char * id);
 char * bg_upnp_parent_id_to_upnp(const char * id);

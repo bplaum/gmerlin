@@ -19,7 +19,6 @@
 
 #include <gmerlin/upnp/soap.h>
 #include <gmerlin/upnp/upnputils.h>
-#include <gmerlin/upnp/ssdp.h>
 #include <gmerlin/upnp/event.h>
 
 #include <gmerlin/upnp/didl.h>
