@@ -5,7 +5,6 @@ vars.js \
 gui.js \
 guitest.js \
 app.js \
-html5player.js \
 utils.js \
 websocket.js \
 widgets.js

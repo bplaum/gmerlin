@@ -210,6 +210,18 @@ function next_visualization()
   player.handle_command(msg);
   }
 
+function play_by_id(obj)
+  {
+  var msg;
+
+  msg = msg_create(BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
+  msg_set_arg_string(msg, 0, obj_make_playqueue_id(obj));
+  player.handle_command(msg);
+
+  msg = msg_create(BG_PLAYER_CMD_PLAY, BG_MSG_NS_PLAYER);
+  player.handle_command(msg);
+  }
+
 function playqueue_add_entry(obj, replace, play)
   {
   var msg;
@@ -234,21 +246,12 @@ function playqueue_add_entry(obj, replace, play)
     player.handle_command(msg);
 
     if(play)
-      {
-      msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-      msg_set_arg_string(msg, 0, obj_make_playqueue_id(obj));
-      player.handle_command(msg);
-      }
-
+      play_by_id(obj);
     }
   else
     {
     if(play)
-      {
-      msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-      msg_set_arg_string(msg, 0, obj_get_id(obj));
-      player.handle_command(msg);
-      }
+      play_by_id(obj);
     }
     
   }
@@ -3407,9 +3410,7 @@ function create_browser()
       {
       if(app_state.id == BG_PLAYQUEUE_ID)
         {
-        msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-        msg_set_arg_string(msg, 0, id);
-        player.handle_command(msg);
+        play_by_id(obj);
 	}
       else if(obj_get_string(obj, GAVL_META_MEDIA_CLASS).startsWith(GAVL_META_MEDIA_CLASS_IMAGE))
 	{
@@ -3424,10 +3425,7 @@ function create_browser()
 	  //          playqueue_add_entry(obj, 0, 1);
 	// replace playqueue
         playqueue_add_album(this.container, true, false);
-	  
-        msg = msg_create(BG_PLAYER_CMD_PLAY_BY_ID, BG_MSG_NS_PLAYER);
-        msg_set_arg_string(msg, 0, obj_make_playqueue_id(obj));
-        player.handle_command(msg);
+        play_by_id(obj);
 	}
       }
 	
