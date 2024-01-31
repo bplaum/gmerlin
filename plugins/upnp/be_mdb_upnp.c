@@ -22,7 +22,7 @@ typedef struct
   {
   bg_controllable_t ctrl;
   char * cd_control_url;
-  gavf_io_t * control_io;
+  gavl_io_t * control_io;
   
   gavl_dictionary_t dev;
   } server_t;

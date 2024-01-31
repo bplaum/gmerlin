@@ -159,17 +159,17 @@ int bg_soap_request_read_req(gavl_dictionary_t * s, bg_http_connection_t * conn)
   gavl_buffer_t buf;
   const char * soapaction;
   const char * pos;
-  gavf_io_t * io = gavf_io_create_socket(conn->fd, 3000, 0);
+  gavl_io_t * io = gavl_io_create_socket(conn->fd, 3000, 0);
 
   gavl_buffer_init(&buf);
   
   if(!gavl_http_read_body(io, &conn->req, &buf))
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     return 0;
     }
   
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
 #ifdef DUMP_SOAP
   fprintf(stderr, "Got SOAP Request:\n");
@@ -368,10 +368,10 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   return ret;
   }
 
-int bg_soap_request(gavl_dictionary_t * s, gavf_io_t ** io_p)
+int bg_soap_request(gavl_dictionary_t * s, gavl_io_t ** io_p)
   {
   int ret = 0;
-  gavf_io_t * io = *io_p;
+  gavl_io_t * io = *io_p;
   const char * function;
   const char * service;
   gavl_buffer_t req_buf;

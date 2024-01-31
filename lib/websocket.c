@@ -84,7 +84,7 @@ typedef struct
 
 struct bg_websocket_connection_s
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   
   int is_client;
 
@@ -349,10 +349,10 @@ msg_read(bg_websocket_connection_t * conn)
     {
     int buf_len;
 
-    if(!gavf_io_can_read(conn->io, 0))
+    if(!gavl_io_can_read(conn->io, 0))
       return GAVL_SOURCE_AGAIN;
     
-    result = gavf_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
+    result = gavl_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
                                         2 - conn->read_msg.head_read);
     RETURN_RES;
 
@@ -398,10 +398,10 @@ msg_read(bg_websocket_connection_t * conn)
   
   if(conn->read_msg.head_read < conn->read_msg.head_len)
     {
-    if(!gavf_io_can_read(conn->io, 0))
+    if(!gavl_io_can_read(conn->io, 0))
       return GAVL_SOURCE_AGAIN;
     
-    result = gavf_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
+    result = gavl_io_read_data_nonblock(conn->io, &conn->read_msg.head[conn->read_msg.head_read],
                                         conn->read_msg.head_len - conn->read_msg.head_read);
     RETURN_RES;
 
@@ -416,10 +416,10 @@ msg_read(bg_websocket_connection_t * conn)
   
   if(conn->read_msg.payload_read < conn->read_msg.payload_len)
     {
-    if(!gavf_io_can_read(conn->io, 0))
+    if(!gavl_io_can_read(conn->io, 0))
       return GAVL_SOURCE_AGAIN;
     
-    result = gavf_io_read_data_nonblock(conn->io,
+    result = gavl_io_read_data_nonblock(conn->io,
                                         conn->read_msg.buf.buf + conn->read_msg.buf.len + conn->read_msg.payload_read,
                                         conn->read_msg.payload_len - conn->read_msg.payload_read);
     RETURN_RES;
@@ -556,7 +556,7 @@ static void conn_close(bg_websocket_connection_t * conn)
   int i;
   if(conn->io)
     {
-    gavf_io_destroy(conn->io);
+    gavl_io_destroy(conn->io);
     conn->io = NULL;
     }
   conn->num_write_msg = 0;
@@ -637,7 +637,7 @@ bg_websocket_connection_create(const char * url, int timeout,
   bg_websocket_connection_t * ret = NULL;
   gavl_socket_address_t * addr = NULL;
   const char * var;
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
   
   gavl_dictionary_init(&req);
   gavl_dictionary_init(&res);
@@ -692,7 +692,7 @@ bg_websocket_connection_create(const char * url, int timeout,
     }
   //  setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
   
-  io = gavf_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
+  io = gavl_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
   
   if(!gavl_http_request_write(io, &req))
     {
@@ -781,7 +781,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
       GAVL_64BE_2_PTR(cur, payload);
         
       /* Send ping */
-      //        gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Sending ping %d", gavf_io_get_socket(conn->io));
+      //        gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Sending ping %d", gavl_io_get_socket(conn->io));
         
       msg_write(conn, payload, PING_PAYLOAD_LEN, 0x9);
       conn->ping_sent = 1;
@@ -791,7 +791,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
     if(conn->ping_sent && ((cur - conn->last_ping_time) > PING_TIMEOUT))
       {
       /* Ping timeout */
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Ping timeout %d", gavf_io_get_socket(conn->io));
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Ping timeout %d", gavl_io_get_socket(conn->io));
       return 0;
       }
     }
@@ -806,7 +806,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
     
     if(conn->write_msg[0].head_written < conn->write_msg[0].head_len)
       {
-      result = gavf_io_write_data_nonblock(conn->io,
+      result = gavl_io_write_data_nonblock(conn->io,
                                            &conn->write_msg[0].head[conn->write_msg[0].head_written],
                                            conn->write_msg[0].head_len - conn->write_msg[0].head_written);
       if(result < 0)
@@ -826,7 +826,7 @@ bg_websocket_connection_iteration(bg_websocket_connection_t * conn)
     
     if(conn->write_msg[0].buf.pos < conn->write_msg[0].buf.len)
       {
-      result = gavf_io_write_data_nonblock(conn->io,
+      result = gavl_io_write_data_nonblock(conn->io,
                                            conn->write_msg[0].buf.buf + conn->write_msg[0].buf.pos,
                                            conn->write_msg[0].buf.len - conn->write_msg[0].buf.pos);
       if(result < 0)
@@ -1022,7 +1022,7 @@ static int conn_start_server(bg_websocket_connection_t * conn,
 
   //  setsockopt(c->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
   
-  if(!(conn->io = gavf_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE)))
+  if(!(conn->io = gavl_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE)))
     goto fail;
   
   c->fd = -1;

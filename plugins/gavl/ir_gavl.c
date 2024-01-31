@@ -32,7 +32,7 @@
 typedef struct
   {
   gavl_video_format_t format;
-  gavf_io_t * io;
+  gavl_io_t * io;
   gavl_dictionary_t m;
   } gavl_t;
 
@@ -58,7 +58,7 @@ static int read_header_gavl(void * priv, const char * filename,
   f = fopen(filename, "r");
   if(!f)
     return 0;
-  gavl->io = gavf_io_create_file(f, 0, 1, 1);
+  gavl->io = gavl_io_create_file(f, 0, 1, 1);
 
   if(!gavl_image_read_header(gavl->io,
                              &gavl->m,
@@ -79,7 +79,7 @@ static int read_image_gavl(void * priv, gavl_video_frame_t * frame)
     result = gavl_image_read_image(gavl->io,
                                    &gavl->format,
                                    frame);
-  gavf_io_destroy(gavl->io);
+  gavl_io_destroy(gavl->io);
   return result;
   }
 

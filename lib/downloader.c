@@ -44,7 +44,7 @@ typedef struct
 typedef struct
   {
   char * uri;
-  gavf_io_t * io;
+  gavl_io_t * io;
   gavl_buffer_t buf;
 
   gavl_time_t start_time;
@@ -138,7 +138,7 @@ static void finish_error(bg_downloader_t * d, int i)
   gavl_buffer_reset(&d->downloads[i].buf);
   if(d->downloads[i].io)
     {
-    gavf_io_destroy(d->downloads[i].io);
+    gavl_io_destroy(d->downloads[i].io);
     d->downloads[i].io = NULL;
     }
   d->num_downloads--;
@@ -344,7 +344,7 @@ void bg_downloader_destroy(bg_downloader_t * d)
         free(d->downloads[i].uri);
       
       if(d->downloads[i].io)
-        gavf_io_destroy(d->downloads[i].io);
+        gavl_io_destroy(d->downloads[i].io);
       
       gavl_buffer_free(&d->downloads[i].buf);
       }

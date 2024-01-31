@@ -146,8 +146,8 @@ struct bg_plug_s
   int wr;
   gavf_t * g;
 
-  //  gavf_io_t * io_orig;
-  //  gavf_io_t * io;
+  //  gavl_io_t * io_orig;
+  //  gavl_io_t * io;
   
   int flags;
   pthread_mutex_t flags_mutex;
@@ -1294,7 +1294,7 @@ int bg_plug_start(bg_plug_t * p)
   }
 
 #if 0
-int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
+int bg_plug_open(bg_plug_t * p, gavl_io_t * io, int io_flags)
   {
   int flags;
   char buf[8];
@@ -1344,7 +1344,7 @@ int bg_plug_open(bg_plug_t * p, gavf_io_t * io, int io_flags)
   
   /* Multitrack mode */
   
-  if((gavf_io_get_data(p->io, (uint8_t*)buf, 8) == 8) &&
+  if((gavl_io_get_data(p->io, (uint8_t*)buf, 8) == 8) &&
      !memcmp(buf, BG_PLUG_MULTI_HEADER, 8))
     {
     gavf_chunk_t chunk;
@@ -1426,7 +1426,7 @@ int bg_plug_start_program(bg_plug_t * p, const gavl_dictionary_t * m, int discar
   //  gavf_set_msg_cb(p->g, msg_cb_write_av, p);
   
   p->io_orig = p->io;
-  p->io = gavf_io_create_sub_write(p->io_orig);
+  p->io = gavl_io_create_sub_write(p->io_orig);
   
   if(!gavf_open_write(p->g, p->io, m))
     {
@@ -1692,7 +1692,7 @@ int bg_plug_got_error(bg_plug_t * p)
   {
   int ret;
   pthread_mutex_lock(&p->mutex);
-  ret = p->got_error || gavf_io_got_error(p->io);
+  ret = p->got_error || gavl_io_got_error(p->io);
   pthread_mutex_unlock(&p->mutex);
   return ret;
   }

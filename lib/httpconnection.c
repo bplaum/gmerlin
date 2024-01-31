@@ -152,7 +152,7 @@ void bg_http_connection_clear_keepalive(bg_http_connection_t * c)
 
 int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
 
   /* Return silently for connect() floods or closed keepalive sockets */
   if(gavl_socket_is_disconnected(fd, timeout))
@@ -161,7 +161,7 @@ int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
     gavl_socket_close(fd);
     return 0;
     }
-  io = gavf_io_create_socket(fd, timeout, 0);
+  io = gavl_io_create_socket(fd, timeout, 0);
 
   
   
@@ -172,12 +172,12 @@ int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
      !(req->path     = gavl_http_request_get_path(&req->req)) ||
      !(req->protocol = gavl_http_request_get_protocol(&req->req)))
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     bg_http_connection_free(req);
     return 0;
     }
 
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
   if(!strncmp(req->protocol, "HTTP/", 5))
     req->protocol_i = BG_HTTP_PROTO_HTTP;

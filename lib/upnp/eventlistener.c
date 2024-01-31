@@ -84,7 +84,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
   gavl_dictionary_t req;
   gavl_dictionary_t res;
 
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
   
   gavl_dictionary_init(&req);
   gavl_dictionary_init(&res);
@@ -122,7 +122,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
   l->last_subscribe_time = gavl_timer_get(l->timer);
   
   if(((fd = gavl_socket_connect_inet(l->remote_addr, 5000)) < 0) ||
-     !(io = gavf_io_create_socket(fd, 5000, 0)) ||
+     !(io = gavl_io_create_socket(fd, 5000, 0)) ||
      !gavl_http_request_write(io, &req) ||
      !gavl_http_response_read(io, &res) ||
      (gavl_http_response_get_status_int(&res) != 200))
@@ -154,7 +154,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
   gavl_dictionary_free(&res);
   
   if(io)
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
 
   if(fd >= 0)
     gavl_socket_close(fd);
@@ -167,7 +167,7 @@ static void unsubscribe(bg_upnp_event_listener_t * l)
   int fd = -1;
   gavl_dictionary_t req;
   gavl_dictionary_t res;
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
   
   gavl_dictionary_init(&req);
   gavl_dictionary_init(&res);
@@ -185,7 +185,7 @@ static void unsubscribe(bg_upnp_event_listener_t * l)
     goto fail;
 
   if(((fd = gavl_socket_connect_inet(l->remote_addr, 5000)) < 0) ||
-     !(io = gavf_io_create_socket(fd, 5000, 0)) ||
+     !(io = gavl_io_create_socket(fd, 5000, 0)) ||
      !gavl_http_request_write(io, &req) ||
      !gavl_http_response_read(io, &res) ||
      (gavl_http_response_get_status_int(&res) != 200))
@@ -205,7 +205,7 @@ static void unsubscribe(bg_upnp_event_listener_t * l)
     gavl_socket_close(fd);
   
   if(io)
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
   
   gavl_dictionary_free(&req);
   gavl_dictionary_free(&res);
@@ -385,7 +385,7 @@ event_listener_handle_http(bg_http_connection_t * conn, void * priv)
   xmlNodePtr node;
   xmlNodePtr child;
   const char * var;
-  gavf_io_t * io;
+  gavl_io_t * io;
 
   gavl_buffer_t buf;
 
@@ -396,15 +396,15 @@ event_listener_handle_http(bg_http_connection_t * conn, void * priv)
   if(strcmp(conn->method, "NOTIFY") || strcmp(conn->path, l->path))
     return 0;
 
-  io = gavf_io_create_socket(conn->fd, 30000, 0);
+  io = gavl_io_create_socket(conn->fd, 30000, 0);
   
   if(!gavl_http_read_body(io, &conn->req, &buf))
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     return 1;
     }
 
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
   if(!(xml_doc = xmlParseMemory((char*)buf.buf, buf.len)) ||
      !(root = bg_xml_find_doc_child(xml_doc, "propertyset")))

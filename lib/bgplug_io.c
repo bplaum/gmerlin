@@ -124,28 +124,28 @@
 
 */
 
-static gavf_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout);
+static gavl_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout);
 
 
-static gavf_io_t * open_dash(int method, int * flags)
+static gavl_io_t * open_dash(int method, int * flags)
   {
   FILE * f;
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   /* Stdin/stdout */
   if(method == BG_PLUG_IO_METHOD_WRITE)
     f = stdout;
   else
     f = stdin;
   
-  ret = gavf_io_create_file(f, method == BG_PLUG_IO_METHOD_WRITE, 0, 0);
+  ret = gavl_io_create_file(f, method == BG_PLUG_IO_METHOD_WRITE, 0, 0);
 
-  if(gavf_io_get_flags(ret) & GAVF_IO_IS_TTY)
+  if(gavl_io_get_flags(ret) & GAVF_IO_IS_TTY)
     {
     if(method == BG_PLUG_IO_METHOD_WRITE)
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Not writing to a TTY");
     else
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Not reading from a TTY");
-    gavf_io_destroy(ret);
+    gavl_io_destroy(ret);
     return NULL;
     }
   return ret;
@@ -175,7 +175,7 @@ static void close_pipe(void * priv)
   bg_subprocess_close(sp);
   }
 
-static gavf_io_t * open_pipe(const char * location, int wr)
+static gavl_io_t * open_pipe(const char * location, int wr)
   {
   const char * pos;
   bg_subprocess_t * sp;
@@ -216,7 +216,7 @@ static gavf_io_t * open_pipe(const char * location, int wr)
   if(!sp)
     return NULL;
   
-  return gavf_io_create(wr ? NULL : read_pipe,
+  return gavl_io_create(wr ? NULL : read_pipe,
                         wr ? write_pipe : NULL,
                         NULL, // seek
                         close_pipe,
@@ -281,7 +281,7 @@ bg_plug_request_get_method(const gavl_dictionary_t * req, int * method)
     return 0;
   }
 
-int bg_plug_io_server_handshake(gavf_io_t * io, int method, const gavl_dictionary_t * req, const char * path)
+int bg_plug_io_server_handshake(gavl_io_t * io, int method, const gavl_dictionary_t * req, const char * path)
   {
   int ret = 0;
   int status = 0;
@@ -374,7 +374,7 @@ int bg_plug_io_server_handshake(gavf_io_t * io, int method, const gavl_dictionar
   return ret;
   }
 
-static int client_handshake(gavf_io_t * io, int method, const char * path, int timeout)
+static int client_handshake(gavl_io_t * io, int method, const char * path, int timeout)
   {
   int ret = 0;
   int status = 0;
@@ -444,13 +444,13 @@ static int client_handshake(gavf_io_t * io, int method, const char * path, int t
   return ret;
   }
 
-static gavf_io_t * open_tcp(const char * location,
+static gavl_io_t * open_tcp(const char * location,
                             int method, int * flags, int timeout)
   {
   /* Remote TCP socket */
   char * host = NULL;
   char * path = NULL;
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
   int port;
   int fd;
   gavl_socket_address_t * addr = NULL;
@@ -490,7 +490,7 @@ static gavf_io_t * open_tcp(const char * location,
   
   if(!client_handshake(ret, method, path, timeout))
     {
-    gavf_io_destroy(ret);
+    gavl_io_destroy(ret);
     goto fail;
     }
   /* Return */
@@ -506,12 +506,12 @@ static gavf_io_t * open_tcp(const char * location,
   return ret;
   }
 
-static gavf_io_t * open_unix(const char * addr, int method, int * flags, int timeout)
+static gavl_io_t * open_unix(const char * addr, int method, int * flags, int timeout)
   {
   char * path = NULL;
   
   int fd;
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
   gavl_dictionary_t vars;
   gavl_dictionary_init(&vars);
 
@@ -540,7 +540,7 @@ static gavf_io_t * open_unix(const char * addr, int method, int * flags, int tim
   
   if(!client_handshake(ret, method, NULL, timeout))
     {
-    gavf_io_destroy(ret);
+    gavl_io_destroy(ret);
     goto fail;
     }
   /* Return */
@@ -555,7 +555,7 @@ static gavf_io_t * open_unix(const char * addr, int method, int * flags, int tim
   return ret;
   }
 
-static gavf_io_t * open_tcpserv(const char * addr,
+static gavl_io_t * open_tcpserv(const char * addr,
                                 int method, int * flags, int timeout)
   {
   gavl_socket_address_t * a = NULL;
@@ -564,7 +564,7 @@ static gavf_io_t * open_tcpserv(const char * addr,
   gavl_dictionary_t req;
   
   char * host = NULL;
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
 
   if(!bg_url_split(addr,
                    NULL,
@@ -610,7 +610,7 @@ static gavf_io_t * open_tcpserv(const char * addr,
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading request failed");
       gavl_dictionary_free(&req);
 
-      gavf_io_destroy(ret);
+      gavl_io_destroy(ret);
       ret = NULL;
 
       continue;
@@ -624,7 +624,7 @@ static gavf_io_t * open_tcpserv(const char * addr,
     
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Handshake failed");
 
-    gavf_io_destroy(ret);
+    gavl_io_destroy(ret);
     ret = NULL;
     
     gavl_dictionary_free(&req);
@@ -640,12 +640,12 @@ static gavf_io_t * open_tcpserv(const char * addr,
   return ret;
   }
 
-static gavf_io_t * open_unixserv(const char * addr, int method, int * flags, int timeout)
+static gavl_io_t * open_unixserv(const char * addr, int method, int * flags, int timeout)
   {
   gavl_dictionary_t req;
   int server_fd, fd;
   char * name = NULL;
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
 
   if(!bg_url_split(addr,
                    NULL,
@@ -687,7 +687,7 @@ static gavf_io_t * open_unixserv(const char * addr, int method, int * flags, int
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading request failed");
       gavl_dictionary_free(&req);
 
-      gavf_io_destroy(ret);
+      gavl_io_destroy(ret);
       ret = NULL;
       
       continue;
@@ -699,7 +699,7 @@ static gavf_io_t * open_unixserv(const char * addr, int method, int * flags, int
       break;
       }
 
-    gavf_io_destroy(ret);
+    gavl_io_destroy(ret);
     ret = NULL;
     
     
@@ -717,7 +717,7 @@ static gavf_io_t * open_unixserv(const char * addr, int method, int * flags, int
 
 /* File */
 
-static gavf_io_t * open_file(const char * file, int wr, int * flags)
+static gavl_io_t * open_file(const char * file, int wr, int * flags)
   {
   FILE * f;
   struct stat st;
@@ -744,10 +744,10 @@ static gavf_io_t * open_file(const char * file, int wr, int * flags)
   f = fopen(file, (wr ? "w" : "r"));
   if(!f)
     return NULL;
-  return gavf_io_create_file(f, wr, !!(S_ISREG(st.st_mode)), 1);
+  return gavl_io_create_file(f, wr, !!(S_ISREG(st.st_mode)), 1);
   }
 
-static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, int timeout)
+static gavl_io_t * plug_io_init_pipe(gavl_io_t * old, int * flags, int method, int timeout)
   {
   /* Pipe "handshake": The sending process sends the address of a Unix-domain socket
      in the form gavf-unixserv:///path/to/socket
@@ -755,7 +755,7 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
 
   char * uri = NULL;
   
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
   gavl_dictionary_t req;
   gavl_dictionary_init(&req);
 
@@ -773,8 +773,8 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
     uri = bg_sprintf(BG_PLUG_PREFIX_UNIX"%s\n", name);
 
     /* Write URI to stdout */
-    gavf_io_write_data(old, (uint8_t*)uri, strlen(uri));
-    gavf_io_flush(old);
+    gavl_io_write_data(old, (uint8_t*)uri, strlen(uri));
+    gavl_io_flush(old);
     
     /* Accept listen socket */
     
@@ -793,7 +793,7 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
     if(!gavl_http_request_read(ret, &req))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading request failed");
-      gavf_io_destroy(ret);
+      gavl_io_destroy(ret);
       ret = NULL;
       goto fail;
       }
@@ -801,7 +801,7 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
     if(!bg_plug_io_server_handshake(ret, method, &req, "/"))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Server handshake failed in pipe redirection");
-      gavf_io_destroy(ret);
+      gavl_io_destroy(ret);
       ret = NULL;
       goto fail;
       }
@@ -812,7 +812,7 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
     {
     int uri_alloc = 0;
 
-    if(!gavf_io_read_line(old, &uri, &uri_alloc, 1024))
+    if(!gavl_io_read_line(old, &uri, &uri_alloc, 1024))
       goto fail;
     
     if(!gavl_string_starts_with(uri, BG_PLUG_PREFIX_UNIX))
@@ -829,14 +829,14 @@ static gavf_io_t * plug_io_init_pipe(gavf_io_t * old, int * flags, int method, i
     free(uri);
   
   gavl_dictionary_free(&req);
-  gavf_io_destroy(old);
+  gavl_io_destroy(old);
   return ret;
   }
 
-gavf_io_t * bg_plug_io_open_location(const char * location,
+gavl_io_t * bg_plug_io_open_location(const char * location,
                                      int method, int * flags, int timeout)
   {
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
 
   if(flags)
     *flags = 0;
@@ -894,7 +894,7 @@ gavf_io_t * bg_plug_io_open_location(const char * location,
   return ret;
   }
 
-static gavf_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout)
+static gavl_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout)
   {
   if(flags)
     {
@@ -903,7 +903,7 @@ static gavf_io_t * bg_plug_io_open_socket(int fd, int * flags, int timeout)
     *flags |= BG_PLUG_IO_IS_SOCKET;
     }
   
-  return gavf_io_create_socket(fd, timeout, GAVF_IO_SOCKET_DO_CLOSE);
+  return gavl_io_create_socket(fd, timeout, GAVF_IO_SOCKET_DO_CLOSE);
   }
 
 

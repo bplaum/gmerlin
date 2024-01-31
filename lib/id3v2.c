@@ -43,7 +43,7 @@
 
 #define MK_FOURCC(a, b, c, d) ((a<<24)|(b<<16)|(c<<8)|d)
 
-static int write_fourcc(gavf_io_t * output, uint32_t fourcc)
+static int write_fourcc(gavl_io_t * output, uint32_t fourcc)
   {
   uint8_t data[4];
 
@@ -52,7 +52,7 @@ static int write_fourcc(gavf_io_t * output, uint32_t fourcc)
   data[2] = (fourcc >> 8) & 0xff;
   data[3] = (fourcc) & 0xff;
 
-  if(gavf_io_write_data(output, data, 4) < 4)
+  if(gavl_io_write_data(output, data, 4) < 4)
     return 0;
   return 1;
   }
@@ -167,20 +167,20 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
   return ret;
   }
 
-static int write_32_syncsave(gavf_io_t * output, uint32_t num)
+static int write_32_syncsave(gavl_io_t * output, uint32_t num)
   {
   uint8_t data[4];
   data[0] = (num >> 21) & 0x7f;
   data[1] = (num >> 14) & 0x7f;
   data[2] = (num >> 7) & 0x7f;
   data[3] = num & 0x7f;
-  if(gavf_io_write_data(output, data, 4) < 4)
+  if(gavl_io_write_data(output, data, 4) < 4)
     return 0;
   return 1;
   }
 
 
-static int write_string(gavf_io_t * output, const char * str,
+static int write_string(gavl_io_t * output, const char * str,
                         bg_charset_converter_t * cnv)
   {
   int len;
@@ -190,20 +190,20 @@ static int write_string(gavf_io_t * output, const char * str,
     char * str1;
     str1 = bg_convert_string(cnv, str, -1, NULL );
     len = strlen(str1)+1;
-    if(gavf_io_write_data(output, (uint8_t*)str1, len) < len)
+    if(gavl_io_write_data(output, (uint8_t*)str1, len) < len)
       return 0;
     free(str1);
     }
   else
     {
     len = strlen(str)+1;
-    if(gavf_io_write_data(output, (uint8_t*)str, len) < len)
+    if(gavl_io_write_data(output, (uint8_t*)str, len) < len)
       return 0;
     }
   return 1;
   }
 
-static int write_frame(gavf_io_t * output, id3v2_frame_t * frame,
+static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
                        uint8_t encoding)
   {
   uint8_t flags[2] = { 0x00, 0x00 };
@@ -221,14 +221,14 @@ static int write_frame(gavf_io_t * output, id3v2_frame_t * frame,
   if(!write_fourcc(output, frame->fourcc))
     goto fail;
   
-  size_pos = gavf_io_position(output);
+  size_pos = gavl_io_position(output);
 
   if(!write_32_syncsave(output, 0))
     goto fail;
   
   /* Frame flags are zero */
 
-  if(gavf_io_write_data(output, flags, 2) < 2)
+  if(gavl_io_write_data(output, flags, 2) < 2)
     goto fail;
 
   if(frame->cover_file)
@@ -242,27 +242,27 @@ static int write_frame(gavf_io_t * output, id3v2_frame_t * frame,
       return 0;
 
     buf = 0x00;
-    gavf_io_write_data(output, &buf, 1); // Encoding
+    gavl_io_write_data(output, &buf, 1); // Encoding
     
-    gavf_io_write_data(output, (uint8_t*)"image/jpeg", 11);
+    gavl_io_write_data(output, (uint8_t*)"image/jpeg", 11);
     buf = 0x03; /* front cover */
-    gavf_io_write_data(output, &buf, 1);
+    gavl_io_write_data(output, &buf, 1);
     buf = 0;
-    gavf_io_write_data(output, &buf, 1); // Description
-    gavf_io_write_data(output, b.buf, b.len); // Image
+    gavl_io_write_data(output, &buf, 1); // Description
+    gavl_io_write_data(output, b.buf, b.len); // Image
     
     gavl_buffer_free(&b);
     }
   else
     {
     /* Encoding */
-    if(gavf_io_write_data(output, &encoding, 1) < 1)
+    if(gavl_io_write_data(output, &encoding, 1) < 1)
       return 0;
   
     /* For COMM frames, we need to set the language as well */
 
     if((frame->fourcc == MK_FOURCC('C','O','M','M')) &&
-       (gavf_io_write_data(output, comm_header, 4) < 4))
+       (gavl_io_write_data(output, comm_header, 4) < 4))
       goto fail;
   
     switch(frame->val.type)
@@ -309,14 +309,14 @@ static int write_frame(gavf_io_t * output, id3v2_frame_t * frame,
       }
     }
   
-  end_pos = gavf_io_position(output);
+  end_pos = gavl_io_position(output);
   size = end_pos - size_pos - 6;
   
-  gavf_io_seek(output, size_pos, SEEK_SET);
+  gavl_io_seek(output, size_pos, SEEK_SET);
   if(!write_32_syncsave(output, size))
     goto fail;
   
-  gavf_io_seek(output, end_pos, SEEK_SET);
+  gavl_io_seek(output, end_pos, SEEK_SET);
   
   ret = 1;
   fail:
@@ -327,7 +327,7 @@ static int write_frame(gavf_io_t * output, id3v2_frame_t * frame,
   return ret;
   }
 
-int bg_id3v2_write(gavf_io_t * output, const bg_id3v2_t * tag,
+int bg_id3v2_write(gavl_io_t * output, const bg_id3v2_t * tag,
                    int encoding)
   {
   int i;
@@ -343,12 +343,12 @@ int bg_id3v2_write(gavf_io_t * output, const bg_id3v2_t * tag,
 
   /* Write header */
 
-  if(gavf_io_write_data(output, header, 6) < 6)
+  if(gavl_io_write_data(output, header, 6) < 6)
     return 0;
   
   /* Write dummy size (will be filled in later) */
 
-  size_pos = gavf_io_position(output);
+  size_pos = gavl_io_position(output);
   write_32_syncsave(output, 0);
 
   /* Write all frames */
@@ -358,12 +358,12 @@ int bg_id3v2_write(gavf_io_t * output, const bg_id3v2_t * tag,
     write_frame(output, &tag->frames[i], encoding);
     }
 
-  end_pos = gavf_io_position(output);
+  end_pos = gavl_io_position(output);
   size = end_pos - size_pos - 4;
 
-  gavf_io_seek(output, size_pos, SEEK_SET);
+  gavl_io_seek(output, size_pos, SEEK_SET);
   write_32_syncsave(output, size);
-  gavf_io_seek(output, end_pos, SEEK_SET);
+  gavl_io_seek(output, end_pos, SEEK_SET);
   return 1;
   }
 

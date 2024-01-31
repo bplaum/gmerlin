@@ -299,13 +299,13 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
     }
   else if(!strcmp(conn->method, "PUT"))
     {
-    gavf_io_t * io = NULL;
+    gavl_io_t * io = NULL;
     gavl_buffer_t buffer;
     gavl_buffer_init(&buffer);
     
     bg_http_connection_check_keepalive(conn);
 
-    if(!(io = gavf_io_create_socket(conn->fd, 10000, 0)) ||
+    if(!(io = gavl_io_create_socket(conn->fd, 10000, 0)) ||
        !gavl_http_read_body(io, &conn->req, &buffer) ||
        !bg_server_storage_put(s, id, real_path, buffer.buf, buffer.len))
       bg_http_connection_init_res(conn, conn->protocol, 400, "Bad Request");
@@ -317,7 +317,7 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
       }
     
     if(io)
-      gavf_io_destroy(io);
+      gavl_io_destroy(io);
     
     gavl_buffer_free(&buffer);
     }

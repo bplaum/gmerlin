@@ -378,7 +378,7 @@ struct bg_input_plugin_s
    *  \returns 1 on success, 0 on failure
    */
 
-  int (*open_io)(void * priv, gavf_io_t * io);
+  int (*open_io)(void * priv, gavl_io_t * io);
   
   /** \brief Get the edl (optional)
    *  \param priv The handle returned by the create() method
@@ -826,7 +826,7 @@ struct bg_encoder_plugin_s
    *  \param chapter_list Chapter list (optional, can be NULL)
    */
 
-  int (*open_io)(void * data, gavf_io_t * io,
+  int (*open_io)(void * data, gavl_io_t * io,
                  const gavl_dictionary_t * metadata);
 
  

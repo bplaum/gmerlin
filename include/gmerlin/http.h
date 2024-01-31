@@ -31,9 +31,9 @@
 int bg_http_response_write(int socket, gavl_dictionary_t * req);
 
 int bg_http_send_request(const char * url, int head,
-                         const gavl_dictionary_t * vars, gavf_io_t ** io_p);
+                         const gavl_dictionary_t * vars, gavl_io_t ** io_p);
 
-int bg_http_read_response(gavf_io_t * io,
+int bg_http_read_response(gavl_io_t * io,
                           char ** redirect,
                           gavl_dictionary_t * res);
 
@@ -60,8 +60,8 @@ char * bg_http_download(const char * url, const char * out_base);
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size);
                              
-int bg_http_write_data(gavf_io_t * io, const uint8_t * data, int len, int chunked);
-void bg_http_flush(gavf_io_t * io, int chunked);
+int bg_http_write_data(gavl_io_t * io, const uint8_t * data, int len, int chunked);
+void bg_http_flush(gavl_io_t * io, int chunked);
 
 /* Keepalive */
 

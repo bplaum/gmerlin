@@ -711,7 +711,7 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t*, int add_cover);
 #define BG_ID3_ENCODING_LATIN1    0x00
 #define BG_ID3_ENCODING_UTF8      0x03
 
-int bg_id3v2_write(gavf_io_t * output, const bg_id3v2_t *, int encoding);
+int bg_id3v2_write(gavl_io_t * output, const bg_id3v2_t *, int encoding);
 
 void bg_id3v2_destroy(bg_id3v2_t *);
 
@@ -724,7 +724,7 @@ int bg_npt_parse_range(const char * str, gavl_time_t * start, gavl_time_t * end)
 char * bg_npt_range_to_string(gavl_time_t start, gavl_time_t end);
 
 /* Output must be seekable */
-int bg_flac_cover_tag_write(gavf_io_t * output, const gavl_dictionary_t * image_uri, int last_tag);
+int bg_flac_cover_tag_write(gavl_io_t * output, const gavl_dictionary_t * image_uri, int last_tag);
 
 const char * bg_get_search_string(const char * str);
 

@@ -25,7 +25,7 @@
 #include <gmerlin/utils.h>
 #include <gavl/metatags.h>
 
-int bg_flac_cover_tag_write(gavf_io_t * output, const gavl_dictionary_t * image_uri, int last_tag)
+int bg_flac_cover_tag_write(gavl_io_t * output, const gavl_dictionary_t * image_uri, int last_tag)
   {
   const char * mimetype;
   const char * uri;
@@ -48,7 +48,7 @@ int bg_flac_cover_tag_write(gavf_io_t * output, const gavl_dictionary_t * image_
      !bg_read_file(uri, &b))
     goto fail;
 
-  start_pos = gavf_io_position(output);
+  start_pos = gavl_io_position(output);
   
   buffer[0] = 0x06;
 
@@ -60,32 +60,32 @@ int bg_flac_cover_tag_write(gavf_io_t * output, const gavl_dictionary_t * image_
   buffer[2] = 0x00;
   buffer[3] = 0x00;
 
-  gavf_io_write_data(output, buffer, 4);
-  gavf_io_write_32_be(output, 0x03); // Cover (front)
+  gavl_io_write_data(output, buffer, 4);
+  gavl_io_write_32_be(output, 0x03); // Cover (front)
 
   len = strlen(mimetype);
-  gavf_io_write_32_be(output, len);
-  gavf_io_write_data(output, (const uint8_t*)mimetype, len);
+  gavl_io_write_32_be(output, len);
+  gavl_io_write_data(output, (const uint8_t*)mimetype, len);
 
   len = strlen("Cover");
-  gavf_io_write_32_be(output, len);
-  gavf_io_write_data(output, (const uint8_t*)"Cover", len);
+  gavl_io_write_32_be(output, len);
+  gavl_io_write_data(output, (const uint8_t*)"Cover", len);
   
-  gavf_io_write_32_be(output, width);
-  gavf_io_write_32_be(output, height);
-  gavf_io_write_32_be(output, 24);
-  gavf_io_write_32_be(output, 0); // For indexed-color pictures (e.g. GIF), the number
+  gavl_io_write_32_be(output, width);
+  gavl_io_write_32_be(output, height);
+  gavl_io_write_32_be(output, 24);
+  gavl_io_write_32_be(output, 0); // For indexed-color pictures (e.g. GIF), the number
                                   // of colors used, or 0 for non-indexed pictures. 
 
-  gavf_io_write_32_be(output, b.len);
-  gavf_io_write_data(output, b.buf, b.len);
+  gavl_io_write_32_be(output, b.len);
+  gavl_io_write_data(output, b.buf, b.len);
 
-  end_pos = gavf_io_position(output);
+  end_pos = gavl_io_position(output);
   
-  gavf_io_seek(output, start_pos + 1, SEEK_SET);
+  gavl_io_seek(output, start_pos + 1, SEEK_SET);
   
-  gavf_io_write_24_be(output, (uint32_t)(end_pos - start_pos - 4));
-  gavf_io_seek(output, end_pos, SEEK_SET);
+  gavl_io_write_24_be(output, (uint32_t)(end_pos - start_pos - 4));
+  gavl_io_seek(output, end_pos, SEEK_SET);
   
   ret = 1;
   fail:

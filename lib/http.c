@@ -114,12 +114,12 @@ int bg_http_response_check_keepalive(gavl_dictionary_t * res)
   return 0;
   }
 
-static gavf_io_t * open_io(const char * protocol, const char * host, int port)
+static gavl_io_t * open_io(const char * protocol, const char * host, int port)
   {
   gavl_socket_address_t * addr = NULL;
   int use_tls = 0;
   int fd;
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
   
   if(!strcasecmp(protocol, "https"))
     {
@@ -152,11 +152,11 @@ static gavf_io_t * open_io(const char * protocol, const char * host, int port)
   
   if(use_tls)
     {
-    ret = gavf_io_create_tls_client(fd, host, GAVF_IO_SOCKET_DO_CLOSE);
+    ret = gavl_io_create_tls_client(fd, host, GAVF_IO_SOCKET_DO_CLOSE);
     }
   else
     {
-    ret = gavf_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
+    ret = gavl_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
     }
 
   fail:
@@ -167,7 +167,7 @@ static gavf_io_t * open_io(const char * protocol, const char * host, int port)
   }
 
 int bg_http_send_request(const char * url, 
-                         int head, const gavl_dictionary_t * vars, gavf_io_t ** io_p)
+                         int head, const gavl_dictionary_t * vars, gavl_io_t ** io_p)
   {
   gavl_dictionary_t req;
 
@@ -179,7 +179,7 @@ int bg_http_send_request(const char * url,
   int port = -1;
   //  int status = -1;
   
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
   
   gavl_dictionary_init(&req);
 
@@ -231,12 +231,12 @@ int bg_http_send_request(const char * url,
   fail:
 
   if(io)
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
   
   return ret;
   }
 
-int bg_http_read_response(gavf_io_t * io,
+int bg_http_read_response(gavl_io_t * io,
                           char ** redirect,
                           gavl_dictionary_t * res)
   {
@@ -299,7 +299,7 @@ static int http_get(const char * url,
   int ret = 0;
 
   
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
 
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Downloading %s", url);
   
@@ -317,7 +317,7 @@ static int http_get(const char * url,
 
   //  if(!bg_http_read_response(io, 3000, redirect, res))
 
-  if(!gavf_io_can_read(io, 10000))
+  if(!gavl_io_can_read(io, 10000))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: Got timeout", url);
     goto fail;
@@ -347,7 +347,7 @@ static int http_get(const char * url,
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   io = gavl_http_client_create();
 
   if((offset > 0) || (size > 0))
@@ -370,7 +370,7 @@ int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t *
     gavl_dictionary_set_string(dict, GAVL_META_MIMETYPE,
                                gavl_dictionary_get_string_i(resp, "Content-Type"));
     }
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   return 1;
   }
 
@@ -383,7 +383,7 @@ int bg_http_get(const char * url, gavl_buffer_t * buf, gavl_dictionary_t * dict)
 
 char * bg_http_download(const char * url, const char * out_base)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   
   int ret = 0;
   const char * pos1;
@@ -452,7 +452,7 @@ char * bg_http_download(const char * url, const char * out_base)
   
   while(1)
     {
-    buf.len = gavf_io_read_data(io, buf.buf, BYTES_TO_READ);
+    buf.len = gavl_io_read_data(io, buf.buf, BYTES_TO_READ);
 
     /* Read error */
     if(buf.len < 0)
@@ -495,7 +495,7 @@ char * bg_http_download(const char * url, const char * out_base)
   }
 
 
-int bg_http_write_data(gavf_io_t * io, const uint8_t * data, int len, int chunked)
+int bg_http_write_data(gavl_io_t * io, const uint8_t * data, int len, int chunked)
   {
   if(chunked)
     {
@@ -506,30 +506,30 @@ int bg_http_write_data(gavf_io_t * io, const uint8_t * data, int len, int chunke
     /* Length in hex + \r\n */
     snprintf(buf, 128, "%x\r\n", len);
     slen = strlen(buf);
-    if(gavf_io_write_data(io, (uint8_t*)buf, slen) < slen)
+    if(gavl_io_write_data(io, (uint8_t*)buf, slen) < slen)
       return 0;
     
     /* Chunk */
-    if((result = gavf_io_write_data(io, data, len) < len))
+    if((result = gavl_io_write_data(io, data, len) < len))
       return 0;
 
     /* Trailing \r\n */
     strncpy(buf, "\r\n", 128);
-    if(gavf_io_write_data(io, (uint8_t*)buf, 2) < 2)
+    if(gavl_io_write_data(io, (uint8_t*)buf, 2) < 2)
       return 0;
     return result;
     }
   else
-    return gavf_io_write_data(io, data, len);
+    return gavl_io_write_data(io, data, len);
   }
 
-void bg_http_flush(gavf_io_t * io, int chunked)
+void bg_http_flush(gavl_io_t * io, int chunked)
   {
   if(chunked)
     {
     char buf[128];
     strncpy(buf, "0\r\n\r\n", 128);
-    gavf_io_write_data(io, (uint8_t*)buf, 5);
+    gavl_io_write_data(io, (uint8_t*)buf, 5);
     }
   }
 

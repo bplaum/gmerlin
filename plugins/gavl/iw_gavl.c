@@ -40,7 +40,7 @@ typedef struct
   {
   gavl_video_format_t format;
   bg_iw_callbacks_t * cb;
-  gavf_io_t * io;
+  gavl_io_t * io;
   
   } gavl_t;
 
@@ -85,7 +85,7 @@ static int write_header_gavl(void * priv, const char * filename,
   if(!f)
     return 0;
 
-  gavl->io = gavf_io_create_file(f, 1, 1, 1);
+  gavl->io = gavl_io_create_file(f, 1, 1, 1);
   if(!gavl->io)
     return 0;
   free(real_filename);
@@ -102,7 +102,7 @@ static int write_image_gavl(void * priv, gavl_video_frame_t * frame)
                          &gavl->format,
                          frame);
   
-  gavf_io_destroy(gavl->io);
+  gavl_io_destroy(gavl->io);
   gavl->io = NULL;
   return 1;
   }

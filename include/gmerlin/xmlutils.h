@@ -64,8 +64,8 @@ void bg_xml_save_to_buffer_opt(xmlDocPtr doc, int opt, gavl_buffer_t * buf);
 xmlDocPtr bg_xml_load_FILE(FILE * f);
 void bg_xml_save_FILE(xmlDocPtr doc, FILE * f);
 
-xmlDocPtr bg_xml_load_gavf_io(gavf_io_t* io);
-void bg_xml_save_io(xmlDocPtr doc, gavf_io_t* io);
+xmlDocPtr bg_xml_load_gavf_io(gavl_io_t* io);
+void bg_xml_save_io(xmlDocPtr doc, gavl_io_t* io);
 
 xmlDocPtr bg_xml_parse_file(const char * filename, int lock);
 void bg_xml_save_file(xmlDocPtr doc, const char * filename, int lock);

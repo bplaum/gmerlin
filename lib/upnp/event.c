@@ -267,7 +267,7 @@ static int send_event(gavl_dictionary_t * es,
   const char * uuid;
   int64_t key = 0;
 
-  gavf_io_t * io = NULL;
+  gavl_io_t * io = NULL;
   
   gavl_dictionary_init(&m);
 
@@ -289,7 +289,7 @@ static int send_event(gavl_dictionary_t * es,
   if((fd = gavl_socket_connect_inet(addr, 500)) < 0)
     goto fail;
 
-  io = gavf_io_create_socket(fd, CLIENT_TIMEOUT, GAVF_IO_SOCKET_DO_CLOSE);
+  io = gavl_io_create_socket(fd, CLIENT_TIMEOUT, GAVF_IO_SOCKET_DO_CLOSE);
   fd = -1;
   
   if(path)
@@ -323,7 +323,7 @@ static int send_event(gavl_dictionary_t * es,
     {
     goto fail;
     }
-  if(!gavf_io_write_data(io, (uint8_t*)event, len))
+  if(!gavl_io_write_data(io, (uint8_t*)event, len))
     {
     goto fail;
     }
@@ -355,7 +355,7 @@ static int send_event(gavl_dictionary_t * es,
     gavl_socket_address_destroy(addr);
 
   if(io)
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
   
   return result;
   }

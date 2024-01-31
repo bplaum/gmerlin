@@ -114,7 +114,7 @@ bg_plug_get_output_parameters();
 void bg_plug_set_parameter(void * data, const char * name,
                            const gavl_value_t * val);
 
-// int bg_plug_open(bg_plug_t *, gavf_io_t * io, int io_flags);
+// int bg_plug_open(bg_plug_t *, gavl_io_t * io, int io_flags);
 
 //  int bg_plug_set_multitrack(bg_plug_t *, const gavl_dictionary_t * mi);
 
@@ -141,7 +141,7 @@ int bg_plug_seek(bg_plug_t * p, const gavl_msg_t * msg);
 
 void bg_plug_write_resync(bg_plug_t * plug,
                           int64_t time, int scale, int discard, int discont);
-gavf_io_t * bg_plug_get_io(bg_plug_t*);
+gavl_io_t * bg_plug_get_io(bg_plug_t*);
 #endif
 
 gavf_t * bg_plug_get_gavf(bg_plug_t*);
@@ -240,17 +240,17 @@ extern const char * bg_plug_app_id; // User-Agent and Server
 
 /* Called by bg_plug_open_location */
 
-gavf_io_t *
+gavl_io_t *
 bg_plug_io_open_location(const char * location,
                          int method, int * flags, int timeout);
 
-int bg_plug_io_server_handshake(gavf_io_t *, int method, const gavl_dictionary_t * req, const char * path);
+int bg_plug_io_server_handshake(gavl_io_t *, int method, const gavl_dictionary_t * req, const char * path);
 
 #if 0
-gavf_io_t *
+gavl_io_t *
 bg_plug_io_open_socket(int fd, int * flags, int timeout);
 
-gavf_io_t *
+gavl_io_t *
 bg_plug_io_open_socket_noclose(int fd, int method, int * flags, int timeout);
 #endif
 
