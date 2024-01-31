@@ -73,9 +73,7 @@ char * track_spec_ptr;
 static bg_frontend_t ** frontends = NULL;
 int num_frontends = 0;
 
-#ifdef HAVE_NCURSES
-static int do_ncurses = 0;
-#endif
+gavl_array_t fe_arr;
 
 /*
  *  Commandline options stuff
@@ -119,13 +117,18 @@ static void opt_nt(void * data, int * argc, char *** _argv, int arg)
   display_time = 0;
   }
 
-#ifdef HAVE_NCURSES
-static void opt_nc(void * data, int * argc, char *** _argv, int arg)
+static void opt_fe(void * data, int * argc, char *** argv, int arg)
   {
-  display_time = 0;
-  do_ncurses = 1;
+  if(arg >= *argc)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Option -fe requires an argument");
+    exit(-1);
+    }
+
+  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_cmdline_remove_arg(argc, argv, arg);
   }
-#endif
+
 
 static void opt_vol(void * data, int * argc, char *** _argv, int arg)
   {
@@ -218,13 +221,6 @@ static bg_cmdline_arg_t global_options[] =
       .help_string = "Disable time display",
       .callback =    opt_nt,
     },
-#ifdef HAVE_NCURSES
-    {
-      .arg =         "-nc",
-      .help_string = "Use ncurses frontend",
-      .callback =    opt_nc,
-    },
-#endif
     {
       .arg =         "-vol",
       .help_arg =    "<volume>",
@@ -256,6 +252,17 @@ static bg_cmdline_arg_t global_options[] =
     BG_PLUGIN_OPT_LIST_FA,
     BG_PLUGIN_OPT_LIST_FV,
     BG_PLUGIN_OPT_LIST_OPTIONS,
+    {
+      .arg =         "-fe",
+      .help_arg = "frontend1[,frontend2]",
+      .help_string = TRS("Comma separated list of frontends. Use -list-fe to list available frontends. The prefix fe_ can be omitted"),
+      .callback = opt_fe,
+    },
+    {
+      .arg =         "-list-fe",
+      .help_string = TRS("List available frontends"),
+      .callback = bg_plugin_registry_list_fe_renderer,
+    },
     { /* End of options */ }
   };
 
@@ -302,10 +309,9 @@ int main(int argc, char ** argv)
   bg_cfg_section_t * cfg_section;
   gavl_timer_t * timer;
 
-  gavl_array_t fe;
   
-  gavl_array_init(&fe);
-  bg_frontend_set_option(&fe, "console");
+  gavl_array_init(&fe_arr);
+  bg_frontend_set_option(&fe_arr, "console");
   
   bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"), "renderer");
   
@@ -352,14 +358,9 @@ int main(int argc, char ** argv)
   bg_cfg_ctx_apply_array(cfg);
   
   /* Create frontend */
-
-  if(do_ncurses)
-    gavl_string_array_add(&fe, "ncurses");
-  else
-    gavl_string_array_add(&fe, "console");
-
+  
   frontends = bg_frontends_create(player_ctrl,
-                                  BG_PLUGIN_FRONTEND_RENDERER, &fe, &num_frontends);
+                                  BG_PLUGIN_FRONTEND_RENDERER, &fe_arr, &num_frontends);
   
   uris = bg_cmdline_get_locations_from_args(&argc, &argv);
 
