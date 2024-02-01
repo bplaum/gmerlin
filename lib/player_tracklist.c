@@ -893,8 +893,6 @@ void bg_player_tracklist_free(bg_player_tracklist_t * l)
   delete_shuffle_list(l);
   gavl_dictionary_destroy(l->cnt);
 
-  if(l->hub)
-    bg_msg_hub_destroy(l->hub);
   
   }
 
@@ -908,11 +906,7 @@ void bg_player_tracklist_init(bg_player_tracklist_t * l, bg_msg_sink_t * evt_sin
   l->idx      = -1;
   l->idx_real = -1;
   
-  l->hub = bg_msg_hub_create(1);
-  
-  l->evt_sink = bg_msg_hub_get_sink(l->hub);
-
-  bg_msg_hub_connect_sink(l->hub, evt_sink);
+  l->evt_sink = evt_sink;
   
   l->cnt = gavl_dictionary_create();
   

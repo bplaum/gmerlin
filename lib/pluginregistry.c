@@ -4570,8 +4570,7 @@ void bg_input_plugin_seek_percentage(bg_plugin_handle_t * h, double percentage)
     {
     t = gavl_seconds_to_time(gavl_time_to_seconds(duration)*percentage);
     t += gavl_track_get_start_time(track);
-
-    fprintf(stderr, "Percentage: %f time: %"PRId64"\n", percentage, t);
+    //    fprintf(stderr, "Percentage: %f time: %"PRId64"\n", percentage, t);
     }
   else
     {

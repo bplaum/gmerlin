@@ -74,7 +74,7 @@ typedef struct
   int has_next;
   
   bg_msg_sink_t * evt_sink; // Set by client
-  bg_msg_hub_t * hub;
+  //  bg_msg_hub_t * hub;
 
   /* We use the player state to check early, if a media stream is loadable */
   gavl_dictionary_t * application_state;

@@ -1467,7 +1467,7 @@ function set_header(obj, no_image, no_metadata)
 
 function player_create_websocket(ret, url)
   {
-  console.log("Opening websocket " + url);
+  console.log("Opening renderer websocket " + url);
 
   ret.ws = new WebSocket(url, ["json"]);
       
@@ -3422,8 +3422,6 @@ function create_browser()
         }
       else
 	{
-	  //          playqueue_add_entry(obj, 0, 1);
-	// replace playqueue
         playqueue_add_album(this.container, true, false);
         play_by_id(obj);
 	}
@@ -3793,12 +3791,14 @@ function create_player_control()
 
     if(!(m = dict_get_dictionary(obj, GAVL_META_METADATA)))
       return;
-    if(!(klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)))
-      return;
       
 //  console.log("have image " + klass + " " + this.have_container_image);
     el = document.getElementById("player-info");
     clear_element(el);
+
+    if(!(klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)))
+      return;
+
     span = append_dom_element(el, "span");
     span.setAttribute("class", "player-label");
     append_dom_text(span, make_label(m, klass));
@@ -3813,9 +3813,9 @@ function create_player_control()
       
   ret.handle_msg = function(msg)
     {
-//  console.log("Handle msg 1 " + JSON.stringify(msg));
     var t;
     var val;
+//    console.log("Handle msg 1 " + JSON.stringify(msg));
     switch(msg.ns)
       {
       case BG_MSG_NS_STATE:
@@ -3910,8 +3910,7 @@ function create_player_control()
                     
                     var child;
                     var m;
-//                    console.log("Got current track " + app_state.widget + " " + app_state.id + " " +
-//                                playqueue_is_current());
+//                    console.log("Got current track " + JSON.stringify(msg.args[3].v));
 
                     this.current_track = msg.args[3].v;
 
@@ -4007,6 +4006,9 @@ function create_player_control()
 
             var id = dict_get_string(msg.header, GAVL_MSG_CONTEXT_ID);
 
+//            console.log("BG_MSG_DB_OBJECT_CHANGED " + " " + JSON.stringify(msg.args[0].v));
+
+	      
             if((current_widget == widgets.browser) && (widgets.browser.container))
               cur_id = obj_get_id(widgets.browser.container);
 
