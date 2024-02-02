@@ -251,6 +251,16 @@ static int get_gmerlin_mode(int shuffle, const char * loop_status)
     return BG_PLAYER_MODE_NORMAL;
   }
 
+static void send_ack(mpris2_t * p, gavl_msg_t * msg)
+  {
+  DBusMessage * reply;
+      
+  reply = bg_dbus_msg_new_reply(msg);
+  bg_dbus_send_msg(p->conn, reply);
+  dbus_message_unref(reply);
+  
+  }
+
 static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
   {
   const char * interface;
@@ -392,7 +402,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
         bg_dbus_send_error(p->conn, msg, NULL, error_msg);
         free(error_msg);
         }
-      
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "GetAll"))
       {
@@ -426,11 +436,11 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     {
     if(!strcmp(member, "Raise"))
       {
-      
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Quit"))
       {
-      
+      send_ack(p, msg);
       }
     else
       {
@@ -446,10 +456,12 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     if(!strcmp(member, "Next"))
       {
       bg_player_next(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Previous"))
       {
       bg_player_prev(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Pause"))
       {
@@ -457,18 +469,22 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       if((var = gavl_dictionary_get_string(&p->player_prop, "PlaybackStatus")) &&
          !strcmp(var, "Playing"))
         bg_player_pause(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "PlayPause"))
       {
       bg_player_pause(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Stop"))
       {
       bg_player_stop(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Play"))
       {
       bg_player_play(p->control.cmd_sink);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "Seek"))
       {
@@ -476,6 +492,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       t = gavl_msg_get_arg_long(msg, 0);
       
       fprintf(stderr, "Seek %"PRId64"\n", t);
+      send_ack(p, msg);
       
       //      bg_player_seek(fe->ctrl.cmd_sink, gavl_time_t time, GAVL_TIME_SCALE);
       }
@@ -488,10 +505,12 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       
       //      fprintf(stderr, "SetPosition %s %"PRId64"\n", str, t);
       bg_player_seek(p->control.cmd_sink, t, GAVL_TIME_SCALE);
+      send_ack(p, msg);
       }
     else if(!strcmp(member, "OpenUri"))
       {
       /* TODO */
+      send_ack(p, msg);
       }
     else
       {
@@ -549,15 +568,19 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     else if(!strcmp(member, "AddTrack"))
       {
       /* (s: Uri, o: AfterTrack, b: SetAsCurrent) */
+      send_ack(p, msg);
+      
       }
     else if(!strcmp(member, "RemoveTrack"))
       {
       /* (o: TrackId) */
+      send_ack(p, msg);
       
       }
     else if(!strcmp(member, "GoTo"))
       {
       /* (o: TrackId) */
+      send_ack(p, msg);
       
       }
     else
