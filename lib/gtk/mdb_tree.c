@@ -850,7 +850,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
   
   gavl_dictionary_get_int(m, GAVL_META_LOCKED, &locked);
   
-  klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+  klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
 
   if(!(var = gavl_dictionary_get_string(m, GAVL_META_STATION)))
     var = gavl_dictionary_get_string(m, GAVL_META_LABEL);
@@ -912,7 +912,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
     
     }
 
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SONG))
+  if(!strcmp(klass, GAVL_META_CLASS_SONG))
     {
     if((var = gavl_dictionary_get_arr(m, GAVL_META_ARTIST, 0)))
       {
@@ -922,7 +922,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
       }
   
     if((var = gavl_dictionary_get_string(m, GAVL_META_ALBUM)) &&
-       (!parent_klass || strcmp(parent_klass, GAVL_META_MEDIA_CLASS_MUSICALBUM)))
+       (!parent_klass || strcmp(parent_klass, GAVL_META_CLASS_MUSICALBUM)))
       {
       markup = append_meta_tag(markup, var, BG_ICON_MUSIC_ALBUM);
       }
@@ -951,7 +951,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
     }
 
   if((var = gavl_dictionary_get_string(m, GAVL_META_PODCAST)) &&
-     (!parent_klass || (strcmp(parent_klass, GAVL_META_MEDIA_CLASS_PODCAST))))
+     (!parent_klass || (strcmp(parent_klass, GAVL_META_CLASS_PODCAST))))
     markup = append_meta_tag(markup, var, BG_ICON_RSS);
   
   if((var = gavl_dictionary_get_arr(m, GAVL_META_TAG, 0)))
@@ -985,7 +985,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
 
   /* For movies we add another line */
 
-  if(klass && gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_MOVIE))
+  if(klass && gavl_string_starts_with(klass, GAVL_META_CLASS_MOVIE))
     {
     markup = gavl_strcat(markup , "\n");
 
@@ -1041,7 +1041,7 @@ static void set_entry_tree(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * dict
   if(!m || !(id = gavl_dictionary_get_string(m, GAVL_META_ID)))
     return;
   
-  if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if((klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     {
     gtk_tree_store_set(GTK_TREE_STORE(model), iter,
                        TREE_COLUMN_ICON, bg_get_type_icon(klass),
@@ -1090,7 +1090,7 @@ static int is_container(const gavl_value_t * val)
 
   if((dict = gavl_value_get_dictionary(val)) &&
      (m = gavl_track_get_metadata(dict)) &&
-     (klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+     (klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
      gavl_string_starts_with(klass, "container"))
     return 1;
   
@@ -1106,7 +1106,7 @@ static int tree_transform_idx(const gavl_dictionary_t * dict, int idx)
   int ret = 0;
 
   if(!(d = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(d, GAVL_META_MEDIA_CLASS)) ||
+     !(klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, "container"))
     {
     //    fprintf(stderr, "Cannot transform index:\n");
@@ -1119,7 +1119,7 @@ static int tree_transform_idx(const gavl_dictionary_t * dict, int idx)
     {
     if((d = gavl_get_track(dict, i)) &&
        (d = gavl_track_get_metadata(d)) &&
-       (klass = gavl_dictionary_get_string(d, GAVL_META_MEDIA_CLASS)) &&
+       (klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) &&
        gavl_string_starts_with(klass, "container"))
       ret++;
     }
@@ -2205,7 +2205,7 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
 #if 1
   m = gavl_dictionary_get_dictionary_create(ret->playqueue.a, GAVL_META_METADATA);
   gavl_dictionary_set_string(m, GAVL_META_LABEL, "Player queue");
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_PLAYQUEUE);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_PLAYQUEUE);
   gavl_dictionary_set_string(m, GAVL_META_ID, BG_PLAYQUEUE_ID);
 #endif
   

@@ -218,7 +218,7 @@ static int is_item(const gavl_value_t * val)
 
   if((dict = gavl_value_get_dictionary(val)) &&
      (m = gavl_track_get_metadata(dict)) &&
-     (klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+     (klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
      gavl_string_starts_with(klass, "item"))
     return 1;
   
@@ -330,7 +330,7 @@ static int list_transform_idx(const gavl_dictionary_t * dict, int idx)
 
   if(!(d = gavl_get_track(dict, idx)) ||
      !(d = gavl_track_get_metadata(d)) ||
-     !(klass = gavl_dictionary_get_string(d, GAVL_META_MEDIA_CLASS)) ||
+     !(klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, "item"))
     {
     return -1;
@@ -339,7 +339,7 @@ static int list_transform_idx(const gavl_dictionary_t * dict, int idx)
     {
     if((d = gavl_get_track(dict, i)) &&
        (d = gavl_track_get_metadata(d)) &&
-       (klass = gavl_dictionary_get_string(d, GAVL_META_MEDIA_CLASS)) &&
+       (klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) &&
        gavl_string_starts_with(klass, "item"))
       ret++;
     }
@@ -552,7 +552,7 @@ static void set_entry_list(list_t * l,
   if(!m)
     return;
 
-  if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if((klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     {
     gtk_list_store_set(GTK_LIST_STORE(model), iter,
                        LIST_COLUMN_ICON, bg_get_type_icon(klass),
@@ -575,9 +575,9 @@ static void set_entry_list(list_t * l,
   gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_ID, id, -1);
 
   if(!l->klass ||
-     (strcmp(l->klass, GAVL_META_MEDIA_CLASS_MUSICALBUM) &&
-      strcmp(l->klass, GAVL_META_MEDIA_CLASS_TV_SEASON) &&
-      strcmp(l->klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD)))
+     (strcmp(l->klass, GAVL_META_CLASS_MUSICALBUM) &&
+      strcmp(l->klass, GAVL_META_CLASS_TV_SEASON) &&
+      strcmp(l->klass, GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD)))
     {
     bg_gtk_mdb_array_set_flag_str(&l->a->t->list_icons_to_load, id, 1);
     }
@@ -638,7 +638,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
 
   l->klass = NULL;
   
-  if((l->klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+  if((l->klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
      (icon = bg_get_type_icon(l->klass)))
     {
     markup = g_markup_printf_escaped("<span size=\"large\" font_family=\"%s\" weight=\"normal\">%s</span> %s",
@@ -841,7 +841,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
       }
 
     m = gavl_track_get_metadata(t->menu_ctx.album);
-    klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+    klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
     
     if(bg_mdb_is_editable(t->menu_ctx.album))
       {
@@ -854,29 +854,29 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
       
       gtk_widget_show(t->menu.album_menu.sort_item);
 
-      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_STREAMS))
+      if(!strcmp(klass, GAVL_META_CLASS_ROOT_STREAMS))
         gtk_widget_show(t->menu.album_menu.new_stream_source_item);
       else
         {
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_SONG))
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_SONG))
           gtk_widget_show(t->menu.album_menu.load_files_item);
 
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_DIRECTORY))
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_DIRECTORY))
           gtk_widget_show(t->menu.album_menu.add_directory_item);
         
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_CONTAINER))
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_CONTAINER))
           gtk_widget_show(t->menu.album_menu.new_container_item);
-        else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_PLAYLIST))
+        else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_PLAYLIST))
           gtk_widget_show(t->menu.album_menu.new_playlist_item);
       
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST) ||
-           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_MEDIA_CLASS_LOCATION))
+        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_AUDIO_BROADCAST) ||
+           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_VIDEO_BROADCAST) ||
+           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_LOCATION))
           gtk_widget_show(t->menu.album_menu.load_url_item);
         }
       }
 
-    if(!t->menu_ctx.tree && klass && !strcmp(klass, GAVL_META_MEDIA_CLASS_PODCAST))
+    if(!t->menu_ctx.tree && klass && !strcmp(klass, GAVL_META_CLASS_PODCAST))
       gtk_widget_show(t->menu.track_menu.download_item);
     
     if(!strcmp(gavl_track_get_id(t->menu_ctx.album), BG_PLAYQUEUE_ID))
@@ -2580,13 +2580,13 @@ static bg_parameter_info_t container_params[] =
       .type = BG_PARAMETER_STRING,
     },
     {
-      .name = GAVL_META_MEDIA_CLASS,
+      .name = GAVL_META_CLASS,
       .long_name = TRS("Type"),
       .type = BG_PARAMETER_STRINGLIST,
-      .multi_names = (char const *[]){ GAVL_META_MEDIA_CLASS_CONTAINER,
-                                       GAVL_META_MEDIA_CLASS_CONTAINER_TV,
-                                       GAVL_META_MEDIA_CLASS_CONTAINER_RADIO,
-                                       GAVL_META_MEDIA_CLASS_PLAYLIST, NULL },
+      .multi_names = (char const *[]){ GAVL_META_CLASS_CONTAINER,
+                                       GAVL_META_CLASS_CONTAINER_TV,
+                                       GAVL_META_CLASS_CONTAINER_RADIO,
+                                       GAVL_META_CLASS_PLAYLIST, NULL },
       .multi_labels = (char const *[]){ TRS("Generic container"),
                                         TRS("TV Stations"),
                                         TRS("Radio Stations"),
@@ -2630,7 +2630,7 @@ static void create_container_generic(bg_gtk_mdb_tree_t * tree,
 
   gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
   gavl_dictionary_set_string(m, GAVL_META_TITLE, label);
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, klass);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, klass);
   gavl_dictionary_set_string(m, GAVL_META_URI, uri);
   
   gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN, 0);
@@ -2665,7 +2665,7 @@ static void add_stream_source(bg_gtk_mdb_tree_t * tree,
   
   gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
   
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_LOCATION);
   
   msg = bg_msg_sink_get(tree->ctrl.cmd_sink);
   
@@ -2714,7 +2714,7 @@ static void create_playlist(bg_gtk_mdb_tree_t * tree)
   if(!str)
     return;
 
-  create_container_generic(tree, str, GAVL_META_MEDIA_CLASS_PLAYLIST, NULL);
+  create_container_generic(tree, str, GAVL_META_CLASS_PLAYLIST, NULL);
   }
 
 static void create_container(bg_gtk_mdb_tree_t * tree)
@@ -2731,7 +2731,7 @@ static void create_container(bg_gtk_mdb_tree_t * tree)
   bg_dialog_destroy(dlg);
   //  ask_container(tree->menu_ctx.widget, &dict);
 
-  klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS);
+  klass = gavl_dictionary_get_string(&dict, GAVL_META_CLASS);
   label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
 
   if(klass)
@@ -2751,7 +2751,7 @@ static void create_directory(bg_gtk_mdb_tree_t * tree)
   if(!uri)
     return;
   
-  create_container_generic(tree, NULL, GAVL_META_MEDIA_CLASS_DIRECTORY, uri);
+  create_container_generic(tree, NULL, GAVL_META_CLASS_DIRECTORY, uri);
   free(uri);
   }
 

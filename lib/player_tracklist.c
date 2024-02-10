@@ -391,7 +391,7 @@ static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int d
     return 0;
   else if(!(id = gavl_dictionary_get_string(m, GAVL_META_ID)))
     return 0;
-  else if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  else if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return 0;
   else if(!gavl_string_starts_with(klass, "item"))
     return 0;
@@ -920,7 +920,7 @@ void bg_player_tracklist_init(bg_player_tracklist_t * l, bg_msg_sink_t * evt_sin
     gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%s queue", label));
   else
     gavl_dictionary_set_string(m, GAVL_META_LABEL, "Player queue");
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_PLAYQUEUE);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_PLAYQUEUE);
   gavl_dictionary_set_string(m, GAVL_META_ID, BG_PLAYQUEUE_ID);
 
   bg_mdb_set_editable(l->cnt);

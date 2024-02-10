@@ -449,7 +449,7 @@ bg_object_cache_t * bg_object_cache_create(int max_disk_cache_size,
   
   ret->directory = gavl_strdup(directory);
 
-  bg_ensure_directory(ret->directory, 1);
+  gavl_ensure_directory(ret->directory, 1);
   
   load_disk_index(ret);
   return ret;

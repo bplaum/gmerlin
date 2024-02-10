@@ -410,7 +410,7 @@ int bg_sqlite_add_groups(sqlite3 * db, gavl_array_t * ret,
         
         m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
         gavl_dictionary_copy(m, m_tmpl);
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
 
         if(last_id)
           {
@@ -478,7 +478,7 @@ int bg_sqlite_set_group_container(sqlite3 * db, gavl_dictionary_t * ret,
 
   m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
   
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
   gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(group_id));
   gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, child_class);
   
@@ -524,7 +524,7 @@ int bg_sqlite_set_group_container(sqlite3 * db, gavl_dictionary_t * ret,
     free(parent_id);
     }
 
-  if(gavl_string_starts_with(child_class, GAVL_META_MEDIA_CLASS_CONTAINER))
+  if(gavl_string_starts_with(child_class, GAVL_META_CLASS_CONTAINER))
     gavl_track_set_num_children(ret, num_children, 0);
   else
     gavl_track_set_num_children(ret, 0, num_children);

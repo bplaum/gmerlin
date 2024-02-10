@@ -39,7 +39,7 @@ static void add_dev(mpris_t * m, const char * addr, const char * name)
   
   gavl_dictionary_init(&info);
   
-  gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  gavl_dictionary_set_string(&info, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
   
   if(gavl_string_starts_with(name, "gmerlin-"))
     {
@@ -100,7 +100,7 @@ static void add_dev(mpris_t * m, const char * addr, const char * name)
     free(str);
     }
   
-  gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  gavl_dictionary_set_string(&info, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
 
   msg = bg_msg_sink_get(m->ctrl.evt_sink);
 

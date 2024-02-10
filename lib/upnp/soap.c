@@ -333,7 +333,7 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
   
   req_vars = gavl_dictionary_get_dictionary_create(s, BG_SOAP_META_REQ_VARS);
   
-  if(!bg_url_split(control_uri, NULL, NULL, NULL, &host, &port, &path))
+  if(!gavl_url_split(control_uri, NULL, NULL, NULL, &host, &port, &path))
     goto fail;
 
   gavl_dictionary_set_string_nocopy(s, BG_SOAP_META_HOSTNAME, host);

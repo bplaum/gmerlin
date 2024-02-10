@@ -47,8 +47,8 @@ static int is_before(const gavl_value_t * val1, const gavl_dictionary_t * dev)
   dict1 = gavl_value_get_dictionary(val1);
   dict1 = gavl_track_get_metadata(dict1);
   
-  str1 = gavl_dictionary_get_string(dict1, GAVL_META_MEDIA_CLASS);
-  str2 = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS);
+  str1 = gavl_dictionary_get_string(dict1, GAVL_META_CLASS);
+  str2 = gavl_dictionary_get_string(dev, GAVL_META_CLASS);
 
   if(!strcmp(str1, str2))
     {
@@ -61,8 +61,8 @@ static int is_before(const gavl_value_t * val1, const gavl_dictionary_t * dev)
     else
       return 0;
     }
-  else if(!strcmp(str1, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER) &&
-          !strcmp(str2, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER))
+  else if(!strcmp(str1, GAVL_META_CLASS_VIDEO_RECORDER) &&
+          !strcmp(str2, GAVL_META_CLASS_AUDIO_RECORDER))
     return 1;
   else
     return 0;
@@ -103,11 +103,11 @@ static void add_dev(bg_mdb_backend_t * b, const gavl_dictionary_t * dev)
   //  gavl_dictionary_dump(dev, 2);
   //  fprintf(stderr, "\n");
 
-  if(!(klass = gavl_dictionary_get_string(dev, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(dev, GAVL_META_CLASS)))
     return;
   
-  if(strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER) &&
-     strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER))
+  if(strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER) &&
+     strcmp(klass, GAVL_META_CLASS_VIDEO_RECORDER))
     return;
 
   if(!(uri = gavl_dictionary_get_string(dev, GAVL_META_URI)))
@@ -304,7 +304,7 @@ void bg_mdb_create_recorder(bg_mdb_backend_t * b)
 
   b->flags |= BE_FLAG_RESOURCES;
   
-  priv->root = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_RECORDERS);
+  priv->root = bg_mdb_get_root_container(b->db, GAVL_META_CLASS_ROOT_RECORDERS);
   bg_mdb_container_set_backend(priv->root, MDB_BACKEND_RECORDER);
 
   //  priv->reg = bg_recording_device_registry_create();

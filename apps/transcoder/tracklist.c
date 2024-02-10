@@ -395,7 +395,7 @@ static void track_list_update(track_list_t * w)
 
     /* Set type */
 
-    if((type = gavl_dictionary_get_string(gavl_track_get_metadata(track), GAVL_META_MEDIA_CLASS)) &&
+    if((type = gavl_dictionary_get_string(gavl_track_get_metadata(track), GAVL_META_CLASS)) &&
        (type = bg_get_type_icon(type)))
       gtk_list_store_set(GTK_LIST_STORE(model),
                          &iter,

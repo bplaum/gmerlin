@@ -208,7 +208,7 @@ void bg_plug_handler_add_uris(bg_plug_handler_t * h, gavl_dictionary_t * track)
                           const char * mimetype, const char * location)
    */
   
-  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return;
 
   //  fprintf(stderr, "bg_plug_handler_add_uris: class: %s\n", klass);

@@ -91,14 +91,14 @@ static void add_device(v4l2_t * reg, gavl_dictionary_t * dict)
     {
     case GAVL_V4L2_DEVICE_SOURCE:
       real_uri = gavl_sprintf("v4l2-capture://%s%s", reg->hostname, node);
-      gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS,
-                                 GAVL_META_MEDIA_CLASS_VIDEO_RECORDER);
+      gavl_dictionary_set_string(dict, GAVL_META_CLASS,
+                                 GAVL_META_CLASS_VIDEO_RECORDER);
 
       break;
     case GAVL_V4L2_DEVICE_SINK:
       real_uri = gavl_sprintf("v4l2-output://%s%s", reg->hostname, node);
-      gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS,
-                                 GAVL_META_MEDIA_CLASS_SINK_VIDEO);
+      gavl_dictionary_set_string(dict, GAVL_META_CLASS,
+                                 GAVL_META_CLASS_SINK_VIDEO);
       break;
     default:
       return;

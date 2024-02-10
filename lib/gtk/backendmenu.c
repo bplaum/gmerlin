@@ -154,7 +154,7 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   
   char * markup;
   
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, m->klass))
     return;
 
@@ -291,7 +291,7 @@ bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
     gavl_dictionary_set_string(&local_dev, GAVL_META_ID,       "local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_URI,       "local");
     gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL,     "Local");
-    gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, klass);
+    gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, klass);
     
     add_item(ret, &local_dev);
     

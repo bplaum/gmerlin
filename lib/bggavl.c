@@ -1779,6 +1779,28 @@ int bg_json_dict_get_bool(json_object * obj, const char * tag)
   return json_object_get_boolean(child);
   }
 
+json_object * bg_json_dict_get_array(json_object * obj, const char * tag)
+  {
+  json_object * child;
+
+  if(!json_object_object_get_ex(obj, tag, &child) ||
+     !json_object_is_type(child, json_type_array))
+    return NULL;
+  
+  return child;
+  }
+
+json_object * bg_json_dict_get_dict(json_object * obj, const char * tag)
+  {
+  json_object * child;
+
+  if(!json_object_object_get_ex(obj, tag, &child) ||
+     !json_object_is_type(child, json_type_object))
+    return NULL;
+  
+  return child;
+  }
+
 
 void bg_string_to_string_array(const char * str, gavl_array_t * arr)
   {

@@ -157,7 +157,7 @@ static void pa_source_cb(pa_context *c, const pa_source_info *l, int eol, void *
     gavl_dictionary_set_string_nocopy(&dict, GAVL_META_ID, gavl_sprintf("pulseaudio-source-%d", l->index));
     
     gavl_dictionary_set_string(&dict, GAVL_META_LABEL, l->description);
-    gavl_dictionary_set_string(&dict, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER);
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
     gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s", reg->hostname,
                                                                          l->name));
     
@@ -217,8 +217,8 @@ static void v4l_add_device(bg_recording_device_registry_t * reg,
   real_uri = gavl_sprintf("v4l2-capture://%s%s", reg->hostname, gavl_dictionary_get_string(dict, GAVL_META_URI));
   gavl_dictionary_set_string_nocopy(dict, GAVL_META_URI, real_uri);
   
-  gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS,
-                             GAVL_META_MEDIA_CLASS_VIDEO_RECORDER);
+  gavl_dictionary_set_string(dict, GAVL_META_CLASS,
+                             GAVL_META_CLASS_VIDEO_RECORDER);
   
   add_device(reg, dict);
   }
@@ -530,13 +530,13 @@ void bg_list_recording_devices(int timeout)
   for(i = 0; i < arr->num_entries; i++)
     {
     dict = gavl_value_get_dictionary(&arr->entries[i]);
-    klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
+    klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
     uri   = gavl_dictionary_get_string(dict, GAVL_META_URI);
     label = gavl_dictionary_get_string(dict, GAVL_META_LABEL);
 
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER))
+    if(!strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER))
       printf("# Audio source: %s\n", label);
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER))
+    else if(!strcmp(klass, GAVL_META_CLASS_VIDEO_RECORDER))
       printf("# Video source: %s\n", label);
     printf("%s\n", uri);
     }

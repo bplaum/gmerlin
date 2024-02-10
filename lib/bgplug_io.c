@@ -455,7 +455,7 @@ static gavl_io_t * open_tcp(const char * location,
   int fd;
   gavl_socket_address_t * addr = NULL;
   
-  if(!bg_url_split(location,
+  if(!gavl_url_split(location,
                    NULL,
                    NULL,
                    NULL,
@@ -515,7 +515,7 @@ static gavl_io_t * open_unix(const char * addr, int method, int * flags, int tim
   gavl_dictionary_t vars;
   gavl_dictionary_init(&vars);
 
-  if(!bg_url_split(addr,
+  if(!gavl_url_split(addr,
                    NULL,
                    NULL,
                    NULL,
@@ -566,7 +566,7 @@ static gavl_io_t * open_tcpserv(const char * addr,
   char * host = NULL;
   gavl_io_t * ret = NULL;
 
-  if(!bg_url_split(addr,
+  if(!gavl_url_split(addr,
                    NULL,
                    NULL,
                    NULL,
@@ -647,7 +647,7 @@ static gavl_io_t * open_unixserv(const char * addr, int method, int * flags, int
   char * name = NULL;
   gavl_io_t * ret = NULL;
 
-  if(!bg_url_split(addr,
+  if(!gavl_url_split(addr,
                    NULL,
                    NULL,
                    NULL,

@@ -149,8 +149,8 @@ int bg_get_thumbnail(const char * gml,
   thumbs_dir_normal = bg_sprintf("%s/.thumbnails/normal",       home_dir);
   thumbs_dir_fail   = bg_sprintf("%s/.thumbnails/fail/gmerlin", home_dir);
   
-  if(!bg_ensure_directory(thumbs_dir_normal, 1) ||
-     !bg_ensure_directory(thumbs_dir_fail, 1))
+  if(!gavl_ensure_directory(thumbs_dir_normal, 1) ||
+     !gavl_ensure_directory(thumbs_dir_fail, 1))
     goto done;
   
   bg_get_filename_hash(gml, hash);

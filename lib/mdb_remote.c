@@ -114,8 +114,8 @@ static int is_us(bg_mdb_t * db, const char * url)
 
   // fprintf(stderr, "is us: %s %s\n", url, root_url);
   
-  if(bg_url_split(url, NULL, NULL, NULL, &host1, &port1, NULL) &&
-     bg_url_split(root_url, NULL, NULL, NULL, &host2, &port2, NULL) &&
+  if(gavl_url_split(url, NULL, NULL, NULL, &host1, &port1, NULL) &&
+     gavl_url_split(root_url, NULL, NULL, NULL, &host2, &port2, NULL) &&
      !strcmp(host1, host2) &&
      (port1 == port2))
     ret = 1;
@@ -348,9 +348,9 @@ static void remove_remote_children(gavl_dictionary_t * root)
     {
     if((dict = gavl_get_track(root, i)) &&
        (dict = gavl_track_get_metadata(dict)) &&
-       (klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+       (klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
       {
-      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_SERVER))
+      if(!strcmp(klass, GAVL_META_CLASS_ROOT_SERVER))
         {
         /* This and remaining entries need to be deleted */
         gavl_track_splice_children(root, i, num - i, NULL);
@@ -437,8 +437,8 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
               {
               if((dict = gavl_value_get_dictionary(&add)) &&
                  (dict = gavl_track_get_metadata(dict)) &&
-                 (klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) &&
-                 !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_SERVER))
+                 (klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)) &&
+                 !strcmp(klass, GAVL_META_CLASS_ROOT_SERVER))
                 {
                 gavl_value_reset(&add);
                 }
@@ -452,8 +452,8 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
                 {
                 if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
                    (dict = gavl_track_get_metadata(dict)) &&
-                   (klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) &&
-                   !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_SERVER))
+                   (klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)) &&
+                   !strcmp(klass, GAVL_META_CLASS_ROOT_SERVER))
                   {
                   /* Discard rest of the array */
                   gavl_array_splice_val(arr, i, -1, NULL);
@@ -542,8 +542,8 @@ static int handle_remote_msg(void * priv, gavl_msg_t * msg)
 #endif       
             /* Correct some fields */
             gavl_dictionary_set_string(root_m,
-                                       GAVL_META_MEDIA_CLASS,
-                                       GAVL_META_MEDIA_CLASS_ROOT_SERVER);
+                                       GAVL_META_CLASS,
+                                       GAVL_META_CLASS_ROOT_SERVER);
             gavl_dictionary_set(root_m, GAVL_META_ID, gavl_dictionary_get(&s->dev,GAVL_META_ID));
             bg_mdb_container_set_backend(&s->root, MDB_BACKEND_REMOTE);
             
@@ -869,8 +869,8 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
           gavl_dictionary_init(&dict);
           gavl_msg_get_arg_dictionary(msg, 0, &dict);
           
-          if((klass = gavl_dictionary_get_string(&dict, GAVL_META_MEDIA_CLASS)) &&
-             !strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB) &&
+          if((klass = gavl_dictionary_get_string(&dict, GAVL_META_CLASS)) &&
+             !strcmp(klass, GAVL_META_CLASS_BACKEND_MDB) &&
              (uri = gavl_dictionary_get_string(&dict, GAVL_META_URI)) &&
              !is_us(be->db, uri))
             //            (protocol = gavl_dictionary_get_string(&dict, BG_BACKEND_PROTOCOL)) &&

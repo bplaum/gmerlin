@@ -300,7 +300,7 @@ bg_preset_t * bg_preset_add(bg_preset_t * presets,
     dir = bg_sprintf("%s/.gmerlin/presets/%s", home_dir,
                      preset_path);
 
-    if(!bg_ensure_directory(dir, 1))
+    if(!gavl_ensure_directory(dir, 1))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Could not create directory: %s", dir);

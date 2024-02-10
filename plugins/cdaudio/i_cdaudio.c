@@ -469,7 +469,7 @@ static int open_cdaudio(void * data, const char * arg)
         m = gavl_track_get_metadata_nc(track);
 
         /* Finalize track */
-        gavl_dictionary_set(m, GAVL_META_MEDIA_CLASS, NULL);
+        gavl_dictionary_set(m, GAVL_META_CLASS, NULL);
         gavl_track_finalize(track);
         
         if(cd->index->tracks[i].is_audio)
@@ -492,7 +492,7 @@ static int open_cdaudio(void * data, const char * arg)
           m = gavl_track_get_metadata_nc(track);
             
           /* Finalize track */
-          gavl_dictionary_set(m, GAVL_META_MEDIA_CLASS, NULL);
+          gavl_dictionary_set(m, GAVL_META_CLASS, NULL);
           gavl_track_finalize(track);
           
           gavl_dictionary_set_string_nocopy(m,
@@ -510,7 +510,7 @@ static int open_cdaudio(void * data, const char * arg)
             if(var)
               gavl_dictionary_set_string(m, GAVL_META_LABEL, var);
             
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD);
             }
           }
         }

@@ -221,11 +221,11 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
       if(!duration)
         duration = GAVL_TIME_UNDEFINED;
       
-      klass = gavl_dictionary_get_string(metadata, GAVL_META_MEDIA_CLASS);
+      klass = gavl_dictionary_get_string(metadata, GAVL_META_CLASS);
       
       /* Cover */
 
-      if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) &&
+      if(gavl_string_starts_with(klass, GAVL_META_CLASS_AUDIO_FILE) &&
          gavl_dictionary_get(metadata, GAVL_META_COVER_URL) &&
          !gavl_dictionary_get(metadata, GAVL_META_COVER_EMBEDDED))
         {
@@ -256,16 +256,16 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     {
     if(klass)
       {
-      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-         !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST))
+      if(!strcmp(klass, GAVL_META_CLASS_AUDIO_BROADCAST) ||
+         !strcmp(klass, GAVL_META_CLASS_VIDEO_BROADCAST))
         {
         /* Only streaming */
         if(!strcmp(var, "Streaming"))
           transferMode = var;
         
         }
-      else if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) ||
-              gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+      else if(gavl_string_starts_with(klass, GAVL_META_CLASS_AUDIO_FILE) ||
+              gavl_string_starts_with(klass, GAVL_META_CLASS_VIDEO_FILE))
         {
         /* Streaming and background */
 

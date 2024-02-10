@@ -220,10 +220,10 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
 #endif
   
   
-  if(!(klass = gavl_dictionary_get_string(m1, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(m1, GAVL_META_CLASS)))
     return  NULL;
   
-  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_IMAGE))
+  if(gavl_string_starts_with(klass, GAVL_META_CLASS_IMAGE))
     {
     int width  = -1;
     int height = -1;
@@ -239,8 +239,8 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
       return NULL;
     }
   
-  if(gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_AUDIO_FILE) ||
-     gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+  if(gavl_string_starts_with(klass, GAVL_META_CLASS_AUDIO_FILE) ||
+     gavl_string_starts_with(klass, GAVL_META_CLASS_VIDEO_FILE))
     {
     const char * profile_id = NULL;
     const char * mimetype = NULL;
@@ -305,8 +305,8 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
     flags = 0;
     
     
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST) ||
-       !strcmp(klass, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST))
+    if(!strcmp(klass, GAVL_META_CLASS_AUDIO_BROADCAST) ||
+       !strcmp(klass, GAVL_META_CLASS_VIDEO_BROADCAST))
       flags |= DLNA_SenderPacedFlag;
 
     // #define DLNA_lop_npt              (1<<30) // Limited Random Access Data Availability

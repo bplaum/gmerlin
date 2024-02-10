@@ -51,7 +51,7 @@ static void add_volume(udisks2_t * u,
 
   gavl_dictionary_set_string(dict, GAVL_META_LABEL, label);
   gavl_dictionary_set_string(dict, GAVL_META_URI,   location);
-  gavl_dictionary_set_string(dict, GAVL_META_MEDIA_CLASS, media_class);
+  gavl_dictionary_set_string(dict, GAVL_META_CLASS, media_class);
   
   msg = bg_msg_sink_get(u->ctrl.evt_sink);
 
@@ -225,7 +225,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected VCD");
       //      fprintf(stderr, "Detected VCD\n");
 
-      add_volume(u, name, label, location_priv, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD);
+      add_volume(u, name, label, location_priv, GAVL_META_CLASS_ROOT_REMOVABLE_VCD);
       done = 1;
 
       free(location_priv);
@@ -239,7 +239,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected SVCD: %s", label);
       //      fprintf(stderr, "Detected SVCD: %s\n", label);
 
-      add_volume(u, name, label, location_priv, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD);
+      add_volume(u, name, label, location_priv, GAVL_META_CLASS_ROOT_REMOVABLE_SVCD);
       
       done = 1;
       
@@ -250,7 +250,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       if((label = strrchr(location, '/')))
         label++;
       
-      add_volume(u, name, label, location, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD);
+      add_volume(u, name, label, location, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD);
       }
     
     globfree(&g);
@@ -279,7 +279,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected video DVD: %s", label);
       //      fprintf(stderr, "Detected video DVD %s\n", label);
 
-      add_volume(u, name, label, location_priv, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD);
+      add_volume(u, name, label, location_priv, GAVL_META_CLASS_ROOT_REMOVABLE_VIDEODVD);
       done = 1;
       
       free(location_priv);
@@ -289,7 +289,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
       if((label = strrchr(location, '/')))
         label++;
       
-      add_volume(u, name, label, location, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD);
+      add_volume(u, name, label, location, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD);
       }
    
     globfree(&g);
@@ -310,12 +310,12 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
     /*
       TODO: Detect:
 
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD
-      GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD
+      GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD
     */
 
 #if 0    
@@ -327,7 +327,7 @@ static void blockdevice_cb(void * priv, const char * name, const gavl_value_t * 
 
     /* Maybe find a smarter check if a filesystem is removable */
     if(gavl_string_starts_with(location, "/media"))
-      add_volume(u, name, label, location, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM);
+      add_volume(u, name, label, location, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM);
     }
 
   return;
@@ -389,7 +389,7 @@ static void drive_cb(void * priv, const char * name, const gavl_value_t * val)
       /* Audio CD */
       char * uri;
       uri = gavl_sprintf("cda://%s", location);
-      add_volume(u, name, "Audio CD", uri, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD);
+      add_volume(u, name, "Audio CD", uri, GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD);
       free(uri);
       }
     }

@@ -793,10 +793,10 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
           //          fprintf(stderr, "gmerlin_set_backend\n");
           //          gavl_dictionary_dump(&dev, 2);
           
-          if((klass = gavl_dictionary_get_string(&dev, GAVL_META_MEDIA_CLASS)) &&
+          if((klass = gavl_dictionary_get_string(&dev, GAVL_META_CLASS)) &&
               (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
             {
-            if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
+            if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
               {
               pthread_mutex_lock(&w->g->backend_mutex);
 
@@ -826,7 +826,7 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
               pthread_mutex_unlock(&w->g->backend_mutex);
 
               }
-            else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+            else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
               {
               pthread_mutex_lock(&w->g->backend_mutex);
               

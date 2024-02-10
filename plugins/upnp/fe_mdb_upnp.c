@@ -512,7 +512,7 @@ static int open_mdb_upnp(void * data, bg_controllable_t * ctrl)
   gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
                                     bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
     
-  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_MDB);
+  gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_MDB);
   gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
     
   bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);

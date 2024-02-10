@@ -277,7 +277,7 @@ static int query_movie_nfo_callback(void * data, int argc, char **argv, char **a
 
   // fprintf(stderr, "Basename: %s\n", basename);
 
-  bg_ensure_directory(basename, 0);
+  gavl_ensure_directory(basename, 0);
 
   nfoname = bg_sprintf("%s/%s.nfo", basename, basename);
 

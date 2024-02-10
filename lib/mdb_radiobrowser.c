@@ -201,20 +201,20 @@ static void set_root_child(rb_t * rb, gavl_dictionary_t * dict, const gavl_array
   if(arr == &rb->languages)
     {
     path = ROOT_BY_LANGUAGE;
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_LANGUAGE);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
     }
   else if(arr == &rb->countries)
     {
     path = ROOT_BY_COUNTRY;
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_COUNTRY);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
     }
   else if(arr == &rb->tag_groups)
     {
     path = ROOT_BY_TAG;
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
     }
   
   if(path && (arr_dict = gavl_value_get_dictionary(&arr->entries[idx])))
@@ -287,7 +287,7 @@ static int set_station(bg_mdb_backend_t * be,
   
   gavl_dictionary_set_string(m, GAVL_META_COUNTRY,     dict_get_string(child, "country"));
   gavl_dictionary_set_string(m, GAVL_META_STATION_URL, dict_get_string(child, "homepage"));
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
 
   if((v = dict_get_string(child, "tags")))
     {
@@ -412,20 +412,20 @@ static gavl_dictionary_t * create_root_folder(bg_mdb_backend_t * be, const char 
   if(!strcmp(id, ROOT_BY_LANGUAGE))
     {
     arr = &rb->languages;
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_LANGUAGE);
     }
   else if(!strcmp(id, ROOT_BY_COUNTRY))
     {
     arr = &rb->countries;
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_COUNTRY);
     }
   else if(!strcmp(id, ROOT_BY_TAG))
     {
     arr = &rb->tag_groups;
-    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
+    gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
     }
 
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf("/webradio/radiobrowser%s", id));
   gavl_dictionary_set_string(m, GAVL_META_LABEL, get_root_label(id));
   
@@ -640,8 +640,8 @@ static gavl_dictionary_t * browse_object(bg_mdb_backend_t * be,
             m = gavl_dictionary_get_dictionary_create(ret, GAVL_META_METADATA);
             gavl_dictionary_copy(m, tag);
             
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
             
             new_id = bg_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
                                 group_id, 
@@ -801,22 +801,22 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
               if(!strcmp(root_folders[i + start].id, ROOT_BY_LANGUAGE))
                 {
                 gavl_track_set_num_children(dict, rb->languages.num_entries, 0);
-                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
+                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_LANGUAGE);
                 }
               else if(!strcmp(root_folders[i + start].id, ROOT_BY_COUNTRY))
                 {
                 gavl_track_set_num_children(dict, rb->countries.num_entries, 0);
-                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
+                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_COUNTRY);
                 }
               else if(!strcmp(root_folders[i + start].id, ROOT_BY_TAG))
                 {
                 gavl_track_set_num_children(dict, rb->tag_groups.num_entries, 0);
-                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+                gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
                 }
               gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf("%s%s", rb->root_id,
                                                                             root_folders[i + start].id));
 
-              gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+              gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
               
               gavl_array_splice_val_nocopy(&arr, -1, 0, &val);
               }
@@ -953,8 +953,8 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
 
                   gavl_dictionary_copy(dst, src);
                   
-                  gavl_dictionary_set_string(dst, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
-                  gavl_dictionary_set_string(dst, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
+                  gavl_dictionary_set_string(dst, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
+                  gavl_dictionary_set_string(dst, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
                   
                   new_id = bg_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
                                       group_id, 
@@ -1190,8 +1190,8 @@ static void make_tag_groups(rb_t * rb, gavl_array_t * tags)
       gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN, children->num_entries);
       gavl_dictionary_set_int(m, GAVL_META_NUM_ITEM_CHILDREN, 0);
       gavl_dictionary_set_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, children->num_entries);
-      gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_TAG);
+      gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+      gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
 #if 0
       fprintf(stderr, "Created tag group %d entries\n", children->num_entries);
       gavl_dictionary_dump(m, 2);
@@ -1238,7 +1238,7 @@ void bg_mdb_create_radio_browser(bg_mdb_backend_t * b)
   
   priv = calloc(1, sizeof(*priv));
   
-  container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_STREAMS);
+  container = bg_mdb_get_root_container(b->db, GAVL_META_CLASS_ROOT_STREAMS);
   
   child = gavl_append_track(container, NULL);
   
@@ -1247,7 +1247,7 @@ void bg_mdb_create_radio_browser(bg_mdb_backend_t * b)
   container_m = gavl_track_get_metadata(container);
   
   gavl_dictionary_set_string(child_m, GAVL_META_LABEL, "radio-browser.info");
-  gavl_dictionary_set_string(child_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string(child_m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
 
   gavl_dictionary_set_string_nocopy(child_m, GAVL_META_ID,
                                     bg_sprintf("%s/radiobrowser",

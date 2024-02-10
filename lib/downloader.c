@@ -317,7 +317,7 @@ bg_downloader_t * bg_downloader_create(int max_downloads)
   ret->timer = gavl_timer_create();
   gavl_timer_start(ret->timer);
 
-  ret->cache_dir = bg_search_cache_dir("http");
+  ret->cache_dir = gavl_search_cache_dir(PACKAGE, "http");
   
   return ret;
   }

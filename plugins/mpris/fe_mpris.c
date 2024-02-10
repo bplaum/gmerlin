@@ -1087,7 +1087,7 @@ static int open_mpris2(void * data, bg_controllable_t * ctrl)
                                     bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
                                                bus_name_real + MPRIS2_NAME_PREFIX_LEN));
 
-  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
   gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, label);
 
 

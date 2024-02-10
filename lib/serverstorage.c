@@ -207,7 +207,7 @@ static char * make_path(bg_server_storage_t * s,
     
     /* Make directory */
     path = bg_sprintf("%s/%s", s->path, id);
-    bg_ensure_directory(path, 1);
+    gavl_ensure_directory(path, 1);
     free(path);
     }
   

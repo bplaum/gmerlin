@@ -276,7 +276,7 @@ static int send_event(gavl_dictionary_t * es,
   gavl_dictionary_get_long(es, SERVER_COUNTER, &key);
   
   /* Parse URL */
-  if(!bg_url_split(uri,
+  if(!gavl_url_split(uri,
                    NULL, NULL, NULL,
                    &host, &port, &path))
     goto fail;

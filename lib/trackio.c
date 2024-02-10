@@ -119,7 +119,7 @@ static char * write_xspf(const gavl_dictionary_t * dict, int local)
     
     if(!(child = gavl_get_track(dict, i)) ||
        !(m = gavl_track_get_metadata(child)) ||
-       !(val = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+       !(val = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
        gavl_string_starts_with(val, "container"))
       continue;
 
@@ -212,7 +212,7 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local)
 
     if(!(child = gavl_get_track(dict, i)) ||
        !(m = gavl_track_get_metadata(child)) ||
-       !(val = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+       !(val = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
        gavl_string_starts_with(val, "container"))
       continue;
 
@@ -244,7 +244,7 @@ static void init_item(gavl_value_t * val)
 
   dict = gavl_value_set_dictionary(val);
   m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_LOCATION);
   }
 
 static int read_m3u(gavl_dictionary_t * ret, const char * str, int len)
@@ -342,7 +342,7 @@ static char * write_pls(const gavl_dictionary_t * dict, int local)
 
     if(!(child = gavl_get_track(dict, i)) ||
        !(m = gavl_track_get_metadata(child)) ||
-       !(val = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+       !(val = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
        gavl_string_starts_with(val, "container"))
       continue;
 
@@ -402,7 +402,7 @@ static char * write_urilist(const gavl_dictionary_t * dict, int local)
 
     if(!(child = gavl_get_track(dict, i)) ||
        !(m = gavl_track_get_metadata(child)) ||
-       !(val = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+       !(val = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
        gavl_string_starts_with(val, "container"))
       continue;
     

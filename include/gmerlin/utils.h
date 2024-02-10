@@ -55,14 +55,6 @@
 
 char * bg_fix_path(char * path);
 
-/** \brief Ensure that a directory exists
- *  \param dir Directory
- *  \returns 1 if the directory exists after the function call, 0 else
- *
- *  Non-existing directories will be created if possible
- */
-
-int bg_ensure_directory(const char * dir, int priv);
 
 /** \brief Search for a directory to store data
  *  \param directory Subdirectory
@@ -75,16 +67,6 @@ int bg_ensure_directory(const char * dir, int priv);
  */
 
 char * bg_search_var_dir(const char * directory);
-
-/** \brief Search for a directory to cache data
- *  \param directory Subdirectory
- *  \returns A directory name or NULL
- *
- *  Return a cache dir ($HOME/.cache/gmerlin/directory or
- *  $XDG_CACHE_HOME/gmerlin/directory)
- */
-
-char * bg_search_cache_dir(const char * directory);
 
 
 /** \brief Search for a file for reading
@@ -215,24 +197,6 @@ char * bg_toupper(const char * str);
 
 int bg_string_is_url(const char * str);
 
-/** \brief Split an URL into their parts
- *  \param url An URL
- *  \param protocol Protocol (returned)
- *  \param user Username (returned)
- *  \param password Password (returned)
- *  \param hostname Hostname (returned)
- *  \param port     Port (returned)
- *  \param path     Path (returned)
- *
- * This parses an url in the form
- * \<protocol\>://\<user\@password\>\<host\>\<:port\>\<path\>. All arguments
- * for returning the path can be NULL. port will be set to -1 if if doesn't
- * occur in the URL. All strings must be freed when non-NULL after the call.
- */
-
-
-#define bg_url_split(url, protocol, user, password, hostname, port, path) \
-  gavl_url_split(url, protocol, user, password, hostname, port, path)
 
 
 /*
@@ -255,23 +219,6 @@ char * bg_url_get_host(const char * host, int port);
  *  
  */
  
-// void bg_url_get_vars(char * path,
-//                     gavl_dictionary_t * vars);
-
-/*
- *  \brief Split off URL variables
- *  \param path Path component of an URL
- *  \param vars Place to store the variables
- *
- *  Like \ref bg_url_get_vars but doesn't cut off the
- *  variables from the url
- *  
- */
-
-// #define bg_url_get_vars_c gavl_url_get_vars_c
-// #define bg_url_get_vars gavl_url_get_vars
-// #define bg_url_append_vars gavl_url_append_vars
-
 
 /*
  *  \brief Get the track index
@@ -698,7 +645,6 @@ void bg_handle_sigint();
 
 int bg_got_sigint();
 
-int bg_is_directory(const char * dir, int wr);
 
 /* ID3V2 write support.
    Used by the encoder plugins and for generating ID3V2 tags on the fly. */

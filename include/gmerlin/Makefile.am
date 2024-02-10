@@ -39,6 +39,7 @@ pluginfuncs.h \
 pluginregistry.h \
 preset.h \
 recorder.h \
+resourcemanager.h \
 singlepic.h \
 state.h \
 streaminfo.h \

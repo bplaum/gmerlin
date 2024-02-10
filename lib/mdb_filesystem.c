@@ -138,9 +138,9 @@ static int load_dirent(gavl_dictionary_t * ret, const char * location)
     return 0;
     }
   if(S_ISDIR(st.st_mode))
-    gavl_dictionary_set_string(ret, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_DIRECTORY);
+    gavl_dictionary_set_string(ret, GAVL_META_CLASS, GAVL_META_CLASS_DIRECTORY);
   else
-    gavl_dictionary_set_string(ret, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+    gavl_dictionary_set_string(ret, GAVL_META_CLASS, GAVL_META_CLASS_LOCATION);
   gavl_dictionary_set_long(ret, GAVL_META_MTIME, st.st_mtime);
   gavl_dictionary_set_string(ret, GAVL_META_URI, location);
   return 1;
@@ -225,12 +225,12 @@ static int entry_supported(const gavl_value_t * dirent_val, dir_type_t type)
     const char * klass;
     const char * uri;
 
-    if(!(klass = gavl_dictionary_get_string(dirent, GAVL_META_MEDIA_CLASS)))
+    if(!(klass = gavl_dictionary_get_string(dirent, GAVL_META_CLASS)))
       return 0;
     
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_DIRECTORY))
+    if(!strcmp(klass, GAVL_META_CLASS_DIRECTORY))
       return 1;
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+    else if(!strcmp(klass, GAVL_META_CLASS_LOCATION))
       {
       if(!(uri = gavl_dictionary_get_string(dirent, GAVL_META_URI)))
         return 0;
@@ -302,13 +302,13 @@ static int load_directory_info(bg_mdb_backend_t * be,
     if(!(dict = gavl_value_get_dictionary(&arr.entries[i])))
       continue;
 
-    if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+    if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
       continue;
 
     if(!(child_uri = gavl_dictionary_get_string(dict, GAVL_META_URI)))
       continue;
 
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+    if(!strcmp(klass, GAVL_META_CLASS_LOCATION))
       {
       if(type == DIR_TYPE_PHOTOALBUMS)
         {
@@ -346,7 +346,7 @@ static int load_directory_info(bg_mdb_backend_t * be,
         }
       
       }
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_DIRECTORY))
+    else if(!strcmp(klass, GAVL_META_CLASS_DIRECTORY))
       num_containers++;
     }
 
@@ -354,7 +354,7 @@ static int load_directory_info(bg_mdb_backend_t * be,
 
   if((type == DIR_TYPE_PHOTOALBUMS) && num_items)
     {
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_PHOTOALBUM);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_PHOTOALBUM);
     if(first_image)
       {
       gavl_video_format_t fmt;
@@ -374,7 +374,7 @@ static int load_directory_info(bg_mdb_backend_t * be,
       }
     }
   else 
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_DIRECTORY); 
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_DIRECTORY); 
   
   if((pos = strrchr(uri, '/')))
     gavl_dictionary_set_string(m, GAVL_META_LABEL, pos+1); 
@@ -488,7 +488,7 @@ static int load_item_info(bg_mdb_backend_t * be,
   gavl_dictionary_t * mi;
   
   const char * uri = gavl_dictionary_get_string(dirent, GAVL_META_URI);
-  const char * klass = gavl_dictionary_get_string(dirent, GAVL_META_MEDIA_CLASS);
+  const char * klass = gavl_dictionary_get_string(dirent, GAVL_META_CLASS);
 
   //  fprintf(stderr, "Load item info\n");
   //  gavl_dictionary_dump(dirent, 2);
@@ -496,7 +496,7 @@ static int load_item_info(bg_mdb_backend_t * be,
   gavl_dictionary_reset(ret);
   
   /* Load directory */
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_DIRECTORY))
+  if(!strcmp(klass, GAVL_META_CLASS_DIRECTORY))
     {
     load_directory_info(be, ret, dirent, type);
     return 1;
@@ -513,7 +513,7 @@ static int load_item_info(bg_mdb_backend_t * be,
     else
       label = uri;
     gavl_dictionary_set_string(m, GAVL_META_LABEL, label);
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_FILE);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_FILE);
 
     if(mi)
       gavl_dictionary_destroy(mi);
@@ -780,11 +780,11 @@ static void finalize_object(bg_mdb_backend_t * be, gavl_dictionary_t * track)
   /* Create thumbnails */
   if((klass = gavl_track_get_media_class(track)))
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_IMAGE) &&
+    if(!strcmp(klass, GAVL_META_CLASS_IMAGE) &&
        gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
       bg_mdb_make_thumbnails(be->db, uri);
     
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_PHOTOALBUM) &&
+    if(!strcmp(klass, GAVL_META_CLASS_PHOTOALBUM) &&
        gavl_track_get_src(track, GAVL_META_ICON_URL, 0, NULL, &uri))
       bg_mdb_make_thumbnails(be->db, uri);
     }
@@ -1028,10 +1028,10 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
     if(!load_dirent(&dirent, path))
       goto fail;
 
-    if(!(klass = gavl_dictionary_get_string(&dirent, GAVL_META_MEDIA_CLASS)))
+    if(!(klass = gavl_dictionary_get_string(&dirent, GAVL_META_CLASS)))
       goto fail;
     
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+    if(!strcmp(klass, GAVL_META_CLASS_LOCATION))
       {
       browse_children_multitrack(be, msg, ctx_id, path, start, num);
       }
@@ -1074,10 +1074,10 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
       if(!load_dirent(&dirent, path))
         goto fail;
 
-      if(!(klass = gavl_dictionary_get_string(&dirent, GAVL_META_MEDIA_CLASS)))
+      if(!(klass = gavl_dictionary_get_string(&dirent, GAVL_META_CLASS)))
         goto fail;
     
-      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION))
+      if(!strcmp(klass, GAVL_META_CLASS_LOCATION))
         browse_children_multitrack(be, msg, ctx_id, path, start, num);
       
       gavl_dictionary_get_long(&dirent, GAVL_META_MTIME, &dirent_mtime);
@@ -1269,7 +1269,7 @@ static int add_directory(bg_mdb_backend_t * b, dir_type_t type, int * idx, const
       gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf(REMOVABLE_ID_PREFIX"-%"PRId64,
                                                                     ++fs->removable_counter));
       gavl_dictionary_set_string(m, VOLUME_ID, volume_id);
-      gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM); 
+      gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM); 
       bg_mdb_container_set_backend(add_dict, MDB_BACKEND_FILESYSTEM);
       break;
     default:
@@ -1514,8 +1514,8 @@ static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
 
           if(!fs->mount_removable ||
              !gavl_msg_get_arg_dictionary(msg, 0, &vol) ||
-             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)) ||
-             !gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM))
+             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_CLASS)) ||
+             !gavl_string_starts_with(klass, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM))
             {
             gavl_dictionary_free(&vol);
             return 1;
@@ -1526,7 +1526,7 @@ static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
           //          fprintf(stderr, "Volume added: %s\n", volume_id);
           //          gavl_dictionary_dump(&vol, 2);
           
-          if(!(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)))
+          if(!(klass = gavl_dictionary_get_string(&vol, GAVL_META_CLASS)))
             return 1;
 
           uri = gavl_dictionary_get_string(&vol, GAVL_META_URI);
@@ -1651,14 +1651,14 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   
   /* Add children */
   
-  priv->local_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES);
+  priv->local_container = bg_mdb_get_root_container(b->db, GAVL_META_CLASS_ROOT_DIRECTORIES);
   bg_mdb_container_set_backend(priv->local_container, MDB_BACKEND_FILESYSTEM);
-  bg_mdb_add_can_add(priv->local_container, GAVL_META_MEDIA_CLASS_DIRECTORY);
+  bg_mdb_add_can_add(priv->local_container, GAVL_META_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->local_container);
 
-  priv->photo_container = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS);
+  priv->photo_container = bg_mdb_get_root_container(b->db, GAVL_META_CLASS_ROOT_PHOTOS);
   bg_mdb_container_set_backend(priv->photo_container, MDB_BACKEND_FILESYSTEM);
-  bg_mdb_add_can_add(priv->photo_container, GAVL_META_MEDIA_CLASS_DIRECTORY);
+  bg_mdb_add_can_add(priv->photo_container, GAVL_META_CLASS_DIRECTORY);
   bg_mdb_set_editable(priv->photo_container);
   
   /* Create cache */  

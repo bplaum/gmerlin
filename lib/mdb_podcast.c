@@ -459,7 +459,7 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   
   gavl_dictionary_set_string(channel_m, GAVL_META_TITLE, podcast);
   gavl_dictionary_set_string(channel_m, GAVL_META_LABEL, podcast);
-  gavl_dictionary_set_string(channel_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_PODCAST);
+  gavl_dictionary_set_string(channel_m, GAVL_META_CLASS, GAVL_META_CLASS_PODCAST);
   
   if((str = bg_xml_node_get_child_content(node, "pubDate")))
     {
@@ -608,11 +608,11 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
       
       if(gavl_string_starts_with(mimetype, "audio/"))
         {
-        gavl_dictionary_set_string(it_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_PODCAST_EPISODE);
+        gavl_dictionary_set_string(it_m, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_PODCAST_EPISODE);
         }
       else if(gavl_string_starts_with(mimetype, "video/"))
         {
-        gavl_dictionary_set_string(it_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_VIDEO_PODCAST_EPISODE);
+        gavl_dictionary_set_string(it_m, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_PODCAST_EPISODE);
         }
       gavl_metadata_add_src(it_m, GAVL_META_SRC, mimetype, url);
 
@@ -621,7 +621,7 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
       }
     else
       {
-      gavl_dictionary_set_string(it_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ITEM);
+      gavl_dictionary_set_string(it_m, GAVL_META_CLASS, GAVL_META_CLASS_ITEM);
       gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID, bg_sprintf("%s/%s/%d", BG_MDB_ID_PODCASTS, md5, idx));
       }
     
@@ -694,8 +694,8 @@ static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl
 
   if(!(dict = gavl_value_get_dictionary(val)) ||
      !(dict = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
-     strcmp(klass, GAVL_META_MEDIA_CLASS_LOCATION) ||
+     !(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)) ||
+     strcmp(klass, GAVL_META_CLASS_LOCATION) ||
      !gavl_metadata_get_src(dict, GAVL_META_SRC, 0, NULL, &uri) ||
      !uri)
     {
@@ -944,7 +944,7 @@ static void make_saved_container(gavl_dictionary_t * saved_dict, const parsed_id
   {
   gavl_dictionary_t * saved_m = gavl_dictionary_get_dictionary_create(saved_dict, GAVL_META_METADATA);
   gavl_dictionary_set_string(saved_m, GAVL_META_LABEL, "Downloaded episodes");
-  gavl_dictionary_set_string(saved_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+  gavl_dictionary_set_string(saved_m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
   gavl_dictionary_set_string_nocopy(saved_m, GAVL_META_ID, gavl_sprintf(BG_MDB_ID_PODCASTS"/%s/saved", id->podcast_id));
 
   bg_mdb_set_editable(saved_dict);
@@ -1061,9 +1061,9 @@ static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
 
   dirname = gavl_sprintf("%s/saved/%s", priv->dir, id->podcast_id);
   
-  if(!bg_is_directory(dirname, 1))
+  if(!gavl_is_directory(dirname, 1))
     {
-    bg_ensure_directory(dirname, 0);
+    gavl_ensure_directory(dirname, 0);
     created_local_folder = 1;
     }
   
@@ -1643,7 +1643,7 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b)
   priv->last_update_time = GAVL_TIME_UNDEFINED;
   priv->last_full_update_time = GAVL_TIME_UNDEFINED;
   
-  priv->root = bg_mdb_get_root_container(b->db, GAVL_META_MEDIA_CLASS_ROOT_PODCASTS);
+  priv->root = bg_mdb_get_root_container(b->db, GAVL_META_CLASS_ROOT_PODCASTS);
 
   gavl_timer_start(priv->timer);
   
@@ -1664,10 +1664,10 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b)
   
   priv->dir = bg_sprintf("%s/%s", b->db->path, "podcasts");
   
-  bg_ensure_directory(priv->dir, 0);
+  gavl_ensure_directory(priv->dir, 0);
 
   dir = gavl_sprintf("%s/saved", priv->dir);
-  bg_ensure_directory(dir, 0);
+  gavl_ensure_directory(dir, 0);
   free(dir);
   
   load_subscriptions(b);

@@ -73,10 +73,10 @@ static void pa_state_cb(pa_context *c, void *userdata)
 
 static char * make_id(const char * klass, int idx)
   {
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER))
+  if(!strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER))
     return gavl_sprintf("pulseaudio-source-%d", idx);
 
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SINK_AUDIO))
+  if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
     return gavl_sprintf("pulseaudio-sink-%d", idx);
   
   return NULL;
@@ -87,7 +87,7 @@ static void add_device(pulse_t * reg, gavl_dictionary_t * dict, int idx)
   gavl_msg_t * msg;
   const char * klass;
 
-  klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
+  klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
   
   msg = bg_msg_sink_get(reg->ctrl.evt_sink);
   
@@ -120,7 +120,7 @@ static void pa_source_cb(pa_context *c, const pa_source_info *l, int eol, void *
     //    fprintf(stderr, "Got source: %s\n", l->name);
     
     gavl_dictionary_set_string(&dict, GAVL_META_LABEL, l->description);
-    gavl_dictionary_set_string(&dict, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER);
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
     gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
                                                                          reg->hostname,
                                                                          l->name));
@@ -142,7 +142,7 @@ static void pa_sink_cb(pa_context *c, const pa_sink_info *l, int eol, void *user
     //    fprintf(stderr, "Got source: %s\n", l->name);
     
     gavl_dictionary_set_string(&dict, GAVL_META_LABEL, l->description);
-    gavl_dictionary_set_string(&dict, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_SINK_AUDIO);
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
     gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-sink://%s/%s",
                                                                          reg->hostname,
                                                                          l->name));
@@ -185,9 +185,9 @@ static void pa_subscribe_callback(pa_context *c,
     case PA_SUBSCRIPTION_EVENT_REMOVE:
       {
       if(source)
-        del_device(reg, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER, idx);
+        del_device(reg, GAVL_META_CLASS_AUDIO_RECORDER, idx);
       else
-        del_device(reg, GAVL_META_MEDIA_CLASS_SINK_AUDIO, idx);
+        del_device(reg, GAVL_META_CLASS_SINK_AUDIO, idx);
       
       }
       break;

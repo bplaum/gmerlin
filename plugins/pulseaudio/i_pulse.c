@@ -143,7 +143,7 @@ static int open_pulse(void * data, const char * location)
   s = gavl_track_append_audio_stream(t);
   gavl_audio_format_copy(gavl_stream_get_audio_format_nc(s), &priv->com.format);
   
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_AUDIO_RECORDER);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
 
   bg_media_source_set_from_track(&priv->source, t);
 

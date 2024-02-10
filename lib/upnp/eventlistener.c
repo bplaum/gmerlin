@@ -245,7 +245,7 @@ bg_upnp_event_listener_create(const char * event_url_remote,
 
   gavl_timer_start(ret->timer);
   
-  if(!bg_url_split(ret->remote_url,
+  if(!gavl_url_split(ret->remote_url,
                    NULL, NULL, NULL,
                    &host, &port, &ret->remote_path))
     {

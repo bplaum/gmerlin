@@ -93,35 +93,35 @@ static void set_editable(const char * id, gavl_dictionary_t * dict)
   gavl_dictionary_t * m;
 
   if(!(m = gavl_track_get_metadata_nc(dict)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, "container"))
     return;
 
   bg_mdb_set_editable(dict);
   
-  if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
+  if(!strcmp(id, bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_FAVORITES)))
     {
     bg_mdb_add_can_add(dict, "item.audio*");
     bg_mdb_add_can_add(dict, "item.video*");
     bg_mdb_add_can_add(dict, "item.image*");
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_LOCATION);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_BROADCAST);
     }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_TV))
+  else if(!strcmp(klass, GAVL_META_CLASS_CONTAINER_TV))
     {
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST);
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_VIDEO_BROADCAST);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_LOCATION);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_BROADCAST);
     }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_CONTAINER_RADIO))
+  else if(!strcmp(klass, GAVL_META_CLASS_CONTAINER_RADIO))
     {
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST);
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_LOCATION);
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_BROADCAST);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_AUDIO_BROADCAST);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_LOCATION);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_BROADCAST);
     }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_PLAYLIST))
+  else if(!strcmp(klass, GAVL_META_CLASS_PLAYLIST))
     {
-    bg_mdb_add_can_add(dict, GAVL_META_MEDIA_CLASS_SONG);
+    bg_mdb_add_can_add(dict, GAVL_META_CLASS_SONG);
     }
   
   }
@@ -159,10 +159,10 @@ static void item_from_storage(bg_mdb_backend_t * b,
   if(!(m = gavl_track_get_metadata_nc(dict)))
     return;
 
-  if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if((klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     {
     /* Set label for song */
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SONG))
+    if(!strcmp(klass, GAVL_META_CLASS_SONG))
       {
       char * artist = gavl_metadata_join_arr(m, GAVL_META_ARTIST, ", ");
 
@@ -334,7 +334,7 @@ static int do_add(bg_mdb_backend_t * b,
   
   dir = id_to_path(b, parent_id);
 
-  if(!strcmp(parent_id, bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_FAVORITES)))
+  if(!strcmp(parent_id, bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_FAVORITES)))
     {
     const char * uri;
     const gavl_dictionary_t * m;
@@ -366,7 +366,7 @@ static int do_add(bg_mdb_backend_t * b,
   m = gavl_track_get_metadata_nc(add);
 
   
-  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
      !bg_mdb_can_add(dir_idx, klass))
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cannot add item, unknown or unsupported media class (%s)",
@@ -391,7 +391,7 @@ static int do_add(bg_mdb_backend_t * b,
     id = bg_sprintf("%s/%s", parent_id, uuid_str);
     
     filename = bg_sprintf("%s/%s", dir, uuid_str);
-    bg_ensure_directory(filename, 0);
+    gavl_ensure_directory(filename, 0);
     free(filename);
 
     tmp_dict = gavl_dictionary_create();
@@ -460,11 +460,11 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
 
   if((klass = bg_mdb_get_klass_from_id(ctx_id)))
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY))
+    if(!strcmp(klass, GAVL_META_CLASS_ROOT_LIBRARY))
       {
       root_dict =  xml->library;
       }
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES))
+    else if(!strcmp(klass, GAVL_META_CLASS_ROOT_FAVORITES))
       {
       root_dict =  xml->favorites;
       }
@@ -1041,7 +1041,7 @@ static gavl_dictionary_t * create_root_folder(bg_mdb_backend_t * b, const char *
   
   directory = id_to_path(b, *id);
   
-  bg_ensure_directory(directory, 0);
+  gavl_ensure_directory(directory, 0);
 
   if((idx = load_dir_index(b, directory)))
     get_num_children(idx, directory, &num_containers, &num_items, &duration);
@@ -1062,11 +1062,11 @@ void bg_mdb_create_xml(bg_mdb_backend_t * b)
   
   priv = calloc(1, sizeof(*priv));
 
-  priv->favorites = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_FAVORITES, &priv->favorites_id);
+  priv->favorites = create_root_folder(b, GAVL_META_CLASS_ROOT_FAVORITES, &priv->favorites_id);
 
   //  fprintf(stderr, "Created favorites: %p\n", priv->favorites);
 
-  priv->library   = create_root_folder(b, GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,   &priv->library_id);
+  priv->library   = create_root_folder(b, GAVL_META_CLASS_ROOT_LIBRARY,   &priv->library_id);
   
   bg_controllable_init(&b->ctrl,
                        bg_msg_sink_create(handle_msg_xml, b, 0),

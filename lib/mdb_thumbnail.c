@@ -67,7 +67,7 @@ static int make_thumbnail(bg_mdb_t * mdb, int64_t image_id,
 
   /* Make sure the directory exists */
   tn_path = bg_sprintf("%s/thumbnails/%dx%d", mdb->path, width, height);
-  bg_ensure_directory(tn_path, 0);
+  gavl_ensure_directory(tn_path, 0);
   free(tn_path);
   tn_path = NULL;
 
@@ -299,8 +299,8 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
   
   pthread_mutex_lock(&mdb->thumbnail_mutex);
   /* Image */  
-  if((var = gavl_dictionary_get_string(tn.m, GAVL_META_MEDIA_CLASS)) &&
-     gavl_string_starts_with(var, GAVL_META_MEDIA_CLASS_IMAGE) &&
+  if((var = gavl_dictionary_get_string(tn.m, GAVL_META_CLASS)) &&
+     gavl_string_starts_with(var, GAVL_META_CLASS_IMAGE) &&
      (path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_SRC, 0, NULL, NULL, NULL)) &&
      ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
     {
@@ -389,7 +389,7 @@ void bg_mdb_init_thumbnails(bg_mdb_t * mdb)
   pthread_mutex_init(&mdb->thumbnail_mutex, NULL);
 
   mdb->thumbs_dir = bg_sprintf("%s/thumbnails", mdb->path);
-  bg_ensure_directory(mdb->thumbs_dir, 0);
+  gavl_ensure_directory(mdb->thumbs_dir, 0);
 
   filename = bg_sprintf("%s/thumbnails/thumbs.sqlite", mdb->path);
   result = sqlite3_open(filename, &mdb->thumbnail_db);

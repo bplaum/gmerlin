@@ -699,11 +699,11 @@ void bg_lpcm_handler_add_uris(bg_lpcm_handler_t * h, gavl_dictionary_t * track)
                           const char * mimetype, const char * location)
    */
   
-  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return;
   
-  if(strcmp(klass, GAVL_META_MEDIA_CLASS_SONG) &&
-     strcmp(klass, GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST))
+  if(strcmp(klass, GAVL_META_CLASS_SONG) &&
+     strcmp(klass, GAVL_META_CLASS_AUDIO_BROADCAST))
     return;
   
   if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, &mimetype, &uri) ||

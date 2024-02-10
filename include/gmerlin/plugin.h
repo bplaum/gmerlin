@@ -173,6 +173,8 @@ typedef enum
     BG_PLUGIN_FRONTEND_MDB               = (1<<23),  //!< 
     BG_PLUGIN_FRONTEND_RENDERER          = (1<<24),  //!< 
 
+    BG_PLUGIN_CONTROL                    = (1<<25),  //!< 
+
   } bg_plugin_type_t;
 
 /** \ingroup plugin
@@ -1473,6 +1475,22 @@ typedef struct
   int (*open)(void * priv, const char * addr);
 
   } bg_backend_plugin_t;
+
+typedef struct 
+  {
+  bg_plugin_common_t common; //!< Infos and functions common to all plugin types
+  const char * protocols;
+  
+  /* Update the internal state, send messages. A zero return value incicates that
+     nothing important happened and the client can savely sleep (e.g. for some 10s of
+     milliseconds) before calling this function again. */
+  
+  int (*update)(void * priv);
+  int (*open)(void * priv, const char * addr);
+  void (*get_controls)(void * priv, gavl_dictionary_t * parent);
+  
+  } bg_control_plugin_t;
+
 
 typedef struct 
   {

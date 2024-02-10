@@ -741,7 +741,7 @@ static int get_root_index(bg_mdb_t * db, const gavl_dictionary_t * dict)
   num = gavl_get_num_tracks(&db->root);
 
   if(!(m = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
      ((idx = get_klass_idx(klass)) < 0) ||
      !(label = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
     {
@@ -752,7 +752,7 @@ static int get_root_index(bg_mdb_t * db, const gavl_dictionary_t * dict)
     {
     if((track = gavl_get_track(&db->root, i)) &&
        (test_m = gavl_track_get_metadata(track)) &&
-       (test_klass = gavl_dictionary_get_string(test_m, GAVL_META_MEDIA_CLASS)) &&
+       (test_klass = gavl_dictionary_get_string(test_m, GAVL_META_CLASS)) &&
        ((test_idx = get_klass_idx(test_klass)) >= 0))
       {
       if(test_idx < idx)
@@ -1241,7 +1241,7 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
                  ret->path);
         goto fail;
         }
-      bg_ensure_directory(ret->path, 0);
+      gavl_ensure_directory(ret->path, 0);
       }
     }
   else
@@ -1286,7 +1286,7 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
 
   gavl_dictionary_set_string(m, GAVL_META_LABEL, "Root");
   gavl_dictionary_set_string(m, GAVL_META_ID, "/");
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT);
   
   /* Thumbnails */
   
@@ -1609,38 +1609,38 @@ static const struct
   }
 root_folders[] =
   {
-    { GAVL_META_MEDIA_CLASS_ROOT_FAVORITES,          "Favorites",    BG_MDB_ID_FAVORITES,    1 },
-    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,            "Library",      BG_MDB_ID_LIBRARY,      2 },
-    { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,        "Music albums", BG_MDB_ID_MUSICALBUMS,  3 },
-    { GAVL_META_MEDIA_CLASS_ROOT_SONGS,              "Songs",        BG_MDB_ID_SONGS,        4 },
-    { GAVL_META_MEDIA_CLASS_ROOT_STREAMS,            "Streams",      BG_MDB_ID_STREAMS,      6 },
-    { GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,           "Podcasts",     BG_MDB_ID_PODCASTS,     7 },
-    { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,             "Movies",       BG_MDB_ID_MOVIES,       8 },
-    { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,           "TV Shows",     BG_MDB_ID_TV_SHOWS,     9 },
-    { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,             "Photos",       BG_MDB_ID_PHOTOS,      10 },
-    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,        "Directories",  BG_MDB_ID_DIRECTORIES, 11 },
-    { GAVL_META_MEDIA_CLASS_ROOT_RECORDERS,          "Devices",      BG_MDB_ID_RECORDERS,   12 },
+    { GAVL_META_CLASS_ROOT_FAVORITES,          "Favorites",    BG_MDB_ID_FAVORITES,    1 },
+    { GAVL_META_CLASS_ROOT_LIBRARY,            "Library",      BG_MDB_ID_LIBRARY,      2 },
+    { GAVL_META_CLASS_ROOT_MUSICALBUMS,        "Music albums", BG_MDB_ID_MUSICALBUMS,  3 },
+    { GAVL_META_CLASS_ROOT_SONGS,              "Songs",        BG_MDB_ID_SONGS,        4 },
+    { GAVL_META_CLASS_ROOT_STREAMS,            "Streams",      BG_MDB_ID_STREAMS,      6 },
+    { GAVL_META_CLASS_ROOT_PODCASTS,           "Podcasts",     BG_MDB_ID_PODCASTS,     7 },
+    { GAVL_META_CLASS_ROOT_MOVIES,             "Movies",       BG_MDB_ID_MOVIES,       8 },
+    { GAVL_META_CLASS_ROOT_TV_SHOWS,           "TV Shows",     BG_MDB_ID_TV_SHOWS,     9 },
+    { GAVL_META_CLASS_ROOT_PHOTOS,             "Photos",       BG_MDB_ID_PHOTOS,      10 },
+    { GAVL_META_CLASS_ROOT_DIRECTORIES,        "Directories",  BG_MDB_ID_DIRECTORIES, 11 },
+    { GAVL_META_CLASS_ROOT_RECORDERS,          "Devices",      BG_MDB_ID_RECORDERS,   12 },
 
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE,          "Removable",    NULL,         20 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD,  "Audio CD",     NULL,         21 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD,      "VCD",          NULL,         22 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD,     "SVCD",         NULL,         23 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD, "DVD",          NULL,         24 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE,          "Removable",    NULL,         20 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD,  "Audio CD",     NULL,         21 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_VCD,      "VCD",          NULL,         22 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_SVCD,     "SVCD",         NULL,         23 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_VIDEODVD, "DVD",          NULL,         24 },
 
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM,            "Filesystem", NULL, 25 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD,        "Filesystem", NULL, 26 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE,   "Filesystem", NULL, 27 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD, "Filesystem", NULL, 28 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE,     "Filesystem", NULL, 29 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD,         "Filesystem", NULL, 30 },
-    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD,        "Filesystem", NULL, 31 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM,            "Filesystem", NULL, 25 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD,        "Filesystem", NULL, 26 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE,   "Filesystem", NULL, 27 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD, "Filesystem", NULL, 28 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE,     "Filesystem", NULL, 29 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD,         "Filesystem", NULL, 30 },
+    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD,        "Filesystem", NULL, 31 },
 
 
 #if 0
-    { GAVL_META_MEDIA_CLASS_ROOT_BOOKMARKS,   "Bookmarks",    "/bookmarks", 0 },
+    { GAVL_META_CLASS_ROOT_BOOKMARKS,   "Bookmarks",    "/bookmarks", 0 },
 #endif
     /* MUST be last */
-    { GAVL_META_MEDIA_CLASS_ROOT_SERVER,      "Network",      NULL,         100 },
+    { GAVL_META_CLASS_ROOT_SERVER,      "Network",      NULL,         100 },
     { /* End */ },
   };
 
@@ -1722,7 +1722,7 @@ void bg_mdb_init_root_container(gavl_dictionary_t * dict, const char * media_cla
 
   m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
   
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, media_class);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, media_class);
   gavl_dictionary_set_string(m, GAVL_META_LABEL, get_klass_label(media_class));
   gavl_dictionary_set_string(m, GAVL_META_ID, bg_mdb_get_klass_id(media_class));
   
@@ -1756,7 +1756,7 @@ gavl_dictionary_t * bg_mdb_get_root_container(bg_mdb_t * db, const char * media_
       {
       if((t = gavl_get_track_nc(&db->root, i)) &&
          (mc = gavl_track_get_metadata(t)) &&
-         (klass = gavl_dictionary_get_string(mc, GAVL_META_MEDIA_CLASS)) &&
+         (klass = gavl_dictionary_get_string(mc, GAVL_META_CLASS)) &&
          !strcmp(klass, media_class))
         return t;
       }
@@ -1774,7 +1774,7 @@ gavl_dictionary_t * bg_mdb_get_root_container(bg_mdb_t * db, const char * media_
         {
         if((t = gavl_get_track_nc(&db->root, i)) &&
            (mc = gavl_track_get_metadata(t)) &&
-           (klass = gavl_dictionary_get_string(mc, GAVL_META_MEDIA_CLASS)))
+           (klass = gavl_dictionary_get_string(mc, GAVL_META_CLASS)))
           {
           test_idx = get_klass_idx(klass);
 
@@ -1926,16 +1926,16 @@ int bg_mdb_can_add(const gavl_dictionary_t * dict, const char * child_class)
     return 0;
 
   if(!(m = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return 0;
   
   /* Directories can only be added to
-     GAVL_META_MEDIA_CLASS_ROOT_PHOTOS and GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES */
+     GAVL_META_CLASS_ROOT_PHOTOS and GAVL_META_CLASS_ROOT_DIRECTORIES */
 
-  if(!strcmp(child_class, GAVL_META_MEDIA_CLASS_DIRECTORY))
+  if(!strcmp(child_class, GAVL_META_CLASS_DIRECTORY))
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_PHOTOS) ||
-       !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES))
+    if(!strcmp(klass, GAVL_META_CLASS_ROOT_PHOTOS) ||
+       !strcmp(klass, GAVL_META_CLASS_ROOT_DIRECTORIES))
       return 1;
     else
       return 0;
@@ -2221,56 +2221,56 @@ classes[] =
   
   /* Container values */
   
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_MUSICALBUM, GAVL_META_MEDIA_CLASS_SONG }, 
-  //  { GAVL_META_MEDIA_CLASS_PLAYLIST },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_GENRE },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_TAG },
-  //  { GAVL_META_MEDIA_CLASS_CONTAINER_YEAR },
-  { GAVL_META_MEDIA_CLASS_TV_SEASON, GAVL_META_MEDIA_CLASS_TV_EPISODE },
-  { GAVL_META_MEDIA_CLASS_TV_SHOW, GAVL_META_MEDIA_CLASS_TV_SEASON },
-  //  { GAVL_META_MEDIA_CLASS_DIRECTORY },
+  //  { GAVL_META_CLASS_CONTAINER },
+  { GAVL_META_CLASS_MUSICALBUM, GAVL_META_CLASS_SONG }, 
+  //  { GAVL_META_CLASS_PLAYLIST },
+  //  { GAVL_META_CLASS_CONTAINER_ACTOR },
+  //  { GAVL_META_CLASS_CONTAINER_DIRECTOR },
+  //  { GAVL_META_CLASS_CONTAINER_ARTIST },
+  //  { GAVL_META_CLASS_CONTAINER_COUNTRY },
+  //  { GAVL_META_CLASS_CONTAINER_GENRE },
+  //  { GAVL_META_CLASS_CONTAINER_LANGUAGE },
+  //  { GAVL_META_CLASS_CONTAINER_TAG },
+  //  { GAVL_META_CLASS_CONTAINER_YEAR },
+  { GAVL_META_CLASS_TV_SEASON, GAVL_META_CLASS_TV_EPISODE },
+  { GAVL_META_CLASS_TV_SHOW, GAVL_META_CLASS_TV_SEASON },
+  //  { GAVL_META_CLASS_DIRECTORY },
 
-  //  { GAVL_META_MEDIA_CLASS_MULTITRACK_FILE },
+  //  { GAVL_META_CLASS_MULTITRACK_FILE },
 
   /* Root Containers */
-  { GAVL_META_MEDIA_CLASS_ROOT },
-  { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS, GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_ROOT_SONGS,       GAVL_META_MEDIA_CLASS_CONTAINER  },
-  { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,      GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,    GAVL_META_MEDIA_CLASS_CONTAINER },
-  { GAVL_META_MEDIA_CLASS_ROOT_STREAMS,     GAVL_META_MEDIA_CLASS_CONTAINER, "Add http(s) urls for Radio- or TV channels in m3u format.\nUse radiobrowser:// to import the database from radio-browser.info.\nUse iptv-org:// to import the database from https://iptv-org.github.io/" },
-  { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES, GAVL_META_MEDIA_CLASS_DIRECTORY, "Add directories, which will be scanned recursively for media files" },
-  { GAVL_META_MEDIA_CLASS_ROOT_PODCASTS,    GAVL_META_MEDIA_CLASS_PODCAST,
+  { GAVL_META_CLASS_ROOT },
+  { GAVL_META_CLASS_ROOT_MUSICALBUMS, GAVL_META_CLASS_CONTAINER },
+  { GAVL_META_CLASS_ROOT_SONGS,       GAVL_META_CLASS_CONTAINER  },
+  { GAVL_META_CLASS_ROOT_MOVIES,      GAVL_META_CLASS_CONTAINER },
+  { GAVL_META_CLASS_ROOT_TV_SHOWS,    GAVL_META_CLASS_CONTAINER },
+  { GAVL_META_CLASS_ROOT_STREAMS,     GAVL_META_CLASS_CONTAINER, "Add http(s) urls for Radio- or TV channels in m3u format.\nUse radiobrowser:// to import the database from radio-browser.info.\nUse iptv-org:// to import the database from https://iptv-org.github.io/" },
+  { GAVL_META_CLASS_ROOT_DIRECTORIES, GAVL_META_CLASS_DIRECTORY, "Add directories, which will be scanned recursively for media files" },
+  { GAVL_META_CLASS_ROOT_PODCASTS,    GAVL_META_CLASS_PODCAST,
     "Add urls for podcast feeds (in RSS xml format)" },
-  //  { GAVL_META_MEDIA_CLASS_PODCAST,  },
+  //  { GAVL_META_CLASS_PODCAST,  },
   
-  { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS, NULL, "Add directories, which will be scanned recursively for photo albums" },
+  { GAVL_META_CLASS_ROOT_PHOTOS, NULL, "Add directories, which will be scanned recursively for photo albums" },
 
-  //  { GAVL_META_MEDIA_CLASS_ROOT_INCOMING },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_FAVORITES },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_BOOKMARKS  },
-  { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY, NULL, "Add generic containers, playlists or TV- or Radio channel lists" },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_NETWORK },
+  //  { GAVL_META_CLASS_ROOT_INCOMING },
+  //  { GAVL_META_CLASS_ROOT_FAVORITES },
+  //  { GAVL_META_CLASS_ROOT_BOOKMARKS  },
+  { GAVL_META_CLASS_ROOT_LIBRARY, NULL, "Add generic containers, playlists or TV- or Radio channel lists" },
+  //  { GAVL_META_CLASS_ROOT_NETWORK },
  
-  //  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE },
-  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD, GAVL_META_MEDIA_CLASS_SONG },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD },
-  //  { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD },
+  //  { GAVL_META_CLASS_ROOT_REMOVABLE },
+  { GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD, GAVL_META_CLASS_SONG },
+  //  { GAVL_META_CLASS_ROOT_REMOVABLE_VCD },
+  //  { GAVL_META_CLASS_ROOT_REMOVABLE_SVCD },
+  //  { GAVL_META_CLASS_ROOT_REMOVABLE_VIDEODVD },
 
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD },
-  //    { GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD },
+  //    { GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD },
 
   { /* End */ }
   };
@@ -2285,7 +2285,7 @@ const char * bg_mdb_get_child_class(const gavl_dictionary_t * dict)
   if((klass = gavl_dictionary_get_string(dict, GAVL_META_CHILD_CLASS)))
     return klass;
 
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
     return NULL;
   
   while(classes[idx].klass)
@@ -2327,7 +2327,7 @@ static void finalize(gavl_dictionary_t * track, int idx, int total)
     gavl_dictionary_set_string(m, GAVL_META_HASH, hash);
     }
   
-  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return;
   
   while(classes[i].klass)
@@ -2551,7 +2551,7 @@ void bg_mdb_set_next_previous(gavl_array_t * arr)
 
 static char * save_tags[] =
   {
-    GAVL_META_MEDIA_CLASS,
+    GAVL_META_CLASS,
     GAVL_META_CHILD_CLASS,
     GAVL_META_ID,
     GAVL_META_NEXT_ID,

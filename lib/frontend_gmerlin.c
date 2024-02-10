@@ -65,9 +65,9 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
 
   /* Announce device */
   
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+  if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
     uri_scheme = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER;
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
+  else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
     uri_scheme = BG_BACKEND_URI_SCHEME_GMERLIN_MDB;
     
   if(!uri_scheme)
@@ -87,7 +87,7 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
   gavl_dictionary_init(&local_dev);
   gavl_dictionary_set_string(&local_dev, GAVL_META_URI, uri);
   gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
-  gavl_dictionary_set_string(&local_dev, GAVL_META_MEDIA_CLASS, klass);
+  gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, klass);
   
   bg_resourcemanager_publish(uri, &local_dev);
     
@@ -99,11 +99,11 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
 
 int bg_frontend_gmerlin_open_mdb(void * data, bg_controllable_t * ctrl)
   {
-  return frontend_gmerlin_open(data, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_MDB);
+  return frontend_gmerlin_open(data, ctrl, GAVL_META_CLASS_BACKEND_MDB);
   }
 
 int bg_frontend_gmerlin_open_renderer(void * data, bg_controllable_t * ctrl)
   {
-  return frontend_gmerlin_open(data, ctrl, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  return frontend_gmerlin_open(data, ctrl, GAVL_META_CLASS_BACKEND_RENDERER);
   }
 

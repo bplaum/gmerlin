@@ -144,7 +144,7 @@ static GtkWidget * create_cover(const gavl_dictionary_t * dict)
   const gavl_dictionary_t * m;
     
   if(!(m = gavl_track_get_metadata(dict)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return NULL;
   
   if(gavl_string_starts_with(klass, "item.audio"))
@@ -243,7 +243,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
 
   gtk_text_buffer_get_start_iter(buf, &iter);
   
-  //  klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS);
+  //  klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
 
   if(!(var_c = gavl_dictionary_get_string(dict, GAVL_META_TITLE)) &&
      !(var_c = gavl_dictionary_get_string(dict, GAVL_META_LABEL)))

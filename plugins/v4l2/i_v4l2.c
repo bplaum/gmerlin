@@ -237,7 +237,7 @@ static int open_v4l(void * priv, const char * location)
   gavl_track_finalize(t);
 
   /* Overwrite value from gavl_track_finalize */
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_VIDEO_RECORDER);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_RECORDER);
   
   ret = 1;
   fail:

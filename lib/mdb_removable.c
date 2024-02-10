@@ -251,8 +251,8 @@ static int handle_msg_removable(void * priv, gavl_msg_t * msg)
 
 
           if(!gavl_msg_get_arg_dictionary(msg, 0, &vol) ||
-             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_MEDIA_CLASS)) ||
-             !gavl_string_starts_with(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE))
+             !(klass = gavl_dictionary_get_string(&vol, GAVL_META_CLASS)) ||
+             !gavl_string_starts_with(klass, GAVL_META_CLASS_ROOT_REMOVABLE))
             {
             gavl_dictionary_free(&vol);
             return 1;
@@ -266,15 +266,15 @@ static int handle_msg_removable(void * priv, gavl_msg_t * msg)
             gavl_dictionary_free(&vol);
             return 1;
             }
-          if(!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD) &&
+          if(!strcmp(klass, GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD) &&
              !r->mount_audiocd)
             {
             gavl_dictionary_free(&vol);
             return 1;
             }
-          if((!strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD) ||
-              !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD) ||
-              !strcmp(klass, GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD)) &&
+          if((!strcmp(klass, GAVL_META_CLASS_ROOT_REMOVABLE_VCD) ||
+              !strcmp(klass, GAVL_META_CLASS_ROOT_REMOVABLE_SVCD) ||
+              !strcmp(klass, GAVL_META_CLASS_ROOT_REMOVABLE_VIDEODVD)) &&
              !r->mount_videodisk)
             {
             gavl_dictionary_free(&vol);

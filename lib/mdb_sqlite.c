@@ -131,14 +131,14 @@ static const struct
   }
 type_ids[] = 
   {
-    { GAVL_META_MEDIA_CLASS_SONG,            TYPE_SONG       },
-    { GAVL_META_MEDIA_CLASS_MUSICALBUM,      TYPE_ALBUM      },
-    { GAVL_META_MEDIA_CLASS_TV_SHOW,         TYPE_TV_SHOW    },
-    { GAVL_META_MEDIA_CLASS_TV_SEASON,       TYPE_TV_SEASON  },
-    { GAVL_META_MEDIA_CLASS_TV_EPISODE,      TYPE_TV_EPISODE },
-    { GAVL_META_MEDIA_CLASS_IMAGE,           TYPE_IMAGE      },
-    { GAVL_META_MEDIA_CLASS_MOVIE,           TYPE_MOVIE      },
-    { GAVL_META_MEDIA_CLASS_MOVIE_PART,      TYPE_MOVIE_PART },
+    { GAVL_META_CLASS_SONG,            TYPE_SONG       },
+    { GAVL_META_CLASS_MUSICALBUM,      TYPE_ALBUM      },
+    { GAVL_META_CLASS_TV_SHOW,         TYPE_TV_SHOW    },
+    { GAVL_META_CLASS_TV_SEASON,       TYPE_TV_SEASON  },
+    { GAVL_META_CLASS_TV_EPISODE,      TYPE_TV_EPISODE },
+    { GAVL_META_CLASS_IMAGE,           TYPE_IMAGE      },
+    { GAVL_META_CLASS_MOVIE,           TYPE_MOVIE      },
+    { GAVL_META_CLASS_MOVIE_PART,      TYPE_MOVIE_PART },
     { "nfo",                                 TYPE_NFO        },
     {  /* End */                                             }
   };
@@ -1297,15 +1297,15 @@ static gavl_dictionary_t * query_sqlite_object(bg_mdb_backend_t * b, int64_t id,
       bg_sqlite_exec(p->db, sql, query_part_callback, &qp);
       sqlite3_free(sql);
       
-      gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj), GAVL_META_MEDIA_CLASS,
-                                 GAVL_META_MEDIA_CLASS_MOVIE);
+      gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj), GAVL_META_CLASS,
+                                 GAVL_META_CLASS_MOVIE);
 
       //      fprintf(stderr, "Got movie:\n");
       //      gavl_dictionary_dump(q.obj, 2);
       }
     else
       gavl_dictionary_set_string(gavl_track_get_metadata_nc(q.obj),
-                                 GAVL_META_MEDIA_CLASS, get_type_class(type));
+                                 GAVL_META_CLASS, get_type_class(type));
     }
 
   return q.obj;
@@ -1475,8 +1475,8 @@ static int64_t add_child_album(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
   gavl_dictionary_init(&album_dict);
 
   album_m = gavl_dictionary_get_dictionary_create(&album_dict, GAVL_META_METADATA);
-  gavl_dictionary_set_string(album_m, GAVL_META_MEDIA_CLASS,
-                             GAVL_META_MEDIA_CLASS_MUSICALBUM);
+  gavl_dictionary_set_string(album_m, GAVL_META_CLASS,
+                             GAVL_META_CLASS_MUSICALBUM);
   
   album_id = create_object(p, TYPE_ALBUM);
   
@@ -1547,8 +1547,8 @@ static int64_t add_child_tv_show(bg_mdb_backend_t * b, gavl_dictionary_t * episo
   gavl_dictionary_init(&show_dict);
   show_m = gavl_dictionary_get_dictionary_create(&show_dict, GAVL_META_METADATA);
 
-  gavl_dictionary_set_string(show_m, GAVL_META_MEDIA_CLASS,
-                             GAVL_META_MEDIA_CLASS_TV_SHOW);
+  gavl_dictionary_set_string(show_m, GAVL_META_CLASS,
+                             GAVL_META_CLASS_TV_SHOW);
   
   show_id = create_object(p, TYPE_TV_SHOW);
 
@@ -1655,7 +1655,7 @@ static int64_t add_child_tv_season(bg_mdb_backend_t * b, gavl_dictionary_t * epi
   gavl_dictionary_set_long(season_m, META_DB_ID, season_id);
   gavl_dictionary_set_long(season_m, META_PARENT_ID, show_id);
 
-  gavl_dictionary_set_string(season_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_TV_SEASON);
+  gavl_dictionary_set_string(season_m, GAVL_META_CLASS, GAVL_META_CLASS_TV_SEASON);
   
   season_id = create_object(p, TYPE_TV_SEASON);
   
@@ -1744,7 +1744,7 @@ static int64_t add_movie_part(bg_mdb_backend_t * b, const gavl_dictionary_t * pa
   movie_m = gavl_track_get_metadata_nc(&movie_dict);
   gavl_dictionary_set(movie_m, GAVL_META_SRC, NULL);
 
-  gavl_dictionary_set_string(movie_m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+  gavl_dictionary_set_string(movie_m, GAVL_META_CLASS, GAVL_META_CLASS_MOVIE);
   
   movie_id = create_object(p, TYPE_MOVIE);
   add_object(b, &movie_dict, -1, movie_id);
@@ -2150,7 +2150,7 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
   
   m = gavl_track_get_metadata_nc(track);
 
-  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     return -1;
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Adding object %s %s",
@@ -2158,10 +2158,10 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
            klass);
   
   /* Single part movies are handled same as multipart in the db */
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE) && (obj_id < 0))
+  if(!strcmp(klass, GAVL_META_CLASS_MOVIE) && (obj_id < 0))
     {
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_MOVIE_PART);
-    klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_MOVIE_PART);
+    klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
     }
   
   if(!(type = get_type_id(klass)) ||
@@ -2256,7 +2256,7 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
     if((obj_id < 0) && ((obj_id = create_object(p, type)) < 0))
       return -1;
     
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE))
+    if(!strcmp(klass, GAVL_META_CLASS_MOVIE))
       {
       gavl_dictionary_set_long(m, META_PARENT_ID, obj_id);
       }
@@ -2440,7 +2440,7 @@ static void add_files(bg_mdb_backend_t * b, gavl_array_t * arr, int64_t scan_dir
           
           m = gavl_dictionary_get_dictionary_create(obj, GAVL_META_METADATA);
           gavl_dictionary_copy(m, dict);
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, "nfo");
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, "nfo");
           
           add_object(b, obj, scan_dir_id, -1);
           
@@ -3068,10 +3068,10 @@ static int browse_object_series(bg_mdb_backend_t * b, const char * id, gavl_dict
         // int64_t poster_id, wallpaper_id;
         int64_t num_children = 0;
         
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "All episodes");
 
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_TV_EPISODE);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_TV_EPISODE);
         
         
         sql = bg_sprintf("SELECT COUNT("META_DB_ID") FROM episodes WHERE "META_PARENT_ID" in (SELECT "META_DB_ID" FROM seasons "
@@ -3189,7 +3189,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         gavl_array_init(&arr);
         
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Artist");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
         
         bg_sqlite_exec(s->db, "SELECT NAME FROM song_artists", append_string_callback, &arr);
 
@@ -3213,8 +3213,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           
           gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(id));
 
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
           gavl_array_free(&arr);
           return 1;
           }
@@ -3236,9 +3236,9 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                      "song_artists",
                                                                      "NAME", "ID", artist_id));
 
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS,
-                                       GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS,
+                                       GAVL_META_CLASS_CONTAINER_ARTIST);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
             /* num_children */
             sql = bg_sprintf("SELECT count(OBJ_ID) "
@@ -3280,8 +3280,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre-Artist");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
                 
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM song_genres;"), 0);
         return 1;
@@ -3303,8 +3303,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                    "song_genres",
                                                                    "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
           
           sql = bg_sprintf("SELECT count(DISTINCT song_artists_arr.NAME_ID) "
                            "FROM song_artists_arr INNER JOIN song_genres_arr "
@@ -3326,8 +3326,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
           if(*id == '\0')
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
           
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                               bg_sqlite_id_to_string(s->db,
@@ -3379,8 +3379,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre-Year");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
         
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM song_genres;"), 0);
         
@@ -3402,8 +3402,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                    "song_genres",
                                                                    "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
           
           sql = bg_sprintf("SELECT count(DISTINCT substr(songs."GAVL_META_DATE", 1, 4)) FROM "
                            "songs INNER JOIN song_genres_arr ON "
@@ -3427,8 +3427,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
           if(*id == '\0')  // /songs/genre-year/1/1960
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
             if(year < 9999)
               gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
@@ -3481,8 +3481,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0') // songs/genre
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
 
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM song_genres;"), 0);
         
@@ -3508,8 +3508,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                             "song_genres",
                                                             "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
           
           /* num children */
 
@@ -3533,8 +3533,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           if(!(pos = strchr(id, '/')))
             {
             
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
             
             gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(id));
 
@@ -3595,8 +3595,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Year");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
         
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db,
                                                            "SELECT count(DISTINCT substr("GAVL_META_DATE", 1, 4)) FROM songs;"), 0);
@@ -3614,8 +3614,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')  // /songs/year/1960
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_SONG);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
           if(year < 9999)
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
@@ -3681,8 +3681,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         gavl_array_init(&arr);
 
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Artist");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
                     
         bg_sqlite_exec(s->db, "SELECT NAME FROM album_artists", append_string_callback, &arr);
 
@@ -3703,8 +3703,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_track_set_num_children(ret, bg_mdb_get_group_size(&arr, id), 0);
 
           gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(id));
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
           gavl_array_free(&arr);
           return 1;
           }
@@ -3720,9 +3720,9 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           
           if(!(pos = strchr(id, '/'))) // /albums/artist/a/152
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS,
-                                       GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MUSICALBUM);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS,
+                                       GAVL_META_CLASS_CONTAINER_ARTIST);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
             
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                        bg_sqlite_id_to_string(s->db,
@@ -3815,8 +3815,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0') // /albums/genre-artist
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre-Artist");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
 
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM album_genres;"), 0);
         
@@ -3838,8 +3838,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                             "album_genres",
                                                             "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
 
           sql = bg_sprintf("SELECT count(DISTINCT album_artists_arr.NAME_ID) "
                            "FROM album_artists_arr INNER JOIN album_genres_arr "
@@ -3860,8 +3860,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
           if(*id == '\0')
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MUSICALBUM);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
 
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                        bg_sqlite_id_to_string(s->db,
@@ -3955,8 +3955,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre-Year");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
         
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM album_genres;"), 0);
         return 1;
@@ -3976,8 +3976,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                             "album_genres",
                                                             "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
 
           sql = bg_sprintf("SELECT count(DISTINCT substr(albums."GAVL_META_DATE", 1, 4)) FROM "
                            "albums INNER JOIN album_genres_arr ON "
@@ -4002,8 +4002,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
           if(*id == '\0')  // /albums/genre-year/1/1960
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MUSICALBUM);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
 
             if(year < 9999)
               gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
@@ -4088,8 +4088,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Year");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
         
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db,
                                                            "SELECT count(DISTINCT substr("GAVL_META_DATE", 1, 4)) FROM albums;"), 0);
@@ -4107,8 +4107,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')  // /albums/year/1960
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MUSICALBUM);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
 
           if(year < 9999)
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
@@ -4200,8 +4200,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         gavl_array_init(&arr);
 
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Actor");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
         
         /* num children */
         
@@ -4226,8 +4226,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_track_set_num_children(ret, bg_mdb_get_group_size(&arr, id), 0);
 
           gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(id));
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ACTOR);
           gavl_array_free(&arr);
           return 1;
           }
@@ -4243,8 +4243,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           
           if(*id == '\0')
             {
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_ACTOR);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
             
             gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                               bg_sqlite_id_to_string(s->db,
@@ -4293,8 +4293,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "All");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
         /* num_children */
 
@@ -4327,8 +4327,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Country");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_COUNTRY);
 
         /* num_children */
 
@@ -4346,8 +4346,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_COUNTRY);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
           gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                             bg_sqlite_id_to_string(s->db,
@@ -4394,8 +4394,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Language");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_LANGUAGE);
 
         /* num_children */
 
@@ -4415,8 +4415,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_LANGUAGE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
           gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                             bg_sqlite_id_to_string(s->db,
@@ -4467,8 +4467,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         gavl_array_init(&arr);
 
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Director");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
 
         /* num children */
         
@@ -4486,7 +4486,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
         if(*id == '\0')
           {
           /* Invalid ID */
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
           return 1;
           }
         else
@@ -4502,8 +4502,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
             gavl_track_set_num_children(ret, bg_mdb_get_group_size(&arr, id), 0);
             gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_get_group_label(id));
-            gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR);
+            gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+            gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_DIRECTOR);
 
             gavl_array_free(&arr);
             return 1;
@@ -4520,8 +4520,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           
             if(*id == '\0')
               {
-              gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR);
-              gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+              gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_DIRECTOR);
+              gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
               gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                                 bg_sqlite_id_to_string(s->db,
@@ -4567,8 +4567,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
 
         /* num_children */
 
@@ -4586,8 +4586,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
           gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
                                             bg_sqlite_id_to_string(s->db,
@@ -4632,8 +4632,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Year");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
 
         /* num_children */
 
@@ -4653,8 +4653,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
 
         if(*id == '\0')
           {
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_YEAR);
-          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_MOVIE);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
+          gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
           gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
 
@@ -4701,8 +4701,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0') // /series/all
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "All");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_TV_SHOW);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_TV_SHOW);
 
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT("META_DB_ID") FROM shows;"), 0);
         
@@ -4720,8 +4720,8 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
       if(*id == '\0')
         {
         gavl_dictionary_set_string(m, GAVL_META_LABEL, "Genre");
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER);
-        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
         
         gavl_track_set_num_children(ret, bg_sqlite_get_int(s->db, "SELECT COUNT(ID) FROM show_genres;"), 0);
         return 1;
@@ -4742,7 +4742,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                             "show_genres",
                                                             "NAME", "ID", genre_id));
           
-          gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_CONTAINER_GENRE);
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           /* TODO: num children */
 
           sql = bg_sprintf("SELECT count(OBJ_ID) "
@@ -6468,7 +6468,7 @@ static void create_root_containers(bg_mdb_backend_t * b)
   sqlite_priv_t * s = b->priv;
 
   /* Songs */
-  bg_mdb_init_root_container(&s->songs, GAVL_META_MEDIA_CLASS_ROOT_SONGS);
+  bg_mdb_init_root_container(&s->songs, GAVL_META_CLASS_ROOT_SONGS);
   bg_mdb_container_set_backend(&s->songs, MDB_BACKEND_SQLITE);
   // Artist
   // Genre
@@ -6483,7 +6483,7 @@ static void create_root_containers(bg_mdb_backend_t * b)
   
   /* Movies */
 
-  bg_mdb_init_root_container(&s->movies, GAVL_META_MEDIA_CLASS_ROOT_MOVIES);
+  bg_mdb_init_root_container(&s->movies, GAVL_META_CLASS_ROOT_MOVIES);
   bg_mdb_container_set_backend(&s->movies, MDB_BACKEND_SQLITE);
 
   // Actor
@@ -6500,7 +6500,7 @@ static void create_root_containers(bg_mdb_backend_t * b)
 
   
   /* Albums */
-  bg_mdb_init_root_container(&s->albums, GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS);
+  bg_mdb_init_root_container(&s->albums, GAVL_META_CLASS_ROOT_MUSICALBUMS);
   bg_mdb_container_set_backend(&s->albums, MDB_BACKEND_SQLITE);
 
   // Artist
@@ -6513,7 +6513,7 @@ static void create_root_containers(bg_mdb_backend_t * b)
   //  gavl_dictionary_dump(&s->albums, 2);
   
   /* Series */
-  bg_mdb_init_root_container(&s->series, GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS);
+  bg_mdb_init_root_container(&s->series, GAVL_META_CLASS_ROOT_TV_SHOWS);
   bg_mdb_container_set_backend(&s->series, MDB_BACKEND_SQLITE);
   
   // All
@@ -6534,7 +6534,7 @@ static void update_root_containers(bg_mdb_backend_t * b)
 
   if(num && !s->songs_id)
     {
-    s->songs_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_SONGS);
+    s->songs_id = bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_SONGS);
     bg_mdb_add_root_container(b->ctrl.evt_sink, &s->songs);
     }
   else if(!num && s->songs_id)
@@ -6547,7 +6547,7 @@ static void update_root_containers(bg_mdb_backend_t * b)
 
   if(num && !s->albums_id)
     {
-    s->albums_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS);
+    s->albums_id = bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_MUSICALBUMS);
     bg_mdb_add_root_container(b->ctrl.evt_sink, &s->albums);
     }
   else if(!num && s->albums_id)
@@ -6560,7 +6560,7 @@ static void update_root_containers(bg_mdb_backend_t * b)
 
   if(num && !s->movies_id)
     {
-    s->movies_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_MOVIES);
+    s->movies_id = bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_MOVIES);
     bg_mdb_add_root_container(b->ctrl.evt_sink, &s->movies);
     }
   else if(!num && s->movies_id)
@@ -6573,7 +6573,7 @@ static void update_root_containers(bg_mdb_backend_t * b)
 
   if(num && !s->series_id)
     {
-    s->series_id = bg_mdb_get_klass_id(GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS);
+    s->series_id = bg_mdb_get_klass_id(GAVL_META_CLASS_ROOT_TV_SHOWS);
     bg_mdb_add_root_container(b->ctrl.evt_sink, &s->series);
     }
   else if(!num && s->series_id)

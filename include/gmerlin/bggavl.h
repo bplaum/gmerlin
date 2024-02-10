@@ -714,6 +714,10 @@ int bg_json_dict_get_int(json_object * obj, const char * tag);
 double bg_json_dict_get_double(json_object * obj, const char * tag);
 int bg_json_dict_get_bool(json_object * obj, const char * tag);
 
+json_object * bg_json_dict_get_array(json_object * obj, const char * tag);
+json_object * bg_json_dict_get_dict(json_object * obj, const char * tag);
+
+
 /* xml Interface */
 
 int bg_xml_2_value(xmlNodePtr xml_val,

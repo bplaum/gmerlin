@@ -220,7 +220,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
               break;
               }
             
-            gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+            gavl_dictionary_set_string(&info, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
             gavl_metadata_add_image_uri(&info,
                                         GAVL_META_ICON_URL,
                                         -1, -1,
@@ -234,7 +234,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
           else if(!strcmp(type, TYPE_PULSEAUDIO_SINK))
             {
             const char * dev;
-            gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_SINK_AUDIO);
+            gavl_dictionary_set_string(&info, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
 
             dev = gavl_dictionary_get_string(&txt_dict, "device");
 
@@ -258,7 +258,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
             const char * proto_str;
             const char * path;
             
-            gavl_dictionary_set_string(&info, GAVL_META_MEDIA_CLASS,
+            gavl_dictionary_set_string(&info, GAVL_META_CLASS,
                                        gavl_dictionary_get_string(&txt_dict, TXT_CLASS) );
 
             proto_str = gavl_dictionary_get_string(&txt_dict, TXT_PROTOCOL);
@@ -421,7 +421,7 @@ static void publish_local(avahi_t * a, const char * id, const gavl_dictionary_t 
   if(!(uri = gavl_dictionary_get_string(dict, GAVL_META_URI)))
     return;
 
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
     return;
 
   if(!gavl_url_split(uri, &protocol, NULL, NULL, &host, &port, &path))

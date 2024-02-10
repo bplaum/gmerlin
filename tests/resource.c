@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
   gavl_dictionary_init(&local_res);
   gavl_dictionary_set_string(&local_res, GAVL_META_LABEL, "Test resource");
   gavl_dictionary_set_string(&local_res, GAVL_META_URI, "gmerlin-renderer://192.168.2.140:5405/some-cool-stuff");
-  gavl_dictionary_set_string(&local_res, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER);
+  gavl_dictionary_set_string(&local_res, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
   
   bg_handle_sigint();
   

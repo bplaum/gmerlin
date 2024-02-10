@@ -185,7 +185,7 @@ int bg_http_send_request(const char * url,
 
   //  fprintf(stderr, "http_get: %s\n", url);
   
-  if(!bg_url_split(url,
+  if(!gavl_url_split(url,
                    &protocol,
                    NULL,
                    NULL,

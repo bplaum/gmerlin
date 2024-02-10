@@ -224,7 +224,7 @@ static char * get_url_base(const char * desc_url)
   char * ret;
   char * host;
   int port = -1;
-  if(!bg_url_split(desc_url,
+  if(!gavl_url_split(desc_url,
                    NULL,
                    NULL,
                    NULL,

@@ -280,7 +280,7 @@ int bg_is_http_media_uri(const char * uri)
 
   // fprintf(stderr, "bg_is_http_media_uri %s\n", uri);
   
-  if(bg_url_split(uri,
+  if(gavl_url_split(uri,
                   &protocol,
                   NULL,
                   NULL,

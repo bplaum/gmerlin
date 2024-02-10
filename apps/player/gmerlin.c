@@ -246,7 +246,7 @@ static int handle_http_client_config(bg_http_connection_t * conn, void * priv)
 
       root_uri = bg_http_server_get_root_url(g->srv);
 
-      bg_url_split(root_uri, NULL, NULL, NULL, &host, &port, NULL);
+      gavl_url_split(root_uri, NULL, NULL, NULL, &host, &port, NULL);
       
       cfg = bg_sprintf("{\"renderer\":\"gmerlin-renderer://%s:%d/ws/renderer\",\"style\":\"dark\"}", host, port);
       
@@ -310,7 +310,7 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
       
       gavl_dictionary_init(&url_vars);
       //      fprintf(stderr, "Referer: %s\n", var);
-      bg_url_split(var, &protocol, NULL, NULL, &host, &port, NULL);
+      gavl_url_split(var, &protocol, NULL, NULL, &host, &port, NULL);
 
       gavl_url_get_vars_c(var, &url_vars);
       if((cid = gavl_dictionary_get_string(&url_vars, BG_URL_VAR_CLIENT_ID)))

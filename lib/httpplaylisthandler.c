@@ -181,7 +181,7 @@ void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t 
   gavl_dictionary_t * m = NULL;
 
   if(!(m = gavl_track_get_metadata_nc(container)) ||
-     !(klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, "container.") ||
      !(id = gavl_dictionary_get_string(m, GAVL_META_ID)) ||
      (!(title = gavl_dictionary_get_string(m, GAVL_META_TITLE)) &&
@@ -190,9 +190,9 @@ void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t 
   
   root_uri = bg_http_server_get_root_url(srv);
   
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MUSICALBUM) ||
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_PLAYLIST) ||
-     !strcmp(klass, GAVL_META_MEDIA_CLASS_TV_SEASON))
+  if(!strcmp(klass, GAVL_META_CLASS_MUSICALBUM) ||
+     !strcmp(klass, GAVL_META_CLASS_PLAYLIST) ||
+     !strcmp(klass, GAVL_META_CLASS_TV_SEASON))
     {
     int idx = 0;
     char * uri;

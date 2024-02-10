@@ -239,7 +239,7 @@ char * bg_path_to_label(const char * path)
   }
 
 
-int bg_url_split(const char * url,
+int gavl_url_split(const char * url,
                  char ** protocol,
                  char ** user,
                  char ** password,

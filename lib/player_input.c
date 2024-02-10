@@ -517,9 +517,9 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
   m1 = gavl_track_get_metadata_nc(&src->track);
 
   /*  */
-  if((var = gavl_dictionary_get_string(m1, GAVL_META_MEDIA_CLASS)) &&
-     !strcmp(var, GAVL_META_MEDIA_CLASS_LOCATION))
-    gavl_dictionary_set(m1, GAVL_META_MEDIA_CLASS, NULL);
+  if((var = gavl_dictionary_get_string(m1, GAVL_META_CLASS)) &&
+     !strcmp(var, GAVL_META_CLASS_LOCATION))
+    gavl_dictionary_set(m1, GAVL_META_CLASS, NULL);
   
   if(m1) /* Merge metadata from DB */
     {
@@ -533,7 +533,7 @@ int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * 
 
     gavl_dictionary_free(m2);
     gavl_dictionary_move(m2, &m);
-    //    gavl_dictionary_set(m2, GAVL_META_MEDIA_CLASS, NULL);
+    //    gavl_dictionary_set(m2, GAVL_META_CLASS, NULL);
     gavl_track_finalize(src->track_info);
     }
   

@@ -238,41 +238,41 @@ static const struct
   }
 class_names[] =
   {
-    { GAVL_META_MEDIA_CLASS_AUDIO_FILE,         "object.item.audioItem" },
-    { GAVL_META_MEDIA_CLASS_VIDEO_FILE,         "object.item.videoItem" },
-    { GAVL_META_MEDIA_CLASS_SONG,               "object.item.audioItem.musicTrack" },
-    { GAVL_META_MEDIA_CLASS_MOVIE,              "object.item.videoItem.movie" },
-    { GAVL_META_MEDIA_CLASS_TV_EPISODE,         "object.item.videoItem.movie" },
-    { GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST,    "object.item.audioItem.audioBroadcast" },
-    { GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST,    "object.item.videoItem.videoBroadcast" },
-    { GAVL_META_MEDIA_CLASS_IMAGE,              "object.item.imageItem" },
+    { GAVL_META_CLASS_AUDIO_FILE,         "object.item.audioItem" },
+    { GAVL_META_CLASS_VIDEO_FILE,         "object.item.videoItem" },
+    { GAVL_META_CLASS_SONG,               "object.item.audioItem.musicTrack" },
+    { GAVL_META_CLASS_MOVIE,              "object.item.videoItem.movie" },
+    { GAVL_META_CLASS_TV_EPISODE,         "object.item.videoItem.movie" },
+    { GAVL_META_CLASS_AUDIO_BROADCAST,    "object.item.audioItem.audioBroadcast" },
+    { GAVL_META_CLASS_VIDEO_BROADCAST,    "object.item.videoItem.videoBroadcast" },
+    { GAVL_META_CLASS_IMAGE,              "object.item.imageItem" },
     
     
     /* Container values */
-    { GAVL_META_MEDIA_CLASS_CONTAINER,          "object.container" },
-    { GAVL_META_MEDIA_CLASS_MUSICALBUM,         "object.container.album.musicAlbum" },
-    { GAVL_META_MEDIA_CLASS_PLAYLIST,           "object.container.playlistContainer" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR,    "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR, "object.container" },
-    { GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST,   "object.container.person.musicArtist" },
-    //    { GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY,  "object.container" },
-    { GAVL_META_MEDIA_CLASS_CONTAINER_GENRE,    "object.container.genre" },
-    //    { GAVL_META_MEDIA_CLASS_TV_SEASON,          "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_TV_SHOW,            "object.container" },
-    { GAVL_META_MEDIA_CLASS_DIRECTORY,          "object.container.storageFolder" },
+    { GAVL_META_CLASS_CONTAINER,          "object.container" },
+    { GAVL_META_CLASS_MUSICALBUM,         "object.container.album.musicAlbum" },
+    { GAVL_META_CLASS_PLAYLIST,           "object.container.playlistContainer" },
+    //    { GAVL_META_CLASS_CONTAINER_ACTOR,    "object.container" },
+    //    { GAVL_META_CLASS_CONTAINER_DIRECTOR, "object.container" },
+    { GAVL_META_CLASS_CONTAINER_ARTIST,   "object.container.person.musicArtist" },
+    //    { GAVL_META_CLASS_CONTAINER_COUNTRY,  "object.container" },
+    { GAVL_META_CLASS_CONTAINER_GENRE,    "object.container.genre" },
+    //    { GAVL_META_CLASS_TV_SEASON,          "object.container" },
+    //    { GAVL_META_CLASS_TV_SHOW,            "object.container" },
+    { GAVL_META_CLASS_DIRECTORY,          "object.container.storageFolder" },
         
     /* Root Containers */
-    //    { GAVL_META_MEDIA_CLASS_ROOT,               "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS,   "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_SONGS,         "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS,     "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_MOVIES,        "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS,      "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO,      "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES,   "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_PHOTOS,        "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_LIBRARY,       "object.container" },
-    //    { GAVL_META_MEDIA_CLASS_ROOT_INCOMING,      "object.container" },
+    //    { GAVL_META_CLASS_ROOT,               "object.container" },
+    //    { GAVL_META_CLASS_ROOT_MUSICALBUMS,   "object.container" },
+    //    { GAVL_META_CLASS_ROOT_SONGS,         "object.container" },
+    //    { GAVL_META_CLASS_ROOT_PLAYLISTS,     "object.container" },
+    //    { GAVL_META_CLASS_ROOT_MOVIES,        "object.container" },
+    //    { GAVL_META_CLASS_ROOT_TV_SHOWS,      "object.container" },
+    //    { GAVL_META_CLASS_ROOT_WEBRADIO,      "object.container" },
+    //    { GAVL_META_CLASS_ROOT_DIRECTORIES,   "object.container" },
+    //    { GAVL_META_CLASS_ROOT_PHOTOS,        "object.container" },
+    //    { GAVL_META_CLASS_ROOT_LIBRARY,       "object.container" },
+    //    { GAVL_META_CLASS_ROOT_INCOMING,      "object.container" },
     { /* End */ }
   };
 
@@ -289,9 +289,9 @@ static const char * class_gavl_to_didl(const char * gavl_class)
 
   if(gavl_string_starts_with(gavl_class, "container"))
     return "object.container";
-  else if(gavl_string_starts_with(gavl_class, GAVL_META_MEDIA_CLASS_AUDIO_FILE))
+  else if(gavl_string_starts_with(gavl_class, GAVL_META_CLASS_AUDIO_FILE))
     return "object.item.audioItem";
-  else if(gavl_string_starts_with(gavl_class, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+  else if(gavl_string_starts_with(gavl_class, GAVL_META_CLASS_VIDEO_FILE))
     return "object.item.videoItem";
   else
     return "object.item";
@@ -309,13 +309,13 @@ static const char * class_didl_to_gavl(const char * didl_class)
     }
 
   if(gavl_string_starts_with(didl_class, "object.container"))
-    return GAVL_META_MEDIA_CLASS_CONTAINER;
+    return GAVL_META_CLASS_CONTAINER;
   else if(gavl_string_starts_with(didl_class, "object.item.audioItem"))
-    return GAVL_META_MEDIA_CLASS_AUDIO_FILE;
+    return GAVL_META_CLASS_AUDIO_FILE;
   else if(gavl_string_starts_with(didl_class, "object.item.videoItem"))
-    return GAVL_META_MEDIA_CLASS_VIDEO_FILE;
+    return GAVL_META_CLASS_VIDEO_FILE;
   else if(gavl_string_starts_with(didl_class, "object.item.imageItem"))
-    return GAVL_META_MEDIA_CLASS_IMAGE;
+    return GAVL_META_CLASS_IMAGE;
   
   return NULL;
   
@@ -684,7 +684,7 @@ void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl)
       
       if((upnp_class = bg_xml_node_get_text_content(child)) &&
          (gavl_class = class_didl_to_gavl(upnp_class)))
-        gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, gavl_class);
+        gavl_dictionary_set_string(m, GAVL_META_CLASS, gavl_class);
       
       child = child->next;
       continue;
@@ -698,7 +698,7 @@ void bg_track_from_didl(gavl_dictionary_t * track, xmlNodePtr didl)
   
   /* If we just loaded a movie, move image res entries from src to poster uri */
 
-  if((gavl_name = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+  if((gavl_name = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
      gavl_string_starts_with(gavl_name, "item.video"))
     {
     const gavl_dictionary_t * img;
@@ -762,7 +762,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
   //  fprintf(stderr, "bg_track_to_didl\n");
   //  gavl_dictionary_dump(track, 2);
 
-  if(!(gavl_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+  if(!(gavl_class = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
      !(didl_class = class_gavl_to_didl(gavl_class)))
     return NULL;
     

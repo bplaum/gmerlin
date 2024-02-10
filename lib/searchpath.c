@@ -47,7 +47,7 @@ char * bg_search_var_dir(const char * directory)
     return NULL;
   
   testdir  = bg_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
-  if(!bg_ensure_directory(testdir, 1))
+  if(!gavl_ensure_directory(testdir, 1))
     {
     free(testdir);
     return NULL;
@@ -55,26 +55,6 @@ char * bg_search_var_dir(const char * directory)
   return testdir;
   }
 
-char * bg_search_cache_dir(const char * directory)
-  {
-  char * home_dir;
-  char * testdir;
-  char * cache_dir;
-  
-  if((testdir = getenv("XDG_CACHE_HOME")))
-    cache_dir = bg_sprintf("%s/.%s/%s", testdir, PACKAGE, directory);
-  else if((home_dir = getenv("HOME")))
-    cache_dir = bg_sprintf("%s/.cache/%s/%s", home_dir, PACKAGE, directory);
-  else
-    return NULL;
-  
-  if(!bg_ensure_directory(cache_dir, 1))
-    {
-    free(cache_dir);
-    return NULL;
-    }
-  return cache_dir;
-  }
 
 
 char * bg_search_file_read(const char * directory, const char * file)
@@ -137,7 +117,7 @@ static char * search_file_write(const char * directory, const char * file, int d
     return NULL;
     }
   
-  if(!bg_ensure_directory(testdir, 1))
+  if(!gavl_ensure_directory(testdir, 1))
     {
     free(testdir);
     return NULL;
@@ -182,82 +162,6 @@ char * bg_search_file_write(const char * directory, const char * file)
 // S_IRUSR|S_IWUSR|S_IXUSR
 // S_IRUSR|S_IWUSR|S_IXUSR|
 
-int bg_is_directory(const char * dir, int wr)
-  {
-  
-  struct stat st;
-
-  if(stat(dir, &st) || !S_ISDIR(st.st_mode))
-    return 0;
-
-
-  if(wr)
-    {
-    if(!access(dir, R_OK|W_OK|X_OK))
-      return 1;
-    }
-  else if(!access(dir, R_OK|X_OK))
-    return 1;
-  
-  return 0;
-  }
-
-int bg_ensure_directory(const char * dir, int priv)
-  {
-  char ** directories;
-  char * subpath = NULL;
-  int i, ret;
-  int absolute;
-  
-  /* Return early */
-
-  if(bg_is_directory(dir, 1))
-    return 1;
-  
-  if(dir[0] == '/')
-    absolute = 1;
-  else
-    absolute = 0;
-  
-  /* We omit the first slash */
-  
-  if(absolute)
-    directories = gavl_strbreak(dir+1, '/');
-  else
-    directories = gavl_strbreak(dir, '/');
-  
-  i = 0;
-  ret = 1;
-  while(directories[i])
-    {
-    if(i || absolute)
-      subpath = gavl_strcat(subpath, "/");
-
-    subpath = gavl_strcat(subpath, directories[i]);
-
-    if(access(subpath, R_OK) && (errno == ENOENT))
-      {
-      mode_t mode = S_IRUSR|S_IWUSR|S_IXUSR;
-      if(!priv)
-        mode |= S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
-      
-      if(mkdir(subpath, mode) == -1)
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Creating directory %s failed: %s",
-               subpath, strerror(errno));
-        ret = 0;
-        break;
-        }
-      else
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created directory %s", subpath);
-      }
-    i++;
-    }
-  if(subpath)
-    free(subpath);
-  gavl_strbreak_free(directories);
-  return ret;
-  }
 
 int bg_search_file_exec(const char * file, char ** _path)
   {

@@ -87,7 +87,7 @@ static void set_backend_id(gavl_dictionary_t * dict)
   {
   const char * klass;
   
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)) ||
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)) ||
      !gavl_string_starts_with(klass, "backend"))
     return;
   
@@ -100,10 +100,10 @@ static int resource_supported(const gavl_dictionary_t * dict)
   char * protocol = NULL;
   const char * klass;
 
-  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_MEDIA_CLASS)))
+  if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
     return 0;
 
-  if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_RENDERER))
+  if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
     {
     const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
     
@@ -120,7 +120,7 @@ static int resource_supported(const gavl_dictionary_t * dict)
       }
     ret = 1;
     }
-  else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_BACKEND_MDB))
+  else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
     {
     const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
     
@@ -663,7 +663,7 @@ void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t ti
   for(i = 0; i < resman->remote.num_entries; i++)
     {
     if((test_dict = gavl_value_get_dictionary(&resman->remote.entries[i])) &&
-       (test_klass = gavl_dictionary_get_string(test_dict, GAVL_META_MEDIA_CLASS)))
+       (test_klass = gavl_dictionary_get_string(test_dict, GAVL_META_CLASS)))
       {
       if(full_match)
         {
@@ -697,7 +697,7 @@ void bg_resource_get_by_protocol(const char * protocol, int full_match, gavl_tim
   for(i = 0; i < resman->remote.num_entries; i++)
     {
     if((test_dict = gavl_value_get_dictionary(&resman->remote.entries[i])) &&
-       (test_uri = gavl_dictionary_get_string(test_dict, GAVL_META_MEDIA_CLASS)))
+       (test_uri = gavl_dictionary_get_string(test_dict, GAVL_META_CLASS)))
       {
       char *test_protocol = NULL;
       if(gavl_url_split(test_uri, &test_protocol, NULL, NULL, NULL, NULL, NULL))

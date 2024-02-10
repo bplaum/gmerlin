@@ -642,7 +642,7 @@ bg_websocket_connection_create(const char * url, int timeout,
   gavl_dictionary_init(&req);
   gavl_dictionary_init(&res);
   
-  if(!bg_url_split(url,
+  if(!gavl_url_split(url,
                    &protocol,
                    NULL, NULL,
                    &host,
