@@ -130,6 +130,9 @@ int bg_state_set(gavl_dictionary_t * state,
   {
   int changed = 0;
   gavl_dictionary_t * child;
+
+  if(!ctx)
+    ctx = "/";
   
   if(state)
     {

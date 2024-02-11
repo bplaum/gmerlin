@@ -391,7 +391,11 @@ int main(int argc, char ** argv)
     int result;
     gavl_time_t delay_time = GAVL_TIME_SCALE / 100;
 
+    if(bg_player_get_status(player) == BG_PLAYER_STATUS_QUIT)
+      break;
+    
     result = bg_frontends_ping(frontends, num_frontends);
+
     
     if(!result)
       gavl_time_delay(&delay_time);

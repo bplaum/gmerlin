@@ -310,6 +310,30 @@ int bg_msg_sink_handle(void * sink, gavl_msg_t * msg)
   return 1;
   }
 
+gavl_msg_t * bg_msg_sink_get_read(bg_msg_sink_t * sink)
+  {
+  gavl_msg_t * ret;
+  
+  if(!sink->queue)
+    {
+    gavl_dprintf("BUG: bg_msg_sink_get_read called for synchronous sink\n");
+    return NULL;
+    }
+
+  pthread_mutex_lock(&sink->write_mutex);
+  ret = queue_get_read(sink->queue);
+  pthread_mutex_unlock(&sink->write_mutex);
+
+  return ret;
+  }
+
+void bg_msg_sink_done_read(bg_msg_sink_t * sink, gavl_msg_t * m)
+  {
+  pthread_mutex_lock(&sink->write_mutex);
+  queue_done_read(sink->queue, m); // Prevent memory leak
+  pthread_mutex_unlock(&sink->write_mutex);
+  }
+
 
 /* For asynchronous sinks */
 int bg_msg_sink_iteration(bg_msg_sink_t * sink)

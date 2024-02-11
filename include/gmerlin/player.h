@@ -484,6 +484,7 @@ void bg_player_apply_cmdline(bg_cfg_ctx_t * ctx);
 float bg_player_volume_to_dB(int volume);
 int bg_player_volume_from_dB(float volume);
 
+int  bg_player_get_status(bg_player_t * player);
 
 
 /** @} */

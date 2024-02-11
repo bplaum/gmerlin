@@ -97,11 +97,6 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
  */
 
 
-/* String initalizer for UUID. Will be changed to a real UUID when encountered */
-
-//                                "550e8400-e29b-11d4-a716-446655440000"
-// #define BG_STATE_UUID_INITILAIZER "----- GMERLIN UUID INITIALIZER -----"
-
 /* Standardized variables */
 
 #define BG_STATE_CTX_OV        "ov"

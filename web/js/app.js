@@ -70,7 +70,7 @@ function playqueue_create()
   playqueue_children = new Array();
     
   dict_set_string(m, GAVL_META_LABEL, "No player configured");
-  dict_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_ROOT_PLAYQUEUE);
+  dict_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_PLAYQUEUE);
   dict_set_string(m, GAVL_META_ID, BG_PLAYQUEUE_ID);
   
   dict_set_dictionary(playqueue, GAVL_META_METADATA, m);
@@ -320,7 +320,7 @@ function playqueue_add_album(container, replace, play)
     {
 //    console.log("Add album " + JSON.stringify(children[i]));
       
-    klass = obj_get_string(children[i].v, GAVL_META_MEDIA_CLASS);
+    klass = obj_get_string(children[i].v, GAVL_META_CLASS);
     if(!klass || !klass.startsWith("item"))
       continue;
     
@@ -956,7 +956,7 @@ function copy_to_favorites_internal(obj)
   {
   var msg;
   var m = dict_get_dictionary(obj, GAVL_META_METADATA);
-  var klass = dict_get_string(m, GAVL_META_MEDIA_CLASS);
+  var klass = dict_get_string(m, GAVL_META_CLASS);
 
   if(!klass.startsWith("item"))
     return;
@@ -1347,7 +1347,7 @@ function append_meta_info(parent, obj, parent_container)
   var num_children; 
   var m = dict_get_dictionary(obj, GAVL_META_METADATA);
   num_children = dict_get_int(m, GAVL_META_NUM_CHILDREN);
-  klass = dict_get_string(m, GAVL_META_MEDIA_CLASS);
+  klass = dict_get_string(m, GAVL_META_CLASS);
 
   if((num_children >= 0) && klass && klass.startsWith("container"))
     {
@@ -1394,7 +1394,7 @@ function append_meta_info(parent, obj, parent_container)
       append_meta_info_internal(parent, obj, GAVL_META_STATION,  parent_container);
     }
 
-  if(klass == GAVL_META_MEDIA_CLASS_SONG)
+  if(klass == GAVL_META_CLASS_SONG)
     {
     append_meta_info_internal(parent, obj, GAVL_META_ARTIST,   parent_container);
     append_meta_info_internal(parent, obj, GAVL_META_ALBUM,    parent_container);
@@ -1409,8 +1409,8 @@ function append_meta_info(parent, obj, parent_container)
   append_meta_info_internal(parent, obj, GAVL_META_DATE,     parent_container);
   append_meta_info_internal(parent, obj, GAVL_META_APPROX_DURATION, parent_container);
 
-  if((klass == GAVL_META_MEDIA_CLASS_MOVIE) ||
-     (klass == GAVL_META_MEDIA_CLASS_MOVIE_PART))
+  if((klass == GAVL_META_CLASS_MOVIE) ||
+     (klass == GAVL_META_CLASS_MOVIE_PART))
     {
     append_dom_element(parent, "br");
     append_meta_info_internal(parent, obj, GAVL_META_DIRECTOR, parent_container);
@@ -1768,11 +1768,11 @@ function update_nav_popup()
     {
     if(!(obj = widgets.browser.get_selected_obj()))
       enabled = false;
-    else if((klass = obj_get_string(obj, GAVL_META_MEDIA_CLASS)) &&
-	    ((klass == GAVL_META_MEDIA_CLASS_MUSICALBUM) ||
-	     (klass == GAVL_META_MEDIA_CLASS_PLAYLIST) ||
-	     (klass == GAVL_META_MEDIA_CLASS_TV_SEASON) ||
-	     (klass == GAVL_META_MEDIA_CLASS_TV_SHOW) ||
+    else if((klass = obj_get_string(obj, GAVL_META_CLASS)) &&
+	    ((klass == GAVL_META_CLASS_MUSICALBUM) ||
+	     (klass == GAVL_META_CLASS_PLAYLIST) ||
+	     (klass == GAVL_META_CLASS_TV_SEASON) ||
+	     (klass == GAVL_META_CLASS_TV_SHOW) ||
 	     klass.startsWith("item.")))
       enabled = true;
     else
@@ -1834,7 +1834,7 @@ function update_nav_popup()
        (app_state.sel_id != "") &&
        (obj = widgets.browser.obj_by_id(app_state.sel_id)) &&
        (m = dict_get_dictionary(obj, GAVL_META_METADATA)) &&
-       (klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+       (klass = dict_get_string(m, GAVL_META_CLASS)) &&
        klass.startsWith("item"))
       enabled = true;
     else if((app_state.widget == "player") && player_control.current_track)
@@ -2283,7 +2283,7 @@ function cfg_info_set_devices(info)
     {
 //    console.log("device type " + dict_get_string(devices[i].v, "type"));
 	
-    if(dict_get_string(devices[i].v, GAVL_META_MEDIA_CLASS) != GAVL_META_MEDIA_CLASS_BACKEND_RENDERER)
+    if(dict_get_string(devices[i].v, GAVL_META_CLASS) != GAVL_META_CLASS_BACKEND_RENDERER)
       continue;
 
     if(!(uri = dict_get_string(devices[i].v, "proxy")))
@@ -2536,13 +2536,13 @@ function load_progress(p)
 var tile_modes =
   [
     {
-      [GAVL_META_MEDIA_CLASS]: GAVL_META_MEDIA_CLASS_PHOTOALBUM
+      [GAVL_META_CLASS]: GAVL_META_CLASS_PHOTOALBUM
     },
     {
-      [GAVL_META_CHILD_CLASS]: GAVL_META_MEDIA_CLASS_MUSICALBUM
+      [GAVL_META_CHILD_CLASS]: GAVL_META_CLASS_MUSICALBUM
     },
     {
-      [GAVL_META_CHILD_CLASS]: GAVL_META_MEDIA_CLASS_MOVIE
+      [GAVL_META_CHILD_CLASS]: GAVL_META_CLASS_MOVIE
     },
 
   ];
@@ -2550,9 +2550,9 @@ var tile_modes =
 function make_label(m, klass)
   {
   /* Label */
-  if((klass == GAVL_META_MEDIA_CLASS_MOVIE) ||
-     (klass == GAVL_META_MEDIA_CLASS_SONG) ||
-     (klass == GAVL_META_MEDIA_CLASS_MUSICALBUM))
+  if((klass == GAVL_META_CLASS_MOVIE) ||
+     (klass == GAVL_META_CLASS_SONG) ||
+     (klass == GAVL_META_CLASS_MUSICALBUM))
     return dict_get_string(m, GAVL_META_TITLE);
   else
     return dict_get_string(m, GAVL_META_LABEL);
@@ -2592,9 +2592,9 @@ function create_browser()
       
     for(i = 0; i < tile_modes.length; i++)
       {
-	if(tile_modes[i][GAVL_META_MEDIA_CLASS] &&
-	   (val = dict_get_string(m, GAVL_META_MEDIA_CLASS)) &&
-	   (tile_modes[i][GAVL_META_MEDIA_CLASS] == val))
+	if(tile_modes[i][GAVL_META_CLASS] &&
+	   (val = dict_get_string(m, GAVL_META_CLASS)) &&
+	   (tile_modes[i][GAVL_META_CLASS] == val))
 	  return BROWSER_MODE_TILES;
 	else if(tile_modes[i][GAVL_META_CHILD_CLASS] &&
 	   (val = dict_get_string(m, GAVL_META_CHILD_CLASS)) &&
@@ -2635,9 +2635,9 @@ function create_browser()
 	this.div.dataset.imgaspect = "square";
 
         child_class = obj_get_string(this.container, GAVL_META_CHILD_CLASS);
-        if((child_class == GAVL_META_MEDIA_CLASS_MOVIE)  ||
-	   (child_class == GAVL_META_MEDIA_CLASS_TV_SEASON) ||
-	   (child_class == GAVL_META_MEDIA_CLASS_TV_SHOW))
+        if((child_class == GAVL_META_CLASS_MOVIE)  ||
+	   (child_class == GAVL_META_CLASS_TV_SEASON) ||
+	   (child_class == GAVL_META_CLASS_TV_SHOW))
  	  this.div.dataset.imgaspect = "poster";
         break;
       }
@@ -2834,8 +2834,8 @@ function create_browser()
   ret.use_image = function(klass)
     {
     if(this.have_container_image &&
-       ((klass == GAVL_META_MEDIA_CLASS_SONG) ||
-	(klass == GAVL_META_MEDIA_CLASS_TV_EPISODE)))
+       ((klass == GAVL_META_CLASS_SONG) ||
+	(klass == GAVL_META_CLASS_TV_EPISODE)))
       return false;
     else
       return true;
@@ -2854,7 +2854,7 @@ function create_browser()
 
     this.render_common(div, obj);
 
-    klass = obj_get_string(obj, GAVL_META_MEDIA_CLASS);
+    klass = obj_get_string(obj, GAVL_META_CLASS);
 
     /* Icon */
     child_div = append_dom_element(div, "div");
@@ -2884,7 +2884,7 @@ function create_browser()
     var m;
     var button;
     var icon;
-    var klass = obj_get_string(obj, GAVL_META_MEDIA_CLASS);
+    var klass = obj_get_string(obj, GAVL_META_CLASS);
 
     this.render_common(div, obj);
       
@@ -2922,7 +2922,7 @@ function create_browser()
     td.setAttribute("style", "width: 1.2em; padding: 0px;");
 	
     /* Arrow */
-    if(dict_get_string(m, GAVL_META_MEDIA_CLASS).startsWith("container"))
+    if(dict_get_string(m, GAVL_META_CLASS).startsWith("container"))
       {
       if(dict_get_int(m, GAVL_META_LOCKED))	    
         {
@@ -3395,7 +3395,7 @@ function create_browser()
   ret.entry_fire = function(id)
     {
     var obj = this.obj_by_id(id);
-    var klass = obj_get_string(obj, GAVL_META_MEDIA_CLASS);
+    var klass = obj_get_string(obj, GAVL_META_CLASS);
 
     if(obj_get_int(obj, GAVL_META_LOCKED))
       return;	
@@ -3412,7 +3412,7 @@ function create_browser()
         {
         play_by_id(obj);
 	}
-      else if(obj_get_string(obj, GAVL_META_MEDIA_CLASS).startsWith(GAVL_META_MEDIA_CLASS_IMAGE))
+      else if(obj_get_string(obj, GAVL_META_CLASS).startsWith(GAVL_META_CLASS_IMAGE))
 	{
         console.log("Showing image " + obj_get_id(obj));
         app_state.image_id =  obj_get_id(obj);
@@ -3796,7 +3796,7 @@ function create_player_control()
     el = document.getElementById("player-info");
     clear_element(el);
 
-    if(!(klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)))
+    if(!(klass = dict_get_string(m, GAVL_META_CLASS)))
       return;
 
     span = append_dom_element(el, "span");
@@ -3919,7 +3919,7 @@ function create_player_control()
                     if(!(m = dict_get_dictionary(this.current_track, GAVL_META_METADATA)))
                       break;
 
-                    if((klass = dict_get_string(m, GAVL_META_MEDIA_CLASS)) &&
+                    if((klass = dict_get_string(m, GAVL_META_CLASS)) &&
 		       klass.startsWith("item.video"))
                       has_video = true;
                     else
@@ -4826,7 +4826,7 @@ function create_iteminfo()
       case "Enter":
 
         if((app_state.id != BG_PLAYEUEUE_ID) &&
-	   (v = obj_get_string(this.info.obj, GAVL_META_MEDIA_CLASS)) &&
+	   (v = obj_get_string(this.info.obj, GAVL_META_CLASS)) &&
 	   v.startsWith("item.") &&
 	   (v = obj_get_id(this.info.obj)))
 	  widgets.browser.entry_fire(v);
@@ -4936,7 +4936,7 @@ function create_iteminfo()
 
     m = dict_get_dictionary(obj, GAVL_META_METADATA);
 
-    klass = dict_get_string(m, GAVL_META_MEDIA_CLASS);
+    klass = dict_get_string(m, GAVL_META_CLASS);
 	
     /* */
 
@@ -4967,16 +4967,16 @@ function create_iteminfo()
 
     switch(klass)
       {
-      case GAVL_META_MEDIA_CLASS_MUSICALBUM:
+      case GAVL_META_CLASS_MUSICALBUM:
         info_table_append(this.metatable, dict_get_int(m, GAVL_META_NUM_CHILDREN) +" track(s)");
         break;
-      case GAVL_META_MEDIA_CLASS_TV_SEASON:
+      case GAVL_META_CLASS_TV_SEASON:
         info_table_append(this.metatable, dict_get_int(m, GAVL_META_NUM_CHILDREN) +" episodes(s)");
         break;
-      case GAVL_META_MEDIA_CLASS_TV_SHOW:
+      case GAVL_META_CLASS_TV_SHOW:
         info_table_append(this.metatable, dict_get_int(m, GAVL_META_NUM_CHILDREN) +" season(s)");
         break;
-      case GAVL_META_MEDIA_CLASS_PLAYLIST:
+      case GAVL_META_CLASS_PLAYLIST:
         info_table_append(this.metatable, dict_get_int(m, GAVL_META_NUM_CHILDREN) +" item(s)");
         break;
       case null:
@@ -5159,7 +5159,7 @@ function global_init()
 
   widgets.logviewer     = create_log_viewer();
 
-  server_uri = "ws://" +  window.location.host + "/ws/" + GAVL_META_MEDIA_CLASS_BACKEND_MDB;
+  server_uri = "ws://" +  window.location.host + "/ws/" + GAVL_META_CLASS_BACKEND_MDB;
   server_connection_init();
     
   widgets.browser   = create_browser();

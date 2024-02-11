@@ -244,6 +244,11 @@ void bg_msg_set_parameter_ctx_term(bg_msg_sink_t * sink);
 void bg_msg_sink_set_id(bg_msg_sink_t * sink, const char * id);
 int bg_msg_sink_has_id(bg_msg_sink_t * sink, const char * id);
 
+gavl_msg_t * bg_msg_sink_get_read(bg_msg_sink_t * sink);
+void bg_msg_sink_done_read(bg_msg_sink_t * sink, gavl_msg_t * m);
+
+
+
 // const char * bg_msg_sink_get_id(bg_msg_sink_t * sink);
 
 
