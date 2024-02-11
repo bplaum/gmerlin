@@ -608,7 +608,7 @@ static void * create_udisks2()
     return u;
     }
   u->dbus_sink = bg_msg_sink_create(handle_dbus_msg_volume, u, 0);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Found UDisks2 daemon at %s", u->daemon_addr);
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Found UDisks2 daemon at %s", u->daemon_addr);
   
   return u;
   }

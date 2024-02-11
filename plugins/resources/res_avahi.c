@@ -561,7 +561,7 @@ static void * create_avahi()
     a->conn = NULL;
     return a;
     }
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Found avahi daemon at %s", a->avahi_addr);
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Found avahi daemon at %s", a->avahi_addr);
   
   a->dbus_sink = bg_msg_sink_create(dbus_callback_avahi, a, 0);
 

@@ -157,7 +157,9 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
   {
   const gavl_dictionary_t * child;
 
-  if(!(child = gavl_dictionary_get_recursive(state, ctx)))
+  if(!strcmp(ctx, "/"))
+    child = state;
+  else if(!(child = gavl_dictionary_get_recursive(state, ctx)))
     {
     //    fprintf(stderr, "No such ctx %s\n", ctx);
     return NULL;
