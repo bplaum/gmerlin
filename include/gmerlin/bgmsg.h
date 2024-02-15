@@ -35,19 +35,6 @@ typedef struct
   uint32_t ns;
   } bg_msg_desc_t;
 
-#if 0
-typedef enum
-  {
-    BG_BACKEND_NONE        = 0, // Not defined
-    BG_BACKEND_MEDIASERVER = 1,
-    BG_BACKEND_RENDERER    = 2,
-    /* Backend type for the control panel */
-    BG_BACKEND_STATE       = 3,
-  } bg_backend_type_t;
-
-const char * bg_backend_type_to_string(bg_backend_type_t type);
-bg_backend_type_t bg_backend_type_from_string(const char * type);
-#endif
 
 /** \defgroup messages Messages
  *  \brief Communication inside and between applications
