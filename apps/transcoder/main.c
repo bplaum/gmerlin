@@ -90,8 +90,7 @@ int main(int argc, char ** argv)
   /* We must initialize the random number generator if we want the
      Vorbis encoder to work */
   srand(time(NULL));
-    
-
+  
   bg_cmdline_init(&app_data);
 
   bg_gtk_init(&argc, &argv);

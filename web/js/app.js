@@ -835,8 +835,7 @@ function app_state_apply()
       (last_app_state.id != app_state.id)))
     push_state();
 */
-    
-    
+      
   last_app_state = app_state_copy(app_state);
   }
 
@@ -2504,15 +2503,6 @@ function get_parent_id(id)
     return id.substring(0, idx);
   }
 
-function is_ancestor(ancestor, descendent)
-  {
-  if((descendent != ancestor) &&
-      descendent.startsWith(ancestor) &&
-     (ancestor.endsWith("/") || (descendent.charAt(ancestor.length) == "/")))
-    return true;
-  else
-    return false;
-  }
 
 /* Load progress: We keep this global. p is between 0 and 1, negative means to hide the widget */
 

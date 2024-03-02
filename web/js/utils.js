@@ -350,75 +350,6 @@ function scrollable_scroll_delta(obj, offset)
   scrollable_scroll(obj, obj.scrollTop + offset);
   }
 
-function make_scrollable(obj, scroller)
-  {
-  var scroll_ctx = new Object();
-
-  scroll_ctx.scroller = scroller;
-  scroll_ctx.obj = obj;
-  scroll_ctx.mouse_active = false;
-  scroll_ctx.mouse_y = -1;
-      
-  obj.scroll_ctx = scroll_ctx;
-  scroller.scroll_ctx = scroll_ctx;
-
-  scroller.onmouseout = function (evt)
-    {
-    this.scroll_ctx.mouse_active = false;
-    };
-  scroller.onmousedown = function (evt)
-    {
-    this.scroll_ctx.mouse_active = true;
-    scroll_ctx.mouse_y = evt.clientY;
-    };
-  scroller.onmouseup = function (evt)
-    {
-    this.scroll_ctx.mouse_active = false;
-    };
-  scroller.onmousemove = function (evt)
-    {
-    var delta;
-    var top;
-    var scrollbar_height;
-    if(!this.scroll_ctx.mouse_active)
-      return false;
-
-    scrollbar_height = this.parentElement.clientHeight;
-
-    delta = evt.clientY - scroll_ctx.mouse_y;
-
-    top = this.scroll_ctx.top + delta;
-    if(top < 0)
-      top = 0;
-
-    if(top + this.scroll_ctx.height > scrollbar_height)
-      top = scrollbar_height - this.scroll_ctx.height;
-
-    if(top != this.scroll_ctx.top)
-      {
-      var scroll_offset;
-      /* Scroll to position */
-      var scroll_offset_max = this.scroll_ctx.obj.scrollHeight - this.scroll_ctx.obj.clientHeight;
-
-      scroll_offset = top * scroll_offset_max / (scrollbar_height - this.scroll_ctx.height);
-      this.scroll_ctx.obj.scrollTop = scroll_offset;
-      this.setAttribute("style", "top: " + parseInt(top) + "px; bottom: " + (scrollbar_height - parseInt(top + this.scroll_ctx.height)) + "px;");
-      this.scroll_ctx.top = top;
-      }
-   	
-    scroll_ctx.mouse_y = evt.clientY;
-
-    stop_propagate(evt);
-	
-    return false;
-    };
-  }
-/*
-function browser_icon_onload()
-  {
-
-  }
-*/
 
 function browser_icon_onerror()
   {
@@ -533,99 +464,14 @@ function make_icon(p, obj, use_image, width)
   return ret;
   }
 
-
-/* Scrolling: Change parents scrollTop such that el is within parents bounding box */
-function scroll_to_element(el, parent_obj)
+function is_ancestor(ancestor, descendent)
   {
-  var rect = el.getBoundingClientRect();
-  var parent_rect = parent_obj.getBoundingClientRect();
-     
-  if(rect_is_below(rect, parent_rect))
-    {
-    scrollable_scroll_delta(parent_obj, rect.bottom - parent_rect.bottom);
-    }
-  else if(rect_is_above(rect, parent_rect))
-    {
-    scrollable_scroll_delta(parent_obj, -(parent_rect.top - rect.top));
-    }
-  }
-  
-/* Mousewheel support */
-
-var wheel_target = null;
-
-/** Event handler for mouse wheel event.
- */
-function wheel_handler(event){
-        var delta = 0;
-        if (!event) /* For IE. */
-                event = window.event;
-        if (event.wheelDelta) { /* IE/Opera. */
-                delta = event.wheelDelta/120;
-        } else if (event.detail) { /** Mozilla case. */
-                /** In Mozilla, sign of delta is different than in IE.
-                 * Also, delta is multiple of 3.
-                 */
-                delta = -event.detail/3;
-        }
-        /** If delta is nonzero, handle it.
-         * Basically, delta is now positive if wheel was scrolled up,
-         * and negative, if wheel was scrolled down.
-         */
-        if (delta && wheel_target)
-                wheel_target.mousewheel_callback(delta);
-        /** Prevent default actions caused by mouse wheel.
-         * That might be ugly, but we handle scrolls somehow
-         * anyway, so don't bother here..
-         */
-        if (event.preventDefault)
-                event.preventDefault();
-	event.returnValue = false;
-}
-
-function init_mousewheel()
-  {
-  /** Initialization code. 
-   * If you use your own event management code, change it as required.
-   */
-  if(window.addEventListener)
-      /** DOMMouseScroll is for mozilla. */
-    window.addEventListener('DOMMouseScroll', wheel_handler, false);
-      /** IE/Opera. */
-  window.onmousewheel = document.onmousewheel = wheel_handler;
-  }
-
-/* Loading animation */
-
-function set_loading_timeout(parent_id)
-  {
-  var parent_obj = document.getElementById(parent_id).parentElement;
-  var div = document.createElement("div");
-  div.setAttribute("class", "loading");
-  parent_obj.appendChild(div);
-  parent_obj.loading_div = div;
-  parent_obj.to = undefined;
-  }
-
-function set_loading(parent_id)
-  {
-  var parent_obj = document.getElementById(parent_id).parentElement;
-  parent_obj.to = setTimeout(function() { set_loading_timeout(parent_id); }, 500);
-  }
-
-function clear_loading(parent_id)
-  {
-  var parent_obj = document.getElementById(parent_id).parentElement;
-  if(parent_obj.to)
-    {
-    clearTimeout(parent_obj.to);
-    parent_obj.to = undefined;
-    }
-  if(parent_obj.loading_div)
-    {
-    parent_obj.removeChild(parent_obj.loading_div);
-    parent_obj.loading_div = undefined;
-    }
+  if((descendent != ancestor) &&
+      descendent.startsWith(ancestor) &&
+     (ancestor.endsWith("/") || (descendent.charAt(ancestor.length) == "/")))
+    return true;
+  else
+    return false;
   }
 
 
@@ -636,28 +482,7 @@ var focus_idx = 0;
 var focus_stack = null;
 var focus_tab_listener = false;
 
-function focus_push()
-  {
-  var el = new Object();
 
-  if(!focus_stack)
-    focus_stack = new Array();
-
-  el.focus_elements = focus_elements;
-  el.focus_idx      = focus_idx;
-  focus_elements = null;
-  focus_stack.splice(0, 0, el);
-  }
-
-function focus_pop()
-  {
-  var el = focus_stack[0];
- 
-  focus_elements = el.focus_elements;
-  focus_idx      = el.focus_idx;
-  focus_stack.splice(0, 1);
-  focus_elements[focus_idx].focus();
-  }
 
 function focus_next()
   {
@@ -763,10 +588,6 @@ function focus_element_append(el)
     if(idx >= 0)
       focus_idx = idx;
 
-    if(el.mousewheel_callback)
-      wheel_target = el;
-    else
-      wheel_target = null;
     return true;
     };
       

@@ -401,19 +401,31 @@ const bg_plugin_info_t * bg_plugin_find_by_name(const char * name)
 
 const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol, int type_mask)
   {
+  const bg_plugin_info_t * ret = NULL;
+  char * protocol_priv = NULL;
+  const char * pos;
   const bg_plugin_info_t * info = bg_plugin_reg->entries;
+
+  if((pos = strstr(protocol, "://")))
+    {
+    protocol_priv = gavl_strndup(protocol, pos);
+    protocol = protocol_priv;
+    }
   
   while(info)
     {
-    //    if(gavl_string_starts_with(info->name, "be_"))
-    //      fprintf(stderr, "%s %p\n", info->name, info->protocols);
-    
     if((info->type & type_mask) &&
        info->protocols && (gavl_string_array_indexof(info->protocols, protocol) >= 0))
-      return info;
+      {
+      ret = info;
+      break;
+      }
     info = info->next;
     }
-  return NULL;
+  
+  if(protocol_priv)
+    free(protocol_priv);
+  return ret;
   }
 
 const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,

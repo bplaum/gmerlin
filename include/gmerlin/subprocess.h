@@ -68,7 +68,6 @@ void bg_subprocess_kill(bg_subprocess_t* proc, int signal);
  *
  *  \returns 1 if the process exited
  *
- *  Types for signal are the same as in \<signal.h\>
  */
 
 int bg_subprocess_done(bg_subprocess_t * proc);
