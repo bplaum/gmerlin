@@ -3712,7 +3712,7 @@ function create_player_control()
 
   el.onchange = function()
     {
-    if(player)
+    if(player && player.seek_perc)
       player.seek_perc(this.value);
     player_control.seeking = false;
     };
