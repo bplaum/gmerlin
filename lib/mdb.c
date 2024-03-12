@@ -823,6 +823,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
              db->rescan_func = NULL;
              
              bg_msg_sink_put(db->ctrl.evt_sink);
+             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Rescan done");
              }
           do_forward = 0;
           break;

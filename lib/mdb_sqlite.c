@@ -6252,6 +6252,7 @@ static int handle_msg_sqlite(void * priv, gavl_msg_t * msg)
           
           res = bg_msg_sink_get(be->ctrl.evt_sink);
           gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
+          gavl_msg_set_resp_for_req(res, msg);
           bg_msg_sink_put(be->ctrl.evt_sink);
           }
           break;

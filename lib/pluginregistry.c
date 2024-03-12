@@ -1129,7 +1129,7 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
     
     if(!(*changed))
       {
-      // fprintf(stderr, "Registry changed %s\n", filename);
+      fprintf(stderr, "Registry changed %s\n", filename);
       *changed = 1;
       closedir(dir);
       if(_file_info)
@@ -1449,9 +1449,13 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
     /* Sort */
     ret->entries = sort_by_priority(ret->entries);
 
-    if(ret->changed && !opt->dont_save)
+    if(ret->changed)
+      {
       bg_plugin_registry_save(ret->entries);
-  
+
+      /* Also save config registry */
+      bg_cfg_registry_save();
+      }
     /* Remove duplicate external plugins */
     ret->entries = remove_duplicate(ret->entries);
     }

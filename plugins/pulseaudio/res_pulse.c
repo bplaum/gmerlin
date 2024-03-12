@@ -220,7 +220,7 @@ static void * create_pulse()
   ret->pa_ml = pa_mainloop_new();
   
   pa_mlapi = pa_mainloop_get_api(ret->pa_ml);
-  ret->pa_ctx = pa_context_new(pa_mlapi, "gmerlin-recording-devices");
+  ret->pa_ctx = pa_context_new(pa_mlapi, "gmerlin-pulseaudio-devices");
   
   // This function connects to the pulse server
   if(pa_context_connect(ret->pa_ctx, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)
@@ -340,7 +340,7 @@ bg_controllable_plugin_t the_plugin =
       BG_LOCALE,
       .name =      "res_pulse",
       .long_name = TRS("Pulseaudio device manager"),
-      .description = TRS("Manages pulseaudio sources and sinks"),
+      .description = TRS("Manages pulseaudio"),
       .type =     BG_PLUGIN_RESOURCE_DETECTOR,
       .flags =    0,
       .create =   create_pulse,

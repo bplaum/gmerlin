@@ -286,63 +286,6 @@ int bg_http_read_response(gavl_io_t * io,
   return ret;
   
   }
-                      
-
-
-/* Simple function implementing GET for (small) files */ 
-#if 0
-static int http_get(const char * url,
-                    gavl_dictionary_t * res, char ** redirect,
-                    int head, gavl_buffer_t * buf, const gavl_dictionary_t * vars)
-  {
-
-  int ret = 0;
-
-  
-  gavl_io_t * io = NULL;
-
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Downloading %s", url);
-  
-  if(!bg_http_send_request(url, 0, vars, &io))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: Coudln't send request", url);
-    goto fail;
-    }
-
-  if(!io)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: Got no I/O handle", url);
-    goto fail;
-    }
-
-  //  if(!bg_http_read_response(io, 3000, redirect, res))
-
-  if(!gavl_io_can_read(io, 10000))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: Got timeout", url);
-    goto fail;
-    }
-  
-  if(!bg_http_read_response(io, redirect, res))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading %s failed: Reading response failed", url);
-    goto fail;
-    }
-  
-  if(!(*redirect))
-    ret = gavl_http_read_body(io, res, buf);
-  else
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got redirected to %s", *redirect);
-  
-  //  if(!ret)
-  //    fprintf(stderr, "result %d\n", ret);
-
-  fail:
-  
-  
-  return ret;
-  }
-#endif
 
 int bg_http_get_range(const char * url, gavl_buffer_t * ret, gavl_dictionary_t * dict,
                       int64_t offset, int64_t size)

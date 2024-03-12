@@ -177,7 +177,7 @@ bg_plugin_type_t bg_plugin_type_from_string(const char * name);
 typedef struct
   {
   char ** blacklist; //!< Plugins, which should be ignored
-  int dont_save;            //!< If 1, don't save the registry after it was created
+  //  int dont_save;            //!< If 1, don't save the registry after it was created
   } bg_plugin_registry_options_t;
 
 /** \ingroup plugin_registry

@@ -59,6 +59,7 @@ type_names[] =
     { "BackendRenderer",         BG_PLUGIN_BACKEND_RENDERER   },
     { "FrontendMDB",             BG_PLUGIN_FRONTEND_MDB     },
     { "FrontendRenderer",        BG_PLUGIN_FRONTEND_RENDERER   },
+    { "Control",                 BG_PLUGIN_CONTROL   },
     { NULL,                      BG_PLUGIN_NONE }
   };
 
