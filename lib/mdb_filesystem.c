@@ -1461,20 +1461,6 @@ static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
         case BG_FUNC_DB_BROWSE_CHILDREN:
           browse_children(be, msg);
           break;
-#if 0 // TODO: Do we really need this?
-        case BG_FUNC_DB_RESCAN:
-          {
-          gavl_msg_t * res;
-          rescan(be);
-          /* Send done event */
-          
-          res = bg_msg_sink_get(be->ctrl.evt_sink);
-          gavl_msg_set_id_ns(res, BG_RESP_DB_RESCAN, BG_MSG_NS_DB);
-          bg_msg_sink_put(be->ctrl.evt_sink);
-
-          }
-          break;
-#endif
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
           int last = 0;
@@ -1640,7 +1626,7 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
 
   b->parameters = parameters;
   
-  b->flags |= (BE_FLAG_RESOURCES | BE_FLAG_RESCAN);
+  b->flags |= BE_FLAG_RESOURCES;
   
   
   b->destroy = destroy_filesystem;

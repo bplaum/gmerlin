@@ -811,6 +811,8 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
         case BG_RESP_DB_RESCAN:
           db->num_rescan--;
 
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Rescan done (%d left)", db->num_rescan);
+          
           /* Send to the outer world if this was the last one */
           if(!db->num_rescan)
              {
@@ -823,7 +825,7 @@ static int handle_be_msg(void * priv, gavl_msg_t * msg)
              db->rescan_func = NULL;
              
              bg_msg_sink_put(db->ctrl.evt_sink);
-             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Rescan done");
+             // gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Rescan done");
              }
           do_forward = 0;
           break;
