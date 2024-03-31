@@ -525,6 +525,8 @@ bg_controllable_t * bg_resourcemanager_get_controllable()
   {
   pthread_mutex_lock(&resman_mutex);
 
+  
+  
   if(!resman)
     bg_resourcemanager_init();
   

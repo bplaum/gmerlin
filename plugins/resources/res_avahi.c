@@ -30,7 +30,7 @@
  };
 
 #define TYPE_MPD               "_mpd._tcp"
-#define TYPE_PULSEAUDIO_SINK   "_pulse-sink._tcp"
+// #define TYPE_PULSEAUDIO_SINK   "_pulse-sink._tcp"
 #define TYPE_GMERLIN           "_gmerlin._tcp"
 
 //#define TYPE_PULSEAUDIO_SOURCE "_pulse-source._tcp"
@@ -47,7 +47,6 @@ typedef struct
   int initialized;
 
   char * mpd_browser;
-  char * pa_sink_browser;
   char * gmerlin_browser;
 
   gavl_dictionary_t entry_groups;
@@ -229,28 +228,6 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
             gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
 
             gavl_dictionary_set_int(&info, BG_RESOURCE_PRIORITY, BG_RESOURCE_PRIORITY_DEFAULT);
-            gavl_dictionary_set_string(&info, GAVL_META_LABEL, name);
-            }
-          else if(!strcmp(type, TYPE_PULSEAUDIO_SINK))
-            {
-            const char * dev;
-            gavl_dictionary_set_string(&info, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
-
-            dev = gavl_dictionary_get_string(&txt_dict, "device");
-
-            if(dev)
-              {
-              switch(protocol)
-                {
-                case AVAHI_PROTO_INET: // IPV4
-                  uri = gavl_sprintf("pulseaudio-sink://%s:%d/%s", addr, port, dev);
-                  break;
-                case AVAHI_PROTO_INET6: // IPV6
-                  uri = gavl_sprintf("pulseaudio-sink://[%s]:%d/%s", addr, port, dev);
-                  break;
-                }
-              }
-            gavl_dictionary_set_string_nocopy(&info, GAVL_META_URI, uri);
             gavl_dictionary_set_string(&info, GAVL_META_LABEL, name);
             }
           else if(!strcmp(type, TYPE_GMERLIN))
@@ -566,7 +543,6 @@ static void * create_avahi()
   a->dbus_sink = bg_msg_sink_create(dbus_callback_avahi, a, 0);
 
   a->mpd_browser = create_service_browser(a, TYPE_MPD);
-  a->pa_sink_browser = create_service_browser(a, TYPE_PULSEAUDIO_SINK);
   a->gmerlin_browser = create_service_browser(a, TYPE_GMERLIN);
   
   bg_controllable_init(&a->ctrl,
@@ -590,8 +566,6 @@ static void destroy_avahi(void * priv)
 
   if(a->mpd_browser)
     free(a->mpd_browser);
-  if(a->pa_sink_browser)
-    free(a->pa_sink_browser);
   if(a->gmerlin_browser)
     free(a->gmerlin_browser);
   if(a->avahi_addr)

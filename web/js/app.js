@@ -2095,8 +2095,8 @@ function create_menu(menu_data)
   /* Show menu, send messages to cb.handle_msg */
   menu.show = function(parent, cb)
     {
-    var parent_rect;
-    var menu_rect;
+    let parent_rect;
+    let menu_rect;
 
     this.cb = cb;
     this.visible = true;

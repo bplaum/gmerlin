@@ -1871,6 +1871,8 @@ static void close_glscope(void * priv)
   {
   glscope_t * s = priv;
 
+  fprintf(stderr, "close_glscope\n");
+  
   if(s->asink)
     {
     gavl_audio_sink_destroy(s->asink);

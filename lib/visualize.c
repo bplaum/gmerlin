@@ -179,7 +179,6 @@ void bg_visualizer_destroy(bg_visualizer_t * v)
   {
   if(v->h)
     bg_plugin_unref(v->h);
-
   
   if(v->msink)
     bg_msg_sink_destroy(v->msink);
@@ -241,6 +240,7 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
     v->plugin = NULL;
     v->asink_int = NULL;
     v->plugin_ctrl = NULL;
+    v->vsrc = NULL;
     }
 
   //  fprintf(stderr, "visualize: load_plugin\n");
@@ -248,6 +248,7 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
   if(!(v->h = bg_plugin_load_with_options(bg_multi_menu_get_selected(&v->plugin_cfg))))
     {
     //    fprintf(stderr, "visualize: loading_plugin failed\n");
+    bg_ov_show_window(v->ov, 0);
     return;
     }
   //  fprintf(stderr, "visualize: load_plugin done\n");

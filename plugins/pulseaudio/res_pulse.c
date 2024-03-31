@@ -177,7 +177,7 @@ static void pa_subscribe_callback(pa_context *c,
         op = pa_context_get_source_info_by_index(c, idx, pa_source_cb, userdata);
       else
         op = pa_context_get_sink_info_by_index(c, idx, pa_sink_cb, userdata);
-
+      
       pa_operation_unref(op);
       
       break;
