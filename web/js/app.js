@@ -1521,7 +1521,9 @@ function player_create()
   var url;
   var idx;
   ret.ready = false;
-   
+
+  if(!player_uri)
+    return;
   if((idx = player_uri.indexOf("://")) > 0)
     url = "ws" + player_uri.slice(idx);
       

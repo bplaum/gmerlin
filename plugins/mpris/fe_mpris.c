@@ -648,7 +648,7 @@ static void add_track(void * priv, const gavl_dictionary_t * track, int idx)
   char * mpris_id;
   gavl_value_t metadata_val;
   gavl_dictionary_t * metadata;
-  const char * before;
+  const char * before = NULL;
   
   gavl_array_t * track_ids;
   
@@ -680,7 +680,8 @@ static void add_track(void * priv, const gavl_dictionary_t * track, int idx)
 
   if(idx > 0)
     before = gavl_string_array_get(track_ids, idx-1);
-  else
+  
+  if(!before)
     before = "/org/mpris/MediaPlayer2/TrackList/NoTrack";
   
   val_to_variant_metadata(&metadata_val, &iter);
