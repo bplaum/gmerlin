@@ -147,6 +147,8 @@ int bg_state_set(gavl_dictionary_t * state,
     gavl_msg_t * msg = bg_msg_sink_get(sink);
     gavl_msg_set_state(msg, id, last, ctx, var, val);
     bg_msg_sink_put(sink);
+    
+    //    fprintf(stderr, "State changed %s %s\n", ctx, var);
     }
   return changed;
   }
