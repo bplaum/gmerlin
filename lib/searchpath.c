@@ -96,7 +96,6 @@ char * bg_search_file_read(const char * directory, const char * file)
 
 static char * search_file_write(const char * directory, const char * file, int do_create)
   {
-  char * home_dir;
   char * testpath;
   char * testdir;
   
@@ -105,11 +104,11 @@ static char * search_file_write(const char * directory, const char * file, int d
   //  if(!file)
   //    return NULL;
   
-  home_dir = getenv("HOME");
-
   /* Try to open the file */
 
-  testdir  = bg_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
+  testdir = bg_search_var_dir(directory);
+  
+  //   bg_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
 
   if(!do_create && access(testdir, R_OK|W_OK|X_OK))
     {

@@ -301,7 +301,7 @@ static int dbus_callback_avahi(void * priv, gavl_msg_t * msg)
 
 static char * create_service_browser(avahi_t * a, const char * type)
   {
-  char * ret;
+  char * ret = NULL;
   DBusMessage * req;
   gavl_msg_t * res;
 

@@ -935,11 +935,20 @@ struct json_object * bg_value_to_json(const gavl_value_t * v)
 static int double_array_from_json(double * ret, struct json_object * obj, int num)
   {
   int i;
-
-  if(!json_object_is_type(obj, json_type_array) ||
-     (json_object_array_length(obj) != num))
+  enum json_type t;
+  
+  if((t = json_object_get_type(obj)) != json_type_array)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Type mismatch, expected array, got %s", json_type_to_name(t));
     return 0;
-
+    }
+    
+  if(json_object_array_length(obj) != num)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length mismatch, expected %d, got %d", num,
+             json_object_array_length(obj));
+    return 0;
+    }
   for(i = 0; i < num; i++)
     ret[i] = json_object_get_double(json_object_array_get_idx(obj, i));
   return 1;
@@ -1105,13 +1114,13 @@ int bg_value_from_json(gavl_value_t * v, struct json_object * obj)
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
-      double_array_from_json(v->v.color, value, 3);
+      return double_array_from_json(v->v.color, value, 3);
       break;
     case GAVL_TYPE_COLOR_RGBA:
-      double_array_from_json(v->v.color, value, 4);
+      return double_array_from_json(v->v.color, value, 4);
       break;
     case GAVL_TYPE_POSITION:
-      double_array_from_json(v->v.position, value, 2);
+      return double_array_from_json(v->v.position, value, 2);
       break;
     case GAVL_TYPE_DICTIONARY:
       return bg_dictionary_from_json(v->v.dictionary, value);
