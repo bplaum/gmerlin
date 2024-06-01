@@ -993,7 +993,28 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
     bg_string_to_string_array(p->protocols, new_info->protocols);
     }
-  
+  if(plugin->type & (BG_PLUGIN_COMPRESSOR_AUDIO |
+                     BG_PLUGIN_COMPRESSOR_VIDEO |
+                     BG_PLUGIN_DECOMPRESSOR_AUDIO |
+                     BG_PLUGIN_DECOMPRESSOR_VIDEO))
+    {
+    int num_compressions = 0;
+    const gavl_codec_id_t * cmp;
+    bg_codec_plugin_t  * p;
+    p = (bg_codec_plugin_t*)plugin;
+
+    if(p->get_compressions)
+      {
+      cmp = p->get_compressions(plugin_priv);
+    
+      while(cmp[num_compressions] != GAVL_CODEC_ID_NONE)
+        num_compressions++;
+
+      new_info->compressions = calloc(num_compressions+1, sizeof(*new_info->compressions));
+      memcpy(new_info->compressions, cmp, (num_compressions+1)*sizeof(*new_info->compressions));
+      }
+    
+    }
   return new_info;
   }
 

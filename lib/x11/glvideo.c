@@ -428,7 +428,7 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
 
   //  priv = d->priv;
   //  w = d->win;
-  int num_planes = gavl_pixelformat_num_planes(d->win->video_format.pixelformat);
+  int num_planes = gavl_pixelformat_num_planes(d->pixelformat);
     
   p->program = glCreateProgram();
   
@@ -828,8 +828,8 @@ static int open_gl(driver_data_t * d)
   
   //  priv->texture_target = GL_TEXTURE_2D;
 
-  //  fprintf(stderr, "Open GL\n");
-  //  gavl_video_format_dump(&w->video_format);
+  fprintf(stderr, "Open GL\n");
+  gavl_video_format_dump(&w->video_format);
   
   if(w->video_format.hwctx)
     {
@@ -926,8 +926,8 @@ static int open_gl(driver_data_t * d)
   create_shader_program(d, &priv->progs_nocm[1], 0, 0);
 
   if(priv->mode != MODE_TEXTURE_DMABUF)
-    set_pixelformat_matrix(priv->cmat, w->video_format.pixelformat);
-  
+    //    set_pixelformat_matrix(priv->cmat, w->video_format.pixelformat);
+    set_pixelformat_matrix(priv->cmat, d->pixelformat);
   update_colormatrix(d);
   create_vertex_buffer(d);
   
@@ -984,6 +984,8 @@ static void set_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     {
     if(!priv->texture)
       priv->texture = gavl_hw_video_frame_create_hw(priv->hwctx_gl, &w->video_format);
+
+    //    gavl_video_frame_clear(f, &w->video_format);
     
     gavl_video_frame_ram_to_hw(&w->video_format, priv->texture, f);
     f = priv->texture;
