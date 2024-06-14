@@ -454,14 +454,17 @@ static int header_get_flac(header_t * ret, const gavl_dictionary_t * m, char * f
   gavl_io_t * output = NULL;
   int len;
   const gavl_dictionary_t * image_uri;
+  gavl_buffer_t buffer;
   
   image_uri = gavl_dictionary_get_image_max(m, GAVL_META_COVER_URL,
                                             600, 600, "image/jpeg");
 
+  gavl_buffer_init(&buffer);
+  
   if(!image_uri)
     goto fail;
 
-  output = gavl_io_create_buf_write();
+  output = gavl_io_create_buffer_write(&buffer);
   if(!bg_flac_cover_tag_write(output, image_uri, 1))
     goto fail;
   
@@ -506,7 +509,7 @@ static int header_get_flac(header_t * ret, const gavl_dictionary_t * m, char * f
 
   ret->buf.len = ret->offset;
   
-  gavl_buffer_append(&ret->buf, gavl_io_buf_get(output));
+  gavl_buffer_append(&ret->buf, &buffer);
   
   result = 1;
   fail:
@@ -516,6 +519,8 @@ static int header_get_flac(header_t * ret, const gavl_dictionary_t * m, char * f
   
   if(output)
     gavl_io_destroy(output);
+
+  gavl_buffer_free(&buffer);
   
   return result;
   }
@@ -527,7 +532,6 @@ static int header_get_mp3(header_t * ret, const gavl_dictionary_t * m, char * fi
   gavl_io_t * output = NULL;
   FILE * file = NULL;
   int result = 0;
-  gavl_buffer_t * b;
   
   file = fopen(filename, "rb");
 
@@ -553,14 +557,10 @@ static int header_get_mp3(header_t * ret, const gavl_dictionary_t * m, char * fi
   if(!(id3 = bg_id3v2_create(m, 1)))
     goto fail;
 
-  output = gavl_io_create_buf_write();
+  output = gavl_io_create_buffer_write(&ret->buf);
   
   if(!bg_id3v2_write(output, id3, BG_ID3_ENCODING_UTF8))
     goto fail;
-
-  b = gavl_io_buf_get(output);
-  memcpy(&ret->buf, b, sizeof(*b));
-  memset(b, 0, sizeof(*b));
   
   result = 1;
   

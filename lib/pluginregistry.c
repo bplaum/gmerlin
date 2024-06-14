@@ -47,7 +47,7 @@
 #include <gmerlin/state.h>
 #include <gmerlin/xmlutils.h>
 #include <gmerlin/bggavl.h>
-#include <gmerlin/bgplug.h>
+// #include <gmerlin/bgplug.h>
 #include <gmerlin/cmdline.h>
 
 // #include <gavfenc.h>
@@ -1461,9 +1461,11 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
 
+#if 0  
   tmp_info = bg_plug_input_get_info();
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
+#endif
   
   if(ret->entries)
     {
@@ -1634,74 +1636,7 @@ int bg_get_num_plugins(uint32_t type_mask, uint32_t flag_mask)
   return ret;
   }
 
-void bg_plugin_registry_scan_devices(bg_plugin_registry_t * plugin_reg,
-                                     uint32_t type_mask, uint32_t flag_mask)
-  {
-  int i;
-  bg_plugin_info_t * info;
-  bg_plugin_common_t * plugin;
-  void * priv;
-  void * module;
-  const bg_parameter_info_t * parameters;
-  int num = bg_get_num_plugins(type_mask, flag_mask);
-  
-  for(i = 0; i < num; i++)
-    {
-    info = find_by_index(plugin_reg->entries, i, type_mask, flag_mask);
-    
-    if(!(info->flags & BG_PLUGIN_DEVPARAM))
-      continue;
-    module = dlopen(info->module_filename, RTLD_NOW);
-    plugin = (bg_plugin_common_t*)(dlsym(module, "the_plugin"));
-    if(!plugin)
-      {
-      dlclose(module);
-      continue;
-      }
-    priv = plugin->create();
-    parameters = plugin->get_parameters(priv);
 
-    if(info->parameters)
-      bg_parameter_info_destroy_array(info->parameters);
-    info->parameters = bg_parameter_info_copy_array(parameters);
-    
-    dlclose(module);
-    }
-  
-  }
-
-#if 0
-void bg_plugin_registry_set_extensions(bg_plugin_registry_t * reg,
-                                       const char * plugin_name,
-                                       const char * extensions)
-  {
-  bg_plugin_info_t * info;
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-  if(!(info->flags & BG_PLUGIN_FILE))
-    return;
-  info->extensions = gavl_strrep(info->extensions, extensions);
-  
-  bg_plugin_registry_save(reg->entries);
-  
-  }
-
-void bg_plugin_registry_set_protocols(bg_plugin_registry_t * reg,
-                                      const char * plugin_name,
-                                      const char * protocols)
-  {
-  bg_plugin_info_t * info;
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-  if(!(info->flags & BG_PLUGIN_URL))
-    return;
-  info->protocols = gavl_strrep(info->protocols, protocols);
-  bg_plugin_registry_save(reg->entries);
-
-  }
-#endif
 
 void bg_plugin_registry_set_priority(bg_plugin_registry_t * reg,
                                      const char * plugin_name,
@@ -2346,6 +2281,9 @@ static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
       i++;
       }
     }
+
+  if(!ret->plugin)
+    goto fail;
   
   ret->info = info;
 
@@ -2558,8 +2496,10 @@ static void load_input_plugin(bg_plugin_registry_t * reg,
 
     if(options)
       bg_plugin_load_with_options(options);
+#if 0
     else if(!strcmp(info->name, "i_bgplug"))
       *ret = bg_input_plugin_create_plug();
+#endif
     else
       *ret = bg_plugin_load(info);
     }
@@ -3200,7 +3140,6 @@ static int input_plugin_load(const char * location,
   char * protocol = NULL, * path = NULL;
   
   int num_plugins, i;
-  uint32_t flags;
   bg_input_plugin_t * plugin;
   int try_and_error = 1;
   const bg_plugin_info_t * first_plugin = NULL;
@@ -3289,12 +3228,10 @@ static int input_plugin_load(const char * location,
   if(!try_and_error)
     return 0;
   
-  flags = bg_string_is_url(real_location) ? BG_PLUGIN_URL : BG_PLUGIN_FILE;
-  
-  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, flags);
+  num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, flags);
+    info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
 
     if(info == first_plugin)
       continue;
@@ -3911,10 +3848,6 @@ void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
        if necessary */
 
     num_parameters = 1; /* Priority */
-    if(info->flags & BG_PLUGIN_FILE)
-      num_parameters++;
-    if(info->flags & BG_PLUGIN_URL)
-      num_parameters++;
 
     if(info->parameters && (info->parameters[0].type != BG_PARAMETER_SECTION))
       num_parameters++; /* Plugin section */
@@ -5029,10 +4962,10 @@ const gavl_array_t * bg_plugin_registry_get_input_mimetypes()
     {
     bg_plugin_reg->input_mimetypes = gavl_array_create();
 
-    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
     for(i = 0; i < num_plugins; i++)
       {
-      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
 
       if(!info->mimetypes)
         continue;
@@ -5055,10 +4988,10 @@ const gavl_array_t * bg_plugin_registry_get_input_protocols()
     {
     bg_plugin_reg->input_protocols = gavl_array_create();
     
-    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
     for(i = 0; i < num_plugins; i++)
       {
-      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, BG_PLUGIN_URL);
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
       
       if(!info->protocols)
         continue;
@@ -5274,14 +5207,13 @@ void bg_plugin_registry_list_plugins(bg_plugin_type_t type, int flags)
 void bg_plugin_registry_list_input(void * data, int * argc,
                                            char *** _argv, int arg)
   {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_INPUT, BG_PLUGIN_FILE | BG_PLUGIN_URL |
-                                  BG_PLUGIN_TUNER | BG_PLUGIN_REMOVABLE);
+  bg_plugin_registry_list_plugins(BG_PLUGIN_INPUT, 0);
   }
 
 void bg_plugin_registry_list_oa(void * data, int * argc,
                                         char *** _argv, int arg)
   {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_AUDIO, BG_PLUGIN_PLAYBACK);
+  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_AUDIO, 0);
   }
 
 void bg_plugin_registry_list_fe_renderer(void * data, int * argc,
@@ -5300,7 +5232,7 @@ void bg_plugin_registry_list_fe_mdb(void * data, int * argc,
 void bg_plugin_registry_list_ov(void * data, int * argc,
                                         char *** _argv, int arg)
   {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_VIDEO, BG_PLUGIN_PLAYBACK);
+  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_VIDEO, 0);
 
   }
 
@@ -5704,7 +5636,7 @@ const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_ty
         
         bg_plugin_registry_set_parameter_info(bg_plugin_reg,
                                               BG_PLUGIN_OUTPUT_AUDIO,
-                                              BG_PLUGIN_PLAYBACK,
+                                              0,
                                               ret);
         }
       break;
@@ -5718,7 +5650,7 @@ const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_ty
 
         bg_plugin_registry_set_parameter_info(bg_plugin_reg,
                                               BG_PLUGIN_OUTPUT_VIDEO,
-                                              BG_PLUGIN_PLAYBACK,
+                                              0,
                                               ret);
         }
       
@@ -5847,96 +5779,6 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
     }
   globfree(&g);
   }
-
-#if 0
-
-  const char * url;
-  const char * klass;
-  gavl_dictionary_t * track_info;
-  int track_index = 0;
-  gavl_dictionary_t vars;
-  int result = 0;
-  gavl_dictionary_t * tm;
-  int variant = 0;
-  
-  
-  gavl_url_get_vars_c(location, &vars);
-
-  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
-    track_index--;
-  
-  gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
-  
-  gavl_dictionary_free(&vars);
-  
-  if(!bg_input_plugin_load(reg,
-                           location,
-                           ret,
-                           ctrl))
-    goto end;
-  
-  track_info = bg_input_plugin_get_track_info(*ret, track_index);
-  
-  if(!track_info)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No track %d in %s", track_index + 1, location);
-    bg_plugin_unref(*ret);
-    return 0;
-    }
-  
-  tm = gavl_track_get_metadata_nc(track_info);
-
-  /* Do redirection */
-
-  const char * klass;
-  if((klass = gavl_dictionary_get_string(tm, GAVL_META_CLASS)) &&
-     !strcmp(klass, GAVL_META_CLASS_LOCATION))
-    {
-    const gavl_dictionary_t * src;
-
-    src = gavl_metadata_get_src(tm, GAVL_META_SRC, 0, NULL, &url);
-
-    if(url)
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
-      *redirect_url = gavl_strdup(url);
-      return 1;
-      }
-    }
-  else
-    result = 1;
-  
-  if(!result)
-    goto end;
-  
-  /* Select track */
-  bg_input_plugin_set_track(*ret, track_index);
-  //  fprintf(stderr, "Select track:\n");
-  //  gavl_dictionary_dump(track_info, 2);
-
-  /* Check for external subtitles */
-  if(gavl_track_get_num_video_streams(track_info) > 0)
-    bg_track_find_subtitles(track_info);
-
-  /* Check for external streams */
-  if(gavl_track_get_num_external_streams(track_info))
-    {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, " %s", url);
-    }
-  
-  end:
-
-  if(!result)
-    {
-    if(*ret)
-      {
-      bg_plugin_unref(*ret);
-      *ret = NULL;
-      }
-    }
-
-
-#endif
 
 bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
   {
@@ -6129,7 +5971,6 @@ bg_track_set_current_location(gavl_dictionary_t * dict, const char * location)
   dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
   gavl_dictionary_set_string(dict, BG_TRACK_CURRENT_LOCATION, location);
   }
-
 
 int
 bg_track_get_force_raw(const gavl_dictionary_t * dict)

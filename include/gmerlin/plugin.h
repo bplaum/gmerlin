@@ -28,8 +28,6 @@
 #include <gavl/metadata.h>
 #include <gavl/edl.h>
 
-#include <gavl/gavf.h>
-
 #include <gmerlin/parameter.h>
 #include <gmerlin/streaminfo.h>
 #include <gmerlin/accelerator.h>
@@ -80,16 +78,12 @@
  *  @{
  */
 
-#define BG_PLUGIN_REMOVABLE        (1<<0)  //!< Plugin handles removable media (CD, DVD etc.)
-#define BG_PLUGIN_FILE             (1<<1)  //!< Plugin reads/writes files
-#define BG_PLUGIN_URL              (1<<3)  //!< Plugin can load URLs
-#define BG_PLUGIN_PLAYBACK         (1<<4)  //!< Plugin is an audio or video driver for playback
+#define BG_PLUGIN_FILE             (1<<7)  //!< Plugin can do I/O from stdin or stdout ("-")
 #define BG_PLUGIN_PIPE             (1<<8)  //!< Plugin can do I/O from stdin or stdout ("-")
 #define BG_PLUGIN_TUNER            (1<<9)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
 #define BG_PLUGIN_FILTER_1        (1<<10)  //!< Plugin acts as a filter with one input
 #define BG_PLUGIN_EMBED_WINDOW    (1<<11)  //!< Plugin can embed it's window into another application
 
-#define BG_PLUGIN_CALLBACKS       (1<<15)  //!< Plugin can be opened from callbacks
 #define BG_PLUGIN_BROADCAST       (1<<16)  //!< Plugin can broadcasts (e.g. webstreams)
 #define BG_PLUGIN_DEVPARAM        (1<<17)  //!< Plugin has pluggable devices as parameters, which must be updated regurarly
 #define BG_PLUGIN_OV_STILL        (1<<18)  //!< OV plugin supports still images
@@ -108,7 +102,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 38
+#define BG_PLUGIN_API_VERSION 39
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -292,23 +286,9 @@ struct bg_plugin_common_s
   
   };
 
-/*
- *  Plugin callbacks: Functions called by the
- *  plugin to reflect user input or other changes
- *  Applications might pass NULL callbacks,
- *  so plugins MUST check for valid callbacks structure
- *  before calling any of these functions
- */
 
 /* Input plugin */
 
-/** \ingroup plugin_i
- *  \brief Callbacks for input plugins
- *
- *  Passing the callback structure to the plugin is optional. Futhermore,
- *  any of the callback functions is optional (i.e. can be NULL). The plugin
- *  might use the callbacks for propagating events.
- */
 
 /*************************************************
  * MEDIA INPUT
@@ -351,17 +331,6 @@ struct bg_input_plugin_s
    */
   const char * (*get_extensions)(void * priv);
   
-  /** \brief Set callbacks
-   *  \param priv The handle returned by the create() method
-   *  \param callbacks Callback structure initialized by the caller before
-   *
-   * Set callback functions, which will be called by the plugin.
-   * Defining as well as calling this function is optional. Any of the
-   * members of callbacks can be NULL.
-   */
-  
-  //  void (*set_callbacks)(void * priv, bg_input_callbacks_t * callbacks);
-  
   /** \brief Open file/url/device
    *  \param priv The handle returned by the create() method
    *  \param arg Filename, URL or device name
@@ -369,17 +338,6 @@ struct bg_input_plugin_s
    */
   int (*open)(void * priv, const char * arg);
   
-  /** \brief Open plugin with callbacks (optional)
-   *  \param priv The handle returned by the create() method
-   *  \param read_callback Callback for reading data
-   *  \param seek_callback Callback for seeking
-   *  \param cb_priv Private argument for the callbacks
-   *  \param filename The filename of the input or NULL if this info is not known.
-   *  \param mimetype The mimetype of the input or NULL if this info is not known.
-   *  \param total_bytes total number of bytes or 0 if this info is not known.
-   *  \returns 1 on success, 0 on failure
-   */
-
   int (*open_io)(void * priv, gavl_io_t * io);
   
   /** \brief Get the edl (optional)

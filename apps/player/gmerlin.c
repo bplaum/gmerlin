@@ -589,17 +589,14 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
     bg_parameter_info_copy_array(input_plugin_parameters);
   bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
                                               BG_PLUGIN_INPUT,
-                                              BG_PLUGIN_FILE|
-                                              BG_PLUGIN_URL|
-                                              BG_PLUGIN_REMOVABLE|
-                                              BG_PLUGIN_TUNER,
+                                              0,
                                               ret->input_plugin_parameters);
   
   ret->image_reader_parameters =
     bg_parameter_info_copy_array(image_reader_parameters);
   bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
                                               BG_PLUGIN_IMAGE_READER,
-                                              BG_PLUGIN_FILE,
+                                              0,
                                               ret->image_reader_parameters);
   
 

@@ -25,7 +25,7 @@
 
 #include <gmerlin/websocket.h>
 #include <gmerlin/lpcm_handler.h>
-#include <gmerlin/plug_handler.h>
+// #include <gmerlin/plug_handler.h>
 
 /* Playlist handler */
 
@@ -116,7 +116,7 @@ struct bg_http_server_s
   //  int backend_proxies_alloc;
 
   bg_lpcm_handler_t * lpcmhandler;
-  bg_plug_handler_t * plughandler;
+  //  bg_plug_handler_t * plughandler;
   gavl_array_t static_dirs;
 
   

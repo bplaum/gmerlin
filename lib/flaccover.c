@@ -21,9 +21,9 @@
 
 #include <string.h>
 
-
 #include <gmerlin/utils.h>
 #include <gavl/metatags.h>
+#include <gavl/io.h>
 
 int bg_flac_cover_tag_write(gavl_io_t * output, const gavl_dictionary_t * image_uri, int last_tag)
   {

@@ -10,7 +10,6 @@
 #include <gmerlin/xmlutils.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
-#include <gmerlin/bgplug.h>
 
 #include <gmerlin/upnp/upnputils.h>
 #include <gmerlin/upnp/soap.h>
@@ -289,7 +288,7 @@ static int send_event(gavl_dictionary_t * es,
   if((fd = gavl_socket_connect_inet(addr, 500)) < 0)
     goto fail;
 
-  io = gavl_io_create_socket(fd, CLIENT_TIMEOUT, GAVF_IO_SOCKET_DO_CLOSE);
+  io = gavl_io_create_socket(fd, CLIENT_TIMEOUT, GAVL_IO_SOCKET_DO_CLOSE);
   fd = -1;
   
   if(path)

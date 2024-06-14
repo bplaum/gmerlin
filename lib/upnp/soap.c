@@ -10,7 +10,6 @@
 #include <gmerlin/upnp/upnputils.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
-#include <gmerlin/bgplug.h>
 
 #define LOG_DOMAIN "soap"
 

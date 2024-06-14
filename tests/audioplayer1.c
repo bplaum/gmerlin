@@ -66,7 +66,7 @@ int main(int argc, char ** argv)
   /* Load output plugin */
   
   plugin_info = bg_plugin_find_by_index(BG_PLUGIN_OUTPUT_AUDIO,
-                                        BG_PLUGIN_PLAYBACK, 0);
+                                        0, 0);
   
   if(!plugin_info)
     {

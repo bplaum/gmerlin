@@ -5,6 +5,8 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "resourcemanager"
 
+#include <gavl/utils.h>
+
 #include <gmerlin/resourcemanager.h>
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/backend.h>

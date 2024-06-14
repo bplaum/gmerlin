@@ -25,6 +25,7 @@
 #include <gmerlin/mdb.h>
 #include <gmerlin/recordingdevice.h>
 
+#include <gavl/utils.h>
 #include <gavl/metatags.h>
 
 #include <mdb_private.h>

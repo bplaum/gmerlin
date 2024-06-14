@@ -262,22 +262,6 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
                                        const bg_plugin_registry_options_t * opt);
 
 
-
-/** \ingroup plugin_registry
- * \brief Scan for pluggable devices
- * \param plugin_reg A plugin registry
- * \param type_mask Mask of all types you want to have the devices scanned for
- * \param flag_mask Mask of all flags you want to have the devices scanned for
- *
- *  Some plugins offer a list of supported devices as parameters. To update these
- *  (e.g. if pluggable devices are among them), call this function right after you
- *  created the plugin registry
- */
-
-void bg_plugin_registry_scan_devices(bg_plugin_registry_t * plugin_reg,
-                                     uint32_t type_mask, uint32_t flag_mask);
-
-
 /** \ingroup plugin_registry
  * \brief Destroy a plugin registry
  * \param reg A plugin registry

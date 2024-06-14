@@ -11,6 +11,9 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "udisks2"
 
+#include <gavl/utils.h>
+
+
 #define MSG_VOLUME_GENERIC 1 // Sent from the dbus to this plugin
 
 typedef struct

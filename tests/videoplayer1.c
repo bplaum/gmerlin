@@ -96,7 +96,7 @@ int main(int argc, char ** argv)
 
   plugin_info =
     bg_plugin_find_by_index(BG_PLUGIN_OUTPUT_VIDEO,
-                            BG_PLUGIN_PLAYBACK, 0);
+                            0, 0);
   
   if(!plugin_info)
     {

@@ -117,7 +117,7 @@ static void  destroy_v4l(void * priv)
 
 
 /* Configuration stuff */
-
+#if 0
 static const bg_parameter_info_t parameters[] =
   {
     {
@@ -143,7 +143,7 @@ static const bg_parameter_info_t parameters[] =
     },
     { /* End of parameters */ }
   };
-
+#endif
 
 static const bg_parameter_info_t * get_parameters_v4l(void * priv)
   {
@@ -289,7 +289,7 @@ const bg_input_plugin_t the_plugin =
       .long_name =     TRS("V4L2"),
       .description =   TRS("video4linux 2 recording plugin. Supports only video and no tuner decives."),
       .type =          BG_PLUGIN_INPUT,
-      .flags =         BG_PLUGIN_URL,
+      .flags =         0,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_v4l,
       .destroy =       destroy_v4l,

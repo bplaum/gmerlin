@@ -59,7 +59,6 @@ audiofilters \
 backends \
 frontends \
 edl \
-gavl \
 resources \
 videofilters \
 visualization \

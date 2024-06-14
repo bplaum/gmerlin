@@ -31,7 +31,7 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #include <gmerlin/httpserver.h>
-#include <gmerlin/bgplug.h>
+// #include <gmerlin/bgplug.h>
 
 #define LOG_DOMAIN "storage"
 

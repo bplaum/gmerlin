@@ -433,9 +433,6 @@ void bg_http_server_destroy(bg_http_server_t * s)
   if(s->lpcmhandler)
     bg_lpcm_handler_destroy(s->lpcmhandler);
 
-  if(s->plughandler)
-    bg_plug_handler_destroy(s->plughandler);
-  
   for(i = 0; i < s->num_headers; i++)
     bg_http_server_free_header(&s->headers[i]);
 
@@ -804,9 +801,6 @@ void bg_http_server_set_mdb(bg_http_server_t * s, bg_mdb_t * mdb)
   if(bg_plugin_reg && !s->lpcmhandler)
     s->lpcmhandler = bg_lpcm_handler_create(mdb, s);
 
-  if(bg_plugin_reg && !s->plughandler)
-    s->plughandler = bg_plug_handler_create(s);
-  
   }
 
 void bg_http_server_free_header(header_t * h)

@@ -27,8 +27,8 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/xmlsave.h>
-#include <gavl/gavf.h>
 
+#include <gavl/gavl.h>
 
 /*  Macro, which calls strcmp, but casts the first argument to char*
  *  This is needed because libxml strings are uint8_t*

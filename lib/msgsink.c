@@ -27,6 +27,7 @@
 #include <uuid/uuid.h>
 
 #include <gavl/gavlsocket.h>
+#include <gavl/utils.h>
 
 #include <gmerlin/parameter.h>
 #include <gmerlin/bgmsg.h>

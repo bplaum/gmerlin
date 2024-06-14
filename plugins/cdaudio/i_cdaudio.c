@@ -895,7 +895,7 @@ const bg_input_plugin_t the_plugin =
       .description =   TRS("Plugin for audio CDs. Supports both playing with direct connection from the CD-drive to the souncard and ripping with cdparanoia. Metadata are obtained from Musicbrainz, freedb or CD-text. Metadata are cached in $HOME/.gmerlin/cdaudio."),
       .type =          BG_PLUGIN_INPUT,
 
-      .flags =         BG_PLUGIN_REMOVABLE,      
+      .flags =         0,      
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_cdaudio,
       .destroy =       destroy_cdaudio,

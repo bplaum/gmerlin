@@ -2067,9 +2067,6 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   gavl_dictionary_t * part;
   int num_parts, i;
   
-  if(mdb->srv && mdb->srv->plughandler)
-    bg_plug_handler_add_uris(mdb->srv->plughandler, dict);
-  
   if(mdb->srv && mdb->srv->lpcmhandler)
     bg_lpcm_handler_add_uris(mdb->srv->lpcmhandler, dict);
 

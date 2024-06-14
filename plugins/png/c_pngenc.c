@@ -33,7 +33,6 @@
 #include <gmerlin/plugin.h>
 #include <gmerlin/utils.h>
 #include <gavl/metatags.h>
-#include <gavl/gavf.h>
 
 #include "pngwriter.h"
 

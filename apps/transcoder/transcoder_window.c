@@ -1027,14 +1027,11 @@ static void transcoder_window_preferences(transcoder_window_t * w)
 
   bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
                                               BG_PLUGIN_INPUT,
-                                              BG_PLUGIN_FILE|
-                                              BG_PLUGIN_URL|
-                                              BG_PLUGIN_REMOVABLE|
-                                              BG_PLUGIN_TUNER,
+                                              0,
                                               params_i);
   bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
                                               BG_PLUGIN_IMAGE_READER,
-                                              BG_PLUGIN_FILE,
+                                              0,
                                               params_ir);
   
   memset(&ao, 0, sizeof(ao));

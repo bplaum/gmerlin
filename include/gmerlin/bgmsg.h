@@ -24,8 +24,9 @@
 
 #include <gavl/gavl.h>
 #include <gavl/gavldsp.h>
-#include <gavl/gavf.h>
 #include <gavl/metatags.h>
+#include <gavl/msg.h>
+#include <gavl/io.h>
 
 #include <json-c/json.h>
 

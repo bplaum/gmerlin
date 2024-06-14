@@ -712,8 +712,6 @@ bg_media_sink_stream_t * bg_media_sink_get_stream_by_id(bg_media_sink_t * sink, 
   return NULL;
   }
 
-
-
 #if 0
 void bg_media_sink_set_from_sink(bg_media_sink_t * dst,
                                  bg_media_sink_t * src)

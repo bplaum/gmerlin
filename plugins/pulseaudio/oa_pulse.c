@@ -22,8 +22,11 @@
 #include <string.h>
 
 #include <pulseaudio_common.h>
-#include <gmerlin/log.h>
+#include <gavl/log.h>
 #define LOG_DOMAIN "oa_pulse"
+
+#include <gavl/utils.h>
+
 
 static gavl_sink_status_t
 write_func_pulse(void * p, gavl_audio_frame_t * f)
@@ -180,7 +183,7 @@ const bg_oa_plugin_t the_plugin =
       .long_name =     TRS("PulseAudio"),
       .description =   TRS("PulseAudio output"),
       .type =          BG_PLUGIN_OUTPUT_AUDIO,
-      .flags =         BG_PLUGIN_PLAYBACK,
+      .flags =         0,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_pulse_output,
       .destroy =       destroy_pulse_output,

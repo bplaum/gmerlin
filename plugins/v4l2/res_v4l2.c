@@ -7,6 +7,8 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "res_v4l2"
 
+#include <gavl/utils.h>
+
 #include <gmerlin/translation.h>
 #include <gmerlin/plugin.h>
 

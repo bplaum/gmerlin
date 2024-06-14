@@ -120,7 +120,6 @@ base64.c \
 bggavl.c \
 bgladspa.c \
 bgfrei0r.c \
-bgplug.c \
 bgxml.c \
 cairo.c \
 cfg_ctx.c \
@@ -196,7 +195,6 @@ player_time.c \
 player_tracklist.c \
 player_video.c \
 playercmd.c \
-plughandler.c \
 pluginfuncs.c \
 pluginregistry.c \
 pluginreg_xml.c \

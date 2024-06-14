@@ -25,7 +25,6 @@
 
 #include <config.h>
 #include <gavl/connectors.h>
-#include <gavl/gavf.h>
 
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/bgthread.h>

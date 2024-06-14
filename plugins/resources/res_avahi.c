@@ -13,6 +13,9 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "avahi"
 
+#include <gavl/utils.h>
+
+
 #define MSG_ID_AVAHI_SERVICE_ADDED   1
 #define MSG_ID_AVAHI_SERVICE_REMOVED 2
 

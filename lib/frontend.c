@@ -8,7 +8,7 @@
 
 #include <gmerlin/frontend.h>
 
-#include <gavl/log.h>
+#include <gavl/utils.h>
 
 struct bg_frontend_s
   {

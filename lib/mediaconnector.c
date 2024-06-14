@@ -781,7 +781,7 @@ bg_mediaconnector_get_stream(bg_mediaconnector_t * conn,
   return NULL;
   }
 
-/* Setup the input side for the media connector. The plug needs to be started already */
+/* Setup the input side for the media connector. The source needs to be started already */
 void bg_mediaconnector_set_from_source(bg_mediaconnector_t * conn, bg_media_source_t * src)
   {
   int i;

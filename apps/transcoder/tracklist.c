@@ -1051,7 +1051,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                                   t, NULL  /* parent */,
                                   bg_plugin_reg,
                                   BG_PLUGIN_INPUT,
-                                  BG_PLUGIN_URL);
+                                  0);
     gtk_widget_set_sensitive(t->add_url_button, 0);
     gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 0);
     bg_gtk_urlsel_run(urlsel, 0, t->add_url_button);
@@ -1064,7 +1064,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                                       drivesel_close_callback,
                                       t, NULL  /* parent */,
                                       bg_plugin_reg,
-                                      BG_PLUGIN_INPUT, BG_PLUGIN_REMOVABLE);
+                                      BG_PLUGIN_INPUT, 0);
     gtk_widget_set_sensitive(t->add_removable_button, 0);
     bg_gtk_drivesel_run(drivesel, 0, t->add_removable_button);
     

@@ -29,7 +29,6 @@
 #include <gmerlin/http.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
-#include <gmerlin/bgplug.h>
 
 #define LOG_DOMAIN "gmerlin.http"
 
@@ -152,11 +151,11 @@ static gavl_io_t * open_io(const char * protocol, const char * host, int port)
   
   if(use_tls)
     {
-    ret = gavl_io_create_tls_client(fd, host, GAVF_IO_SOCKET_DO_CLOSE);
+    ret = gavl_io_create_tls_client(fd, host, GAVL_IO_SOCKET_DO_CLOSE);
     }
   else
     {
-    ret = gavl_io_create_socket(fd, 30000, GAVF_IO_SOCKET_DO_CLOSE);
+    ret = gavl_io_create_socket(fd, 30000, GAVL_IO_SOCKET_DO_CLOSE);
     }
 
   fail:

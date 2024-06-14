@@ -38,7 +38,6 @@
 #include <gmerlin/upnp/eventlistener.h>
 #include <gmerlin/xmlutils.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/bgplug.h>
 
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>

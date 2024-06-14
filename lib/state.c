@@ -25,7 +25,6 @@
 #include <config.h>
 
 #include <gavl/gavl.h>
-#include <gavl/gavf.h>
 #include <gavl/utils.h>
 
 #include <gmerlin/utils.h>

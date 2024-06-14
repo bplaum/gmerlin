@@ -44,8 +44,6 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/upnp/upnputils.h>
 
-#include <gmerlin/bgplug.h>
-
 
 // #include <gmerlin/upnp/device.h>
 
@@ -183,9 +181,10 @@ int bg_http_connection_read_req(bg_http_connection_t * req, int fd, int timeout)
     req->protocol_i = BG_HTTP_PROTO_HTTP;
   else if(!strncmp(req->protocol, "RTSP/", 5))
     req->protocol_i = BG_HTTP_PROTO_RTSP;
+#if 0
   else if(!strcmp(req->protocol, BG_PLUG_PROTOCOL))
     req->protocol_i = BG_HTTP_PROTO_BGPLUG;
-
+#endif
   if(req->protocol_i == BG_HTTP_PROTO_RTSP)
     {
     const char * pos;

@@ -582,7 +582,7 @@ const bg_parameter_info_t * bg_player_get_ov_plugin_parameters(bg_player_t * p)
 
     bg_plugin_registry_set_parameter_info(bg_plugin_reg,
                                           BG_PLUGIN_OUTPUT_VIDEO,
-                                          BG_PLUGIN_PLAYBACK,
+                                          0,
                                           &p->video_stream.plugin_params[0]);
     }
   return p->video_stream.plugin_params;
