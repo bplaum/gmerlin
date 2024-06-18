@@ -702,6 +702,7 @@ struct json_object * bg_value_to_json(const gavl_value_t * m);
 int bg_value_from_json(gavl_value_t * m, struct json_object * obj);
 
 int bg_value_from_json_external(gavl_value_t * v, struct json_object * obj);
+int bg_value_from_json_string_external(gavl_value_t * v, const char * str);
 
 void bg_dictionary_to_json(const gavl_dictionary_t * dict,
                            struct json_object * json);

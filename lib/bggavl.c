@@ -1019,6 +1019,20 @@ int bg_value_from_json_external(gavl_value_t * v, struct json_object * obj)
   return ret;
   }
 
+int bg_value_from_json_string_external(gavl_value_t * v, const char * str)
+  {
+  int ret = 0;
+  
+  struct json_object * obj;
+
+  if(!(obj = json_tokener_parse(str)))
+    return ret;
+  
+  ret = bg_value_from_json_external(v, obj);
+  json_object_put(obj);
+  return ret;
+  }
+
 int bg_value_from_json(gavl_value_t * v, struct json_object * obj)
   {
   gavl_type_t gavl_type;
