@@ -3018,12 +3018,12 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
     else if(!strcmp(klass, GAVL_META_CLASS_TV_EPISODE))
       {
       gavl_dictionary_t show_m;
-      char * pos;
+      char * p;
       
       char * path = gavl_strdup(location);
 
-      if((pos = strrchr(path, '/')))
-        *pos = '\0';
+      if((p = strrchr(path, '/')))
+        *p = '\0';
 
       gavl_dictionary_init(&show_m);
       gavl_dictionary_set_string(&show_m, GAVL_META_CLASS, GAVL_META_CLASS_TV_SHOW);
@@ -3033,53 +3033,57 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
       gavl_dictionary_free(&show_m);
       bg_track_find_subtitles(ti);
       create_language_arrays(ti);
-
       
       if(!detect_movie_poster(bg_plugin_reg, path, basename, m))
         {
-        int result;
-        const char * pos;
-        char * parent_basename;
-
-        pos = gavl_detect_episode_tag(basename, NULL, NULL, NULL);
-
-        pos++;
-        while(isdigit(*pos))
-          pos++;
-        
-        parent_basename = gavl_strndup(basename, pos);
-        result = detect_movie_poster(bg_plugin_reg, path, parent_basename, m);
-        free(parent_basename);
-
-        if(!result)
+        const char * tag;
+        if(basename && (tag = gavl_detect_episode_tag(basename, NULL, NULL, NULL)))
           {
-          parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
+          int result;
+          char * parent_basename;
+          
+          tag++;
+          while(isdigit(*tag))
+            tag++;
+        
+          parent_basename = gavl_strndup(basename, tag);
           result = detect_movie_poster(bg_plugin_reg, path, parent_basename, m);
           free(parent_basename);
+
+          if(!result)
+            {
+            parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
+            result = detect_movie_poster(bg_plugin_reg, path, parent_basename, m);
+            free(parent_basename);
+            }
+
           }
+
         }
       
       if(!detect_movie_wallpaper(bg_plugin_reg, path, basename, m))
         {
-        int result;
-        const char * pos;
-        char * parent_basename;
-
-        pos = gavl_detect_episode_tag(basename, NULL, NULL, NULL);
-
-        pos++;
-        while(isdigit(*pos))
-          pos++;
-        
-        parent_basename = gavl_strndup(basename, pos);
-        result = detect_movie_wallpaper(bg_plugin_reg, path, parent_basename, m);
-        free(parent_basename);
-
-        if(!result)
+        const char * tag;
+        if(basename && (tag = gavl_detect_episode_tag(basename, NULL, NULL, NULL)))
           {
-          parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
+          int result;
+          char * parent_basename;
+
+          tag++;
+          while(isdigit(*tag))
+            tag++;
+        
+          parent_basename = gavl_strndup(basename, tag);
           result = detect_movie_wallpaper(bg_plugin_reg, path, parent_basename, m);
           free(parent_basename);
+
+          if(!result)
+            {
+            parent_basename = gavl_strdup(gavl_dictionary_get_string(m, GAVL_META_SHOW));
+            result = detect_movie_wallpaper(bg_plugin_reg, path, parent_basename, m);
+            free(parent_basename);
+            }
+          
           }
         
         }
