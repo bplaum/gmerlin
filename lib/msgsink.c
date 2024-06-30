@@ -341,7 +341,6 @@ int bg_msg_sink_iteration(bg_msg_sink_t * sink)
   {
   gavl_msg_t * m;
   int result = 1;
-  
   sink->num_msg = 0;
 
   /* Do nothing for synchronous queues */
@@ -356,7 +355,8 @@ int bg_msg_sink_iteration(bg_msg_sink_t * sink)
 
     if(!m)
       break;
-    
+
+#if 0 // Must be handled by the clients
     /* Check for quit command */
     if((m->NS == GAVL_MSG_NS_GENERIC) &&
        (m->ID == GAVL_CMD_QUIT))
@@ -374,12 +374,17 @@ int bg_msg_sink_iteration(bg_msg_sink_t * sink)
       
       break;
       }
+#endif
     
     /* Call callback function */
 
     if(result && sink->cb)
       result = sink->cb(sink->cb_data, m);
 
+    if((m->NS == GAVL_MSG_NS_GENERIC) &&
+       (m->ID == GAVL_CMD_QUIT))
+      result = 0;
+    
     pthread_mutex_lock(&sink->write_mutex);
     queue_done_read(sink->queue, m);
     pthread_mutex_unlock(&sink->write_mutex);
@@ -391,34 +396,6 @@ int bg_msg_sink_iteration(bg_msg_sink_t * sink)
     }
   
   return result;
-#if 0
-    if((m->NS == GAVL_MSG_NS_GENERIC) &&
-       (m->ID == GAVL_CMD_QUIT))
-      {
-      gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN,
-             "bg_msg_sink_iteration: Got quit command");
-      bg_msg_queue_unlock_read(sink->q);
-      return 0;
-      }
-    if(sink->cb)
-      {
-      gavl_msg_t m1;
-      gavl_msg_init(&m1);
-      gavl_msg_copy(&m1, m);
-      bg_msg_queue_unlock_read(sink->q);
-      result = sink->cb(sink->cb_data, &m1);
-      gavl_msg_free(&m1);
-      }
-    else
-      bg_msg_queue_unlock_read(sink->q);
-
-    sink->num_msg++;
-    
-    if(!result)
-      return 0;
-    }
-  return 1;
-#endif
   }
 
 void bg_msg_sink_set_id(bg_msg_sink_t * sink, const char * id)

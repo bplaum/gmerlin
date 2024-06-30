@@ -910,39 +910,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
       
       switch(gavl_msg_get_id(command))
         {
-#if 0   
-        case BG_CMD_SET_STATE_REL:
-          {
-          gavl_msg_t cmd;
-          
-          gavl_value_t val;
-          gavl_value_t add;
-
-          const char * ctx;
-          const char * var;
-          
-          int last = 0;
-          
-          gavl_value_init(&val);
-          gavl_value_init(&add);
-          
-          gavl_msg_get_state(command, &last, &ctx, &var, &add, NULL);
-          
-          /* Add (and clamp) value */
-
-          bg_state_add_value(&player->state, ctx, var, &add, &val);
-          
-          gavl_msg_init(&cmd);
-          gavl_msg_set_state(&cmd, BG_CMD_SET_STATE, last, ctx, var, &val);
-          bg_player_handle_command(priv, &cmd);
-          gavl_msg_free(&cmd);
-
-          
-          gavl_value_free(&val);
-          gavl_value_free(&add);
-          }
-          break;
-#endif
         case BG_CMD_SET_STATE:
           {
           gavl_value_t val;
@@ -1476,8 +1443,9 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
         {
         case GAVL_CMD_QUIT:
           {
-          int state = bg_player_get_status(player);
-          switch(state)
+          int status = bg_player_get_status(player);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got quit command");
+          switch(status)
             {
             case BG_PLAYER_STATUS_PLAYING:
             case BG_PLAYER_STATUS_CHANGING:
@@ -1545,13 +1513,17 @@ static void * player_thread(void * data)
     /* Process commands */
 
     if(!(bg_msg_sink_iteration(player->ctrl.cmd_sink)))
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got quit from command handler");
       do_exit = 1;
-
+      }
     actions += bg_msg_sink_get_num(player->ctrl.cmd_sink);
 
     if(!(bg_msg_sink_iteration(player->src_msg_sink)))
+      {
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got quit from source message");
       do_exit = 1;
-
+      }
     actions += bg_msg_sink_get_num(player->src_msg_sink);
     
     if(do_exit)
