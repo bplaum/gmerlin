@@ -452,7 +452,6 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
   while(info)
     {
     if(!(info->type & typemask) ||
-       !(info->flags & BG_PLUGIN_FILE) ||
        !info->extensions ||
        !info->extensions->num_entries)
       {
