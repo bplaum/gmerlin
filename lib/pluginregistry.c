@@ -3146,6 +3146,8 @@ static int input_plugin_load(const char * location,
   bg_input_plugin_t * plugin;
   int try_and_error = 1;
   const bg_plugin_info_t * first_plugin = NULL;
+
+  int result = 0;
   
   if(!location)
     return 0;
@@ -3203,7 +3205,7 @@ static int input_plugin_load(const char * location,
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Loading plugin \"%s\" failed"),
                                            info->long_name);
-      return 0;
+      goto fail;
       }
     
     plugin = (bg_input_plugin_t*)((*ret)->plugin);
@@ -3216,20 +3218,13 @@ static int input_plugin_load(const char * location,
     else
       {
       input_plugin_finalize(*ret, real_location);
-
-      if(protocol)
-        free(protocol);
-      if(path)
-        free(path);
-      return 1;
+      goto done;
       }
     }
   
-  if(protocol) free(protocol);
-  if(path)     free(path);
   
   if(!try_and_error)
-    return 0;
+    goto fail;
   
   num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
   for(i = 0; i < num_plugins; i++)
@@ -3238,7 +3233,13 @@ static int input_plugin_load(const char * location,
 
     if(info == first_plugin)
       continue;
-        
+
+    if(protocol && info->protocols)
+      {
+      if(gavl_string_array_indexof(info->protocols, protocol) < 0)
+        continue;
+      }
+    
     load_input_plugin(bg_plugin_reg, info, NULL, ret);
 
     if(!*ret)
@@ -3253,10 +3254,20 @@ static int input_plugin_load(const char * location,
     else
       {
       input_plugin_finalize(*ret, real_location);
-      return 1;
+      goto done;
       }
     }
-  return 0;
+
+  done:
+  result = 1;
+  fail:
+
+  if(protocol)
+    free(protocol);
+  if(path)
+    free(path);
+  
+  return result;
   }
 
 int bg_file_is_blacklisted(const char * url)
