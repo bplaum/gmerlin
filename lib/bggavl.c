@@ -945,7 +945,7 @@ static int double_array_from_json(double * ret, struct json_object * obj, int nu
     
   if(json_object_array_length(obj) != num)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length mismatch, expected %d, got %d", num,
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length mismatch, expected %d, got %"PRIuPTR, num,
              json_object_array_length(obj));
     return 0;
     }

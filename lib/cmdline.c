@@ -463,7 +463,7 @@ void bg_cmdline_print_help(char * argv0, bg_help_format_t format)
       
       args = gavl_strbreak(tmp_string, ' ');
       i = 0;
-      while(args && (args+i) && args[i])
+      while(args && args[i])
         {
         printf(".I %s\n", args[i]);
         i++;

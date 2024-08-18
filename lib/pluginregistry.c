@@ -2373,8 +2373,10 @@ bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict)
     return NULL;
   
   if(!(info = bg_plugin_find_by_name(plugin_name)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading plugin %s failed, no such plugin", plugin_name);
     return NULL;
-
+    }
   ret = load_plugin(info);
 
   if(ret && ret->plugin->set_parameter)

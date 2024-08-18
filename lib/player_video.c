@@ -91,6 +91,12 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
   if(!DO_SUBTITLE_ONLY(player->flags))
     s->src = bg_video_filter_chain_connect(s->fc, s->src);
 
+  if(!s->src)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing video filters failed");
+    return 0;
+    }
+  
   if(!bg_player_ov_init
      (&player->video_stream))
     return 0;

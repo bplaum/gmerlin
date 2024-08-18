@@ -5,6 +5,9 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "be_server_upnp"
 
+#include <gavl/utils.h>
+
+
 #include <gmerlin/translation.h>
 #include <gmerlin/plugin.h>
 

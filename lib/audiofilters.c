@@ -121,7 +121,7 @@ static void destroy_audio_chain(bg_audio_filter_chain_t * ch)
     }
   }
 
-static void bg_audio_filter_chain_rebuild(bg_audio_filter_chain_t * ch)
+static int bg_audio_filter_chain_rebuild(bg_audio_filter_chain_t * ch)
   {
   int i;
   ch->need_rebuild = 0;
@@ -131,7 +131,11 @@ static void bg_audio_filter_chain_rebuild(bg_audio_filter_chain_t * ch)
   ch->num_filters = ch->filter_arr.num_entries;
   
   for(i = 0; i < ch->filter_arr.num_entries; i++)
-    audio_filter_create(&ch->filters[i], ch, ch->filter_arr.entries[i].v.dictionary);
+    {
+    if(!audio_filter_create(&ch->filters[i], ch, ch->filter_arr.entries[i].v.dictionary))
+      return 0;
+    }
+  return 1;
   }
 
 static int handle_cmd(void * priv, gavl_msg_t * msg)
@@ -346,8 +350,8 @@ bg_audio_filter_chain_connect(bg_audio_filter_chain_t * ch,
   int i;
   gavl_audio_source_t * src = src_orig;
   
-  if(ch->need_rebuild)
-    bg_audio_filter_chain_rebuild(ch);
+  if(ch->need_rebuild && !bg_audio_filter_chain_rebuild(ch))
+    return NULL;
   
   for(i = 0; i < ch->filter_arr.num_entries; i++)
     {

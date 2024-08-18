@@ -101,6 +101,12 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
   pthread_mutex_lock(&s->config_mutex);
   s->src = bg_audio_filter_chain_connect(s->fc, s->in_src);
   pthread_mutex_unlock(&s->config_mutex);
+
+  if(!s->src)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing audio filters failed");
+    return 0;
+    }
   
   gavl_audio_format_copy(&s->output_format,
                          gavl_audio_source_get_src_format(s->src));
