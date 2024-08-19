@@ -1597,7 +1597,7 @@ static int handle_msg_podcast(void * priv, gavl_msg_t * msg)
             idx = gavl_value_set_array(&idx_val);
             filename = bg_sprintf("%s/index", p->dir);
             bg_array_load_xml(idx, filename, "items");
-            gavl_sort_tracks_by_label(idx);
+            bg_mdb_tracks_sort(idx);
             bg_array_save_xml(idx, filename, "items");
             free(filename);
 

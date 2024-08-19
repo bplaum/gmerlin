@@ -971,8 +971,8 @@ static int handle_msg_xml(void * priv, gavl_msg_t * msg)
             browse_children(b, ctx_id, &children, 0, -1, NULL);
 
             /* We use the dir_idx as parent for sorting the tracks */
-            gavl_sort_tracks_by_label(&children);
-
+            bg_mdb_tracks_sort(&children);
+            
             /* Extract child IDs */
 
             gavl_array_splice_val(child_ids, 0, -1, NULL);

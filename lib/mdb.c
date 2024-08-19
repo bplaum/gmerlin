@@ -2674,3 +2674,17 @@ void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl
   gavl_value_free(&add_val);
   }
 
+void bg_mdb_tracks_sort(gavl_array_t * arr)
+  {
+  int i;
+  gavl_dictionary_t * track;
+
+  gavl_sort_tracks_by_label(arr);
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((track = gavl_value_get_dictionary_nc(&arr->entries[i])))
+      finalize(track, i, arr->num_entries);
+    }
+  bg_mdb_set_next_previous(arr);
+  }

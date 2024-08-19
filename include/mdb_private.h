@@ -181,10 +181,7 @@ void bg_mdb_delete_http_uris(gavl_dictionary_t * dict);
 void bg_mdb_set_next_previous(gavl_array_t * arr);
 void bg_mdb_set_idx_total(gavl_array_t * arr, int idx, int total);
 
-/* Push / pop a browse request */
-
-gavl_dictionary_t * bg_mdb_push_browse_request(gavl_array_t * arr, int msg_id, const char * id);
-gavl_dictionary_t * bg_mdb_pop_browse_request(gavl_array_t * arr, int msg_id, const char * id);
+void bg_mdb_tracks_sort(gavl_array_t * arr);
 
 struct bg_mdb_backend_s
   {
