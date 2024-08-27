@@ -43,8 +43,6 @@
 
 #include <gavl/trackinfo.h>
 #include <gavl/metatags.h>
-#include <md5.h>
-
 
 #include <fontconfig/fontconfig.h>
 
