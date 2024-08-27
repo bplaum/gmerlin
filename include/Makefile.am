@@ -17,7 +17,6 @@ frei0r.h \
 gavfenc.h \
 ladspa.h \
 language_table.h \
-md5.h \
 mdb_private.h \
 ovl2text.h \
 playerprivate.h \

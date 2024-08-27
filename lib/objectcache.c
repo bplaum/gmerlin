@@ -40,7 +40,6 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "objcache"
 
-#include <md5.h>
 
 #define ROOT_NAME_ENTRY "cacheentry"
 #define ROOT_NAME_INDEX "cacheindex"
@@ -116,13 +115,13 @@ static void move_to_front_disk(disk_cache_entry_t * arr, int num, int idx)
 /* md5 stuff */
 static void id_2_md5(const char * id, void * ret)
   {
-  bg_md5_buffer(id, strlen(id), ret);
+  gavl_md5_buffer(id, strlen(id), ret);
   }
 
 static char * create_filename(const bg_object_cache_t * cache, const uint32_t * md5)
   {
-  char str[MD5STRING_LEN];
-  bg_md5_2_string(md5, str);
+  char str[GAVL_MD5_LENGTH];
+  gavl_md5_2_string(md5, str);
   return bg_sprintf("%s/%s", cache->directory, str);
   }
 
@@ -146,8 +145,8 @@ static void load_disk_index(bg_object_cache_t * cache)
     while((cache->disk_cache_size < cache->max_disk_cache_size) &&
           (cache->disk_cache_size < arr->num_entries))
       {
-      if(!bg_string_2_md5(gavl_value_get_string(&arr->entries[cache->disk_cache_size]),
-                       cache->disk_cache[cache->disk_cache_size].md5))
+      if(!gavl_string_2_md5(gavl_value_get_string(&arr->entries[cache->disk_cache_size]),
+                            cache->disk_cache[cache->disk_cache_size].md5))
         break;
       cache->disk_cache_size++;
       }
@@ -163,7 +162,7 @@ static void save_disk_index(const bg_object_cache_t * cache)
   gavl_value_t val;
   gavl_value_t el;
 
-  char md5_string[MD5STRING_LEN];
+  char md5_string[GAVL_MD5_LENGTH];
   
   gavl_value_init(&val);
   filename = bg_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
@@ -175,7 +174,7 @@ static void save_disk_index(const bg_object_cache_t * cache)
   for(i = 0; i < cache->disk_cache_size; i++)
     {
     gavl_value_init(&el);
-    bg_md5_2_string(cache->disk_cache[i].md5, md5_string);
+    gavl_md5_2_string(cache->disk_cache[i].md5, md5_string);
     gavl_value_set_string(&el, md5_string);
     gavl_array_splice_val_nocopy(arr, -1, 0, &el);
     }
@@ -396,7 +395,7 @@ static gavl_value_t * object_cache_prepend_nocopy(bg_object_cache_t * cache,
   gavl_value_move(&cache->memory_cache[0].val, val);
 
 
-  bg_md5_buffer(id, strlen(id), cache->memory_cache[0].md5);
+  gavl_md5_buffer(id, strlen(id), cache->memory_cache[0].md5);
   
   cache->memory_cache_size++;
 

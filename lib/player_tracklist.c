@@ -31,8 +31,6 @@
 #include <gmerlin/player.h>
 #include <playerprivate.h>
 
-#include <md5.h>
-
 #include <gmerlin/log.h>
 #include <gmerlin/mdb.h>
 #include <gmerlin/application.h>

@@ -57,9 +57,6 @@
 #include <gavl/http.h>
 #include <gmerlin/http.h>
 
-
-#include <md5.h>
-
 static char * strip_space(char * str, int do_free);
 
 char * bg_fix_path(char * path)
@@ -698,20 +695,13 @@ char * bg_capitalize(const char * str)
   return ret;
   }
 
-void bg_get_filename_hash(const char * gml, char ret[33])
+void bg_get_filename_hash(const char * gml, char ret[GAVL_MD5_LENGTH])
   {
   char * uri;
   uint8_t md5sum[16];
     
   uri = bg_string_to_uri(gml, -1);
-  
-  bg_md5_buffer(uri, strlen(uri), md5sum);
-  sprintf(ret,
-          "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-          md5sum[0], md5sum[1], md5sum[2], md5sum[3], 
-          md5sum[4], md5sum[5], md5sum[6], md5sum[7], 
-          md5sum[8], md5sum[9], md5sum[10], md5sum[11], 
-          md5sum[12], md5sum[13], md5sum[14], md5sum[15]);
+  gavl_md5_buffer_str(uri, strlen(uri), ret);
   free(uri);
   }
 

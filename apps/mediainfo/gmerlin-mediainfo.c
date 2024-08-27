@@ -20,6 +20,7 @@
 
 
 #include <config.h>
+#include <string.h>
 
 
 #include <gmerlin/pluginregistry.h>
@@ -29,6 +30,8 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/application.h>
+#include <md5.h>
+#include <gavl/utils.h>
 
 
 static int input_flags = 0;
@@ -80,10 +83,27 @@ const bg_cmdline_app_data_t app_data =
                                        {  } },
   };
 
+static void blupp()
+  {
+  char md5_str[33];
+  uint32_t md5[4];
+  
+  char * str = "BlaBla";
+    
+  bg_md5_buffer(str, strlen(str), md5);
+  bg_md5_2_string(md5, md5_str);
+
+  fprintf(stderr, "Gmerlin md5: %s\n", md5_str);
+  
+  fprintf(stderr, "gavl md5:    %s\n", gavl_md5_buffer_str(str, strlen(str), md5_str));
+  
+  }
 
 int main(int argc, char ** argv)
   {
   gavl_dictionary_t * mi;
+
+  blupp();
   
   /* Handle commandline options */
   bg_app_init("gmerlin-mediainfo", TRS("Print media information"), NULL);

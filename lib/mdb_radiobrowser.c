@@ -30,8 +30,7 @@
 
 #include <mdb_private.h>
 #include <gavl/metatags.h>
-
-#include <md5.h>
+#include <gavl/utils.h>
 
 
 #include <gmerlin/translation.h>
@@ -1111,7 +1110,8 @@ static void load_array(bg_mdb_backend_t * be, gavl_array_t * ret,
    
     gavl_dictionary_set_string(dict, RB_ID, v);
 
-    gavl_dictionary_set_string(dict, GAVL_META_ID, bg_md5_buffer_str(v, strlen(v), md5));
+    gavl_dictionary_set_string(dict, GAVL_META_ID,
+                               gavl_md5_buffer_str(v, strlen(v), md5));
     
     if((num = dict_get_int(child, "stationcount")) > 0)
       {

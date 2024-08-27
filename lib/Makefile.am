@@ -154,7 +154,6 @@ iconfont.c \
 id3v2.c \
 language_table.c \
 log.c \
-md5.c \
 mdb_filesystem.c \
 mdb_radiobrowser.c \
 mdb_remote.c \

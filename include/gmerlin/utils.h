@@ -256,7 +256,7 @@ char * bg_url_append_vars(char * path,
  *  specification
  */
 
-void bg_get_filename_hash(const char * gml, char ret[33]);
+void bg_get_filename_hash(const char * gml, char ret[GAVL_MD5_LENGTH]);
 
 /* Create UUID from URI */
 
