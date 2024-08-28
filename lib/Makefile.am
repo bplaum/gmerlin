@@ -26,12 +26,6 @@ lv_cflags  =
 lv_libs  =
 endif
 
-if HAVE_POSIX_SEMAPHORES
-sem_sources =
-else
-sem_sources = uthread_sem.c
-endif
-
 if HAVE_NCURSES
 ncurses_sources = ncurses.c
 ncurses_cflags  = @NCURSES_CFLAGS@
@@ -110,7 +104,6 @@ $(LIBM) \
 lib_LTLIBRARIES = libgmerlin.la
 libgmerlin_la_SOURCES = \
 $(lv_sources) \
-$(sem_sources) \
 $(dbus_sources) \
 $(ncurses_sources) \
 accelerator.c \

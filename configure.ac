@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([include/gmerlin/player.h])
 
 AM_INIT_AUTOMAKE
 
-AM_CONFIG_HEADER(include/config.h)
+AC_CONFIG_HEADERS(include/config.h)
 
 BG_VERSION=$VERSION
 
@@ -34,8 +34,7 @@ AC_DISABLE_STATIC
 dnl AM_DISABLE_STATIC
 
 AC_LANG(C)
-AC_PROG_LIBTOOL
-
+LT_INIT
 
 AM_CONDITIONAL(CROSSBUILD, [test "x${cross_compiling}" = "xyes"])
 
@@ -53,8 +52,6 @@ AC_CHECK_SIZEOF(double)
 
 AC_CHECK_FUNCS(vasprintf isatty)
 AC_CHECK_FUNCS(canonicalize_file_name)
-AC_C99_FUNC_LRINT
-AC_C99_FUNC_LRINTF
 
 AC_C_BIGENDIAN(,,AC_MSG_ERROR("Cannot detect endianess"))
 
@@ -63,12 +60,6 @@ AC_CHECK_HEADERS([sys/select.h sys/sendfile.h ifaddrs.h])
 AC_CHECK_DECLS([MSG_NOSIGNAL, SO_NOSIGPIPE],,,
                [#include <sys/types.h>
 	       #include <sys/socket.h>])
-
-dnl
-dnl POSIX Semaphores
-dnl
-
-GMERLIN_CHECK_SEMAPHORES
 
 dnl
 dnl Linux dma-buf
@@ -91,7 +82,7 @@ test_doxygen="true"
 have_doxygen="false"
 
 AC_ARG_WITH(doxygen,
-    AC_HELP_STRING([--without-doxygen],
+    AS_HELP_STRING([--without-doxygen],
     [disable documentation generation]),
     test_doxygen="false")
 
@@ -112,7 +103,7 @@ test_texinfo="true"
 have_texinfo="false"
 
 AC_ARG_WITH(texinfo,
-    AC_HELP_STRING([--without-texinfo],
+    AS_HELP_STRING([--without-texinfo],
     [disable texinfo documentation generation]),
     test_texinfo="false")
 
@@ -160,7 +151,7 @@ DBUS_REQUIRED="1.2.0"
 have_dbus=false
 test_dbus=true
 AC_ARG_ENABLE(dbus,
-              AC_HELP_STRING(--disable-dbus, [Disable DBUS support (default: autodetect)]),
+              AS_HELP_STRING(--disable-dbus, [Disable DBUS support (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_dbus=true ;;
                  no) test_dbus=false ;;
@@ -230,14 +221,12 @@ dnl Gtk
 dnl
 
 GTK_REQUIRED="3.10.8"
-AM_PATH_GTK_3_0($GTK_REQUIRED, have_gtk=true, have_gtk=false)
+
+PKG_CHECK_MODULES(GTK, gtk+-3.0 >= $GTK_REQUIRED, have_gtk=true, have_gtk=false)
 AM_CONDITIONAL(HAVE_GTK, test x$have_gtk = xtrue)
 AC_SUBST(GTK_REQUIRED)
-
 dnl Always be in sync with the newest gtk
-
 GTK_CFLAGS="$GTK_CFLAGS -DGTK_DISABLE_DEPRECATED -DGDK_DISABLE_DEPRECATED"
-dnl GTK_CFLAGS="$GTK_CFLAGS -DGTK_DISABLE_DEPRECATED -DGTK_DISABLE_SINGLE_INCLUDES"
 
 dnl
 dnl X11
@@ -283,13 +272,17 @@ CFLAGS=$X_FLAGS
 LIBS="$X_LIBS -lXinerama"
 
 AC_MSG_CHECKING(for xinerama)
-AC_TRY_LINK([#include <X11/Xlib.h>
-             #include <X11/extensions/Xinerama.h>],
-            [int i = 0;
-             /* We ensure the function is here but never call it */
-             if(i)
-               XineramaQueryExtension(NULL, NULL, NULL);
-             return 0;],
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
+		#include <X11/extensions/Xinerama.h>
+		int main()
+		{
+                int i = 0;
+                /* We ensure the function is here but never call it */
+                if(i)
+                  XineramaQueryExtension(NULL, NULL, NULL);
+                return 0;
+		}
+		]])],
             [XINERAMA_LIBS="-lXinerama";have_xinerama=true;AC_MSG_RESULT(Yes)],
 	    AC_MSG_RESULT(No))
 
@@ -323,15 +316,18 @@ CFLAGS=$X_FLAGS
 LIBS="$X_LIBS -lXtst"
 
 AC_MSG_CHECKING(for xtest)
-AC_TRY_LINK([#include <X11/Xlib.h>
-             #include <X11/extensions/XTest.h>],
-            [int i = 0;
-             /* We ensure the function is here but never call it */
-             if(i)
-               XTestQueryExtension(NULL, NULL, NULL, NULL, NULL);
-             return 0;],
-            [XTEST_LIBS="-lXtst";have_xtest=true;AC_MSG_RESULT(Yes)],
-	    AC_MSG_RESULT(No))
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
+		#include <X11/extensions/XTest.h>
+		int main()
+		{
+		int i = 0;
+		 /* We ensure the function is here but never call it */
+		 if(i)
+		   XTestQueryExtension(NULL, NULL, NULL, NULL, NULL);
+		 return 0;
+		 }]])],
+		[XTEST_LIBS="-lXtst";have_xtest=true;AC_MSG_RESULT(Yes)],
+		AC_MSG_RESULT(No))
 
 if test x$have_xtest = "xtrue"; then
 AC_DEFINE(HAVE_XTEST)
@@ -364,16 +360,20 @@ CFLAGS=$X_FLAGS
 LIBS="$X_LIBS -lXext"
 
 AC_MSG_CHECKING(for x11 dpms)
-AC_TRY_LINK([#include <X11/Xlib.h>
-             #include <X11/extensions/dpms.h>],
-            [int i = 0;
-             /* We ensure the function is here but never call it */
-             if(i)
-		 DPMSQueryExtension(NULL, NULL, NULL);
-             return 0;],
-            [XDPMS_LIBS="-lXext";have_xdpms=true;AC_MSG_RESULT(Yes)],
-	    AC_MSG_RESULT("No"))
-
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
+		#include <X11/extensions/dpms.h>
+		int main()
+		{
+		int i = 0;
+		/* We ensure the function is here but never call it */
+		if(i)
+		  DPMSQueryExtension(NULL, NULL, NULL);
+		return 0;
+		} 
+		]])],
+		[XDPMS_LIBS="-lXext";have_xdpms=true;AC_MSG_RESULT(Yes)],
+		AC_MSG_RESULT("No"))
+	       
 if test x$have_xdpms = "xtrue"; then
 AC_DEFINE(HAVE_XDPMS)
 fi
@@ -402,16 +402,21 @@ OLD_LIBS=$LIBS
 CFLAGS=$X_FLAGS
 LIBS="$X_LIBS -lXfixes"
 
-AC_MSG_CHECKING(for x11 dpms)
-AC_TRY_LINK([#include <X11/Xlib.h>
-             #include <X11/extensions/Xfixes.h>],
-            [int i = 0;
-             /* We ensure the function is here but never call it */
-             if(i)
-		 XFixesQueryExtension(NULL, NULL, NULL);
-             return 0;],
-            [XFIXES_LIBS="-lXfixes";have_xfixes=true;AC_MSG_RESULT(Yes)],
-	    AC_MSG_RESULT("No"))
+AC_MSG_CHECKING(for x11 Xfixes)
+AC_LINK_IFELSE([AC_LANG_SOURCE(
+		    [[#include <X11/Xlib.h>
+		      #include <X11/extensions/Xfixes.h>
+		      int main()
+		      {
+			  int i = 0;
+			  /* We ensure the function is here but never call it */
+			  if(i)
+			    XFixesQueryExtension(NULL, NULL, NULL);
+			    return 0;
+		      }
+		     ]])],
+               [XFIXES_LIBS="-lXfixes";have_xfixes=true;AC_MSG_RESULT(Yes)],
+	       AC_MSG_RESULT("No"))
 
 if test x$have_xfixes = "xtrue"; then
 AC_DEFINE(HAVE_XFIXES)
@@ -467,7 +472,7 @@ V4LCONVERT_REQUIRED="0.5.7"
 have_v4lconvert=false
 
 AC_ARG_ENABLE(v4lconvert,
-              AC_HELP_STRING(--disable-v4lconvert, [Disable libv4lconvert support (default: autodetect)]),
+              AS_HELP_STRING(--disable-v4lconvert, [Disable libv4lconvert support (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_v4lconvert=true ;;
                  no) test_v4lconvert=false ;;
@@ -497,7 +502,7 @@ AH_TEMPLATE([LV_PLUGIN_DIR],
 LV_REQUIRED="0.4.0"
 have_LV=false
 AC_ARG_ENABLE(libvisual,
-              AC_HELP_STRING(--disable-libvisual, [Disable Libvisual support (default: autodetect)]),
+              AS_HELP_STRING(--disable-libvisual, [Disable Libvisual support (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_lv=true ;;
                  no) test_lv=false ;;
@@ -533,7 +538,7 @@ have_cdio="false"
 CDIO_REQUIRED="1.0.0"
 
 AC_ARG_ENABLE(libcdio,
-[AC_HELP_STRING([--disable-libcdio],[Disable libcdio (default: autodetect)])],
+[AS_HELP_STRING([--disable-libcdio],[Disable libcdio (default: autodetect)])],
 [case "${enableval}" in
    yes) test_cdio=true ;;
    no)  test_cdio=false ;;
@@ -572,7 +577,7 @@ AH_TEMPLATE([HAVE_MUSICBRAINZ],
 MUSICBRAINZ_REQUIRED="2.0.2"
 have_musicbrainz=false
 AC_ARG_ENABLE(musicbrainz,
-              AC_HELP_STRING(--disable-musicbrainz, [Disable musicbrainz support (default: autodetect)]),
+              AS_HELP_STRING(--disable-musicbrainz, [Disable musicbrainz support (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_musicbrainz=true ;;
                  no) test_musicbrainz=false ;;
@@ -606,7 +611,7 @@ dnl LIBCDDB_REQUIRED="1.2.1"
 LIBCDDB_REQUIRED="1.0.2"
 have_cddb=false
 AC_ARG_ENABLE(cddb,
-              AC_HELP_STRING(--disable-cddb, [Disable cddb support (default: autodetect)]),
+              AS_HELP_STRING(--disable-cddb, [Disable cddb support (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_cddb=true ;;
                  no) test_cddb=false ;;
@@ -642,7 +647,7 @@ OLD_CFLAGS=$CFLAGS
 OLD_LIBS=$LIBS
 
 AC_ARG_ENABLE(alsa,
-              AC_HELP_STRING(--disable-alsa, [Disable Alsa (default: autodetect)]),
+              AS_HELP_STRING(--disable-alsa, [Disable Alsa (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_alsa=true ;;
                  no) test_alsa=false ;;
@@ -650,7 +655,7 @@ AC_ARG_ENABLE(alsa,
 	       test_alsa=true)
 		 
 if test x$test_alsa = xtrue; then
-  AM_PATH_ALSA(1.0.0, have_alsa="true", have_alsa="false")
+   PKG_CHECK_MODULES(ALSA, alsa, have_alsa="true", have_alsa="false")
 fi
 
 dnl CFLAGS and LIBS must be cleared after AM_PATH_ALSA
@@ -667,7 +672,7 @@ dnl
 
 have_oss=false
 AC_ARG_ENABLE(oss,
-              AC_HELP_STRING(--disable-oss, [Disable OSS (default: autodetect)]),
+              AS_HELP_STRING(--disable-oss, [Disable OSS (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_oss=true ;;
                  no) test_oss=false ;;
@@ -717,7 +722,7 @@ dnl
 dnl Player
 
 AC_ARG_ENABLE(player,
-              AC_HELP_STRING(--disable-player, [Disable player (default: enabled)]),
+              AS_HELP_STRING(--disable-player, [Disable player (default: enabled)]),
               [case "${enableval}" in
                  yes) have_player=true ;;
                  no) have_player=false ;;
@@ -734,7 +739,7 @@ AM_CONDITIONAL(HAVE_PLAYER, test x$have_player = xtrue)
 dnl Transcoder
 
 AC_ARG_ENABLE(transcoder,
-              AC_HELP_STRING(--disable-transcoder, [Disable transcoder (default: enabled)]),
+              AS_HELP_STRING(--disable-transcoder, [Disable transcoder (default: enabled)]),
               [case "${enableval}" in
                  yes) have_transcoder=true ;;
                  no) have_transcoder=false ;;
@@ -750,7 +755,7 @@ AM_CONDITIONAL(HAVE_TRANSCODER, test x$have_transcoder = xtrue)
 dnl Thumbnailer
 
 AC_ARG_ENABLE(thumbnailer,
-              AC_HELP_STRING(--disable-thumbnailer, [Disable thumbnailer (default: enabled)]),
+              AS_HELP_STRING(--disable-thumbnailer, [Disable thumbnailer (default: enabled)]),
               [case "${enableval}" in
                  yes) have_thumbnailer=true ;;
                  no) have_thumbnailer=false ;;

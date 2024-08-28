@@ -12,7 +12,6 @@ bgfrei0r.h \
 bglv.h \
 bgladspa.h \
 bgsqlite.h \
-float_cast.h \
 frei0r.h \
 gavfenc.h \
 ladspa.h \

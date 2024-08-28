@@ -84,7 +84,6 @@ include/httpserver_priv.h
 include/bgncurses.h
 include/pluginreg_priv.h
 include/bgfrei0r.h
-include/md5.h
 include/playerprivate.h
 include/bgsqlite.h
 include/bglv.h
@@ -225,7 +224,6 @@ lib/x11/grab.c
 lib/httpmediahandler.c
 lib/hexdump.c
 lib/cairo.c
-lib/md5.c
 lib/httpconnection.c
 lib/player.c
 lib/player_tracklist.c

@@ -134,7 +134,7 @@ extern const video_driver_t ximage_driver;
 extern const video_driver_t xv_driver;
 #endif
 
-#ifdef HAVE_GLX
+#if defined(HAVE_GLX) || defined(HAVE_EGL)
 extern const video_driver_t gl_driver;
 #endif
 
@@ -323,8 +323,7 @@ struct bg_x11_window_s
   int depth;
 
   /* OpenGL stuff */  
-#ifdef HAVE_GLX
-  
+#if defined(HAVE_GLX) || defined(HAVE_EGL)
   float background_color[3];
 #endif
 
