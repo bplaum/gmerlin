@@ -667,24 +667,6 @@ AM_CONDITIONAL(HAVE_ALSA, test x$have_alsa = xtrue)
 AC_SUBST(ALSA_REQUIRED)
 
 dnl
-dnl OSS
-dnl
-
-have_oss=false
-AC_ARG_ENABLE(oss,
-              AS_HELP_STRING(--disable-oss, [Disable OSS (default: autodetect)]),
-              [case "${enableval}" in
-                 yes) test_oss=true ;;
-                 no) test_oss=false ;;
-               esac],
-	       test_oss=true)
-
-if test x$test_oss = xtrue; then
-AC_CHECK_HEADERS(sys/soundcard.h soundcard.h, have_oss=true)
-fi
-AM_CONDITIONAL(HAVE_OSS, test x$have_oss = xtrue)
-
-dnl
 dnl Video4linux2
 dnl
 
@@ -967,17 +949,6 @@ echo "Disabled"
 fi
 fi
 
-echo -n "OSS:                 "
-if test "x$have_oss" = "xtrue"; then
-echo "Yes"
-else
-if test "x$test_oss" = "xtrue"; then
-echo "Missing (Probably unsupported architecture)"
-else
-echo "Disabled"
-fi
-fi
-
 echo -n "Video4Linux2:        "
 if test "x$have_v4l2" = "xtrue"; then
 echo "Yes"
@@ -1018,12 +989,6 @@ echo "Missing"
 fi
 
 
-echo -n "Xvideo extension:    "
-if test "x$have_xv" = "xtrue"; then
-echo "Yes"
-else
-echo "Missing"
-fi
 
 echo -n "X11 dpms extension:  "
 if test "x$have_xdpms" = "xtrue"; then
