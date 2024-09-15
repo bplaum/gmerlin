@@ -1892,7 +1892,7 @@ static void close_glscope(void * priv)
   {
   glscope_t * s = priv;
 
-  fprintf(stderr, "close_glscope\n");
+  //  fprintf(stderr, "close_glscope\n");
   
   if(s->asink)
     {

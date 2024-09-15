@@ -1566,10 +1566,15 @@ int bg_value_load_xml_string(gavl_value_t * ret,
   {
   int result;
   xmlDocPtr xml_doc;
+
+  if(len < 0)
+    len = strlen(str);
   
   if(!(xml_doc = xmlParseMemory(str, len)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't parse xml");
+    
+    fprintf(stderr, "Couldn't parse xml %d: %s\n", len, str);
     return 0;
     }
 

@@ -698,8 +698,6 @@ char * bg_capitalize(const char * str)
 void bg_get_filename_hash(const char * gml, char ret[GAVL_MD5_LENGTH])
   {
   char * uri;
-  uint8_t md5sum[16];
-    
   uri = bg_string_to_uri(gml, -1);
   gavl_md5_buffer_str(uri, strlen(uri), ret);
   free(uri);

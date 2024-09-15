@@ -775,7 +775,7 @@ const bg_encoder_plugin_t the_plugin =
     {
       BG_LOCALE,
       .name =              "e_wav", /* Unique short name */
-      .long_name =         TRS("Wave writer"),
+      .long_name =         TRS("WAV"),
       .description =       TRS("Simple writer for wave files, supports 8, 16, 24 and 32 bit PCM"),
       .type =              BG_PLUGIN_ENCODER_AUDIO,
       .flags =             BG_PLUGIN_FILE | BG_PLUGIN_PIPE | BG_PLUGIN_GAVF_IO,

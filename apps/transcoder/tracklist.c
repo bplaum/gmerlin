@@ -501,15 +501,24 @@ clipboard_received_func_tracks(GtkClipboard *clipboard,
   
   if(bg_dictionary_load_xml_string(&dict, text, -1, BG_TRANSCODER_TRACK_XML_ROOT))
     {
-    gavl_array_t * children = gavl_get_tracks_nc(&dict);
+    
+    const gavl_array_t * new_children;
 
-    if((children = gavl_get_tracks_nc(&dict)) && children->num_entries)
+    if((new_children = gavl_get_tracks_nc(&dict)) &&  new_children->num_entries)
       {
-      gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&w->t), -1, 0, children);
+      int old_num;
+      gavl_array_t * children =  gavl_get_tracks_nc(&w->t);
+      old_num = children->num_entries;
+      
+      /* Clear old selection, select all pasted tracks */
+
+      gavl_tracks_set_gui_state(children, GAVL_META_GUI_SELECTED, 0, 0, -1);
+      
+      gavl_array_splice_array(children, -1, 0, new_children);
+      gavl_tracks_set_gui_state(children, GAVL_META_GUI_SELECTED, 1, old_num, -1);
+      
       track_list_update(w);  
       }
-    
-    gavl_array_destroy(children);
     }
   
   gavl_dictionary_free(&dict);
@@ -1646,7 +1655,7 @@ track_list_t * track_list_create(bg_cfg_section_t * track_defaults_section,
                             gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(ret->treeview)));
   
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
-                                 GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
+                                 GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
   gtk_container_add(GTK_CONTAINER(scrolled), ret->treeview);
   gtk_widget_show(scrolled);
     

@@ -1276,7 +1276,7 @@ const bg_encoder_plugin_t encoder_plugin =
     {
       BG_LOCALE,
       .name =           bg_singlepic_encoder_name,
-      .long_name =      "Singlepicture encoder",
+      .long_name =      "Single images",
       .description =    TRS("This plugin encodes a video as a series of images. It uses the installed image writers."),
 
       .type =           BG_PLUGIN_ENCODER_VIDEO,
