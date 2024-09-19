@@ -75,10 +75,11 @@ static void set_metadata_parameter(void * priv, const char * name, const gavl_va
   {
   track_dialog_t * d;
   d = priv;
+#if 0
   fprintf(stderr, "Set metadata parameter %s\n", name); 
   gavl_value_dump(val, 2);
   fprintf(stderr, "\n");
-  
+#endif
   bg_metadata_set_parameter(d->metadata, name, val);
   set_parameter(priv, name, val);
   }

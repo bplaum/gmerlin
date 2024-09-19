@@ -1240,7 +1240,7 @@ static int close_encoder(void * data, int do_delete)
   STR_FREE(e->filename_buffer);
   STR_FREE(e->filename_base);
   
-  gavl_dictionary_free(&e->metadata);
+  gavl_dictionary_reset(&e->metadata);
   
   if(e->plugin_handle)
     {
