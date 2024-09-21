@@ -875,6 +875,12 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       free(prefix);
       }
     }
+
+  if(plugin->get_extensions)
+    {
+    new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
+    bg_string_to_string_array(plugin->get_extensions(plugin_priv), new_info->extensions);
+    }
   
   if(plugin->type & (BG_PLUGIN_ENCODER_AUDIO|
                      BG_PLUGIN_ENCODER_VIDEO|
@@ -942,11 +948,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
       bg_string_to_string_array(input->get_mimetypes(plugin_priv), new_info->mimetypes);
       }
-    if(input->get_extensions)
-      {
-      new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
-      bg_string_to_string_array(input->get_extensions(plugin_priv), new_info->extensions);
-      }
     
     if(input->get_protocols)
       {
@@ -962,7 +963,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
     new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
     
-    bg_string_to_string_array(ir->extensions, new_info->extensions);
     bg_string_to_string_array(ir->mimetypes, new_info->mimetypes);
     }
   if(plugin->type & BG_PLUGIN_IMAGE_WRITER)
@@ -973,7 +973,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
     new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
     
-    bg_string_to_string_array(iw->extensions, new_info->extensions);
     bg_string_to_string_array(iw->mimetypes, new_info->mimetypes);
     }
   if(plugin->type & (BG_PLUGIN_BACKEND_MDB | BG_PLUGIN_BACKEND_RENDERER))

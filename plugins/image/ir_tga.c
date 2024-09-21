@@ -220,6 +220,11 @@ static const gavl_dictionary_t * get_metadata_tga(void * priv)
   return &t->m;
   }
 
+static const char * get_extensions_tga(void * priv)
+  {
+  return "tga";
+  }
+
 const bg_image_reader_plugin_t the_plugin =
   {
     .common =
@@ -233,8 +238,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_tga,
       .destroy =       destroy_tga,
+      .get_extensions = get_extensions_tga,
     },
-    .extensions =    "tga",
     .read_header = read_header_tga,
     .get_metadata = get_metadata_tga,
     .get_compression_info = get_compression_info_tga,

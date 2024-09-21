@@ -332,6 +332,11 @@ static void set_parameter_jpeg(void * p, const char * name,
     }
   }
 
+static const char * get_extensions_jpeg(void * priv)
+  {
+  return "jpeg jpg";
+  }
+
 const bg_image_writer_plugin_t the_plugin =
   {
     .common =
@@ -346,9 +351,9 @@ const bg_image_writer_plugin_t the_plugin =
       .create =         create_jpeg,
       .destroy =        destroy_jpeg,
       .get_parameters = get_parameters_jpeg,
-      .set_parameter =  set_parameter_jpeg
+      .set_parameter =  set_parameter_jpeg,
+      .get_extensions = get_extensions_jpeg,
     },
-    .extensions = "jpg",
     .mimetypes = "image/jpeg",
     .set_callbacks = set_callbacks_jpeg,
     .write_header = write_header_jpeg,

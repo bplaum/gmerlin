@@ -122,6 +122,10 @@ static const bg_parameter_info_t * get_parameters_png(void * p)
   return parameters;
   }
 
+static const char * get_extensions_png(void *)
+  {
+  return "png";
+  }
 
 const bg_image_writer_plugin_t the_plugin =
   {
@@ -137,9 +141,9 @@ const bg_image_writer_plugin_t the_plugin =
       .create =         create_png,
       .destroy =        destroy_png,
       .get_parameters = get_parameters_png,
-      .set_parameter =  bg_pngwriter_set_parameter
+      .set_parameter =  bg_pngwriter_set_parameter,
+      .get_extensions = get_extensions_png,
     },
-    .extensions = "png",
     .mimetypes = "image/png",
     .set_callbacks = set_callbacks_png,
     .write_header =  write_header_png,

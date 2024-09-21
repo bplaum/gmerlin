@@ -183,6 +183,11 @@ static void set_parameter_tga(void * p, const char * name,
     tga->rle = val->v.i;
   }
 
+static const char * get_extensions_tga(void * priv)
+  {
+  return "tga";
+  }
+
 
 const bg_image_writer_plugin_t the_plugin =
   {
@@ -198,9 +203,9 @@ const bg_image_writer_plugin_t the_plugin =
       .create =         create_tga,
       .destroy =        destroy_tga,
       .get_parameters = get_parameters_tga,
-      .set_parameter =  set_parameter_tga
+      .set_parameter =  set_parameter_tga,
+      .get_extensions = get_extensions_tga,
     },
-    .extensions = "tga",
     .set_callbacks = set_callbacks_tga,
     .write_header = write_header_tga,
     .write_image =  write_image_tga,

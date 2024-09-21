@@ -361,6 +361,11 @@ static int get_compression_info_jpeg(void * priv, gavl_compression_info_t * ci)
   return 1;
   }
 
+static const char * get_extensions_jpeg(void * priv)
+  {
+  return "jpeg jpg";
+  }
+
 const bg_image_reader_plugin_t the_plugin =
   {
     .common =
@@ -374,8 +379,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_jpeg,
       .destroy =       destroy_jpeg,
+      .get_extensions = get_extensions_jpeg,
     },
-    .extensions  = "jpeg jpg",
     .mimetypes  = "image/jpeg",
     .read_header = read_header_jpeg,
     .get_metadata = get_metadata_jpeg,

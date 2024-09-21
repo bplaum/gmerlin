@@ -897,6 +897,11 @@ static const gavl_dictionary_t * get_metadata_tiff(void * priv)
   return &t->m;
   }
 
+static const char * get_extensions_tiff(void *)
+  {
+  return "tif tiff";
+  }
+
 const bg_image_reader_plugin_t the_plugin =
   {
     .common =
@@ -910,8 +915,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_tiff,
       .destroy =       destroy_tiff,
+      .get_extensions = get_extensions_tiff,
     },
-    .extensions =    "tif tiff",
     .read_header = read_header_tiff,
     .get_metadata = get_metadata_tiff,
     .read_image =  read_image_tiff,

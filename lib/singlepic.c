@@ -1191,15 +1191,10 @@ static int add_video_stream_encoder(void * data,
                                     const gavl_dictionary_t * m,
                                     const gavl_video_format_t * format)
   {
-  char ** extensions;
   encoder_t * e = data;
   
   gavl_video_format_copy(&e->format, format);
-
-  extensions = gavl_strbreak(e->image_writer->extensions, ' ');
-  create_mask(e, extensions[0]);
-  gavl_strbreak_free(extensions);
-  
+  create_mask(e, gavl_string_array_get(e->plugin_handle->info->extensions, 0));
   /* Write image header so we know the format */
   
   write_frame_header(e);

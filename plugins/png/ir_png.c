@@ -317,6 +317,10 @@ static int read_image_png(void * priv, gavl_video_frame_t * frame)
   return 1;
   }
 
+static const char * get_extensions_png(void *)
+  {
+  return "png";
+  }
 
 const bg_image_reader_plugin_t the_plugin =
   {
@@ -331,8 +335,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_png,
       .destroy =       destroy_png,
+      .get_extensions = get_extensions_png,
     },
-    .extensions =    "png",
     .mimetypes  = "image/png",
     .read_header = read_header_png,
     .get_metadata = get_metadata_png,

@@ -769,6 +769,11 @@ static gavl_audio_sink_t * get_audio_sink_wav(void * data, int stream)
   return wav->sink;
   }
 
+static const char * get_extensions_wav(void * data)
+  {
+  return "wav";
+  }
+
 const bg_encoder_plugin_t the_plugin =
   {
     .common =
@@ -784,6 +789,7 @@ const bg_encoder_plugin_t the_plugin =
       .destroy =           destroy_wav,
       .get_parameters =    get_parameters_wav,
       .set_parameter =     set_parameter_wav,
+      .get_extensions =    get_extensions_wav,
     },
     .max_audio_streams =   1,
     .max_video_streams =   0,

@@ -752,6 +752,12 @@ static const gavl_dictionary_t * get_metadata_bmp(void * priv)
   return &p->m;
   }
 
+static const char * get_extensions_bmp(void * priv)
+  {
+  return "bmp";
+  }
+
+
 const bg_image_reader_plugin_t the_plugin =
   {
     .common =
@@ -765,8 +771,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_bmp,
       .destroy =       destroy_bmp,
+      .get_extensions = get_extensions_bmp,
     },
-    .extensions =    "bmp",
     .read_header = read_header_bmp,
     .get_metadata = get_metadata_bmp,
     .read_image =  read_image_bmp,

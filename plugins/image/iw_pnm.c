@@ -235,6 +235,11 @@ static void set_parameter_pnm(void * p, const char * name,
     pnm->comment = gavl_strrep(pnm->comment, val->v.str);
   }
 
+static const char * get_extensions_pmn(void * priv)
+  {
+  return "ppm pgm";
+  }
+
 const bg_image_writer_plugin_t the_plugin =
   {
     .common =
@@ -249,9 +254,9 @@ const bg_image_writer_plugin_t the_plugin =
       .create =         create_pnm,
       .destroy =        destroy_pnm,
       .get_parameters = get_parameters_pnm,
-      .set_parameter =  set_parameter_pnm
+      .set_parameter =  set_parameter_pnm,
+      .get_extensions = get_extensions_pmn,
     },
-    .extensions = "ppm pgm",
     .set_callbacks = set_callbacks_pnm,
     .write_header =  write_header_pnm,
     .write_image =   write_image_pnm,

@@ -221,6 +221,12 @@ static int write_image_bmp(void * priv, gavl_video_frame_t * frame)
   return 1;
   }
 
+static const char * get_extensions_bmp(void * priv)
+  {
+  return "bmp";
+  }
+
+
 const bg_image_writer_plugin_t the_plugin =
   {
     .common =
@@ -234,8 +240,8 @@ const bg_image_writer_plugin_t the_plugin =
       .priority =       5,
       .create =         create_bmp,
       .destroy =        destroy_bmp,
+      .get_extensions = get_extensions_bmp,
     },
-    .extensions = "bmp",
     .set_callbacks = set_callbacks_bmp,
     .write_header = write_header_bmp,
     .write_image =  write_image_bmp,

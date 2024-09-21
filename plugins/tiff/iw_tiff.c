@@ -106,6 +106,11 @@ static void set_parameter_tiff(void * p, const char * name,
   bg_tiff_writer_set_parameter(tiff->tiff, name, val);
   }
 
+static const char * get_extensions_tiff(void *)
+  {
+  return "tif tiff";
+  }
+
 const bg_image_writer_plugin_t the_plugin =
   {
     .common =
@@ -120,9 +125,9 @@ const bg_image_writer_plugin_t the_plugin =
       .create =         create_tiff,
       .destroy =        destroy_tiff,
       .get_parameters = get_parameters_tiff,
-      .set_parameter =  set_parameter_tiff
+      .set_parameter =  set_parameter_tiff,
+      .get_extensions = get_extensions_tiff,
     },
-    .extensions = "tif",
     .set_callbacks = set_callbacks_tiff,
     .write_header =  write_header_tiff,
     .write_image =   write_image_tiff,

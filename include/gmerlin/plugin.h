@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #ifndef BG_PLUGIN_H_INCLUDED
 #define BG_PLUGIN_H_INCLUDED
 
@@ -103,7 +101,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 39
+#define BG_PLUGIN_API_VERSION 40
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -144,7 +142,6 @@ typedef enum
     BG_PLUGIN_INPUT                      = (1<<0), //!< Media input
     BG_PLUGIN_OUTPUT_AUDIO               = (1<<1), //!< Audio output
     BG_PLUGIN_OUTPUT_VIDEO               = (1<<2), //!< Video output
-    //    BG_PLUGIN_RECORDER_AUDIO             = (1<<3), //!< Audio recorder
     BG_PLUGIN_RECORDER_VIDEO             = (1<<4), //!< Video recorder
     BG_PLUGIN_ENCODER_AUDIO              = (1<<5), //!< Encoder for audio only
     BG_PLUGIN_ENCODER_VIDEO              = (1<<6), //!< Encoder for video only
@@ -284,6 +281,12 @@ struct bg_plugin_common_s
    */
   
   bg_controllable_t * (*get_controllable)(void * priv);
+
+  /** \brief Get supported extensions
+   *  \param priv The handle returned by the create() method
+   *  \returns A space separated list of extensions
+   */
+  const char * (*get_extensions)(void * priv);
   
   };
 
@@ -326,11 +329,6 @@ struct bg_input_plugin_s
    */
   const char * (*get_mimetypes)(void * priv);
 
-  /** \brief Get supported extensions
-   *  \param priv The handle returned by the create() method
-   *  \returns A space separated list of extensions
-   */
-  const char * (*get_extensions)(void * priv);
   
   /** \brief Open file/url/device
    *  \param priv The handle returned by the create() method
@@ -1096,7 +1094,6 @@ typedef struct bg_image_reader_plugin_s bg_image_reader_plugin_t;
 struct bg_image_reader_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-  const char * extensions; //!< Supported file extensions (space separated)
   const char * mimetypes;  //!< Supported mimetypes
   
   /** \brief Read the file header
@@ -1175,7 +1172,6 @@ typedef struct bg_image_writer_plugin_s bg_image_writer_plugin_t;
 struct bg_image_writer_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-  const char * extensions; //!< File extensions (space separated)
   const char * mimetypes;  //!< Supported mimetypes
 
   /** \brief Set callbacks

@@ -646,6 +646,10 @@ static const gavl_dictionary_t * get_metadata_pnm(void * priv)
   return &p->m;
   }
 
+static const char * get_extensions_pmn(void * priv)
+  {
+  return "ppm pnm pbm pgm";
+  }
 
 const bg_image_reader_plugin_t the_plugin =
   {
@@ -660,8 +664,8 @@ const bg_image_reader_plugin_t the_plugin =
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_pnm,
       .destroy =       destroy_pnm,
+      .get_extensions = get_extensions_pmn,
     },
-    .extensions =    "pnm ppm pbm pgm",
     .read_header = read_header_pnm,
     .get_metadata = get_metadata_pnm,
     .read_image =  read_image_pnm,

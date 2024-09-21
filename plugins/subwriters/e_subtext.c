@@ -103,43 +103,6 @@ static void write_subtitle_srt(subtext_t * s, gavl_packet_t * p)
   gavl_strbreak_free(lines);
   }
 
-static void write_header_mpsub(subtext_t * s)
-  {
-  const char * tag;
-
-  tag = gavl_dictionary_get_string(&s->metadata, GAVL_META_TITLE);
-  
-  if(tag)
-    fprintf(s->output, "TITLE=%s\n", tag);
-
-  tag = gavl_dictionary_get_string(&s->metadata, GAVL_META_AUTHOR);
-
-  if(tag)
-    fprintf(s->output, "AUTHOR=%s\n", tag);
-
-  tag = gavl_dictionary_get_string(&s->metadata, GAVL_META_COMMENT);
-
-  if(tag)
-    fprintf(s->output, "NOTE=%s\n", tag);
-  fprintf(s->output, "FORMAT=TIME\n\n");
-  }
-
-static void write_subtitle_mpsub(subtext_t * s, gavl_packet_t * p)
-  {
-  if(s->last_time != GAVL_TIME_UNDEFINED)
-    {
-    fprintf(s->output, "%.3f %.3f\n",
-            gavl_time_to_seconds(p->pts - (s->last_time + s->last_duration)),
-            gavl_time_to_seconds(p->duration));
-    }
-  else
-    fprintf(s->output, "%.3f %.3f\n",
-            gavl_time_to_seconds(p->pts),
-            gavl_time_to_seconds(p->duration));
-  
-  fprintf(s->output, "%s\n\n", (char*)p->buf.buf);
-  }
-
 static const struct
   {
   const char * extension;
@@ -154,12 +117,6 @@ formats[] =
       .name =           "srt",
       .write_subtitle = write_subtitle_srt,
     },
-    {
-      .extension =      "sub",
-      .name =           "mpsub",
-      .write_header =   write_header_mpsub,
-      .write_subtitle = write_subtitle_mpsub,
-    }
   };
 
 static void * create_subtext()
@@ -267,9 +224,8 @@ static const bg_parameter_info_t parameters[] =
       .long_name =    TRS("Format"),
       .type =         BG_PARAMETER_STRINGLIST,
       .val_default =  GAVL_VALUE_INIT_STRING("srt"),
-      .multi_names =  (char const *[]){ "srt",           "mpsub", NULL },
-      .multi_labels = (char const *[]){ TRS("Subrip (.srt)"), TRS("MPlayer mpsub"), NULL },
-      
+      .multi_names =  (char const *[]){ "srt", NULL },
+      .multi_labels = (char const *[]){ TRS("Subrip (.srt)"), NULL },
     },
     { /* End of parameters */ }
   };
@@ -301,6 +257,11 @@ static void set_parameter_subtext(void * data, const char * name,
     }
   }
 
+static const char * get_extensions_subwriter(void * data)
+  {
+  return "srt";
+  }
+
 const bg_encoder_plugin_t the_plugin =
   {
     .common =
@@ -308,7 +269,7 @@ const bg_encoder_plugin_t the_plugin =
       BG_LOCALE,
       .name =           "e_subtext",       /* Unique short name */
       .long_name =      TRS("Text subtitle exporter"),
-      .description =    TRS("Plugin for exporting text subtitles. Supported formats are MPSub and SRT"),
+      .description =    TRS("Plugin for exporting text subtitles. Supported format is SRT"),
       .type =           BG_PLUGIN_ENCODER_TEXT,
       .flags =          BG_PLUGIN_FILE,
       .priority =       BG_PLUGIN_PRIORITY_MAX,
@@ -316,6 +277,7 @@ const bg_encoder_plugin_t the_plugin =
       .destroy =        destroy_subtext,
       .get_parameters = get_parameters_subtext,
       .set_parameter =  set_parameter_subtext,
+      .get_extensions = get_extensions_subwriter,
     },
 
     .max_text_streams = 1,
