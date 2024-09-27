@@ -459,6 +459,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
       info = info->next;
       continue;
       }
+    //    fprintf(stderr, "Trying: %s\n", info->name);
     if(gavl_string_array_indexof_i(info->extensions, extension) >= 0)
       {
       if(max_priority < info->priority)
@@ -468,6 +469,14 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
         }
       // return info;
       }
+#if 0
+    else
+      {
+      fprintf(stderr, "Extension mismatch: %s\n", info->name);
+      gavl_array_dump(info->extensions, 2);
+      }
+#endif
+    
     info = info->next;
     }
   return ret;
@@ -880,6 +889,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     {
     new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
     bg_string_to_string_array(plugin->get_extensions(plugin_priv), new_info->extensions);
+    
     }
   
   if(plugin->type & (BG_PLUGIN_ENCODER_AUDIO|
@@ -960,7 +970,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_image_reader_plugin_t  * ir;
     ir = (bg_image_reader_plugin_t*)plugin;
 
-    new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
     new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
     
     bg_string_to_string_array(ir->mimetypes, new_info->mimetypes);
@@ -970,7 +979,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_image_writer_plugin_t  * iw;
     iw = (bg_image_writer_plugin_t*)plugin;
 
-    new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
     new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
     
     bg_string_to_string_array(iw->mimetypes, new_info->mimetypes);
@@ -1014,6 +1022,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       }
     
     }
+
   return new_info;
   }
 
