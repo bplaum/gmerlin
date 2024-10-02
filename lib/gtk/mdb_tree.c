@@ -386,29 +386,6 @@ static void album_array_free(album_array_t * arr)
     free(arr->albums);
   }
 
-#if 0
-static album_t * album_array_move_1(bg_gtk_mdb_tree_t * tree,
-                                    album_array_t * arr, int old_idx, int new_idx)
-  {
-  album_t * a;
-  album_t * ret;
-  gavl_value_t val;
-  char * id;
-
-  a = arr->albums[old_idx];
-  arr->albums[old_idx] = NULL;
-  
-  /* Delete old */
-  album_array_splice_nocopy(tree, arr, old_idx, 1, NULL, NULL);
-  
-  /* Add new */
-  id = gavl_value_get_string_nc(&val);
-  
-  ret = album_array_splice_nocopy(tree, arr, new_idx, 0, id, a);
-  
-  return ret;
-  }
-#endif
 
 static int album_array_has_id(album_array_t * arr, const char * id)
   {
@@ -436,21 +413,6 @@ static album_t * album_array_get_by_id(album_array_t * arr, const char * id)
     }
   return NULL;
   }
-
-
-#if 0
-static int album_array_has_iter(GtkTreeView *treeview, album_array_t * arr, GtkTreeIter * iter)
-  {
-  int ret = 0;
-  char * id = iter_to_id_tree(treeview, iter);
-  if(id)
-    {
-    ret = album_array_has_id(arr, id);
-    free(id);
-    }
-  return ret;
-  }
-#endif
 
 static void album_array_delete_by_id(bg_gtk_mdb_tree_t * tree,
                                      album_array_t * arr, const char * id)

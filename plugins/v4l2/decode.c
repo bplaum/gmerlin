@@ -41,7 +41,8 @@ static gavl_source_status_t read_video(void * priv, gavl_video_frame_t ** f)
     return st;
 
   dec->decode(dec, p, *f);
-  gavl_packet_to_videoframe(p, *f);
+  
+  gavl_packet_to_video_frame_metadata(p, *f);
   return GAVL_SOURCE_OK;
   }
   

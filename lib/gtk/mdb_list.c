@@ -2706,7 +2706,6 @@ static void create_stream_source(bg_gtk_mdb_tree_t * tree)
   gavl_dictionary_free(&dict);
   }
 
-
 static void create_playlist(bg_gtk_mdb_tree_t * tree)
   {
   char * str;

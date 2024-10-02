@@ -33,7 +33,6 @@
 #include <gtk/gtk.h>
 #include <gmerlin/pluginregistry.h>
 #include <gui_gtk/fileselect.h>
-#include <gui_gtk/question.h>
 #include <gui_gtk/gtkutils.h>
 
 #include <gmerlin/utils.h>

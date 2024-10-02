@@ -14,8 +14,6 @@ gtkutils.h \
 infowindow.h \
 logwindow.h \
 message.h \
-presetmenu.h \
-question.h \
 textview.h \
 urlselect.h
 

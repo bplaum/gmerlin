@@ -58,9 +58,6 @@ struct bg_dialog_s
 
   int result;
   
-  bg_gtk_preset_menu_t * preset_menu;
-  bg_cfg_section_t     * preset_section;
-  
   bg_msg_sink_t * sink;
   };
 
@@ -524,32 +521,6 @@ static GtkWidget * create_restore_button(dialog_section_t * section)
   return button;
   }
 
-static void preset_load_callback(void * data)
-  {
-  dialog_section_t * s = data;
-  restore_section(s, s->preset_section);
-  }
-
-static void preset_save_callback(void * data)
-  {
-  int i;
-  dialog_section_t * s = data;
-
-  //  fprintf(stderr, "preset_save_callback %p\n", data);
-  
-  for(i = 0; i < s->num_widgets; i++)
-    {
-    if(!s->widgets[i].funcs->set_value)
-      continue;
-    
-    s->widgets[i].funcs->set_value(&s->widgets[i]);
-    
-    bg_cfg_section_set_parameter(s->preset_section,
-                                 s->widgets[i].info,
-                                 &s->widgets[i].value);
-
-    }
-  }
 
 static GtkWidget * create_section(dialog_section_t * section,
                                   const bg_parameter_info_t * info,
@@ -557,7 +528,6 @@ static GtkWidget * create_section(dialog_section_t * section,
                                   bg_set_parameter_func_t set_param,
                                   void * data,
                                   const char * translation_domain,
-                                  bg_cfg_section_t * preset_section,
                                   bg_dialog_t * dialog)
   {
   int i, count;
@@ -785,22 +755,6 @@ static GtkWidget * create_section(dialog_section_t * section,
     action_box = bg_gtk_hbox_new(0);
     bg_gtk_box_pack_start(action_box, restore_button, 0);
     
-    if(!preset_section &&
-       (info[0].preset_path || (section->num_widgets && section->widgets[0].info->preset_path)))
-      {
-      section->preset_section = bg_cfg_section_copy(section->cfg_section);
-      section->preset_menu = bg_gtk_preset_menu_create(info[0].preset_path,
-                                                       section->preset_section,
-                                                       preset_load_callback,
-                                                       preset_save_callback,
-                                                       section);
-      bg_gtk_box_pack_start(action_box,
-                            bg_gtk_preset_menu_get_widget(section->preset_menu),
-                            0);
-      }
-    else
-      section->preset_section = preset_section;
-    
     gtk_widget_show(action_box);
     
     }
@@ -853,8 +807,6 @@ bg_dialog_t * bg_dialog_create(bg_cfg_section_t * section,
   GtkWidget * label;
   GtkWidget * table;
   
-  bg_cfg_section_t * preset_subsection;
-  
   GtkTreeIter root_iter;
   GtkTreeModel * model;
   const char * translation_domain = NULL;
@@ -892,15 +844,10 @@ bg_dialog_t * bg_dialog_create(bg_cfg_section_t * section,
       gtk_tree_store_set(GTK_TREE_STORE(model), &root_iter, COLUMN_NAME,
                          TR_DOM(info[index].long_name), -1);
 
-      if(ret->preset_section)
-        preset_subsection =
-          bg_cfg_section_find_subsection(ret->preset_section, info[index].name);
-      else
-        preset_subsection = NULL;
 
       table = create_section(ret->root_section.children[i], &info[index],
                              section, set_param, callback_data,
-                             translation_domain, preset_subsection, ret);
+                             translation_domain, ret);
       
       ret->root_section.children[i]->notebook_index =
         gtk_notebook_get_n_pages(GTK_NOTEBOOK(ret->notebook));
@@ -928,7 +875,7 @@ bg_dialog_t * bg_dialog_create(bg_cfg_section_t * section,
     ret->root_section.children[0] = calloc(1, sizeof(*ret->root_section.children[0]));
     table =
       create_section(*ret->root_section.children, info, section, set_param, 
-                     callback_data, NULL, NULL, ret);
+                     callback_data, NULL, ret);
     gtk_notebook_append_page(GTK_NOTEBOOK(ret->notebook), table, label);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(ret->notebook), 1);
     gtk_widget_hide(ret->scrolledwindow);
@@ -986,7 +933,7 @@ static void dialog_add_child_internal(bg_dialog_t *d, void * _parent,
     
     table = create_section(parent->children[parent->num_children],
                            info, section, set_param, callback_data,
-                           NULL, NULL, d);
+                           NULL, d);
     tab_label = gtk_label_new(name);
     gtk_widget_show(tab_label);
 
@@ -1051,7 +998,7 @@ static void dialog_add_child_internal(bg_dialog_t *d, void * _parent,
       table = create_section(parent->children[section_index],
                              &info[item_index],
                              section, set_param, callback_data,
-                             translation_domain, NULL, d);
+                             translation_domain, d);
       
       parent->children[section_index]->parent = parent;
 
@@ -1190,14 +1137,7 @@ static void destroy_section(dialog_section_t * s)
       }
     free(s->children);
     }
-
-  if(s->preset_menu)
-    {
-    bg_gtk_preset_menu_destroy(s->preset_menu);
-    if(s->preset_section)
-      bg_cfg_section_destroy(s->preset_section);
-    }
-
+  
   if(s->private_cfg_section)
     bg_cfg_section_destroy(s->cfg_section);
   }

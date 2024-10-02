@@ -180,6 +180,8 @@ struct track_list_s
   char * open_path;
   char * rename_mask;
   bg_gtk_filesel_t * filesel;
+  bg_gtk_drivesel_t * drivesel;
+  bg_gtk_urlsel_t * urlsel;
   
   char * clipboard;
   
@@ -462,7 +464,7 @@ static void clipboard_get_func(GtkClipboard *clipboard,
                                gpointer data)
   {
   GdkAtom type_atom;
-  track_list_t * w = (track_list_t*)data;
+  track_list_t * w = data;
   
   type_atom = gdk_atom_intern("STRING", FALSE);
   if(!type_atom)
@@ -475,7 +477,7 @@ static void clipboard_get_func(GtkClipboard *clipboard,
 static void clipboard_clear_func(GtkClipboard *clipboard,
                                  gpointer data)
   {
-  track_list_t * w = (track_list_t*)data;
+  track_list_t * w = data;
   if(w->clipboard)
     {
     free(w->clipboard);
@@ -667,24 +669,21 @@ static void add_file_callback(char ** files, void * data)
 
 static void filesel_close_callback(bg_gtk_filesel_t * f , void * data)
   {
-  track_list_t * t;
-  t = (track_list_t*)data;
+  track_list_t * t = data;
   gtk_widget_set_sensitive(t->add_file_button, 1);
   t->filesel = NULL;
   }
 
 static void urlsel_close_callback(bg_gtk_urlsel_t * f , void * data)
   {
-  track_list_t * t;
-  t = (track_list_t*)data;
+  track_list_t * t = data;
   gtk_widget_set_sensitive(t->add_url_button, 1);
   gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 1);
   }
 
 static void drivesel_close_callback(bg_gtk_drivesel_t * f , void * data)
   {
-  track_list_t * t;
-  t = (track_list_t*)data;
+  track_list_t * t = data;
   gtk_widget_set_sensitive(t->add_removable_button, 1);
   }
 
@@ -1025,27 +1024,25 @@ static void auto_number(track_list_t * l)
 
 static void button_callback(GtkWidget * w, gpointer data)
   {
-  track_list_t * t;
-  bg_gtk_urlsel_t * urlsel;
-  bg_gtk_drivesel_t * drivesel;
+  
   
   track_dialog_t * track_dialog;
 
   gavl_time_t track_duration;
   gavl_time_t track_duration_total;
-
   
-  t = (track_list_t*)data;
+  track_list_t * t = data;
 
   if((w == t->add_file_button) || (w == t->menu.add_menu.add_files_item))
     {
-    t->filesel = bg_gtk_filesel_create("Add URLs",
-                                       add_file_callback,
-                                       filesel_close_callback,
-                                       t, NULL /* parent */,
-                                       BG_PLUGIN_INPUT,
-                                       BG_PLUGIN_FILE);
-
+    if(!t->filesel)
+      t->filesel = bg_gtk_filesel_create("Add URLs",
+                                         add_file_callback,
+                                         filesel_close_callback,
+                                         t, NULL /* parent */,
+                                         BG_PLUGIN_INPUT,
+                                         BG_PLUGIN_FILE);
+    
     bg_gtk_filesel_set_directory(t->filesel, t->open_path);
     gtk_widget_set_sensitive(t->add_file_button, 0);
     bg_gtk_filesel_run(t->filesel, 0);     
@@ -1055,28 +1052,34 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if((w == t->add_url_button) || (w == t->menu.add_menu.add_urls_item))
     {
-    urlsel = bg_gtk_urlsel_create(TR("Add files"),
-                                  add_file_callback,
-                                  urlsel_close_callback,
-                                  t, NULL  /* parent */,
-                                  bg_plugin_reg,
-                                  BG_PLUGIN_INPUT,
-                                  0);
+    if(t->urlsel)
+      t->urlsel = bg_gtk_urlsel_create(TR("Add URLs"),
+                                       add_file_callback,
+                                       urlsel_close_callback,
+                                       t, NULL  /* parent */,
+                                       bg_plugin_reg,
+                                       BG_PLUGIN_INPUT,
+                                       0);
+    
     gtk_widget_set_sensitive(t->add_url_button, 0);
     gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 0);
-    bg_gtk_urlsel_run(urlsel, 0, t->add_url_button);
+    bg_gtk_urlsel_run(t->urlsel, 0, t->add_url_button);
     //    bg_gtk_urlsel_destroy(urlsel);
     }
   else if((w == t->add_removable_button) || (w == t->menu.add_menu.add_drives_item))
     {
-    drivesel = bg_gtk_drivesel_create("Add drive",
-                                      add_file_callback,
-                                      drivesel_close_callback,
-                                      t, NULL  /* parent */,
-                                      bg_plugin_reg,
-                                      BG_PLUGIN_INPUT, 0);
+    if(!t->drivesel)
+      t->drivesel = bg_gtk_drivesel_create("Add drive",
+                                           add_file_callback,
+                                           drivesel_close_callback,
+                                           t, NULL  /* parent */,
+                                           bg_plugin_reg,
+                                           BG_PLUGIN_INPUT, 0);
+    
     gtk_widget_set_sensitive(t->add_removable_button, 0);
-    bg_gtk_drivesel_run(drivesel, 0, t->add_removable_button);
+    gtk_widget_set_sensitive(t->menu.add_menu.add_drives_item, 0);
+    
+    bg_gtk_drivesel_run(t->drivesel, 0, t->add_removable_button);
     
     
     }
@@ -1297,7 +1300,7 @@ GtkWidget * track_list_get_menu(track_list_t * t)
 static gboolean button_press_callback(GtkWidget * w, GdkEventButton * evt,
                                       gpointer data)
   {
-  track_list_t * t = (track_list_t*)data;
+  track_list_t * t = data;
 
   if(evt->button == 3)
     {

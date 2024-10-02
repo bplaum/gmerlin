@@ -47,8 +47,6 @@ mdb_list.c \
 mdb_tree.c \
 message.c \
 multiinfo.c \
-presetmenu.c \
-question.c \
 textview.c \
 trackinfo.c \
 urlselect.c \

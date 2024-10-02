@@ -27,7 +27,6 @@
 #include <gmerlin/cfg_dialog.h>
 
 #include <gui_gtk/gtkutils.h>
-#include <gui_gtk/presetmenu.h>
 
 #include <stdlib.h>
 
@@ -70,9 +69,6 @@ struct dialog_section_s
   /* Index in global notebook */
 
   int notebook_index;
-
-  bg_gtk_preset_menu_t * preset_menu;
-  bg_cfg_section_t * preset_section;
 
   int private_cfg_section;
   

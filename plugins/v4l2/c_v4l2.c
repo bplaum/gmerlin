@@ -18,28 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-/*****************************************************************
- * gmerlin - a general purpose multimedia framework and applications
- *
- * copyright (c) 2001 - 2012 members of the gmerlin project
- * gmerlin-general@lists.sourceforge.net
- * http://gmerlin.sourceforge.net
- *
- * this program is free software: you can redistribute it and/or modify
- * it under the terms of the gnu general public license as published by
- * the free software foundation, either version 2 of the license, or
- * (at your option) any later version.
- *
- * this program is distributed in the hope that it will be useful,
- * but without any warranty; without even the implied warranty of
- * merchantability or fitness for a particular purpose.  see the
- * gnu general public license for more details.
- *
- * you should have received a copy of the gnu general public license
- * along with this program.  if not, see <http://www.gnu.org/licenses/>.
- * *****************************************************************/
-
 /* V4l2 formats decoder */
 #include <config.h>
 #include <gmerlin/translation.h>
