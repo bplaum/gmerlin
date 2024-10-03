@@ -347,7 +347,7 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_MSG_NS_VISUALIZER        104
 #define BG_MSG_NS_GUI_PLAYER        105
 #define BG_MSG_NS_UPNP              106
-#define BG_MSG_NS_TREE              107
+#define BG_MSG_NS_DIALOG            107
 
 #define BG_MSG_NS_PLAYER_PRIVATE    109
 #define BG_MSG_NS_MENU              111
@@ -494,6 +494,12 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_CMD_BACKEND_REGISTER_LOCAL    1
 #define BG_CMD_SET_BACKEND               2
 #define BG_MSG_BACKENDS_RESCAN           3
+
+// BG_MSG_NS_DIALOG
+// GAVL_MSG_CONTEXT_ID must always be the name of the dialog
+
+#define BG_MSG_DIALOG_ADD_LOCATIONS      1
+#define BG_MSG_DIALOG_CLOSED             2
 
 
 /**@} */
