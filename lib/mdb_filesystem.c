@@ -1003,7 +1003,7 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
   gavl_array_t arr_tmp;
   gavl_time_t last_flush_time, cur;
   fs_t * fs = be->priv;
-  
+
   
   gavl_array_init(&arr_static);
   gavl_array_init(&arr_tmp);
@@ -1450,6 +1450,7 @@ static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
   {
   bg_mdb_backend_t * be = priv;
   fs_t * fs = be->priv;
+
   switch(msg->NS)
     {
     case BG_MSG_NS_DB:
