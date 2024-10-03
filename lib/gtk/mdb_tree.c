@@ -1657,8 +1657,11 @@ static void tree_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent * evt)
     char * id = NULL;
     char * parent_id = NULL;
 
-    t->menu_ctx.num_selected = 1;
     id = iter_to_id_tree(GTK_TREE_VIEW(t->treeview), &iter);
+    if(!id)
+      return;
+    
+    t->menu_ctx.num_selected = 1;
     t->menu_ctx.album = get_selected_album(t, id);
     
     if((parent_id = bg_mdb_get_parent_id(id)))
