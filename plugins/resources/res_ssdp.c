@@ -429,6 +429,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
     klass = GAVL_META_CLASS_BACKEND_MDB;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp server: %s", (alive ? "alive" : "bye"), real_uri);
     }
+#if 0 // No use for this info right now
   else if(gavl_string_starts_with_i(nt, UPNP_RENDERER_NT_PREFIX))
     {
     real_uri = gavl_sprintf("%s%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, strstr(uri, "://"));
@@ -437,6 +438,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
     is_upnp = 1;
     gavl_log(LOG_LEVEL_MSG, LOG_DOMAIN, "Got %s for upnp renderer: %s", (alive ? "alive" : "bye"), real_uri);
     }
+#endif
   else if(!strcasecmp(nt, GMERLIN_SERVER_NT))
     {
     real_uri = gavl_strdup(uri);
