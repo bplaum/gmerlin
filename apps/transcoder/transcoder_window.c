@@ -685,14 +685,15 @@ static void init_menus(transcoder_window_t * w)
   
   }
 
-#if 0
-static void logwindow_close_callback(bg_gtk_log_window_t*w, void*data)
+static void logwindow_close_callback(GtkWidget * w, void*data)
   {
   transcoder_window_t * win = data;
+
+  fprintf(stderr, "Logwindow close\n");
+  
   gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(win->windows_menu.log_item), 0);
   win->show_logwindow = 0;
   }
-#endif
 
 static void remove_missing_encoders_sub(gavl_dictionary_t * dst, const gavl_dictionary_t * src, const char * name)
   {
@@ -802,6 +803,10 @@ transcoder_window_t * transcoder_window_create()
   /* Create log window */
 
   ret->logwindow = bg_gtk_log_window_create(TR("Gmerlin transcoder"));
+
+  g_signal_connect(G_OBJECT(bg_gtk_log_window_get_widget(ret->logwindow)),
+                   "hide", G_CALLBACK(logwindow_close_callback),
+                   (gpointer)ret);
   
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "logwindow");
   bg_cfg_section_apply(cfg_section, bg_gtk_log_window_get_parameters(ret->logwindow),
