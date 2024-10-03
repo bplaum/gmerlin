@@ -39,13 +39,21 @@
 
 struct bg_gtk_drivesel_s
   {
+  /* 
   GtkWidget * window;
   GtkWidget * add_button;
   GtkWidget * close_button;
-  bg_msg_sink_t * sink;
+  */
+  GtkWidget * dialog;
+  
+  bg_msg_sink_t * res_sink;
   GtkWidget * combo_box;
 
   guint idle_tag;
+
+  bg_msg_sink_t * dlg_sink;
+  const char * ctx;
+  
   };
 
 enum
@@ -178,38 +186,72 @@ static int handle_msg(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-static void button_callback(GtkWidget * w, gpointer data)
+static void
+response_callback(GtkWidget *chooser,
+                 gint       response_id,
+                 gpointer data)
   {
-  bg_gtk_drivesel_t * d = data;
+  gavl_msg_t * msg;
+  bg_gtk_drivesel_t * f = data;
+  
+  switch(response_id)
+    {
+    case GTK_RESPONSE_APPLY:
+      {
+      gavl_array_t filenames;
+      GtkTreeIter iter;
+      GtkTreeModel * model;
+      char * str;
+      fprintf(stderr, "Apply\n");
+      gavl_array_init(&filenames);
 
-  if(w == d->add_button)
-    {
-    fprintf(stderr, "Add\n");
+      if(!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(f->combo_box), &iter))
+        return;
+
+      model = gtk_combo_box_get_model(GTK_COMBO_BOX(f->combo_box));
+      
+      gtk_tree_model_get(model, &iter, COLUMN_URI, &str, -1);
+      gavl_string_array_add(&filenames, str);
+      
+      msg = bg_msg_sink_get(f->dlg_sink);
+      gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_ADD_LOCATIONS, BG_MSG_NS_DIALOG);
+      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
+      gavl_msg_set_arg_array_nocopy(msg, 0, &filenames);
+      bg_msg_sink_put(f->dlg_sink);
+      gavl_array_free(&filenames);
+      }
+      break;
+    default:
+      {
+      fprintf(stderr, "Close\n");
+      gtk_widget_hide(f->dialog);
+
+      msg = bg_msg_sink_get(f->dlg_sink);
+      gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
+      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
+      bg_msg_sink_put(f->dlg_sink);
+      }
+      break;
     }
-  else if(w == d->close_button)
-    {
-    fprintf(stderr, "Close\n");
-    }
+  
+  //  gtk_main_quit();
   }
+
 
 bg_gtk_drivesel_t *
 bg_gtk_drivesel_create(const char * title,
-                       void (*add_files)(char ** files, void * data),
-                       void (*close_notify)(bg_gtk_drivesel_t *,
-                                            void * data),
-                       void * user_data,
-                       GtkWidget * parent_window,
-                       bg_plugin_registry_t * plugin_reg,
-                       int type_mask, int flag_mask)
+                       bg_msg_sink_t * sink,
+                       const char * ctx,
+                       GtkWidget * parent_window)
   {
   bg_gtk_drivesel_t * ret;
-  GtkWidget * box;
   GtkWidget * table;
-  GtkWidget * mainbox;
   GtkWidget * label;
+  GtkWidget * content_area;
   bg_controllable_t * resman;
   GtkListStore * store;
   GtkCellRenderer * column;
+  GtkDialogFlags flags;
   
 #if 0
   COLUMN_ICON,
@@ -219,31 +261,31 @@ bg_gtk_drivesel_create(const char * title,
 #endif
   
   store = gtk_list_store_new(NUM_COLUMNS,
-                             G_TYPE_BOOLEAN,     // has_icon
+                             G_TYPE_BOOLEAN,  // has_icon
                              GDK_TYPE_PIXBUF, // pixmap
-                             G_TYPE_BOOLEAN,     // has_pixmap
+                             G_TYPE_BOOLEAN,  // has_pixmap
                              G_TYPE_STRING,   // Label
                              G_TYPE_STRING,   // uri
                              G_TYPE_STRING);  // id
     
   ret = calloc(1, sizeof(*ret));
-  
-  /* Create window */
 
-  ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(GTK_WINDOW(ret->window), title);
-  gtk_window_set_position(GTK_WINDOW(ret->window), GTK_WIN_POS_CENTER_ON_PARENT);
-  gtk_container_set_border_width(GTK_CONTAINER(ret->window), 5);
+  ret->dlg_sink = sink;
+  ret->ctx = ctx;
   
-  g_signal_connect(G_OBJECT(ret->window), "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
-  
-  if(parent_window)
-    {
-    gtk_window_set_transient_for(GTK_WINDOW(ret->window),
-                                 GTK_WINDOW(parent_window));
-    gtk_window_set_destroy_with_parent(GTK_WINDOW(ret->window), TRUE);
-    }
+  /* Create dialog */
+  flags = GTK_DIALOG_DESTROY_WITH_PARENT;
+  ret->dialog = gtk_dialog_new_with_buttons("Message",
+                                            GTK_WINDOW(parent_window),
+                                            flags,
+                                            TR("Add"),
+                                            GTK_RESPONSE_APPLY,
+                                            TR("Close"),
+                                            GTK_RESPONSE_CLOSE,
+                                            NULL);
 
+  g_signal_connect(G_OBJECT(ret->dialog), "response", G_CALLBACK(response_callback), ret);
+  
   /* Create Menu */
 
   ret->combo_box = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
@@ -271,26 +313,8 @@ bg_gtk_drivesel_create(const char * title,
                                  NULL);
   gtk_widget_show(ret->combo_box);
   
-  /* Create Buttons */
-
-  ret->add_button = gtk_button_new_with_mnemonic("_Add");
-  ret->close_button = gtk_button_new_with_mnemonic("_Close");
-
-  bg_gtk_widget_set_can_default(ret->close_button, TRUE);
-  bg_gtk_widget_set_can_default(ret->add_button, TRUE);
-
-  g_signal_connect(G_OBJECT(ret->add_button), "clicked", G_CALLBACK(button_callback), ret);
-  g_signal_connect(G_OBJECT(ret->close_button), "clicked", G_CALLBACK(button_callback), ret);
-  
-  /* Show Buttons */
-
-  gtk_widget_show(ret->add_button);
-  gtk_widget_show(ret->close_button);
-  
   /* Pack everything */
-
-  mainbox = bg_gtk_vbox_new(5);
-
+  
   table = gtk_grid_new();
 
   gtk_grid_set_column_spacing(GTK_GRID(table), 5);
@@ -303,23 +327,16 @@ bg_gtk_drivesel_create(const char * title,
   bg_gtk_table_attach(table, ret->combo_box, 1, 2, 1, 2, 0, 0);
   
   gtk_widget_show(table);
-  bg_gtk_box_pack_start(mainbox, table, 1);
-  
-  box = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 
-  gtk_container_add(GTK_CONTAINER(box), ret->close_button);
-  gtk_container_add(GTK_CONTAINER(box), ret->add_button);
-  gtk_widget_show(box);
-  bg_gtk_box_pack_start(mainbox, box, 1);
+  content_area = gtk_dialog_get_content_area(GTK_DIALOG(ret->dialog));
   
-  gtk_widget_show(mainbox);
-  gtk_container_add(GTK_CONTAINER(ret->window), mainbox);
-
+  gtk_container_add(GTK_CONTAINER(content_area), table);
+  
   resman = bg_resourcemanager_get_controllable();
 
-  ret->sink = bg_msg_sink_create(handle_msg, ret, 0);
+  ret->res_sink = bg_msg_sink_create(handle_msg, ret, 0);
   
-  bg_msg_hub_connect_sink(resman->evt_hub, ret->sink);
+  bg_msg_hub_connect_sink(resman->evt_hub, ret->res_sink);
   return ret;
   }
 
@@ -327,7 +344,7 @@ static gboolean idle_func(gpointer user_data)
   {
   bg_gtk_drivesel_t * d = user_data;
   
-  bg_msg_sink_iteration(d->sink);
+  bg_msg_sink_iteration(d->res_sink);
   
   return TRUE;
   }
@@ -344,26 +361,11 @@ void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel)
 
 /* Show the window */
 
-void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal,
-                         GtkWidget * parent)
+void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal)
   {
-  if(modal)
-    {
-    parent = bg_gtk_get_toplevel(parent);
-    if(parent)
-      gtk_window_set_transient_for(GTK_WINDOW(drivesel->window),
-                                   GTK_WINDOW(parent));
-    
-    }
-  
-  gtk_window_set_modal(GTK_WINDOW(drivesel->window), modal);
-  
+  gtk_window_set_modal(GTK_WINDOW(drivesel->dialog), modal);
   drivesel->idle_tag = g_timeout_add(100, idle_func, drivesel);
-  
-  gtk_widget_show(drivesel->window);
-
-  gtk_widget_grab_focus(drivesel->close_button);
-  gtk_widget_grab_default(drivesel->close_button);
+  gtk_widget_show(drivesel->dialog);
   
   if(modal)
     {

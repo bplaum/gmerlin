@@ -27,16 +27,12 @@ typedef struct bg_gtk_urlsel_s bg_gtk_urlsel_t;
 
 /* Create urlselector with callback */
 
+
 bg_gtk_urlsel_t *
 bg_gtk_urlsel_create(const char * title,
-                     void (*add_url)(char ** urls, 
-                                     void * data),
-                     void (*close_notify)(bg_gtk_urlsel_t *,
-                                          void * data),
-                     void * user_data,
-                     GtkWidget * parent_window,
-                     bg_plugin_registry_t * plugin_reg,
-                     int type_mask, int flag_mask);
+                     bg_msg_sink_t * sink,
+                     const char * ctx,
+                     GtkWidget * parent_window);
 
 /* Destroy urlselector */
 

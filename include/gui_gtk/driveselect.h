@@ -29,14 +29,9 @@ typedef struct bg_gtk_drivesel_s bg_gtk_drivesel_t;
 
 bg_gtk_drivesel_t *
 bg_gtk_drivesel_create(const char * title,
-                       void (*add_drive)(char ** drives,
-                                         void * data),
-                       void (*close_notify)(bg_gtk_drivesel_t *,
-                                            void * data),
-                       void * user_data,
-                       GtkWidget * parent_window,
-                       bg_plugin_registry_t * plugin_reg, int type_mask,
-                       int flag_mask);
+                       bg_msg_sink_t * sink,
+                       const char * ctx,
+                       GtkWidget * parent_window);
 
 /* Destroy driveselector */
 
@@ -44,10 +39,7 @@ void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel);
 
 /* Show the window */
 
-/* A non modal window will destroy itself when it's closed */
-
-void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal,
-                         GtkWidget * w);
+void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal);
 
 #endif // BG_GTK_DRIVESEL_H_INCLUDED
 

@@ -36,21 +36,16 @@
 #include <gui_gtk/gtkutils.h>
 
 #include <gmerlin/utils.h>
+#include <gmerlin/bgmsg.h>
 
 struct bg_gtk_filesel_s
   {
   GtkWidget * filesel;
   GtkWidget * plugin_menu;
-  void (*add_files)(char ** files, void * data);
 
-  void (*add_dir)(char * dir,
-                  const char * plugin,
-                  void * data);
+  bg_msg_sink_t * sink;
+  const char * ctx;
   
-  void (*close_notify)(bg_gtk_filesel_t * f, void * data);
-  
-  void * callback_data;
-
   char * cwd;
   int is_modal;
   
@@ -59,62 +54,43 @@ struct bg_gtk_filesel_s
 
 static void add_files(bg_gtk_filesel_t * f)
   {
-  char ** filenames;
   GSList * file_list;
   GSList * tmp;
-  gavl_dictionary_t vars;
-  
   int num, i;
-
-  gavl_dictionary_init(&vars);
+  gavl_array_t filenames;
+  gavl_msg_t * msg;
+  
+  gavl_array_init(&filenames);
   
   file_list =
     gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(f->filesel));
   
   num = g_slist_length(file_list);
   
-  filenames = calloc(num+1, sizeof(*filenames));
-
   tmp = file_list;
   
   for(i = 0; i < num; i++)
     {
-    filenames[i] = bg_url_append_vars(gavl_strdup((char*)tmp->data), &vars);
+    gavl_string_array_add(&filenames, (char*)tmp->data);
     tmp = tmp->next;
     }
   
   f->unsensitive = 1;
   gtk_widget_set_sensitive(f->filesel, 0);
-  f->add_files(filenames, f->callback_data);
+
+  msg = bg_msg_sink_get(f->sink);
+  gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_ADD_LOCATIONS, BG_MSG_NS_DIALOG);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
+  gavl_msg_set_arg_array_nocopy(msg, 0, &filenames);
+  bg_msg_sink_put(f->sink);
+  
   gtk_widget_set_sensitive(f->filesel, 1);
   f->unsensitive = 0;
   
   g_slist_foreach(file_list, (GFunc)g_free, NULL);
   g_slist_free(file_list);
-
-  for(i = 0; i < num; i++)
-    free(filenames[i]);
-  
-  gavl_dictionary_free(&vars);
-  free(filenames);
   }
 
-static void add_dir(bg_gtk_filesel_t * f)
-  {
-  const char * plugin = NULL;
-  char * tmp =
-    gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f->filesel));
-  
-
-  f->unsensitive = 1;
-  gtk_widget_set_sensitive(f->filesel, 0);
-  f->add_dir(tmp,
-             plugin,
-             f->callback_data);
-  gtk_widget_set_sensitive(f->filesel, 1);
-  f->unsensitive = 0;
-  g_free(tmp);
-  }
 
 static void
 fileselect_callback(GtkWidget *chooser,
@@ -128,47 +104,28 @@ fileselect_callback(GtkWidget *chooser,
 
   if(response_id == GTK_RESPONSE_OK)
     {
-    if(f->add_files)
-      add_files(f);
-    else if(f->add_dir)
-      add_dir(f);
+    add_files(f);
     }
   else
     {
+    gavl_msg_t * msg;
     gtk_widget_hide(f->filesel);
     if(f->is_modal)
       gtk_main_quit();
-  
-    if(f->close_notify)
-      f->close_notify(f, f->callback_data);
+
+    msg = bg_msg_sink_get(f->sink);
+    gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
+    bg_msg_sink_put(f->sink);
     bg_gtk_filesel_destroy(f);
     }
   }
 
-#if 0
-static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
-                                gpointer data)
-  {
-  fileselect_callback(w, GTK_RESPONSE_CANCEL, data);
-  return TRUE;
-  }
-
-static gboolean destroy_callback(GtkWidget * w, GdkEvent * event,
-                                  gpointer data)
-  {
-  fileselect_callback(w, GTK_RESPONSE_CANCEL, data);
-  return TRUE;
-  }
-#endif
-
-static bg_gtk_filesel_t *
-filesel_create(const char * title,
-               void (*add_files)(char ** files, void * data),
-               void (*close_notify)(bg_gtk_filesel_t *,
-                                    void * data),
-               void * user_data,
-               GtkWidget * parent_window, bg_plugin_registry_t * plugin_reg,
-               int type_mask, int flag_mask)
+bg_gtk_filesel_t *
+bg_gtk_filesel_create(const char * title,
+                      bg_msg_sink_t * sink,
+                      const char * ctx,
+                      GtkWidget * parent_window)
   {
   bg_gtk_filesel_t * ret;
   
@@ -195,29 +152,13 @@ filesel_create(const char * title,
   g_signal_connect(ret->filesel, "response",
                    G_CALLBACK(fileselect_callback),
                    (gpointer)ret);
-  
-  ret->add_files     = add_files;
-  ret->close_notify  = close_notify;
-  ret->callback_data = user_data;
 
+  ret->sink = sink;
+  ret->ctx = ctx;
+  
   return ret;
   }
 
-bg_gtk_filesel_t *
-bg_gtk_filesel_create(const char * title,
-                      void (*add_file)(char ** files, void * data),
-                      void (*close_notify)(bg_gtk_filesel_t *,
-                                           void * data),
-                      void * user_data,
-                      GtkWidget * parent_window,
-                      int type_mask, int flag_mask)
-  {
-  return filesel_create(title,
-                        add_file,
-                        close_notify,
-                        user_data,
-                        parent_window, bg_plugin_reg, type_mask, flag_mask);
-  }
 
 
 /* Destroy fileselector */

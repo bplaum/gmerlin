@@ -29,14 +29,9 @@ typedef struct bg_gtk_filesel_s bg_gtk_filesel_t;
 
 bg_gtk_filesel_t *
 bg_gtk_filesel_create(const char * title,
-                      void (*add_file)(char ** files,
-                                       void * data),
-                      void (*close_notify)(bg_gtk_filesel_t *,
-                                           void * data),
-                      void * user_data,
-                      GtkWidget * parent_window,
-                      int type_mask,
-                      int flag_mask);
+                      bg_msg_sink_t * sink,
+                      const char * ctx,
+                      GtkWidget * parent_window);
 
 /* Create directory selector (for addig directories to the tree) */
 
