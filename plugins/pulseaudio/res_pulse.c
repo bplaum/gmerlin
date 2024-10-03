@@ -144,9 +144,32 @@ static void pa_source_cb(pa_context *c, const pa_source_info *l, int eol, void *
     
     gavl_dictionary_set_string(&dict, GAVL_META_LABEL, l->description);
     gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
-    gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
-                                                                         reg->hostname,
-                                                                         l->name));
+
+    if(gavl_string_starts_with(l->name, "tunnel."))
+      {
+      char * hostname;
+      
+      const char * pos;
+      const char * end_pos;
+
+      pos = l->name + 7;
+      end_pos = strchr(pos, '.'); // after hostname
+
+      end_pos++;
+      end_pos = strchr(end_pos, '.'); /// after .local
+      
+      hostname = gavl_strndup(pos, end_pos);
+
+      pos = end_pos + 1;
+
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
+                                                                           hostname, pos));
+      
+      free(hostname);
+      }
+    else
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
+                                                                           reg->hostname, l->name));
     
     add_device(reg, &dict, l->index);
     gavl_dictionary_free(&dict);
