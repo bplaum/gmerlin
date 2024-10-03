@@ -5871,7 +5871,13 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       {
       /* Get url vars */
       gavl_dictionary_t vars;
-      char * real_location = gavl_strdup(location);
+      char * real_location;
+
+      /* Handle radiobrowser URL */
+      if(bg_rb_check_uri(location))
+        real_location = bg_rb_resolve_uri(location);
+      else
+        real_location = gavl_strdup(location);
       
       track_index = 0;
       gavl_dictionary_init(&vars);
@@ -5880,12 +5886,11 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       
       if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
         track_index--;
-
+      
       real_location = gavl_url_append_vars(real_location, &vars);
       
       gavl_dictionary_free(&vars);
 
-      
       if(!(ret = bg_input_plugin_load(real_location)))
         {
         free(real_location);
