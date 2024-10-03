@@ -58,7 +58,6 @@ static void save_tracks(bg_gtk_mdb_tree_t * tree);
 static void save_selected(bg_gtk_mdb_tree_t * tree);
 
 static void load_files(bg_gtk_mdb_tree_t * tree);
-static void create_playlist(bg_gtk_mdb_tree_t * tree);
 static void create_container(bg_gtk_mdb_tree_t * tree);  
 static void load_uri(bg_gtk_mdb_tree_t * tree);
 static void create_directory(bg_gtk_mdb_tree_t * tree);  
@@ -800,7 +799,6 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   gtk_widget_hide(t->menu.album_menu.sort_item);
   gtk_widget_hide(t->menu.album_menu.load_files_item);
   gtk_widget_hide(t->menu.album_menu.load_url_item);
-  gtk_widget_hide(t->menu.album_menu.new_playlist_item);
   gtk_widget_hide(t->menu.album_menu.new_container_item);
   gtk_widget_hide(t->menu.album_menu.new_stream_source_item);
   gtk_widget_hide(t->menu.album_menu.add_directory_item);
@@ -867,8 +865,6 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
         
         if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_CONTAINER))
           gtk_widget_show(t->menu.album_menu.new_container_item);
-        else if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_PLAYLIST))
-          gtk_widget_show(t->menu.album_menu.new_playlist_item);
       
         if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_AUDIO_BROADCAST) ||
            bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_VIDEO_BROADCAST) ||
@@ -1457,17 +1453,13 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     //    fprintf(stderr, "Load URL\n");
     load_uri(tree);
     }
-  else if(item == tree->menu.album_menu.new_playlist_item)
-    {
-    create_playlist(tree);
-    }
   else if(item == tree->menu.album_menu.new_container_item)
     {
     create_container(tree);
     }
   else if(item == tree->menu.album_menu.new_stream_source_item)
     {
-    /* TODO: New stream source */
+    /* New stream source */
     create_stream_source(tree);
     }
   else if(item == tree->menu.album_menu.add_directory_item)
@@ -1565,7 +1557,6 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->album_menu.sort_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_SORT, "Sort", 0, 0);
   m->album_menu.load_files_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER_OPEN, "Add file(s)", 0, 0);
   m->album_menu.load_url_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_GLOBE, "Add URL", 0, 0);
-  m->album_menu.new_playlist_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_PLAYLIST, "New playlist...", 0, 0);
   m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New container...", 0, 0);
   m->album_menu.new_stream_source_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_NETWORK, "New source...", 0, 0);
   m->album_menu.add_directory_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "Add folder...", 0, 0);
@@ -2706,16 +2697,6 @@ static void create_stream_source(bg_gtk_mdb_tree_t * tree)
   gavl_dictionary_free(&dict);
   }
 
-static void create_playlist(bg_gtk_mdb_tree_t * tree)
-  {
-  char * str;
-  
-  str = ask_string(tree->menu_ctx.widget, "Create playlist", "Name");
-  if(!str)
-    return;
-
-  create_container_generic(tree, str, GAVL_META_CLASS_PLAYLIST, NULL);
-  }
 
 static void create_container(bg_gtk_mdb_tree_t * tree)
   {

@@ -58,7 +58,6 @@ typedef struct
   GtkWidget * load_files_item;
   GtkWidget * load_url_item;
 
-  GtkWidget * new_playlist_item;
   GtkWidget * new_container_item;
   GtkWidget * new_stream_source_item;
   GtkWidget * add_directory_item;
