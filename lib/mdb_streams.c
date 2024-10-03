@@ -2656,9 +2656,10 @@ static int ping_streams(bg_mdb_backend_t * be)
   bg_sqlite_start_transaction(priv->db);
   
   add_source_str(be, "radio-browser.info", "radiobrowser://");
-  add_source_str(be, "iptv-org",        "https://iptv-org.github.io/iptv/index.m3u");
-  add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
-  add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
+  add_source_str(be, "iptv-org",           "iptv-org://");
+  
+  //  add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
+  //  add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
   
   bg_sqlite_end_transaction(priv->db);
 
