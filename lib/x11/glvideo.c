@@ -829,8 +829,8 @@ static int open_gl(driver_data_t * d)
   
   //  priv->texture_target = GL_TEXTURE_2D;
 
-  fprintf(stderr, "Open GL\n");
-  gavl_video_format_dump(&w->video_format);
+  //  fprintf(stderr, "Open GL\n");
+  //  gavl_video_format_dump(&w->video_format);
   
   if(w->video_format.hwctx)
     {
