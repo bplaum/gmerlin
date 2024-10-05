@@ -47,6 +47,71 @@
 #define LOG_DOMAIN_ENC "singlepicture-encoder"
 #define LOG_DOMAIN_DEC "singlepicture-decoder"
 
+/* Image list */
+
+typedef struct
+  {
+  gavl_io_t * io;
+  gavl_video_format_t fmt;
+
+  char * line;
+  int line_alloc;
+  
+  } img_list_reader_t;
+
+static int img_list_start_read(img_list_reader_t * list, const char * filename, gavl_dictionary_t * s)
+  {
+  if((list->io = gavl_io_from_filename(filename, 0)))
+    return 0;
+  
+  }
+
+static const char * img_list_read(img_list_reader_t * list, int64_t * pts)
+  {
+  while(1)
+    {
+    if(!gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
+      return 0;
+
+    if(list->line[0] != '#')
+      return list->line;
+
+    else if(gavl_string_starts_with(list->line, "#PTS: "))
+      *pts = strtoll(list->line + 6, NULL, 10);
+    
+    }
+  
+  return 0;
+  }
+
+static void img_list_close_read(img_list_reader_t * list)
+  {
+  if(list->io)
+    gavl_io_destroy(list->io);
+  if(list->line)
+    free(list->line);
+  }
+
+typedef struct
+  {
+  FILE * f;
+  gavl_audio_format_t fmt;
+  } img_list_writer_t;
+
+static void img_list_start_write(img_list_writer_t * list, const char * filename, const gavl_dictionary_t * s)
+  {
+  const char * var;
+  list->f = fopen(filename, "w");
+  
+  }
+
+static int img_list_write(img_list_writer_t * list, const char * filename, int64_t pts)
+  {
+  fprintf(list->f, "#PTS: %"PRId64"\n%s\n", pts, filename);
+  
+  }
+
+
 static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
   {
   int num, i;
@@ -61,9 +126,7 @@ static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
 
   for(i = 0; i < num; i++)
     {
-    info = bg_plugin_find_by_index(i,
-                                   type_mask, flag_mask);
-
+    info = bg_plugin_find_by_index(i, type_mask, flag_mask);
     gavl_array_splice_array(&arr, -1, 0, info->extensions);
     }
   
@@ -139,6 +202,8 @@ typedef struct
   bg_controllable_t controllable;
 
   bg_media_source_t ms;
+
+  gavl_io_t * list;
   
   } input_t;
 
