@@ -1173,7 +1173,7 @@ static void create_mask(encoder_t * e, const char * ext)
     e->mask = gavl_strcat(e->mask, ext);
     }
   
-  filename_len = strlen(e->filename_base) + e->frame_digits + 32;
+  filename_len = strlen(e->mask) + e->frame_digits + 32;
   e->filename_buffer = malloc(filename_len);
   }
 
@@ -1377,8 +1377,10 @@ static int close_encoder(void * data, int do_delete)
     }
 
   if(e->list)
+    {
     fclose(e->list);
-  
+    e->list = NULL;
+    }
   return 1;
   }
 
