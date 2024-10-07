@@ -52,27 +52,53 @@
 typedef struct
   {
   gavl_io_t * io;
-  gavl_video_format_t fmt;
-
+  int timescale;
+  int frame_duration;
+  
   char * line;
   int line_alloc;
-  
+  int64_t frame_counter;
+
+  int have_line;
   } img_list_reader_t;
+
 
 static int img_list_start_read(img_list_reader_t * list, const char * filename, gavl_dictionary_t * s)
   {
   if((list->io = gavl_io_from_filename(filename, 0)))
     return 0;
-  
+
+  while(1)
+    {
+    if(!gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
+      return 0;
+    if(gavl_string_starts_with(list->line, "#TIMESCALE: "))
+      {
+      list->timescale = atoi(list->line + strlen("#TIMESCALE: "));
+      }
+    else if(gavl_string_starts_with(list->line, "#FRAMEDUR: "))
+      {
+      list->frame_duration = atoi(list->line + strlen("#FRAMEDUR: "));
+      }
+    else
+      {
+      list->have_line = 1;
+      break;
+      }
+    }
+  return 1;
   }
 
 static const char * img_list_read(img_list_reader_t * list, int64_t * pts)
   {
   while(1)
     {
-    if(!gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
+    if(!list->have_line &&
+       !gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
       return 0;
 
+    list->have_line = 0;
+    
     if(list->line[0] != '#')
       return list->line;
 
@@ -95,20 +121,22 @@ static void img_list_close_read(img_list_reader_t * list)
 typedef struct
   {
   FILE * f;
-  gavl_audio_format_t fmt;
   } img_list_writer_t;
 
-static void img_list_start_write(img_list_writer_t * list, const char * filename, const gavl_dictionary_t * s)
+static int img_list_start_write(FILE * f, const gavl_video_format_t * fmt)
   {
-  const char * var;
-  list->f = fopen(filename, "w");
+  fprintf(f, "#TIMESCALE: %d\n", fmt->timescale);
   
+  if(fmt->framerate_mode == GAVL_FRAMERATE_CONSTANT)
+    fprintf(f, "#FRAMEDUR: %d\n", fmt->frame_duration);
+  
+  return 1;
   }
 
-static int img_list_write(img_list_writer_t * list, const char * filename, int64_t pts)
+static int img_list_write(FILE * f, int64_t pts, const char * filename)
   {
-  fprintf(list->f, "#PTS: %"PRId64"\n%s\n", pts, filename);
-  
+  fprintf(f, "#PTS: %"PRId64"\n%s\n", pts, filename);
+  return 1;
   }
 
 
@@ -203,8 +231,8 @@ typedef struct
 
   bg_media_source_t ms;
 
-  gavl_io_t * list;
-  
+  img_list_reader_t list;
+
   } input_t;
 
 static const bg_parameter_info_t * get_parameters_input(void * priv)
@@ -286,6 +314,8 @@ static int open_input(void * priv, const char * filename)
   
   if(access(filename, R_OK))
     return 0;
+
+  
   
   /* Load plugin */
 
@@ -1041,12 +1071,18 @@ typedef struct
   gavl_video_sink_t * sink;
   gavl_packet_sink_t * psink;
   
+  int64_t pts;
+
+  FILE * list;
+  
   } encoder_t;
 
 static int iw_callbacks_create_output_file(void * priv, const char * filename)
   {
   encoder_t * e = priv;
-  return bg_encoder_cb_create_output_file(e->cb, filename);
+  if(e->list)
+    img_list_write(e->list, e->pts, filename);
+  return 1;
   }
 
 static bg_parameter_info_t *
@@ -1122,15 +1158,22 @@ static void set_callbacks_encoder(void * data, bg_encoder_callbacks_t * cb)
 
 static void create_mask(encoder_t * e, const char * ext)
   {
-  char * tmp_string;
   int filename_len;
-  e->mask = gavl_strrep(e->mask, e->filename_base);
+  const char * pos;
+  if((pos = strrchr(e->filename_base, '/')))
+    pos++;
+  else
+    pos = e->filename_base;
   
-  tmp_string = bg_sprintf("-%%0%d"PRId64".%s", e->frame_digits, ext);
-  e->mask = gavl_strcat(e->mask, tmp_string);
-  free(tmp_string);
+  e->mask = bg_sprintf("%s/%s-%%0%d"PRId64, e->filename_base, pos, e->frame_digits);
   
-  filename_len = strlen(e->filename_base) + e->frame_digits + strlen(ext) + 16;
+  if(ext)
+    {
+    e->mask = gavl_strcat(e->mask, ".");
+    e->mask = gavl_strcat(e->mask, ext);
+    }
+  
+  filename_len = strlen(e->filename_base) + e->frame_digits + 32;
   e->filename_buffer = malloc(filename_len);
   }
 
@@ -1141,6 +1184,9 @@ static int open_encoder(void * data, const char * filename,
   
   e->frame_counter = e->frame_offset;
   e->filename_base = gavl_strrep(e->filename_base, filename);
+
+  if(!gavl_ensure_directory(e->filename_base, 1))
+    return 0;
   
   if(metadata)
     gavl_dictionary_copy(&e->metadata, metadata);
@@ -1175,6 +1221,8 @@ write_video_func_encoder(void * data, gavl_video_frame_t * frame)
   int ret = 1;
   encoder_t * e = data;
 
+  e->pts = frame->timestamp;
+  
   if(!e->have_header)
     ret = write_frame_header(e);
   if(ret)
@@ -1191,8 +1239,11 @@ static gavl_sink_status_t write_packet_encoder(void * data, gavl_packet_t * pack
   encoder_t * e = data;
   sprintf(e->filename_buffer, e->mask, e->frame_counter);
 
-  if(!bg_encoder_cb_create_output_file(e->cb, e->filename_buffer))
-    return GAVL_SINK_ERROR;
+  //  if(!bg_encoder_cb_create_output_file(e->cb, e->filename_buffer))
+  //    return GAVL_SINK_ERROR;
+
+  img_list_write(e->list, packet->pts, e->filename_buffer);
+    
   out = fopen(e->filename_buffer, "wb");
   if(!out)
     {
@@ -1214,6 +1265,7 @@ static gavl_sink_status_t write_packet_encoder(void * data, gavl_packet_t * pack
 
 static int start_encoder(void * data)
   {
+  char * list_file;
   encoder_t * e = data;
 
   if(e->have_header)
@@ -1222,6 +1274,16 @@ static int start_encoder(void * data)
   else if(e->ci)
     e->psink = gavl_packet_sink_create(NULL, write_packet_encoder,
                                        e);
+
+  list_file = gavl_sprintf("%s.imglist", e->filename_base);
+  if(!bg_encoder_cb_create_output_file(e->cb, list_file))
+    return 0;
+
+  if(!(e->list = fopen(list_file, "w")))
+    return 0;
+
+  if(!img_list_start_write(e->list, &e->format))
+    return 0;
   
   return (e->have_header || e->ci) ? 1 : 0;
   }
@@ -1259,7 +1321,7 @@ static int add_video_stream_encoder(void * data,
   encoder_t * e = data;
   
   gavl_video_format_copy(&e->format, format);
-  create_mask(e, gavl_string_array_get(e->plugin_handle->info->extensions, 0));
+  create_mask(e, NULL);
   /* Write image header so we know the format */
   
   write_frame_header(e);
@@ -1313,6 +1375,9 @@ static int close_encoder(void * data, int do_delete)
     gavl_video_sink_destroy(e->sink);
     e->sink = NULL;
     }
+
+  if(e->list)
+    fclose(e->list);
   
   return 1;
   }
