@@ -77,7 +77,7 @@ int main(int argc, char ** argv)
     for(j = 0; j < num_channels; j++)
       {
       tmp_string =
-        bg_sprintf("%s_%s.gavi",
+        gavl_sprintf("%s_%s.gavi",
                    gavl_pixelformat_to_string(fmt),
                    channels[j].name);
 
@@ -112,7 +112,7 @@ int main(int argc, char ** argv)
       }
 
     tmp_string =
-      bg_sprintf("insert_%s.gavi",
+      gavl_sprintf("insert_%s.gavi",
                  gavl_pixelformat_to_string(fmt));
     
     bg_plugin_registry_save_image(bg_plugin_reg,

@@ -602,7 +602,7 @@ static void set_image_type(bg_mdb_backend_t * b, int64_t image_id, int type)
   {
   char * sql;
   sqlite_priv_t * p = b->priv;
-  sql = bg_sprintf("UPDATE images SET "META_IMAGE_TYPE" = %d WHERE "META_DB_ID" = %"PRId64";", type, image_id);
+  sql = gavl_sprintf("UPDATE images SET "META_IMAGE_TYPE" = %d WHERE "META_DB_ID" = %"PRId64";", type, image_id);
   bg_sqlite_exec(p->db, sql, NULL, NULL);
   }
 
@@ -641,7 +641,7 @@ static int create_tables(bg_mdb_backend_t * b)
   
   while(obj_tables[i].table_name)
     {
-    sql = bg_sprintf("CREATE TABLE %s(", obj_tables[i].table_name);
+    sql = gavl_sprintf("CREATE TABLE %s(", obj_tables[i].table_name);
 
     j = 0;
 
@@ -651,9 +651,9 @@ static int create_tables(bg_mdb_backend_t * b)
         sql = gavl_strcat(sql, ", ");
 
       if(obj_tables[i].cols[j].id_table)
-        tmp_string = bg_sprintf("\"%s\" INTEGER", obj_tables[i].cols[j].name);
+        tmp_string = gavl_sprintf("\"%s\" INTEGER", obj_tables[i].cols[j].name);
       else
-        tmp_string = bg_sprintf("\"%s\" %s",
+        tmp_string = gavl_sprintf("\"%s\" %s",
                                 obj_tables[i].cols[j].name, get_type_label(obj_tables[i].cols[j].type));
 
       sql = gavl_strcat(sql, tmp_string);
@@ -674,9 +674,9 @@ static int create_tables(bg_mdb_backend_t * b)
         sql = gavl_strcat(sql, ", ");
 
         if(obj_tables[i].src_cols[j].id_table)
-          tmp_string = bg_sprintf("\"%s\" INTEGER", obj_tables[i].src_cols[j].name);
+          tmp_string = gavl_sprintf("\"%s\" INTEGER", obj_tables[i].src_cols[j].name);
         else
-          tmp_string = bg_sprintf("\"%s\" %s",
+          tmp_string = gavl_sprintf("\"%s\" %s",
                                   obj_tables[i].src_cols[j].name, get_type_label(obj_tables[i].src_cols[j].type));
         
         sql = gavl_strcat(sql, tmp_string);
@@ -702,7 +702,7 @@ static int create_tables(bg_mdb_backend_t * b)
       
       while(obj_tables[i].arrays[j].name)
         {
-        sql = bg_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
+        sql = gavl_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
                          obj_tables[i].arrays[j].id_table_name);
 
         if(!bg_sqlite_exec(p->db, sql, NULL, NULL))
@@ -710,7 +710,7 @@ static int create_tables(bg_mdb_backend_t * b)
         
         free(sql);
 
-        sql = bg_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, OBJ_ID INTEGER, NAME_ID INTEGER);",
+        sql = gavl_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, OBJ_ID INTEGER, NAME_ID INTEGER);",
                          obj_tables[i].arrays[j].array_table_name);
 
         if(!bg_sqlite_exec(p->db, sql, NULL, NULL))
@@ -729,7 +729,7 @@ static int create_tables(bg_mdb_backend_t * b)
       {
       if(obj_tables[i].cols[j].id_table)
         {
-        sql = bg_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
+        sql = gavl_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
                          obj_tables[i].cols[j].id_table);
         if(!bg_sqlite_exec(p->db, sql, NULL, NULL))
           return 0;
@@ -747,7 +747,7 @@ static int create_tables(bg_mdb_backend_t * b)
         {
         if(obj_tables[i].src_cols[j].id_table)
           {
-          sql = bg_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
+          sql = gavl_sprintf("CREATE TABLE IF NOT EXISTS %s(ID INTEGER PRIMARY KEY, NAME TEXT);",
                            obj_tables[i].src_cols[j].id_table);
 
           if(!bg_sqlite_exec(p->db, sql, NULL, NULL))
@@ -1045,7 +1045,7 @@ static int query_array_callback(void * data, int argc, char **argv, char **azCol
   m = gavl_track_get_metadata_nc(q->obj);
   gavl_dictionary_append_string_array(m, q->tag, argv[0]);
 
-  tmp_string = bg_sprintf("%s"GAVL_META_ID, q->tag);
+  tmp_string = gavl_sprintf("%s"GAVL_META_ID, q->tag);
   gavl_dictionary_append_string_array(m, tmp_string, argv[1]);
   free(tmp_string);
   
@@ -1349,7 +1349,7 @@ static void update_foreach_func(void * priv, const char * name,
     }
 
   if(!f->sql)
-    f->sql = bg_sprintf("UPDATE %s SET ", f->tab->table_name);
+    f->sql = gavl_sprintf("UPDATE %s SET ", f->tab->table_name);
   else
     f->sql = gavl_strcat(f->sql, ", ");
 
@@ -1377,7 +1377,7 @@ static void update_object(bg_mdb_backend_t * b,
   
   gavl_dictionary_foreach(m, update_foreach_func, &f);
 
-  tmp_string = bg_sprintf(" WHERE "META_DB_ID" = %"PRId64";", id);
+  tmp_string = gavl_sprintf(" WHERE "META_DB_ID" = %"PRId64";", id);
   f.sql = gavl_strcat(f.sql, tmp_string);
   free(tmp_string);
 
@@ -1828,12 +1828,12 @@ static void get_related_array(bg_mdb_backend_t * b,
     priv.type = obj_tables[i].type;
     if(has_src_col(&obj_tables[i], GAVL_META_URI))
       {
-      sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_URI" from %s WHERE %s = %"PRId64";",
+      sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_URI" from %s WHERE %s = %"PRId64";",
                        obj_tables[i].table_name, tag, id);
       }
     else
       {
-      sql = bg_sprintf("SELECT "META_DB_ID" from %s WHERE %s = %"PRId64";",
+      sql = gavl_sprintf("SELECT "META_DB_ID" from %s WHERE %s = %"PRId64";",
                        obj_tables[i].table_name, tag, id);
       }
 
@@ -1871,12 +1871,12 @@ static void get_child_array(bg_mdb_backend_t * b,
   
   if(has_src_col(tab, GAVL_META_URI))
     {
-    sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_URI" from %s WHERE %s = %"PRId64";",
+    sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_URI" from %s WHERE %s = %"PRId64";",
                      tab->table_name, META_PARENT_ID, id);
     }
   else
     {
-    sql = bg_sprintf("SELECT "META_DB_ID" from %s WHERE %s = %"PRId64";",
+    sql = gavl_sprintf("SELECT "META_DB_ID" from %s WHERE %s = %"PRId64";",
                      tab->table_name, META_PARENT_ID, id);
     }
   
@@ -1987,7 +1987,7 @@ delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
     {
     q.table = get_obj_table(type);
 
-    sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION", "META_PARENT_ID" "
+    sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION", "META_PARENT_ID" "
                      "from %s WHERE "META_DB_ID" = %"PRId64";",
                        q.table->table_name, id);
       
@@ -2009,19 +2009,19 @@ delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
 
     if(parent_type == TYPE_MOVIE)
       {
-      sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION" "
+      sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION" "
                        "from %s WHERE "META_DB_ID" = %"PRId64";",
                        q.table->table_name, parent_id);
       }
     else if(parent_type == TYPE_TV_SHOW)
       {
-      sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_NUM_CHILDREN" "
+      sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_NUM_CHILDREN" "
                        "from %s WHERE "META_DB_ID" = %"PRId64";",
                        q.table->table_name, parent_id);
       }
     else
       {
-      sql = bg_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION", "
+      sql = gavl_sprintf("SELECT "META_DB_ID", "GAVL_META_APPROX_DURATION", "
                        GAVL_META_NUM_CHILDREN" from %s WHERE "META_DB_ID" = %"PRId64";",
                        q.table->table_name, parent_id);
       }
@@ -2077,7 +2077,7 @@ delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
   /* Dedicated table */
   if((q.table = get_obj_table(type)))
     {
-    sql = bg_sprintf("DELETE FROM %s WHERE "META_DB_ID" = %"PRId64";",
+    sql = gavl_sprintf("DELETE FROM %s WHERE "META_DB_ID" = %"PRId64";",
                      q.table->table_name, id);
     bg_sqlite_exec(p->db, sql, NULL, NULL);
     free(sql);
@@ -2091,13 +2091,13 @@ delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
       while(q.table->arrays[i].name)
         {
         /* Remove from array */
-        sql = bg_sprintf("DELETE FROM %s WHERE OBJ_ID = %"PRId64";",
+        sql = gavl_sprintf("DELETE FROM %s WHERE OBJ_ID = %"PRId64";",
                          q.table->arrays[i].array_table_name, id);
         bg_sqlite_exec(p->db, sql, NULL, NULL);
         free(sql);
 
         /* Remove orphaned IDs */
-        sql = bg_sprintf("DELETE FROM %s WHERE ID NOT IN (SELECT DISTINCT NAME_ID FROM %s);",
+        sql = gavl_sprintf("DELETE FROM %s WHERE ID NOT IN (SELECT DISTINCT NAME_ID FROM %s);",
                          q.table->arrays[i].id_table_name, q.table->arrays[i].array_table_name);
         bg_sqlite_exec(p->db, sql, NULL, NULL);
         free(sql);
@@ -2109,7 +2109,7 @@ delete_object_internal(bg_mdb_backend_t * b, int64_t id, type_id_t type,
     }
 
   /* Object table */
-  sql = bg_sprintf("DELETE FROM objects WHERE "META_DB_ID" = %"PRId64";", id);
+  sql = gavl_sprintf("DELETE FROM objects WHERE "META_DB_ID" = %"PRId64";", id);
   bg_sqlite_exec(p->db, sql, NULL, NULL);
   free(sql);
 
@@ -2265,8 +2265,8 @@ static int64_t add_object(bg_mdb_backend_t * b, gavl_dictionary_t * track,
     gavl_dictionary_set_long(m, META_DB_ID, obj_id);
   
   
-    sql  = bg_sprintf("INSERT INTO %s (", tab->table_name);
-    sql2 = bg_sprintf(") VALUES (");
+    sql  = gavl_sprintf("INSERT INTO %s (", tab->table_name);
+    sql2 = gavl_sprintf(") VALUES (");
   
     append_cols(p, m, tab->cols, &sql, &sql2, 1);
 
@@ -2337,7 +2337,7 @@ static void scan_directory(bg_mdb_backend_t * b, const char * dir, gavl_array_t 
     if(dent_ptr->d_name[0] == '.')
       continue;
     
-    filename = bg_sprintf("%s/%s", dir, dent_ptr->d_name);
+    filename = gavl_sprintf("%s/%s", dir, dent_ptr->d_name);
 
 #ifdef _DIRENT_HAVE_D_TYPE
 
@@ -2586,7 +2586,7 @@ static void get_files_db(bg_mdb_backend_t * b, gavl_array_t * ret, int64_t id, i
       continue;
       }
     gf.type = obj_tables[i].type;
-    sql = bg_sprintf("SELECT "GAVL_META_URI", "META_DB_ID", "GAVL_META_MTIME" FROM %s WHERE "
+    sql = gavl_sprintf("SELECT "GAVL_META_URI", "META_DB_ID", "GAVL_META_MTIME" FROM %s WHERE "
                      META_SCAN_DIR_ID" = %"PRId64";", obj_tables[i].table_name, id);
 
     //    fprintf(stderr, "Get files SQL: %s\n", sql);
@@ -2633,7 +2633,7 @@ static void delete_directory(bg_mdb_backend_t * b, const char * dir)
     delete_object(b, gavl_value_get_dictionary(&files.entries[i]),
                   DEL_FLAG_RELATED | DEL_FLAG_PARENT | DEL_FLAG_CHILDREN);
   
-  sql = bg_sprintf("DELETE FROM scandirs WHERE ID = %"PRId64";", id);
+  sql = gavl_sprintf("DELETE FROM scandirs WHERE ID = %"PRId64";", id);
   bg_sqlite_exec(priv->db, sql, NULL, NULL);
   free(sql);
   
@@ -2864,7 +2864,7 @@ static void finalize_metadata_album(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_ARTIST GAVL_META_ID, i);
 
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_ARTIST "Container", 
-                                                 bg_sprintf("/albums/artist/%s/%s", bg_mdb_get_group_id(str), id) );
+                                                 gavl_sprintf("/albums/artist/%s/%s", bg_mdb_get_group_id(str), id) );
       }
     }
 
@@ -2876,12 +2876,12 @@ static void finalize_metadata_album(gavl_dictionary_t * m)
       {
       id = gavl_dictionary_get_string_array(m, GAVL_META_GENRE GAVL_META_ID, i);
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_GENRE "Container", 
-                                                 bg_sprintf("/albums/genre-artist/%s", id) );
+                                                 gavl_sprintf("/albums/genre-artist/%s", id) );
       }
     }
   
   if((year = gavl_dictionary_get_year(m, GAVL_META_DATE)))
-    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", bg_sprintf("/albums/year/%d", year));
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", gavl_sprintf("/albums/year/%d", year));
   
   }
 
@@ -2906,7 +2906,7 @@ static void finalize_metadata_song(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_ARTIST GAVL_META_ID, i);
 
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_ARTIST "Container", 
-                                                 bg_sprintf("/songs/artist/%s/%s", bg_mdb_get_group_id(str), id) );
+                                                 gavl_sprintf("/songs/artist/%s/%s", bg_mdb_get_group_id(str), id) );
       }
 
     
@@ -2922,14 +2922,14 @@ static void finalize_metadata_song(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_GENRE GAVL_META_ID, i);
       
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_GENRE "Container", 
-                                                 bg_sprintf("/songs/genre-artist/%s", id) );
+                                                 gavl_sprintf("/songs/genre-artist/%s", id) );
       }
     
     }
 
   
   if((year = gavl_dictionary_get_year(m, GAVL_META_DATE)))
-    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", bg_sprintf("/songs/year/%d", year));
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", gavl_sprintf("/songs/year/%d", year));
 
   
   }
@@ -2955,7 +2955,7 @@ static void finalize_metadata_movie(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_ACTOR GAVL_META_ID, i);
     
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_ACTOR "Container", 
-                                                 bg_sprintf("/movies/actor/%s/%s", bg_mdb_get_group_id(str), id) );
+                                                 gavl_sprintf("/movies/actor/%s/%s", bg_mdb_get_group_id(str), id) );
       }
     
     
@@ -2971,7 +2971,7 @@ static void finalize_metadata_movie(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_DIRECTOR GAVL_META_ID, i);
     
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_DIRECTOR "Container", 
-                                                 bg_sprintf("/movies/director/%s/%s", bg_mdb_get_group_id(str), id) );
+                                                 gavl_sprintf("/movies/director/%s/%s", bg_mdb_get_group_id(str), id) );
       }
 
     
@@ -2986,7 +2986,7 @@ static void finalize_metadata_movie(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_GENRE GAVL_META_ID, i);
       
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_GENRE "Container", 
-                                                 bg_sprintf("/movies/genre/%s", id) );
+                                                 gavl_sprintf("/movies/genre/%s", id) );
       }
     
     }
@@ -3000,12 +3000,12 @@ static void finalize_metadata_movie(gavl_dictionary_t * m)
       id = gavl_dictionary_get_string_array(m, GAVL_META_COUNTRY GAVL_META_ID, i);
     
       gavl_dictionary_append_string_array_nocopy(m, GAVL_META_COUNTRY "Container", 
-                                                 bg_sprintf("/movies/country/%s", id) );
+                                                 gavl_sprintf("/movies/country/%s", id) );
       }
     }
 
   if((year = gavl_dictionary_get_year(m, GAVL_META_DATE)))
-    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", bg_sprintf("/movies/year/%d", year));
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_YEAR "Container", gavl_sprintf("/movies/year/%d", year));
   }
 
 static int browse_object_series(bg_mdb_backend_t * b, const char * id, gavl_dictionary_t * ret)
@@ -3075,7 +3075,7 @@ static int browse_object_series(bg_mdb_backend_t * b, const char * id, gavl_dict
         gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_TV_EPISODE);
         
         
-        sql = bg_sprintf("SELECT COUNT("META_DB_ID") FROM episodes WHERE "META_PARENT_ID" in (SELECT "META_DB_ID" FROM seasons "
+        sql = gavl_sprintf("SELECT COUNT("META_DB_ID") FROM episodes WHERE "META_PARENT_ID" in (SELECT "META_DB_ID" FROM seasons "
                          "WHERE "META_PARENT_ID" = %"PRId64");", series_id);
 
         bg_sqlite_exec(s->db, sql, bg_sqlite_int_callback, &num_children);
@@ -3088,7 +3088,7 @@ static int browse_object_series(bg_mdb_backend_t * b, const char * id, gavl_dict
         q.be = b;
         q.table = get_obj_table(TYPE_TV_SHOW);
         
-        sql = bg_sprintf("SELECT "META_POSTER_ID", "META_WALLPAPER_ID" FROM shows WHERE "META_DB_ID" = %"PRId64";", series_id);
+        sql = gavl_sprintf("SELECT "META_POSTER_ID", "META_WALLPAPER_ID" FROM shows WHERE "META_DB_ID" = %"PRId64";", series_id);
         bg_sqlite_exec(s->db, sql, query_object_callback, &q);
         free(sql);
         
@@ -3124,7 +3124,7 @@ static int browse_object_series(bg_mdb_backend_t * b, const char * id, gavl_dict
         gavl_dictionary_get_int(m, GAVL_META_NUM_CHILDREN, &num);
         gavl_dictionary_set_int(m, GAVL_META_NUM_ITEM_CHILDREN, num);
         
-        gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("Season %d", season));
+        gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("Season %d", season));
       
         gavl_dictionary_destroy(obj);
         }
@@ -3242,7 +3242,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
             gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
             /* num_children */
-            sql = bg_sprintf("SELECT count(OBJ_ID) "
+            sql = gavl_sprintf("SELECT count(OBJ_ID) "
                              "FROM song_artists_arr WHERE "
                              "NAME_ID = %"PRId64";", artist_id);
 
@@ -3307,7 +3307,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
           
-          sql = bg_sprintf("SELECT count(DISTINCT song_artists_arr.NAME_ID) "
+          sql = gavl_sprintf("SELECT count(DISTINCT song_artists_arr.NAME_ID) "
                            "FROM song_artists_arr INNER JOIN song_genres_arr "
                            "ON song_artists_arr.OBJ_ID = song_genres_arr.OBJ_ID "
                            "WHERE song_genres_arr.NAME_ID = %"PRId64";", genre_id);
@@ -3335,7 +3335,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                      "song_artists",
                                                                      "NAME", "ID", artist_id));
 
-            sql = bg_sprintf("SELECT count(song_artists_arr.OBJ_ID) "
+            sql = gavl_sprintf("SELECT count(song_artists_arr.OBJ_ID) "
                              "FROM song_artists_arr INNER JOIN song_genres_arr "
                              "ON song_artists_arr.OBJ_ID = song_genres_arr.OBJ_ID "
                              "WHERE song_genres_arr.NAME_ID = %"PRId64" AND "
@@ -3406,7 +3406,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
           
-          sql = bg_sprintf("SELECT count(DISTINCT substr(songs."GAVL_META_DATE", 1, 4)) FROM "
+          sql = gavl_sprintf("SELECT count(DISTINCT substr(songs."GAVL_META_DATE", 1, 4)) FROM "
                            "songs INNER JOIN song_genres_arr ON "
                            "song_genres_arr.OBJ_ID = songs.DBID WHERE "
                            "song_genres_arr.NAME_ID = %"PRId64" ;", genre_id);
@@ -3432,12 +3432,12 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
             gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
             if(year < 9999)
-              gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
+              gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%d", year));
             else
               gavl_dictionary_set_string(m, GAVL_META_LABEL, "Unknown");
                         
             /* num children */
-            sql = bg_sprintf("SELECT count(songs."META_DB_ID") FROM "
+            sql = gavl_sprintf("SELECT count(songs."META_DB_ID") FROM "
                              "songs INNER JOIN song_genres_arr ON "
                              "song_genres_arr.OBJ_ID = songs.DBID WHERE "
                              "song_genres_arr.NAME_ID = %"PRId64" AND songs."GAVL_META_DATE" GLOB '%d*';", genre_id, year);
@@ -3514,7 +3514,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           
           /* num children */
 
-          sql = bg_sprintf("SELECT songs."GAVL_META_SEARCH_TITLE" "
+          sql = gavl_sprintf("SELECT songs."GAVL_META_SEARCH_TITLE" "
                            "FROM song_genres_arr INNER JOIN songs "
                            "ON song_genres_arr.OBJ_ID = songs."META_DB_ID" "
                            "WHERE song_genres_arr.NAME_ID = %"PRId64";", genre_id);
@@ -3546,7 +3546,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
               
               cond = bg_sqlite_make_group_condition(id);
             
-              sql = bg_sprintf("SELECT count(songs."META_DB_ID") "
+              sql = gavl_sprintf("SELECT count(songs."META_DB_ID") "
                                "FROM song_genres_arr INNER JOIN songs "
                                "ON song_genres_arr.OBJ_ID = songs."META_DB_ID" "
                                "WHERE song_genres_arr.NAME_ID = %"PRId64" AND songs."GAVL_META_SEARCH_TITLE" %s;",
@@ -3619,12 +3619,12 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_SONG);
 
           if(year < 9999)
-            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
+            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%d", year));
           else
             gavl_dictionary_set_string(m, GAVL_META_LABEL, "Unknown");
                         
           /* num children */
-          sql = bg_sprintf("SELECT count("META_DB_ID") FROM "
+          sql = gavl_sprintf("SELECT count("META_DB_ID") FROM "
                            "songs WHERE "
                            GAVL_META_DATE" GLOB '%d*';", year);
           
@@ -3731,7 +3731,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                               "NAME", "ID", artist_id));
 
             /* num_children */
-            sql = bg_sprintf("SELECT count(OBJ_ID) "
+            sql = gavl_sprintf("SELECT count(OBJ_ID) "
                              "FROM album_artists_arr WHERE "
                              "NAME_ID = %"PRId64";", artist_id);
 
@@ -3765,7 +3765,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                   GAVL_META_DATE)))
                 {
                 gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
-                                                  bg_sprintf("%s (%d)",
+                                                  gavl_sprintf("%s (%d)",
                                                              gavl_dictionary_get_string(m, GAVL_META_TITLE), year));
                 }
               else
@@ -3842,7 +3842,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_ARTIST);
 
-          sql = bg_sprintf("SELECT count(DISTINCT album_artists_arr.NAME_ID) "
+          sql = gavl_sprintf("SELECT count(DISTINCT album_artists_arr.NAME_ID) "
                            "FROM album_artists_arr INNER JOIN album_genres_arr "
                            "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
                            "WHERE album_genres_arr.NAME_ID = %"PRId64";", genre_id);
@@ -3869,7 +3869,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                               "album_artists",
                                                               "NAME", "ID", artist_id));
 
-            sql = bg_sprintf("SELECT count(album_artists_arr.OBJ_ID) "
+            sql = gavl_sprintf("SELECT count(album_artists_arr.OBJ_ID) "
                              "FROM album_artists_arr INNER JOIN album_genres_arr "
                              "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
                              "WHERE album_genres_arr.NAME_ID = %"PRId64" AND "
@@ -3904,7 +3904,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                   GAVL_META_DATE)))
                 {
                 gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
-                                                  bg_sprintf("%s (%d)",
+                                                  gavl_sprintf("%s (%d)",
                                                              gavl_dictionary_get_string(m, GAVL_META_TITLE), year));
                 }
               else
@@ -3980,7 +3980,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
 
-          sql = bg_sprintf("SELECT count(DISTINCT substr(albums."GAVL_META_DATE", 1, 4)) FROM "
+          sql = gavl_sprintf("SELECT count(DISTINCT substr(albums."GAVL_META_DATE", 1, 4)) FROM "
                            "albums INNER JOIN album_genres_arr ON "
                            "album_genres_arr.OBJ_ID = albums.DBID WHERE "
                            "album_genres_arr.NAME_ID = %"PRId64" ;", genre_id);
@@ -4007,12 +4007,12 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
             gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
 
             if(year < 9999)
-              gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
+              gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%d", year));
             else
               gavl_dictionary_set_string(m, GAVL_META_LABEL, "Unknown");
             
             /* num children */
-            sql = bg_sprintf("SELECT count(albums."META_DB_ID") FROM "
+            sql = gavl_sprintf("SELECT count(albums."META_DB_ID") FROM "
                              "albums INNER JOIN album_genres_arr ON "
                              "album_genres_arr.OBJ_ID = albums.DBID WHERE "
                              "album_genres_arr.NAME_ID = %"PRId64" AND albums."GAVL_META_DATE" GLOB '%d*';", genre_id, year);
@@ -4112,12 +4112,12 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MUSICALBUM);
 
           if(year < 9999)
-            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
+            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%d", year));
           else
             gavl_dictionary_set_string(m, GAVL_META_LABEL, "Unknown");
                         
           /* num children */
-          sql = bg_sprintf("SELECT count("META_DB_ID") FROM "
+          sql = gavl_sprintf("SELECT count("META_DB_ID") FROM "
                            "albums WHERE "
                            GAVL_META_DATE" GLOB '%d*';", year);
           
@@ -4253,7 +4253,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                      "NAME", "ID", actor_id));
 
             
-            sql = bg_sprintf("SELECT count(OBJ_ID) "
+            sql = gavl_sprintf("SELECT count(OBJ_ID) "
                              "FROM movie_actors_arr WHERE "
                              "NAME_ID = %"PRId64";", actor_id);
 
@@ -4355,7 +4355,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                    "movie_countries",
                                                                    "NAME", "ID", country_id));
           
-          sql = bg_sprintf("SELECT count(OBJ_ID) "
+          sql = gavl_sprintf("SELECT count(OBJ_ID) "
                            "FROM movie_countries_arr WHERE "
                            "NAME_ID = %"PRId64";", country_id);
 
@@ -4424,7 +4424,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                    "movie_audio_languages",
                                                                    "NAME", "ID", language_id));
           
-          sql = bg_sprintf("SELECT count(OBJ_ID) "
+          sql = gavl_sprintf("SELECT count(OBJ_ID) "
                            "FROM movie_audio_languages_arr WHERE "
                            "NAME_ID = %"PRId64";", language_id);
 
@@ -4530,7 +4530,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                        "NAME", "ID", director_id));
             
 
-              sql = bg_sprintf("SELECT count(OBJ_ID) "
+              sql = gavl_sprintf("SELECT count(OBJ_ID) "
                                "FROM movie_directors_arr WHERE "
                                "NAME_ID = %"PRId64";", director_id);
 
@@ -4595,7 +4595,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
                                                                    "movie_genres",
                                                                    "NAME", "ID", genre_id));
 
-          sql = bg_sprintf("SELECT count(OBJ_ID) "
+          sql = gavl_sprintf("SELECT count(OBJ_ID) "
                            "FROM movie_genres_arr WHERE "
                            "NAME_ID = %"PRId64";", genre_id);
 
@@ -4657,10 +4657,10 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_YEAR);
           gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_MOVIE);
 
-          gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%d", year));
+          gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%d", year));
 
           /* num_children */
-          sql = bg_sprintf("SELECT count("META_DB_ID") FROM movies where substr("GAVL_META_DATE", 1, 4) = '%d';", year);
+          sql = gavl_sprintf("SELECT count("META_DB_ID") FROM movies where substr("GAVL_META_DATE", 1, 4) = '%d';", year);
 
           gavl_track_set_num_children(ret, 0, bg_sqlite_get_int(s->db, sql));
           free(sql);
@@ -4746,7 +4746,7 @@ static int browse_object_internal(bg_mdb_backend_t * b, const char * id_p, gavl_
           gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_GENRE);
           /* TODO: num children */
 
-          sql = bg_sprintf("SELECT count(OBJ_ID) "
+          sql = gavl_sprintf("SELECT count(OBJ_ID) "
                            "FROM show_genres_arr WHERE "
                            "NAME_ID = %"PRId64";", genre_id);
 
@@ -4849,7 +4849,7 @@ static gavl_dictionary_t * append_id(gavl_array_t * arr, char * id)
 static int append_id_callback(void * data, int argc, char **argv, char **azColName)
   {
   append_id_t * a = data;
-  append_id(a->arr, bg_sprintf("%s/%s", a->parent_id, argv[0]));
+  append_id(a->arr, gavl_sprintf("%s/%s", a->parent_id, argv[0]));
   return 0;
   }
 
@@ -4871,11 +4871,11 @@ static int browse_children_series(bg_mdb_backend_t * b, const char * id,
 
   if(*id == '\0')
     {
-    sql = bg_sprintf("SELECT "META_DB_ID" FROM seasons WHERE "META_PARENT_ID" = %"PRId64" ORDER BY "GAVL_META_SEASON";", series_id);
+    sql = gavl_sprintf("SELECT "META_DB_ID" FROM seasons WHERE "META_PARENT_ID" = %"PRId64" ORDER BY "GAVL_META_SEASON";", series_id);
     bg_sqlite_exec(s->db, sql, append_id_callback, a);  
     free(sql);
 
-    append_id(a->arr, bg_sprintf("%s/all", a->parent_id));
+    append_id(a->arr, gavl_sprintf("%s/all", a->parent_id));
     return 1;
     }
   else if(*id == '/')
@@ -4884,7 +4884,7 @@ static int browse_children_series(bg_mdb_backend_t * b, const char * id,
 
     if(!strcmp(id, "all"))
       {
-      sql = bg_sprintf("SELECT "META_DB_ID" FROM episodes WHERE "META_PARENT_ID" in (SELECT "META_DB_ID" FROM seasons "
+      sql = gavl_sprintf("SELECT "META_DB_ID" FROM episodes WHERE "META_PARENT_ID" in (SELECT "META_DB_ID" FROM seasons "
                        "WHERE "META_PARENT_ID" = %"PRId64") ORDER BY "GAVL_META_SEARCH_TITLE" COLLATE strcoll;", series_id);
       
       bg_sqlite_exec(s->db, sql, append_id_callback, a);  
@@ -4893,7 +4893,7 @@ static int browse_children_series(bg_mdb_backend_t * b, const char * id,
     else
       {
       int64_t season_id = strtoll(id, &rest, 10);
-      sql = bg_sprintf("SELECT "META_DB_ID" FROM episodes WHERE "META_PARENT_ID" = %"PRId64" ORDER BY "GAVL_META_EPISODENUMBER";", season_id);
+      sql = gavl_sprintf("SELECT "META_DB_ID" FROM episodes WHERE "META_PARENT_ID" = %"PRId64" ORDER BY "GAVL_META_EPISODENUMBER";", season_id);
       bg_sqlite_exec(s->db, sql, append_id_callback, a);  
       free(sql);
       }
@@ -4926,11 +4926,11 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
     {
     if(*id == '\0') // /songs
       {
-      append_id(ret, bg_sprintf("%s/artist", s->songs_id));
-      append_id(ret, bg_sprintf("%s/genre", s->songs_id));
-      append_id(ret, bg_sprintf("%s/genre-artist", s->songs_id));
-      append_id(ret, bg_sprintf("%s/genre-year", s->songs_id));
-      append_id(ret, bg_sprintf("%s/year", s->songs_id));
+      append_id(ret, gavl_sprintf("%s/artist", s->songs_id));
+      append_id(ret, gavl_sprintf("%s/genre", s->songs_id));
+      append_id(ret, gavl_sprintf("%s/genre-artist", s->songs_id));
+      append_id(ret, gavl_sprintf("%s/genre-year", s->songs_id));
+      append_id(ret, gavl_sprintf("%s/year", s->songs_id));
       
       return 1;
       }
@@ -4970,7 +4970,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               {
               gavl_dictionary_t * dict, *m;
               
-              dict = append_id(ret, bg_sprintf("%s/artist/%s", s->songs_id, bg_mdb_groups[i].id));
+              dict = append_id(ret, gavl_sprintf("%s/artist/%s", s->songs_id, bg_mdb_groups[i].id));
 
               gavl_track_set_num_children(dict, num, 0);
               
@@ -4978,7 +4978,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_groups[i].label);
               }
             
-            // gavl_value_set_string_nocopy(&val, bg_sprintf("%s/genre-year", s->songs_id));
+            // gavl_value_set_string_nocopy(&val, gavl_sprintf("%s/genre-year", s->songs_id));
             // gavl_array_splice_val_nocopy(ret, -1, 0, &val);
             }
           gavl_array_free(&arr);
@@ -4995,7 +4995,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if((cond = bg_sqlite_make_group_condition(id)))
               {
-              sql = bg_sprintf("SELECT ID FROM song_artists WHERE NAME %s ORDER BY NAME;", cond);
+              sql = gavl_sprintf("SELECT ID FROM song_artists WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
               free(sql);
               free(cond);
@@ -5010,7 +5010,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             id++;
             artist_id = strtoll(id, NULL, 10);
 
-            sql = bg_sprintf("SELECT songs."META_DB_ID" FROM songs INNER JOIN "
+            sql = gavl_sprintf("SELECT songs."META_DB_ID" FROM songs INNER JOIN "
                              "song_artists_arr "
                              "ON songs."META_DB_ID" = song_artists_arr.OBJ_ID "
                              "WHERE song_artists_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5047,7 +5047,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0') // songs/genre-artist/1
             {
-            sql = bg_sprintf("SELECT ID FROM song_artists WHERE ID in (SELECT DISTINCT song_artists_arr.NAME_ID "
+            sql = gavl_sprintf("SELECT ID FROM song_artists WHERE ID in (SELECT DISTINCT song_artists_arr.NAME_ID "
                              "FROM song_artists_arr INNER JOIN song_genres_arr "
                              "ON song_artists_arr.OBJ_ID = song_genres_arr.OBJ_ID "
                              "WHERE song_genres_arr.NAME_ID = %"PRId64") ORDER BY NAME;", genre_id);
@@ -5065,7 +5065,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             
             if(*id == '\0')
               {
-              sql = bg_sprintf("SELECT song_artists_arr.OBJ_ID "
+              sql = gavl_sprintf("SELECT song_artists_arr.OBJ_ID "
                                "FROM "
                                "song_artists_arr INNER JOIN song_genres_arr "
                                "ON song_artists_arr.OBJ_ID = song_genres_arr.OBJ_ID "
@@ -5108,7 +5108,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0') // /songs/genre-year/1
             {
-            sql = bg_sprintf("SELECT DISTINCT substr(songs."GAVL_META_DATE", 1, 4) FROM "
+            sql = gavl_sprintf("SELECT DISTINCT substr(songs."GAVL_META_DATE", 1, 4) FROM "
                              "songs INNER JOIN song_genres_arr ON "
                              "song_genres_arr.OBJ_ID = songs.DBID WHERE "
                              "song_genres_arr.NAME_ID = %"PRId64" ORDER BY songs."GAVL_META_DATE";", genre_id);
@@ -5131,7 +5131,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if(*id == '\0')
               {
-              sql = bg_sprintf("SELECT songs."META_DB_ID" FROM "
+              sql = gavl_sprintf("SELECT songs."META_DB_ID" FROM "
                                "songs INNER JOIN song_genres_arr ON "
                                "song_genres_arr.OBJ_ID = songs.DBID WHERE "
                                "song_genres_arr.NAME_ID = %"PRId64" AND songs."GAVL_META_DATE" GLOB '%d*' "
@@ -5178,7 +5178,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0')
             {
-            sql = bg_sprintf("select "META_DB_ID" FROM "
+            sql = gavl_sprintf("select "META_DB_ID" FROM "
                              "songs WHERE "
                              GAVL_META_DATE" GLOB '%d*' "
                              "ORDER BY "GAVL_META_SEARCH_TITLE" COLLATE strcoll;", year);
@@ -5224,7 +5224,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             int i, j, num;
             gavl_array_init(&arr);
             
-            sql = bg_sprintf("SELECT songs."GAVL_META_SEARCH_TITLE" "
+            sql = gavl_sprintf("SELECT songs."GAVL_META_SEARCH_TITLE" "
                              "FROM song_genres_arr INNER JOIN songs "
                              "ON song_genres_arr.OBJ_ID = songs."META_DB_ID" "
                              "WHERE song_genres_arr.NAME_ID = %"PRId64";", genre_id);
@@ -5248,7 +5248,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
                 {
                 gavl_dictionary_t * dict, *m;
                 
-                dict = append_id(ret, bg_sprintf("%s/genre/%"PRId64"/%s", s->songs_id, genre_id, bg_mdb_groups[i].id));
+                dict = append_id(ret, gavl_sprintf("%s/genre/%"PRId64"/%s", s->songs_id, genre_id, bg_mdb_groups[i].id));
 
                 m = gavl_track_get_metadata_nc(dict);
 
@@ -5257,7 +5257,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
                 gavl_dictionary_set_string(m, GAVL_META_LABEL, bg_mdb_groups[i].label);
                 }
             
-              // gavl_value_set_string_nocopy(&val, bg_sprintf("%s/genre-year", s->songs_id));
+              // gavl_value_set_string_nocopy(&val, gavl_sprintf("%s/genre-year", s->songs_id));
               // gavl_array_splice_val_nocopy(ret, -1, 0, &val);
 
               }
@@ -5275,7 +5275,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
               if(cond)
                 {
-                sql = bg_sprintf("SELECT songs."META_DB_ID" "
+                sql = gavl_sprintf("SELECT songs."META_DB_ID" "
                                  "FROM song_genres_arr INNER JOIN songs "
                                  "ON song_genres_arr.OBJ_ID = songs."META_DB_ID" "
                                  "WHERE song_genres_arr.NAME_ID = %"PRId64" AND "
@@ -5302,10 +5302,10 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
     {
     if(*id == '\0') // /albums
       {
-      append_id(ret, bg_sprintf("%s/artist", s->albums_id));
-      append_id(ret, bg_sprintf("%s/genre-artist", s->albums_id));
-      append_id(ret, bg_sprintf("%s/genre-year", s->albums_id));
-      append_id(ret, bg_sprintf("%s/year", s->albums_id));
+      append_id(ret, gavl_sprintf("%s/artist", s->albums_id));
+      append_id(ret, gavl_sprintf("%s/genre-artist", s->albums_id));
+      append_id(ret, gavl_sprintf("%s/genre-year", s->albums_id));
+      append_id(ret, gavl_sprintf("%s/year", s->albums_id));
       return 1;
       }
     else
@@ -5345,7 +5345,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               {
               gavl_dictionary_t * dict, *m;
               
-              dict = append_id(ret, bg_sprintf("%s/artist/%s", s->albums_id, bg_mdb_groups[i].id));
+              dict = append_id(ret, gavl_sprintf("%s/artist/%s", s->albums_id, bg_mdb_groups[i].id));
 
               gavl_track_set_num_children(dict, num, 0);
                             
@@ -5369,7 +5369,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if((cond = bg_sqlite_make_group_condition(id)))
               {
-              sql = bg_sprintf("SELECT ID FROM album_artists WHERE NAME %s ORDER BY NAME;", cond);
+              sql = gavl_sprintf("SELECT ID FROM album_artists WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
               free(sql);
               free(cond);
@@ -5388,7 +5388,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             
             if(*id == '\0')
               {
-              sql = bg_sprintf("SELECT albums."META_DB_ID" FROM albums INNER JOIN album_artists_arr "
+              sql = gavl_sprintf("SELECT albums."META_DB_ID" FROM albums INNER JOIN album_artists_arr "
                                "ON albums."META_DB_ID" = album_artists_arr.OBJ_ID "
                                "WHERE album_artists_arr.NAME_ID = %"PRId64" "
                                "ORDER BY albums."GAVL_META_DATE", albums."GAVL_META_SEARCH_TITLE" COLLATE strcoll;", artist_id);
@@ -5403,7 +5403,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               id++;
               album_id = strtoll(id, &rest, 10);
 
-              sql = bg_sprintf("SELECT "META_DB_ID" FROM songs "
+              sql = gavl_sprintf("SELECT "META_DB_ID" FROM songs "
                                "WHERE "META_PARENT_ID" = %"PRId64" "
                                "ORDER BY "GAVL_META_TRACKNUMBER";", album_id);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5439,7 +5439,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0')
             {
-            sql = bg_sprintf("SELECT ID FROM album_artists WHERE ID in (SELECT DISTINCT album_artists_arr.NAME_ID "
+            sql = gavl_sprintf("SELECT ID FROM album_artists WHERE ID in (SELECT DISTINCT album_artists_arr.NAME_ID "
                              "FROM album_artists_arr INNER JOIN album_genres_arr "
                              "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
                              "WHERE album_genres_arr.NAME_ID = %"PRId64") ORDER BY NAME;", genre_id);
@@ -5458,7 +5458,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             
             if(*id == '\0')
               {
-              sql = bg_sprintf("SELECT album_artists_arr.OBJ_ID "
+              sql = gavl_sprintf("SELECT album_artists_arr.OBJ_ID "
                                "FROM "
                                "album_artists_arr INNER JOIN album_genres_arr "
                                "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
@@ -5482,7 +5482,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
               if(*id == '\0')
                 {
-                sql = bg_sprintf("SELECT "META_DB_ID" FROM songs "
+                sql = gavl_sprintf("SELECT "META_DB_ID" FROM songs "
                                  "WHERE "META_PARENT_ID" = %"PRId64" "
                                  "ORDER BY "GAVL_META_TRACKNUMBER";", album_id);
                 bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5524,7 +5524,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
           if(*id == '\0')
             {
 
-            sql = bg_sprintf("SELECT DISTINCT substr(albums."GAVL_META_DATE", 1, 4) FROM "
+            sql = gavl_sprintf("SELECT DISTINCT substr(albums."GAVL_META_DATE", 1, 4) FROM "
                              "albums INNER JOIN album_genres_arr ON "
                              "album_genres_arr.OBJ_ID = albums.DBID WHERE "
                              "album_genres_arr.NAME_ID = %"PRId64" ORDER BY albums."GAVL_META_DATE";", genre_id);
@@ -5550,7 +5550,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if(*id == '\0')
               {
-              sql = bg_sprintf("SELECT albums."META_DB_ID" FROM "
+              sql = gavl_sprintf("SELECT albums."META_DB_ID" FROM "
                                "albums INNER JOIN album_genres_arr ON "
                                "album_genres_arr.OBJ_ID = albums.DBID WHERE "
                                "album_genres_arr.NAME_ID = %"PRId64" AND albums."GAVL_META_DATE" GLOB '%d*' "
@@ -5569,7 +5569,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               id++;
               album_id = strtoll(id, &rest, 10);
 
-              sql = bg_sprintf("SELECT "META_DB_ID" FROM songs "
+              sql = gavl_sprintf("SELECT "META_DB_ID" FROM songs "
                                "WHERE "META_PARENT_ID" = %"PRId64" "
                                "ORDER BY "GAVL_META_TRACKNUMBER";", album_id);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5613,7 +5613,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0')
             {
-            sql = bg_sprintf("select "META_DB_ID" FROM "
+            sql = gavl_sprintf("select "META_DB_ID" FROM "
                              "albums WHERE "
                              GAVL_META_DATE" GLOB '%d*' "
                              "ORDER BY "GAVL_META_SEARCH_TITLE" COLLATE strcoll;", year);
@@ -5631,7 +5631,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             id++;
             album_id = strtoll(id, &rest, 10);
 
-            sql = bg_sprintf("SELECT "META_DB_ID" FROM songs "
+            sql = gavl_sprintf("SELECT "META_DB_ID" FROM songs "
                              "WHERE "META_PARENT_ID" = %"PRId64" "
                              "ORDER BY "GAVL_META_TRACKNUMBER";", album_id);
             bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
@@ -5657,13 +5657,13 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
     {
     if(*id == '\0') // /movies
       {
-      append_id(ret, bg_sprintf("%s/all", s->movies_id));
-      append_id(ret, bg_sprintf("%s/actor", s->movies_id));
-      append_id(ret, bg_sprintf("%s/director", s->movies_id));
-      append_id(ret, bg_sprintf("%s/genre", s->movies_id));
-      append_id(ret, bg_sprintf("%s/year", s->movies_id));
-      append_id(ret, bg_sprintf("%s/country", s->movies_id));
-      append_id(ret, bg_sprintf("%s/language", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/all", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/actor", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/director", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/genre", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/year", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/country", s->movies_id));
+      append_id(ret, gavl_sprintf("%s/language", s->movies_id));
       return 1;
       }
     else
@@ -5702,7 +5702,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               {
               gavl_dictionary_t * dict, *m;
               
-              dict = append_id(ret, bg_sprintf("%s/actor/%s", s->movies_id, bg_mdb_groups[i].id));
+              dict = append_id(ret, gavl_sprintf("%s/actor/%s", s->movies_id, bg_mdb_groups[i].id));
 
               m = gavl_track_get_metadata_nc(dict);
 
@@ -5724,7 +5724,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if((cond = bg_sqlite_make_group_condition(id)))
               {
-              sql = bg_sprintf("SELECT ID FROM movie_actors WHERE NAME %s ORDER BY NAME;", cond);
+              sql = gavl_sprintf("SELECT ID FROM movie_actors WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
               free(sql);
               free(cond);
@@ -5739,7 +5739,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             id++;
             actor_id = strtoll(id, NULL, 10);
 
-            sql = bg_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
+            sql = gavl_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
                              "movie_actors_arr "
                              "ON movies."META_DB_ID" = movie_actors_arr.OBJ_ID "
                              "WHERE movie_actors_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5789,7 +5789,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
           id++;
           country_id = strtoll(id, NULL, 10);
           
-          sql = bg_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
+          sql = gavl_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
                            "movie_countries_arr "
                            "ON movies."META_DB_ID" = movie_countries_arr.OBJ_ID "
                            "WHERE movie_countries_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5820,7 +5820,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
           id++;
           language_id = strtoll(id, NULL, 10);
           
-          sql = bg_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
+          sql = gavl_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
                            "movie_audio_languages_arr "
                            "ON movies."META_DB_ID" = movie_audio_languages_arr.OBJ_ID "
                            "WHERE movie_audio_languages_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5862,7 +5862,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
               {
               gavl_dictionary_t * dict, *m;
               
-              dict = append_id(ret, bg_sprintf("%s/director/%s", s->movies_id, bg_mdb_groups[i].id));
+              dict = append_id(ret, gavl_sprintf("%s/director/%s", s->movies_id, bg_mdb_groups[i].id));
 
               m = gavl_track_get_metadata_nc(dict);
 
@@ -5884,7 +5884,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
             if((cond = bg_sqlite_make_group_condition(id)))
               {
-              sql = bg_sprintf("SELECT ID FROM movie_directors WHERE NAME %s ORDER BY NAME;", cond);
+              sql = gavl_sprintf("SELECT ID FROM movie_directors WHERE NAME %s ORDER BY NAME;", cond);
               bg_sqlite_exec(s->db, sql, append_id_callback, &a);  
               free(sql);
               free(cond);
@@ -5899,7 +5899,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
             id++;
             director_id = strtoll(id, NULL, 10);
 
-            sql = bg_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
+            sql = gavl_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
                              "movie_directors_arr "
                              "ON movies."META_DB_ID" = movie_directors_arr.OBJ_ID "
                              "WHERE movie_directors_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5931,7 +5931,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
           id++;
           genre_id = strtoll(id, NULL, 10);
           
-          sql = bg_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
+          sql = gavl_sprintf("SELECT movies."META_DB_ID" FROM movies INNER JOIN "
                            "movie_genres_arr "
                            "ON movies."META_DB_ID" = movie_genres_arr.OBJ_ID "
                            "WHERE movie_genres_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -5967,7 +5967,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
           
           if(*id == '\0')
             {
-            sql = bg_sprintf("SELECT "META_DB_ID" FROM movies WHERE substr("GAVL_META_DATE", 1, 4) = '%d' ORDER BY "GAVL_META_SEARCH_TITLE" COLLATE strcoll;", year);
+            sql = gavl_sprintf("SELECT "META_DB_ID" FROM movies WHERE substr("GAVL_META_DATE", 1, 4) = '%d' ORDER BY "GAVL_META_SEARCH_TITLE" COLLATE strcoll;", year);
             bg_sqlite_exec(s->db,                                        
                            sql, append_id_callback, &a);
             free(sql);
@@ -5987,8 +5987,8 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
     {
     if(*id == '\0') // /series
       {
-      append_id(ret, bg_sprintf("%s/all", s->series_id));
-      append_id(ret, bg_sprintf("%s/genre", s->series_id));
+      append_id(ret, gavl_sprintf("%s/all", s->series_id));
+      append_id(ret, gavl_sprintf("%s/genre", s->series_id));
       return 1;
       }
     else
@@ -6034,7 +6034,7 @@ static int browse_children_ids(bg_mdb_backend_t * b, const char * id,
 
           if(*id == '\0')
             {
-            sql = bg_sprintf("SELECT shows."META_DB_ID" FROM shows INNER JOIN "
+            sql = gavl_sprintf("SELECT shows."META_DB_ID" FROM shows INNER JOIN "
                              "show_genres_arr "
                              "ON shows."META_DB_ID" = show_genres_arr.OBJ_ID "
                              "WHERE show_genres_arr.NAME_ID = %"PRId64" ORDER BY "
@@ -6180,11 +6180,11 @@ static void make_thumbnails(bg_mdb_backend_t * be)
   char * sql;
   sqlite_priv_t * p = be->priv;
 
-  sql = bg_sprintf("SELECT "GAVL_META_URI" FROM images WHERE "META_IMAGE_TYPE" = %d;", IMAGE_TYPE_COVER);
+  sql = gavl_sprintf("SELECT "GAVL_META_URI" FROM images WHERE "META_IMAGE_TYPE" = %d;", IMAGE_TYPE_COVER);
   bg_sqlite_exec(p->db, sql, make_thumbnail_callback, be->db);
   free(sql);
 
-  sql = bg_sprintf("SELECT "GAVL_META_URI" FROM images WHERE "META_IMAGE_TYPE" = %d;", IMAGE_TYPE_POSTER);
+  sql = gavl_sprintf("SELECT "GAVL_META_URI" FROM images WHERE "META_IMAGE_TYPE" = %d;", IMAGE_TYPE_POSTER);
   bg_sqlite_exec(p->db, sql, make_thumbnail_callback, be->db);
   free(sql);
   }
@@ -6603,7 +6603,7 @@ void bg_mdb_create_sqlite(bg_mdb_backend_t * b)
   b->flags |= BE_FLAG_RESCAN;
 #endif
   
-  filename = bg_sprintf("%s/db.sqlite", b->db->path);
+  filename = gavl_sprintf("%s/db.sqlite", b->db->path);
   
   /* Create */
 

@@ -252,14 +252,14 @@ static void parse_output_line(vcdimager_t * vcdimager, char * line)
         if(!(end = strchr(id, '"')))
           return;
         *end = '\0';
-        str = bg_sprintf(TR("Scanning %s"), id);
+        str = gavl_sprintf(TR("Scanning %s"), id);
         vcdimager->callbacks->action_callback(vcdimager->callbacks->data,
                                               str);
         free(str);
         }
       if(!strncmp(start, "write\"", 6))
         {
-        str = bg_sprintf(TR("Writing image"));
+        str = gavl_sprintf(TR("Writing image"));
         vcdimager->callbacks->action_callback(vcdimager->callbacks->data,
                                               str);
         free(str);
@@ -290,23 +290,23 @@ static void run_vcdimager(void * data, const char * directory, int cleanup)
 
   //  bg_search_file_exec("vcdxgen", &commandline);
 
-  xml_file = bg_sprintf("%s/%s", directory, vcdimager->xml_file);
+  xml_file = gavl_sprintf("%s/%s", directory, vcdimager->xml_file);
     
-  str = bg_sprintf("vcdxgen -o %s -t %s --iso-application-id=%s-%s",
+  str = gavl_sprintf("vcdxgen -o %s -t %s --iso-application-id=%s-%s",
                    xml_file, vcdimager->vcd_version, PACKAGE, VERSION);
   commandline = gavl_strcat(commandline, str);
   free(str);
 
   if(vcdimager->volume_label)
     {
-    str = bg_sprintf(" -l \"%s\"", vcdimager->volume_label);
+    str = gavl_sprintf(" -l \"%s\"", vcdimager->volume_label);
     commandline = gavl_strcat(commandline, str);
     free(str);
     }
 
   for(i = 0; i < vcdimager->num_files; i++)
     {
-    str = bg_sprintf(" \"%s\"", vcdimager->files[i].name);
+    str = gavl_sprintf(" \"%s\"", vcdimager->files[i].name);
     commandline = gavl_strcat(commandline, str);
     free(str);
     }
@@ -336,10 +336,10 @@ static void run_vcdimager(void * data, const char * directory, int cleanup)
   
   bg_search_file_exec("vcdxbuild", &commandline);
   
-  bin_file = bg_sprintf("%s/%s", directory, vcdimager->bin_file);
-  cue_file = bg_sprintf("%s/%s", directory, vcdimager->cue_file);
+  bin_file = gavl_sprintf("%s/%s", directory, vcdimager->bin_file);
+  cue_file = gavl_sprintf("%s/%s", directory, vcdimager->cue_file);
   
-  str = bg_sprintf(" --gui -p -c %s -b %s %s/%s",
+  str = gavl_sprintf(" --gui -p -c %s -b %s %s/%s",
                    cue_file,
                    bin_file,
                    directory, vcdimager->xml_file);

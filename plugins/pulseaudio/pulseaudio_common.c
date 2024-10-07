@@ -165,14 +165,14 @@ int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record)
   //  attr.fragsize  = -1; // Let server choose
   //  attr.maxlength = -1; // Let server choose
   
-  app_name = bg_sprintf("Gmerlin [%d]", getpid());
+  app_name = gavl_sprintf("Gmerlin [%d]", getpid());
 
   if(record)
     stream_name =
-      bg_sprintf("Gmerlin capture [%d]", getpid());
+      gavl_sprintf("Gmerlin capture [%d]", getpid());
   else
     stream_name =
-      bg_sprintf("Gmerlin playback [%d]", getpid());
+      gavl_sprintf("Gmerlin playback [%d]", getpid());
   
   p->pa = pa_simple_new(server,
                         app_name,

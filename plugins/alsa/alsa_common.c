@@ -470,7 +470,7 @@ void bg_alsa_create_card_parameters(bg_parameter_info_t * ret,
         snd_pcm_info_free(pcminfo);
         continue;
         }
-      name = bg_sprintf("hw:%d,%d", card, dev);
+      name = gavl_sprintf("hw:%d,%d", card, dev);
       label = gavl_strdup(snd_pcm_info_get_name(pcminfo));
       append_card(ret, name, label);
       snd_pcm_info_free(pcminfo);

@@ -1577,7 +1577,7 @@ const char * bg_x11_window_get_display_string(bg_x11_window_t * w)
     create_window(w, w->window_rect.w, w->window_rect.h);
   
   if(!w->display_string_child)
-    w->display_string_child = bg_sprintf("%s:%08lx:%08lx",
+    w->display_string_child = gavl_sprintf("%s:%08lx:%08lx",
                                          XDisplayName(DisplayString(w->dpy)),
                                          w->normal.win, w->fullscreen.win);
   return w->display_string_child;

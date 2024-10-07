@@ -291,7 +291,7 @@ static int open_cdaudio(void * data, const char * arg)
   cd->device_name = gavl_strrep(cd->device_name, arg);
   gavl_url_get_vars(cd->device_name, NULL);
 
-  //  uri = bg_sprintf("cda://%s", cd->device_name);
+  //  uri = gavl_sprintf("cda://%s", cd->device_name);
   
   cd->cdio = bg_cdaudio_open(cd->device_name);
   if(!cd->cdio)
@@ -476,7 +476,7 @@ static int open_cdaudio(void * data, const char * arg)
         if(cd->index->tracks[i].is_audio)
           gavl_dictionary_set_string_nocopy(m,
                                             GAVL_META_LABEL,
-                                            bg_sprintf(TR("Audio CD track %02d"), j+1));
+                                            gavl_sprintf(TR("Audio CD track %02d"), j+1));
         }
       }
     }

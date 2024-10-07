@@ -345,19 +345,19 @@ int main(int argc, char ** argv)
   gavl_dictionary_set_string(&metadata, "Thumb::URI", tmp_string);
   free(tmp_string);
 
-  tmp_string = bg_sprintf("%"PRId64, (int64_t)st.st_mtime);
+  tmp_string = gavl_sprintf("%"PRId64, (int64_t)st.st_mtime);
   gavl_dictionary_set_string(&metadata, "Thumb::MTime", tmp_string);
   free(tmp_string);
 
   gavl_dictionary_set_string(&metadata, "Software", "gmerlin-video-thumbnailer");
   
-  tmp_string = bg_sprintf("%"PRId64, (int64_t)st.st_size);
+  tmp_string = gavl_sprintf("%"PRId64, (int64_t)st.st_size);
   gavl_dictionary_set_string(&metadata, "Thumb::Size", tmp_string);
   free(tmp_string);
 
   if(duration != GAVL_TIME_UNDEFINED)
     {
-    tmp_string = bg_sprintf("%d", (int)(gavl_time_to_seconds(duration)));
+    tmp_string = gavl_sprintf("%d", (int)(gavl_time_to_seconds(duration)));
     gavl_dictionary_set_string(&metadata, "Thumb::Movie::Length", tmp_string);
     free(tmp_string);
     }

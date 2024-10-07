@@ -207,9 +207,9 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
       gavl_url_get_vars_c(var, &url_vars);
       if((cid = gavl_dictionary_get_string(&url_vars, BG_URL_VAR_CLIENT_ID)))
         {
-        start_url = bg_sprintf("%s://%s:%d/?%s=%s", protocol, host, port,
+        start_url = gavl_sprintf("%s://%s:%d/?%s=%s", protocol, host, port,
                                BG_URL_VAR_CLIENT_ID, cid);
-        m = bg_sprintf(manifest_file, s->label, s->label, start_url);
+        m = gavl_sprintf(manifest_file, s->label, s->label, start_url);
         len = strlen(m);
         
         bg_http_connection_init_res(conn, conn->protocol, 200, "OK");
@@ -291,7 +291,7 @@ int server_init(server_t * s, gavl_array_t * fe_arr)
   /* Load state */
 
   if(!s->state_file)
-    s->state_file = bg_sprintf("%s/state.xml", s->vardir);
+    s->state_file = gavl_sprintf("%s/state.xml", s->vardir);
 
   if(!bg_dictionary_load_xml(&s->state, s->state_file, "state") ||
      !(uuid_val =  bg_state_get(&s->state, "server", "uuid")) ||
@@ -345,7 +345,7 @@ int server_init(server_t * s, gavl_array_t * fe_arr)
   
   /* Create server side storage */
   
-  tmp_string = bg_sprintf("%s/storage", s->vardir);
+  tmp_string = gavl_sprintf("%s/storage", s->vardir);
   s->storage = bg_server_storage_create(tmp_string, s->max_client_ids, storage_vars);
   free(tmp_string);
 

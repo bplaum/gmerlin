@@ -108,7 +108,7 @@ int main(int argc, char ** argv)
       return -1;
       }
 
-    filename = bg_sprintf("%s_%c.%s", argv[2], get_channel_name(ch), argv[3]);
+    filename = gavl_sprintf("%s_%c.%s", argv[2], get_channel_name(ch), argv[3]);
     
     bg_plugin_registry_save_image(bg_plugin_reg,
                                   filename,

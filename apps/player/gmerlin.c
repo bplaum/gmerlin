@@ -249,7 +249,7 @@ static int handle_http_client_config(bg_http_connection_t * conn, void * priv)
 
       gavl_url_split(root_uri, NULL, NULL, NULL, &host, &port, NULL);
       
-      cfg = bg_sprintf("{\"renderer\":\"gmerlin-renderer://%s:%d/ws/renderer\",\"style\":\"dark\"}", host, port);
+      cfg = gavl_sprintf("{\"renderer\":\"gmerlin-renderer://%s:%d/ws/renderer\",\"style\":\"dark\"}", host, port);
       
       bg_server_storage_put(g->client_config, client_id, "cfg", cfg, strlen(cfg));
       free(cfg);
@@ -316,9 +316,9 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
       gavl_url_get_vars_c(var, &url_vars);
       if((cid = gavl_dictionary_get_string(&url_vars, BG_URL_VAR_CLIENT_ID)))
         {
-        start_url = bg_sprintf("%s://%s:%d/?%s=%s", protocol, host, port,
+        start_url = gavl_sprintf("%s://%s:%d/?%s=%s", protocol, host, port,
                                BG_URL_VAR_CLIENT_ID, cid);
-        m = bg_sprintf(manifest_file, bg_app_get_label(), bg_app_get_label(), start_url);
+        m = gavl_sprintf(manifest_file, bg_app_get_label(), bg_app_get_label(), start_url);
         len = strlen(m);
         
         bg_http_connection_init_res(conn, conn->protocol, 200, "OK");
@@ -907,7 +907,7 @@ void gmerlin_run(gmerlin_t * g, const char ** locations,
   gavl_value_init(&icons_val);
   icons_arr = gavl_value_set_array(&icons_val);
   
-  tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(g->srv));
+  tmp_string = gavl_sprintf("%s/static/icons/", bg_http_server_get_root_url(g->srv));
   gavl_dictionary_set(&root_metadata, GAVL_META_ICON_URL, NULL);
   bg_array_add_application_icons(icons_arr, tmp_string, "player");
   

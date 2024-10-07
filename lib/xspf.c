@@ -143,7 +143,7 @@ xmlNodePtr bg_xspf_add_track(xmlDocPtr xspf, const gavl_dictionary_t * m)
 
         child = bg_xml_append_child_node(ret, "meta", var);
         
-        tmp_string = bg_sprintf("%s%s", GMERLIN_PREFIX, meta_tags[i]);
+        tmp_string = gavl_sprintf("%s%s", GMERLIN_PREFIX, meta_tags[i]);
         BG_XML_SET_PROP(child, "rel", tmp_string);
         free(tmp_string);
         }

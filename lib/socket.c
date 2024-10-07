@@ -1084,7 +1084,7 @@ static int unix_socket_index = 0;
 int bg_unix_socket_create(char ** name, int queue_size)
   {
   pthread_mutex_lock(&unix_socket_mutex);
-  *name = bg_sprintf("%s/gmerlin-unix-%ld-%d", bg_tempdir(), (long)getpid(), unix_socket_index++);
+  *name = gavl_sprintf("%s/gmerlin-unix-%ld-%d", bg_tempdir(), (long)getpid(), unix_socket_index++);
   pthread_mutex_unlock(&unix_socket_mutex);
   return bg_listen_socket_create_unix(*name, queue_size);
   }

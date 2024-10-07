@@ -359,7 +359,7 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     http_uri = gavl_metadata_add_src(metadata, GAVL_META_SRC, NULL, NULL); 
     
     gavl_dictionary_copy(http_uri, gavl_metadata_get_src(metadata, GAVL_META_SRC, 0, NULL, NULL));
-    gavl_dictionary_set_string_nocopy(http_uri, GAVL_META_URI, bg_sprintf("%s%s", s->root_url, conn->path));
+    gavl_dictionary_set_string_nocopy(http_uri, GAVL_META_URI, gavl_sprintf("%s%s", s->root_url, conn->path));
     
     if((content_features = bg_get_dlna_content_features(track, http_uri, 1, 0)))
       gavl_dictionary_set_string_nocopy(&conn->res, "contentFeatures.dlna.org", content_features);
@@ -370,7 +370,7 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
   
   if(duration != GAVL_TIME_UNDEFINED)
     gavl_dictionary_set_string_nocopy(&conn->res, "X-Content-Duration",
-                                      bg_sprintf("%f", gavl_time_to_seconds(duration)));
+                                      gavl_sprintf("%f", gavl_time_to_seconds(duration)));
   
   gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
   bg_http_header_set_date(&conn->res, "Date");
@@ -382,7 +382,7 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     gavl_dictionary_set_long(&conn->res, "Content-Length", end_byte - start_byte + 1);
     
     gavl_dictionary_set_string_nocopy(&conn->res, "Content-Range",
-                                      bg_sprintf("bytes %"PRId64"-%"PRId64"/%"PRId64, start_byte, end_byte,
+                                      gavl_sprintf("bytes %"PRId64"-%"PRId64"/%"PRId64, start_byte, end_byte,
                                                  total_bytes));
     }
   else

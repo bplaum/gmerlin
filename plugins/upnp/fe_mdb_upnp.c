@@ -398,8 +398,8 @@ static int handle_mdb_message_upnp(void * priv, gavl_msg_t * msg)
               //       fprintf(stderr, "DIDL: %s\n", didl_str);
               
               gavl_dictionary_set_string_nocopy(args_out, "Result", didl_str);
-              gavl_dictionary_set_string_nocopy(args_out, "NumberReturned", bg_sprintf("%d", num_returned));
-              gavl_dictionary_set_string_nocopy(args_out, "TotalMatches", bg_sprintf("%d", total));
+              gavl_dictionary_set_string_nocopy(args_out, "NumberReturned", gavl_sprintf("%d", num_returned));
+              gavl_dictionary_set_string_nocopy(args_out, "TotalMatches", gavl_sprintf("%d", total));
               gavl_dictionary_set_string(args_out, "UpdateID", "0");
 
               //              fprintf(stderr, "Browse children response");
@@ -508,7 +508,7 @@ static int open_mdb_upnp(void * data, bg_controllable_t * ctrl)
 
   root_uri = bg_http_server_get_root_url(bg_http_server_get());
     
-  uri = bg_sprintf("%s/upnp/server/desc.xml", root_uri);
+  uri = gavl_sprintf("%s/upnp/server/desc.xml", root_uri);
 
   gavl_dictionary_init(&local_dev);
     
@@ -531,14 +531,14 @@ static int open_mdb_upnp(void * data, bg_controllable_t * ctrl)
   /* Register local device */
 
   gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                    bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
+                                    gavl_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_SERVER, uri + 7));
     
   gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_MDB);
   gavl_dictionary_set_string(&local_dev, GAVL_META_LABEL, server_label);
     
   bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
     
-  priv->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+  priv->desc = gavl_sprintf(dev_desc, uuid_str, server_label, icons);
 
   bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
 

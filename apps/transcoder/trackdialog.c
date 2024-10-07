@@ -265,16 +265,16 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     if(num > 1)
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Audio #%d: %s"), i+1, var);
+        label = gavl_sprintf(TR("Audio #%d: %s"), i+1, var);
       else
-        label = bg_sprintf(TR("Audio #%d"), i+1);
+        label = gavl_sprintf(TR("Audio #%d"), i+1);
       }
     else
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Audio: %s"), var);
+        label = gavl_sprintf(TR("Audio: %s"), var);
       else
-        label = bg_sprintf(TR("Audio"));
+        label = gavl_sprintf(TR("Audio"));
       }
     
     parent = bg_dialog_add_parent(ret->cfg_dialog, NULL,
@@ -336,16 +336,16 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
       if(num > 1)
         {
         if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-          label = bg_sprintf(TR("Video #%d: %s"), i+1, var);
+          label = gavl_sprintf(TR("Video #%d: %s"), i+1, var);
         else
-          label = bg_sprintf(TR("Video #%d"), i+1);
+          label = gavl_sprintf(TR("Video #%d"), i+1);
         }
       else
         {
         if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-          label = bg_sprintf(TR("Video: %s"), var);
+          label = gavl_sprintf(TR("Video: %s"), var);
         else
-          label = bg_sprintf(TR("Video"));
+          label = gavl_sprintf(TR("Video"));
         }
 
       parent = bg_dialog_add_parent(ret->cfg_dialog, NULL,
@@ -426,16 +426,16 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     if(num > 1)
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Subtitles #%d: %s"), i+1, var);
+        label = gavl_sprintf(TR("Subtitles #%d: %s"), i+1, var);
       else
-        label = bg_sprintf(TR("Subtitles #%d"), i+1);
+        label = gavl_sprintf(TR("Subtitles #%d"), i+1);
       }
     else
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Subtitles: %s"), var);
+        label = gavl_sprintf(TR("Subtitles: %s"), var);
       else
-        label = bg_sprintf(TR("Subtitles"));
+        label = gavl_sprintf(TR("Subtitles"));
       }
     
     parent = bg_dialog_add_parent(ret->cfg_dialog, NULL,
@@ -491,16 +491,16 @@ track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
     if(num > 1)
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Subtitles #%d: %s"), i + 1 + num_text_streams, var);
+        label = gavl_sprintf(TR("Subtitles #%d: %s"), i + 1 + num_text_streams, var);
       else
-        label = bg_sprintf(TR("Subtitles #%d"), i + 1 + num_text_streams);
+        label = gavl_sprintf(TR("Subtitles #%d"), i + 1 + num_text_streams);
       }
     else
       {
       if((var = gavl_dictionary_get_string(bg_transcoder_track_get_cfg_general(stream), GAVL_META_LABEL)))
-        label = bg_sprintf(TR("Subtitles: %s"), var);
+        label = gavl_sprintf(TR("Subtitles: %s"), var);
       else
-        label = bg_sprintf(TR("Subtitles"));
+        label = gavl_sprintf(TR("Subtitles"));
       }
     
     parent = bg_dialog_add_parent(ret->cfg_dialog, NULL,

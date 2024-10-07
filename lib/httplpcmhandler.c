@@ -404,7 +404,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
 
   if(format == FORMAT_LPCM)
     gavl_dictionary_set_string_nocopy(&conn->res, "Content-Type",
-                                      bg_sprintf("audio/L16;%s=%d;%s=%d",
+                                      gavl_sprintf("audio/L16;%s=%d;%s=%d",
                                                  LPCM_VAR_SAMPLERATE, out_rate,
                                                  LPCM_VAR_CHANNELS, channels));
   else if(format == FORMAT_WAV)
@@ -418,7 +418,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
       gavl_dictionary_set_long(&conn->res, "Content-Length", byte_len);
       
       gavl_dictionary_set_string_nocopy(&conn->res, "Content-Range",
-                                        bg_sprintf("bytes %"PRId64"-%"PRId64"/%"PRId64,
+                                        gavl_sprintf("bytes %"PRId64"-%"PRId64"/%"PRId64,
                                                    byte_offset,
                                                    byte_offset + byte_len - 1,
                                                    stream_duration * block_align));
@@ -442,7 +442,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
     gavl_dictionary_set_string(&uri, GAVL_META_MIMETYPE,
                                gavl_dictionary_get_string(&conn->res, "Content-Type"));
     
-    gavl_dictionary_set_string_nocopy(&uri, GAVL_META_URI, bg_sprintf("http://localhost:123%s/%s", LPCM_PATH, conn->path));
+    gavl_dictionary_set_string_nocopy(&uri, GAVL_META_URI, gavl_sprintf("http://localhost:123%s/%s", LPCM_PATH, conn->path));
     
     if((content_features = bg_get_dlna_content_features(src_track, &uri, sample_accurate, 0)))
       gavl_dictionary_set_string_nocopy(&conn->res, "contentFeatures.dlna.org", content_features);
@@ -457,16 +457,16 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
     //    char * range;
     
     gavl_dictionary_set_string_nocopy(&conn->res, "X-Content-Duration",
-                                      bg_sprintf("%f", gavl_time_to_seconds(duration)));
+                                      gavl_sprintf("%f", gavl_time_to_seconds(duration)));
 
     //    range = bg_npt_range_to_string(0, duration-GAVL_TIME_SCALE/1000);
     //    gavl_dictionary_set_string_nocopy(&conn->res, "X-AvailableSeekRange",
-    //                                      bg_sprintf("1 ntp=%s", range));
+    //                                      gavl_sprintf("1 ntp=%s", range));
 
     //    dur_str = bg_npt_to_string(duration);
     
     //    gavl_dictionary_set_string_nocopy(&conn->res, "TimeSeekRange.dlna.org",
-    //                                      bg_sprintf("ntp=%s/%s", range, dur_str));
+    //                                      gavl_sprintf("ntp=%s/%s", range, dur_str));
     
     //    free(range);
     //    free(dur_str);
@@ -630,7 +630,7 @@ static void add_uri_lpcm(gavl_dictionary_t * metadata,
   
   //  gavl_dictionary_t * src;
   
-  uri      = bg_sprintf("%s%s%s", bg_http_server_get_root_url(srv), LPCM_PATH, id);
+  uri      = gavl_sprintf("%s%s%s", bg_http_server_get_root_url(srv), LPCM_PATH, id);
   
   gavl_url_get_vars(uri, &vars);
   gavl_dictionary_set_int(&vars, LPCM_VAR_SAMPLERATE, samplerate);
@@ -638,7 +638,7 @@ static void add_uri_lpcm(gavl_dictionary_t * metadata,
   uri = bg_url_append_vars(uri, &vars);
   gavl_dictionary_free(&vars);
   
-  mimetype = bg_sprintf("audio/L16;%s=%d;%s=%d", LPCM_VAR_SAMPLERATE, samplerate, LPCM_VAR_CHANNELS, num_channels);
+  mimetype = gavl_sprintf("audio/L16;%s=%d;%s=%d", LPCM_VAR_SAMPLERATE, samplerate, LPCM_VAR_CHANNELS, num_channels);
 
   //  src =
   src = gavl_metadata_add_src(metadata, GAVL_META_SRC, mimetype, uri);
@@ -671,7 +671,7 @@ static void add_uri_wav(gavl_dictionary_t * metadata, bg_http_server_t * srv, co
   else
     label = gavl_strdup("file");
   
-  uri = bg_sprintf("%s%s%s/%s.wav", bg_http_server_get_root_url(srv), WAV_PATH, id, label);
+  uri = gavl_sprintf("%s%s%s/%s.wav", bg_http_server_get_root_url(srv), WAV_PATH, id, label);
   
   src = gavl_metadata_add_src(metadata, GAVL_META_SRC, "audio/wav", uri);
   gavl_dictionary_set_int(src, GAVL_META_TRANSCODED, 1);

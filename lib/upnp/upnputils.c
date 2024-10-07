@@ -77,7 +77,7 @@ char * bg_upnp_make_server_string(void)
   {
   struct utsname os_info;
   uname(&os_info);
-  return bg_sprintf("%s/%s UPnP/1.0 "PACKAGE"/"VERSION,
+  return gavl_sprintf("%s/%s UPnP/1.0 "PACKAGE"/"VERSION,
                     os_info.sysname, os_info.release);
   }
 
@@ -157,7 +157,7 @@ char * bg_upnp_create_icon_list(const gavl_array_t * arr)
         depth = 24;
 
       
-      tmp_string = bg_sprintf("      <icon>"
+      tmp_string = gavl_sprintf("      <icon>"
                               "<mimetype>%s</mimetype>"
                               "<width>%d</width>"
                               "<height>%d</height>"
@@ -235,7 +235,7 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
        gavl_dictionary_get_int(m1, GAVL_META_HEIGHT, &height) &&
        (mimetype = gavl_dictionary_get_string(uri, GAVL_META_MIMETYPE)) &&
        (profile_id = bg_get_dlna_image_profile(mimetype, width, height)))
-      return bg_sprintf("DLNA.ORG_PN=%s", profile_id);
+      return gavl_sprintf("DLNA.ORG_PN=%s", profile_id);
     else
       return NULL;
     }
@@ -286,7 +286,7 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
     
     if(profile_id)
       {
-      tmp_string = bg_sprintf("DLNA.ORG_PN=%s", profile_id);
+      tmp_string = gavl_sprintf("DLNA.ORG_PN=%s", profile_id);
 
       if(ret)
         ret = gavl_strcat(ret, ";");
@@ -296,7 +296,7 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
       }
    
     // DLNA.ORG_OP
-    tmp_string = bg_sprintf("DLNA.ORG_OP=%d%d", can_seek_dlna, can_seek_http);
+    tmp_string = gavl_sprintf("DLNA.ORG_OP=%d%d", can_seek_dlna, can_seek_http);
     if(ret)
       ret = gavl_strcat(ret, ";");
     ret = gavl_strcat(ret, tmp_string);
@@ -333,7 +333,7 @@ char * bg_get_dlna_content_features(const gavl_dictionary_t * track,
     flags |= DLNA_1_5_version_flag;
 
     /* 8 hexdigits primary-flags + 24 hexdigits reserved-data (all zero) */
-    tmp_string = bg_sprintf("DLNA.ORG_FLAGS=%08x000000000000000000000000", flags);
+    tmp_string = gavl_sprintf("DLNA.ORG_FLAGS=%08x000000000000000000000000", flags);
     if(ret)
       ret = gavl_strcat(ret, ";");
     ret = gavl_strcat(ret, tmp_string);

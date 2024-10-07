@@ -361,7 +361,7 @@ static void run_cdrdao(void * data, const char * directory, int cleanup)
   pregap_mm = pregap;
     
   /* Open output file */
-  filename = bg_sprintf("%s/%s", directory, cdrdao->toc_file);
+  filename = gavl_sprintf("%s/%s", directory, cdrdao->toc_file);
   outfile = fopen(filename, "w");
   if(!outfile)
     return;

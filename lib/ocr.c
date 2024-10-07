@@ -322,7 +322,7 @@ static int run_tesseract(bg_ocr_t * ocr, const gavl_video_format_t * format,
   int result = 0;
   gavl_buffer_t buf;
   
-  char * template = bg_sprintf("%s/gmerlin_ocr_%%05d.tif", ocr->tmpdir);
+  char * template = gavl_sprintf("%s/gmerlin_ocr_%%05d.tif", ocr->tmpdir);
   
   /* Create name for tiff file */
   tiff_file = bg_create_unique_filename(template);
@@ -341,7 +341,7 @@ static int run_tesseract(bg_ocr_t * ocr, const gavl_video_format_t * format,
   *pos = '\0';
 
   /* Create name for text file */
-  text_file = bg_sprintf("%s.txt", base);
+  text_file = gavl_sprintf("%s.txt", base);
   
   /* Save image */
   
@@ -352,7 +352,7 @@ static int run_tesseract(bg_ocr_t * ocr, const gavl_video_format_t * format,
   if(!ocr->iw_plugin->write_image(ocr->iw_handle->priv, frame))
     goto fail;
 
-  commandline = bg_sprintf("tesseract %s %s", ocr->image_file, base);
+  commandline = gavl_sprintf("tesseract %s %s", ocr->image_file, base);
 
   if(ocr->lang[0] != '\0')
     {

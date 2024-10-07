@@ -206,19 +206,19 @@ bg_gtk_create_time(bg_gtk_widget_t * w,
   
   if(w->info->help_string)
     {
-    tooltip = bg_sprintf(TR("%s (Hours)"), TR_DOM(w->info->help_string));
+    tooltip = gavl_sprintf(TR("%s (Hours)"), TR_DOM(w->info->help_string));
     bg_gtk_tooltips_set_tip(s->spinbutton_h, tooltip, PACKAGE);
     free(tooltip);
 
-    tooltip = bg_sprintf(TR("%s (Minutes)"), TR_DOM(w->info->help_string));
+    tooltip = gavl_sprintf(TR("%s (Minutes)"), TR_DOM(w->info->help_string));
     bg_gtk_tooltips_set_tip(s->spinbutton_m, tooltip, PACKAGE);
     free(tooltip);
 
-    tooltip = bg_sprintf(TR("%s (Seconds)"), TR_DOM(w->info->help_string));
+    tooltip = gavl_sprintf(TR("%s (Seconds)"), TR_DOM(w->info->help_string));
     bg_gtk_tooltips_set_tip(s->spinbutton_s, tooltip, PACKAGE);
     free(tooltip);
 
-    tooltip = bg_sprintf(TR("%s (Milliseconds)"), TR_DOM(w->info->help_string));
+    tooltip = gavl_sprintf(TR("%s (Milliseconds)"), TR_DOM(w->info->help_string));
     bg_gtk_tooltips_set_tip(s->spinbutton_ms, tooltip, PACKAGE);
     free(tooltip);
     }

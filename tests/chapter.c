@@ -40,7 +40,7 @@ static void create_chapter_list(gavl_chapter_list_t * ret)
   
   for(i = 0; i < 6; i++)
     {
-    name = bg_sprintf("Chapter %c", 'A' + i);
+    name = gavl_sprintf("Chapter %c", 'A' + i);
 
     t = i * 600; 
     t *= GAVL_TIME_SCALE;

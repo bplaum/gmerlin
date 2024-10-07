@@ -295,7 +295,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       else
         {
         char * error_msg =
-          bg_sprintf("org.freedesktop.DBus.Properties.Get failed: No such interface %s", prop_iface);
+          gavl_sprintf("org.freedesktop.DBus.Properties.Get failed: No such interface %s", prop_iface);
         
         bg_dbus_send_error(p->conn, msg, NULL, error_msg);
         free(error_msg);
@@ -314,7 +314,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
         else
           {
           error_msg =
-            bg_sprintf("org.freedesktop.DBus.Properties.Set failed: Property %s in interface %s doesn't exist or is read-only",
+            gavl_sprintf("org.freedesktop.DBus.Properties.Set failed: Property %s in interface %s doesn't exist or is read-only",
                        prop_name, prop_iface);
         
           bg_dbus_send_error(p->conn, msg, NULL, error_msg);
@@ -388,7 +388,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
         else
           {
           error_msg =
-            bg_sprintf("org.freedesktop.DBus.Properties.Set failed: Property %s in interface %s doesn't exist or is read-only",
+            gavl_sprintf("org.freedesktop.DBus.Properties.Set failed: Property %s in interface %s doesn't exist or is read-only",
                        prop_name, prop_iface);
         
           bg_dbus_send_error(p->conn, msg, NULL, error_msg);
@@ -398,7 +398,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       else
         {
         error_msg =
-          bg_sprintf("org.freedesktop.DBus.Properties.Get failed: No such interface %s", prop_iface);
+          gavl_sprintf("org.freedesktop.DBus.Properties.Get failed: No such interface %s", prop_iface);
         
         bg_dbus_send_error(p->conn, msg, NULL, error_msg);
         free(error_msg);
@@ -418,7 +418,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
       else
         {
         error_msg =
-          bg_sprintf("org.freedesktop.DBus.Properties.GetAll failed: No such interface %s", prop_iface);
+          gavl_sprintf("org.freedesktop.DBus.Properties.GetAll failed: No such interface %s", prop_iface);
         
         bg_dbus_send_error(p->conn, msg, NULL, error_msg);
         free(error_msg);
@@ -428,7 +428,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     else
       {
       error_msg =
-        bg_sprintf("No such function %s in interface %s", member, interface);
+        gavl_sprintf("No such function %s in interface %s", member, interface);
       bg_dbus_send_error(p->conn, msg, NULL, error_msg);
       free(error_msg);
       }
@@ -446,7 +446,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     else
       {
       error_msg =
-        bg_sprintf("No such function %s in interface %s", member, interface);
+        gavl_sprintf("No such function %s in interface %s", member, interface);
       bg_dbus_send_error(p->conn, msg, NULL, error_msg);
       free(error_msg);
       }
@@ -516,7 +516,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     else
       {
       error_msg =
-        bg_sprintf("No such function %s in interface %s", member, interface);
+        gavl_sprintf("No such function %s in interface %s", member, interface);
       bg_dbus_send_error(p->conn, msg, NULL, error_msg);
       free(error_msg);
       }
@@ -587,7 +587,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
     else
       {
       error_msg =
-        bg_sprintf("No such function %s in interface %s", member, interface);
+        gavl_sprintf("No such function %s in interface %s", member, interface);
       bg_dbus_send_error(p->conn, msg, NULL, error_msg);
       free(error_msg);
       }
@@ -596,7 +596,7 @@ static int handle_msg_mpris2(void * priv, gavl_msg_t * msg)
   else
     {
     error_msg =
-      bg_sprintf("Unhandled interface %s", interface);
+      gavl_sprintf("Unhandled interface %s", interface);
     bg_dbus_send_error(p->conn, msg, NULL, error_msg);
     free(error_msg);
     }
@@ -660,7 +660,7 @@ static void add_track(void * priv, const gavl_dictionary_t * track, int idx)
   track_ids = gavl_dictionary_get_array_nc(&p->tracklist_prop, "Tracks");
   
   /* Create ID */
-  mpris_id = bg_sprintf("/net/sourceforge/gmerlin/player/tracklist/%d", ++p->track_counter);
+  mpris_id = gavl_sprintf("/net/sourceforge/gmerlin/player/tracklist/%d", ++p->track_counter);
     
   /* Add to metadata array */
   gavl_value_init(&metadata_val);
@@ -1086,7 +1086,7 @@ static int open_mpris2(void * data, bg_controllable_t * ctrl)
   /* TODO: Register local device. Must be done before releasing the lock */
 
   gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                    bg_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
+                                    gavl_sprintf("%s://%s", BG_DBUS_MPRIS_URI_SCHEME,
                                                bus_name_real + MPRIS2_NAME_PREFIX_LEN));
 
   gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);

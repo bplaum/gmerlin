@@ -771,7 +771,7 @@ static gavl_io_t * plug_io_init_pipe(gavl_io_t * old, int * flags, int method, i
     listen_fd = gavl_unix_socket_create(&name, 1);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Redirecting pipe to %s", name);
 
-    uri = bg_sprintf(BG_PLUG_PREFIX_UNIX"%s\n", name);
+    uri = gavl_sprintf(BG_PLUG_PREFIX_UNIX"%s\n", name);
 
     /* Write URI to stdout */
     gavl_io_write_data(old, (uint8_t*)uri, strlen(uri));

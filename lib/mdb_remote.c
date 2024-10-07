@@ -132,7 +132,7 @@ static int is_us(bg_mdb_t * db, const char * url)
 
 static char * make_id(remote_priv_t * priv)
   {
-  return bg_sprintf("/remote-%"PRId64, ++priv->server_counter);
+  return gavl_sprintf("/remote-%"PRId64, ++priv->server_counter);
   }
 
 static char * id_local_to_remote(remote_priv_t * priv, int * server_idx, const char * local_id)
@@ -172,7 +172,7 @@ static char * id_remote_to_local(const remote_server_t * s, const char * remote_
   else if(!strcmp(remote_id, "/"))
     return gavl_strdup(var);
   else
-    return bg_sprintf("%s%s", var, remote_id);
+    return gavl_sprintf("%s%s", var, remote_id);
   }
 
 /* remote_to_local_array */
@@ -193,7 +193,7 @@ static void foreach_func_arr(void * priv, const char * name,
   if(gavl_string_ends_with(name, "Container"))
     return;
 
-  tmp_name = bg_sprintf("%sContainer", name);
+  tmp_name = gavl_sprintf("%sContainer", name);
 
   if(gavl_dictionary_get(a->dict, tmp_name))
     {

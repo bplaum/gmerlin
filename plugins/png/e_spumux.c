@@ -137,7 +137,7 @@ write_subtitle_overlay_spumux(void * priv, gavl_overlay_t * ovl)
   
   gavl_video_frame_get_subframe(spumux->format.pixelformat, ovl, spumux->subframe, &ovl->src_rect);
 
-  image_filename = bg_sprintf(spumux->filename_template, spumux->subtitles_written);
+  image_filename = gavl_sprintf(spumux->filename_template, spumux->subtitles_written);
 
   if(!bg_encoder_cb_create_output_file(spumux->cb, image_filename))
     {
@@ -193,7 +193,7 @@ static int close_spumux(void * priv, int do_delete)
     {
     for(i = 0; i < spumux->subtitles_written; i++)
       {
-      image_filename = bg_sprintf(spumux->filename_template, i);
+      image_filename = gavl_sprintf(spumux->filename_template, i);
       remove(image_filename);
       free(image_filename);
       }

@@ -646,7 +646,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
                                      gavl_dictionary_get_string(m, GAVL_META_LABEL));
     }
   else
-    markup = bg_sprintf("%s", gavl_dictionary_get_string(m, GAVL_META_LABEL));
+    markup = gavl_sprintf("%s", gavl_dictionary_get_string(m, GAVL_META_LABEL));
   
   gtk_label_set_markup(GTK_LABEL(l->menu_label), markup);
   
@@ -662,7 +662,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
     }
   else if(icon)
     {
-    markup = bg_sprintf("<span size=\"large\" font_family=\"%s\" weight=\"normal\">%s</span>",
+    markup = gavl_sprintf("<span size=\"large\" font_family=\"%s\" weight=\"normal\">%s</span>",
                         BG_ICON_FONT_FAMILY, icon);
     gtk_label_set_markup(GTK_LABEL(l->tab_icon), markup);
     free(markup);
@@ -1525,7 +1525,7 @@ create_list_menu_item(bg_gtk_mdb_tree_t * tree, GtkWidget * parent, const char *
   text_escaped = g_markup_escape_text(label, -1);
 
   if(icon)
-    markup = (gchar*)bg_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>  %s",
+    markup = (gchar*)gavl_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>  %s",
                                 BG_ICON_FONT_FAMILY, icon, text_escaped);
   else
     markup = gavl_strdup(text_escaped);
@@ -1925,7 +1925,7 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   l->tab_image     = gtk_image_new_from_pixbuf(NULL);
   l->tab_label_cur = gtk_label_new(NULL);
 
-  tmp_string = bg_sprintf("<span size=\"xx-large\" font_family=\"%s\" weight=\"normal\">%s</span>",
+  tmp_string = gavl_sprintf("<span size=\"xx-large\" font_family=\"%s\" weight=\"normal\">%s</span>",
                           BG_ICON_FONT_FAMILY, BG_ICON_PLAY);
   
   gtk_label_set_markup(GTK_LABEL(l->tab_label_cur), tmp_string);

@@ -602,7 +602,7 @@ static char * websocket_key_to_response(const char * key)
   int str_enc_len = 0;
   uint8_t sha1[20];
   
-  str = bg_sprintf("%s258EAFA5-E914-47DA-95CA-C5AB0DC85B11", key);
+  str = gavl_sprintf("%s258EAFA5-E914-47DA-95CA-C5AB0DC85B11", key);
 
   bg_base64_encode(bg_sha1_buffer(str, strlen(str), sha1),
                    20, &str_enc, &str_enc_len);
@@ -680,7 +680,7 @@ bg_websocket_connection_create(const char * url, int timeout,
     gavl_dictionary_set_string(&req, "Origin", origin);
   else
     gavl_dictionary_set_string_nocopy(&req, "Origin",
-                            bg_sprintf("http://%s", gavl_dictionary_get_string(&req, "Host")));
+                            gavl_sprintf("http://%s", gavl_dictionary_get_string(&req, "Host")));
 
   gavl_dictionary_set_string(&req, "Sec-WebSocket-Protocol", "json");
   gavl_dictionary_set_string(&req, "Sec-WebSocket-Version",  "13");
@@ -1132,7 +1132,7 @@ static int bg_websocket_context_handle_request(bg_http_connection_t * c, void * 
 
 char * bg_websocket_make_path(const char * klass)
   {
-  return bg_sprintf("/ws/%s", klass);
+  return gavl_sprintf("/ws/%s", klass);
   }
 
 bg_websocket_context_t *

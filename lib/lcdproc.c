@@ -275,7 +275,7 @@ static int do_connect(bg_lcdproc_t* l)
   
   /* Set client attributes */
 
-  cmd = bg_sprintf("client_set name {gmerlin%d}", getpid());
+  cmd = gavl_sprintf("client_set name {gmerlin%d}", getpid());
   
   if(!send_command(l, cmd))
     goto fail;
@@ -310,10 +310,10 @@ static int set_name(bg_lcdproc_t * l, const char * name)
     return 1;
   
   if(strlen(name) > l->width)
-    command = bg_sprintf("widget_set %s %s 1 2 %d 3 m 1 {%s *** }",
+    command = gavl_sprintf("widget_set %s %s 1 2 %d 3 m 1 {%s *** }",
                        name_time_name, name_name, l->width, name);
   else
-    command = bg_sprintf("widget_set %s %s 1 2 %d 3 m 1 {%s}",
+    command = gavl_sprintf("widget_set %s %s 1 2 %d 3 m 1 {%s}",
                        name_time_name, name_name, l->width, name);
   
   if(!send_command(l, command))
@@ -334,7 +334,7 @@ static int set_time(bg_lcdproc_t * l, gavl_time_t time)
     {
     gethostname(buffer, 16);
     
-    command = bg_sprintf("widget_set %s %s 1 1 {%s}",
+    command = gavl_sprintf("widget_set %s %s 1 1 {%s}",
                          name_time_name, time_name, buffer);
     if(!send_command(l, command))
       goto fail;
@@ -343,9 +343,9 @@ static int set_time(bg_lcdproc_t * l, gavl_time_t time)
     {
     gavl_time_prettyprint(time, buffer);
 
-    format = bg_sprintf("widget_set %%s %%s 1 1 {T: %%%ds}", l->width - 3);
+    format = gavl_sprintf("widget_set %%s %%s 1 1 {T: %%%ds}", l->width - 3);
         
-    command = bg_sprintf(format,
+    command = gavl_sprintf(format,
                          name_time_name, time_name, buffer);
     if(!send_command(l, command))
       goto fail;
@@ -363,19 +363,19 @@ static int create_name_time(bg_lcdproc_t * l)
   //  char time_buf[GAVL_TIME_STRING_LEN];
     
   char * command;
-  command = bg_sprintf("screen_add %s", name_time_name);
+  command = gavl_sprintf("screen_add %s", name_time_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
 
-  command = bg_sprintf("screen_set %s -heartbeat off", name_time_name);
+  command = gavl_sprintf("screen_set %s -heartbeat off", name_time_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
   
   /* Time display */
   
-  command = bg_sprintf("widget_add %s %s string",
+  command = gavl_sprintf("widget_add %s %s string",
                        name_time_name, time_name);
   if(!send_command(l, command))
     goto fail;
@@ -384,7 +384,7 @@ static int create_name_time(bg_lcdproc_t * l)
   set_time(l, GAVL_TIME_UNDEFINED);
   
   /* Name display */
-  command = bg_sprintf("widget_add %s %s scroller",
+  command = gavl_sprintf("widget_add %s %s scroller",
                        name_time_name, name_name);
   if(!send_command(l, command))
     goto fail;
@@ -403,7 +403,7 @@ static int destroy_name_time(bg_lcdproc_t * l)
   {
   char * command;
 
-  command = bg_sprintf("screen_del %s", name_time_name);
+  command = gavl_sprintf("screen_del %s", name_time_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
@@ -423,25 +423,25 @@ static int set_audio_format(bg_lcdproc_t * l, gavl_audio_format_t * f)
   
   if(!f)
     {
-    command = bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {Audio: none}",
+    command = gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {Audio: none}",
                          formats_name, audio_format_name);
     }
   else
     {
     if(f->num_channels == 1)
-      format_string = bg_sprintf("%d Hz Mono", f->samplerate);
+      format_string = gavl_sprintf("%d Hz Mono", f->samplerate);
     else if(f->num_channels == 2)
-      format_string = bg_sprintf("%d Hz Stereo", f->samplerate);
+      format_string = gavl_sprintf("%d Hz Stereo", f->samplerate);
     else
-      format_string = bg_sprintf("%d Hz %d Ch", f->samplerate, f->num_channels);
+      format_string = gavl_sprintf("%d Hz %d Ch", f->samplerate, f->num_channels);
 
     if(strlen(format_string) > l->width)
       command = 
-        bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {%s *** }",
+        gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {%s *** }",
                    formats_name, audio_format_name, format_string);
     else
       command = 
-        bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {%s}",
+        gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {%s}",
                    formats_name, audio_format_name, format_string);
 
     free(format_string);
@@ -462,7 +462,7 @@ static int set_video_format(bg_lcdproc_t * l, gavl_video_format_t * f)
   char * command, *format_string;
   if(!f)
     {
-    command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {Video: none}",
+    command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {Video: none}",
                          formats_name, video_format_name);
     }
   else
@@ -470,22 +470,22 @@ static int set_video_format(bg_lcdproc_t * l, gavl_video_format_t * f)
     
     if(f->framerate_mode == GAVL_FRAMERATE_CONSTANT)
       {
-      format_string = bg_sprintf("%dx%d %.2f fps", f->image_width,
+      format_string = gavl_sprintf("%dx%d %.2f fps", f->image_width,
                                  f->image_height, (float)(f->timescale)/
                                  (float)(f->frame_duration));
       
       }
     else
       {
-      format_string = bg_sprintf("%dx%d", f->image_width,
+      format_string = gavl_sprintf("%dx%d", f->image_width,
                                  f->image_height);
       }
 
     if(strlen(format_string) > l->width)
-      command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {%s *** }",
+      command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {%s *** }",
                            formats_name, video_format_name, format_string);
     else
-      command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {%s}",
+      command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {%s}",
                            formats_name, video_format_name, format_string);
     free(format_string);
     }
@@ -501,19 +501,19 @@ static int set_video_format(bg_lcdproc_t * l, gavl_video_format_t * f)
 static int create_formats(bg_lcdproc_t * l)
   {
   char * command;
-  command = bg_sprintf("screen_add %s", formats_name);
+  command = gavl_sprintf("screen_add %s", formats_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
 
-  command = bg_sprintf("screen_set %s -heartbeat off", formats_name);
+  command = gavl_sprintf("screen_set %s -heartbeat off", formats_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
   
   /* Audio format */
 
-  command = bg_sprintf("widget_add %s %s scroller",
+  command = gavl_sprintf("widget_add %s %s scroller",
                        formats_name, audio_format_name);
   if(!send_command(l, command))
     goto fail;
@@ -523,7 +523,7 @@ static int create_formats(bg_lcdproc_t * l)
   
   /* Video format */
   
-  command = bg_sprintf("widget_add %s %s scroller",
+  command = gavl_sprintf("widget_add %s %s scroller",
                        formats_name, video_format_name);
   if(!send_command(l, command))
     goto fail;
@@ -543,7 +543,7 @@ static int destroy_formats(bg_lcdproc_t * l)
   {
   char * command;
   
-  command = bg_sprintf("screen_del %s", formats_name);
+  command = gavl_sprintf("screen_del %s", formats_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
@@ -575,24 +575,24 @@ static int set_audio_description(bg_lcdproc_t * l, gavl_dictionary_t * m)
   else
     {
     if(bitrate)
-      desc = bg_sprintf("%s %d kbps", format_str, bitrate);
+      desc = gavl_sprintf("%s %d kbps", format_str, bitrate);
     else
-      desc = bg_sprintf("%s", format_str);
+      desc = gavl_sprintf("%s", format_str);
     }
   
   if(!desc)
     {
-    command = bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: Off}",
+    command = gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: Off}",
                          descriptions_name, audio_description_name);
     }
   else
     {
     if(strlen(desc) > l->width)
-      command = bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: %s *** }",
+      command = gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: %s *** }",
                            descriptions_name, audio_description_name, desc);
       
     else
-      command = bg_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: %s}",
+      command = gavl_sprintf("widget_set %s %s 1 1 16 2 m 1 {A: %s}",
                            descriptions_name, audio_description_name, desc);
     free(desc);
     }
@@ -619,21 +619,21 @@ static int set_video_description(bg_lcdproc_t * l, gavl_dictionary_t * m)
     desc = NULL;
   else
     {
-    desc = bg_sprintf("%s", format_str);
+    desc = gavl_sprintf("%s", format_str);
     }
   
   if(!desc)
     {
-    command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: Off}",
+    command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: Off}",
                          descriptions_name, video_description_name);
     }
   else
     {
     if(strlen(desc) > l->width)
-      command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: %s *** }",
+      command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: %s *** }",
                            descriptions_name, video_description_name, desc);
     else
-      command = bg_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: %s}",
+      command = gavl_sprintf("widget_set %s %s 1 2 16 3 m 1 {V: %s}",
                            descriptions_name, video_description_name, desc);
     free(desc);
     }
@@ -649,19 +649,19 @@ static int set_video_description(bg_lcdproc_t * l, gavl_dictionary_t * m)
 static int create_descriptions(bg_lcdproc_t * l)
   {
   char * command;
-  command = bg_sprintf("screen_add %s", descriptions_name);
+  command = gavl_sprintf("screen_add %s", descriptions_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
 
-  command = bg_sprintf("screen_set %s -heartbeat off", descriptions_name);
+  command = gavl_sprintf("screen_set %s -heartbeat off", descriptions_name);
   if(!send_command(l, command))
     goto fail;
   free(command);
   
   /* Audio description */
 
-  command = bg_sprintf("widget_add %s %s scroller",
+  command = gavl_sprintf("widget_add %s %s scroller",
                        descriptions_name, audio_description_name);
   if(!send_command(l, command))
     goto fail;
@@ -671,7 +671,7 @@ static int create_descriptions(bg_lcdproc_t * l)
   
   /* Video format */
   
-  command = bg_sprintf("widget_add %s %s scroller",
+  command = gavl_sprintf("widget_add %s %s scroller",
                        descriptions_name, video_description_name);
   if(!send_command(l, command))
     goto fail;
@@ -693,7 +693,7 @@ static int destroy_descriptions(bg_lcdproc_t * l)
   {
   char * command;
   
-  command = bg_sprintf("screen_del %s", descriptions_name);
+  command = gavl_sprintf("screen_del %s", descriptions_name);
   if(!send_command(l, command))
     goto fail;
   free(command);

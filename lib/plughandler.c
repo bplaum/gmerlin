@@ -234,7 +234,7 @@ void bg_plug_handler_add_uris(bg_plug_handler_t * h, gavl_dictionary_t * track)
      !(pos = strstr(root_uri, "://")))
     return;
     
-  uri      = bg_sprintf("gavf-tcp%s"PLUG_PATH"%s", pos, id);
+  uri      = gavl_sprintf("gavf-tcp%s"PLUG_PATH"%s", pos, id);
   
   gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
   

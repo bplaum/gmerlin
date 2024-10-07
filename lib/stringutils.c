@@ -87,24 +87,6 @@ char * bg_fix_path(char * path)
   else
     return path;
   }
-
-char * bg_sprintf(const char * format,...)
-  {
-  va_list argp; /* arg ptr */
-  int len __attribute__ ((unused));
-  char * ret = NULL;
-  va_start( argp, format);
-
-#ifndef HAVE_VASPRINTF
-  len = vsnprintf(NULL, 0, format, argp);
-  ret = malloc(len+1);
-  vsnprintf(ret, len+1, format, argp);
-#else
-  len = vasprintf(&ret, format, argp);
-#endif
-  va_end(argp);
-  return ret;
-  }
   
 char * bg_create_unique_filename(char * template)
   {
@@ -116,7 +98,7 @@ char * bg_create_unique_filename(char * template)
 
   count = 0;
 
-  filename = bg_sprintf(template, 0);
+  filename = gavl_sprintf(template, 0);
 
   while(1)
     {
@@ -476,7 +458,7 @@ char * bg_url_append_vars(char * path,
       continue;
       }
     
-    tmp_string = bg_sprintf("%c%s=%s", sep, vars->entries[i].name, val_string);
+    tmp_string = gavl_sprintf("%c%s=%s", sep, vars->entries[i].name, val_string);
     idx++;
     
     path = gavl_strcat(path, tmp_string);
@@ -489,7 +471,7 @@ char * bg_url_append_vars(char * path,
 char * bg_url_get_host(const char * host, int port)
   {
   if(port > 0)
-    return bg_sprintf("%s:%d", host, port);
+    return gavl_sprintf("%s:%d", host, port);
   else
     return gavl_strdup(host);
   }
@@ -732,7 +714,7 @@ char * bg_filename_ensure_extension(const char * filename,
      (!strcasecmp(pos+1, ext)))
     return gavl_strdup(filename);
   else
-    return bg_sprintf("%s.%s", filename, ext);
+    return gavl_sprintf("%s.%s", filename, ext);
   }
 
 char * bg_get_stream_label(int index, const gavl_dictionary_t * m)
@@ -745,13 +727,13 @@ char * bg_get_stream_label(int index, const gavl_dictionary_t * m)
   language = gavl_dictionary_get_string(m, GAVL_META_LANGUAGE);
   
   if(info && language)
-    label = bg_sprintf("%s [%s]", info, bg_get_language_name(language));
+    label = gavl_sprintf("%s [%s]", info, bg_get_language_name(language));
   else if(info)
-    label = bg_sprintf("%s", info);
+    label = gavl_sprintf("%s", info);
   else if(language)
-    label = bg_sprintf(TR("Stream %d [%s]"), index+1, bg_get_language_name(language));
+    label = gavl_sprintf(TR("Stream %d [%s]"), index+1, bg_get_language_name(language));
   else
-    label = bg_sprintf(TR("Stream %d"), index+1);
+    label = gavl_sprintf(TR("Stream %d"), index+1);
   return label;
   }
 
@@ -1052,9 +1034,9 @@ char * bg_get_chapter_label(int index, int64_t t, int scale, const char * name)
                         time_string);
   
   if(name)
-    return bg_sprintf("%s [%s]", name, time_string);
+    return gavl_sprintf("%s [%s]", name, time_string);
   else
-    return bg_sprintf(TR("Chapter %d [%s]"), index+1, time_string);
+    return gavl_sprintf(TR("Chapter %d [%s]"), index+1, time_string);
 
   }
 

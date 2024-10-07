@@ -39,7 +39,7 @@ char * gmerlin_skin_load(gmerlin_skin_t * s, char * directory)
   char * filename = NULL;
   xmlDocPtr doc = NULL;
   
-  filename = bg_sprintf("%s/skin.xml", directory);
+  filename = gavl_sprintf("%s/skin.xml", directory);
   doc = xmlParseFile(filename);
 
   if(!doc)
@@ -48,7 +48,7 @@ char * gmerlin_skin_load(gmerlin_skin_t * s, char * directory)
 
     directory = gavl_strrep(directory, default_skin_directory);
         
-    filename = bg_sprintf("%s/skin.xml", directory);
+    filename = gavl_sprintf("%s/skin.xml", directory);
     doc = xmlParseFile(filename);
     }
 

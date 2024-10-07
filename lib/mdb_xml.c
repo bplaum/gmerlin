@@ -168,15 +168,15 @@ static void item_from_storage(bg_mdb_backend_t * b,
       char * artist = gavl_metadata_join_arr(m, GAVL_META_ARTIST, ", ");
 
       gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL,
-                                        bg_sprintf("%s: %s", artist, gavl_dictionary_get_string(m, GAVL_META_TITLE)));
+                                        gavl_sprintf("%s: %s", artist, gavl_dictionary_get_string(m, GAVL_META_TITLE)));
       free(artist);
       }
     }
   
   if(!strcmp(parent_id, "/"))
-    id = bg_sprintf("%s%s", parent_id, gavl_dictionary_get_string(m, GAVL_META_ID));
+    id = gavl_sprintf("%s%s", parent_id, gavl_dictionary_get_string(m, GAVL_META_ID));
   else
-    id = bg_sprintf("%s/%s", parent_id, gavl_dictionary_get_string(m, GAVL_META_ID));
+    id = gavl_sprintf("%s/%s", parent_id, gavl_dictionary_get_string(m, GAVL_META_ID));
   set_editable(id, dict);
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, id);
 
@@ -190,7 +190,7 @@ static void item_from_storage(bg_mdb_backend_t * b,
 static gavl_dictionary_t * load_dir_index(bg_mdb_backend_t * be, const char * dir)
   {
   gavl_dictionary_t * ret;
-  char * filename = bg_sprintf("%s/INDEX", dir);
+  char * filename = gavl_sprintf("%s/INDEX", dir);
   
   ret = gavl_dictionary_create();
   if(access(filename, R_OK) || !bg_dictionary_load_xml(ret, filename, "INDEX"))
@@ -243,7 +243,7 @@ static void arr_get_num_children(const gavl_array_t * arr, const char * director
   
   for(i = 0; i < arr->num_entries; i++)
     {
-    tmp_string = bg_sprintf("%s/%s", directory, gavl_string_array_get(arr, i));
+    tmp_string = gavl_sprintf("%s/%s", directory, gavl_string_array_get(arr, i));
 
     if(!stat(tmp_string, &st))
       {
@@ -304,7 +304,7 @@ static void get_num_children(const gavl_dictionary_t * dict, const char * direct
 
 static void save_dir_index(bg_mdb_backend_t * be, const char * dir, gavl_dictionary_t * d)
   {
-  char * filename = bg_sprintf("%s/INDEX", dir);
+  char * filename = gavl_sprintf("%s/INDEX", dir);
 
   item_to_storage(be, d);
   bg_dictionary_save_xml(d, filename, "INDEX");
@@ -313,7 +313,7 @@ static void save_dir_index(bg_mdb_backend_t * be, const char * dir, gavl_diction
 
 static char * id_to_path(bg_mdb_backend_t * be, const char * id)
   {
-  return bg_sprintf("%s/xml%s", be->db->path, id);
+  return gavl_sprintf("%s/xml%s", be->db->path, id);
   }
 
 
@@ -389,9 +389,9 @@ static int do_add(bg_mdb_backend_t * b,
     gavl_dictionary_t * tmp_dict;
     char * id;
 
-    id = bg_sprintf("%s/%s", parent_id, uuid_str);
+    id = gavl_sprintf("%s/%s", parent_id, uuid_str);
     
-    filename = bg_sprintf("%s/%s", dir, uuid_str);
+    filename = gavl_sprintf("%s/%s", dir, uuid_str);
     gavl_ensure_directory(filename, 0);
     free(filename);
 
@@ -404,7 +404,7 @@ static int do_add(bg_mdb_backend_t * b,
     set_editable(id, tmp_dict);
     free(id);
     
-    filename = bg_sprintf("%s/%s/INDEX", dir, uuid_str);
+    filename = gavl_sprintf("%s/%s/INDEX", dir, uuid_str);
     bg_dictionary_save_xml(tmp_dict, filename, "INDEX");
     
     gavl_dictionary_destroy(tmp_dict);
@@ -412,7 +412,7 @@ static int do_add(bg_mdb_backend_t * b,
     }
   else
     {
-    filename = bg_sprintf("%s/%s", dir, uuid_str);
+    filename = gavl_sprintf("%s/%s", dir, uuid_str);
     bg_dictionary_save_xml(add, filename, "TRACK");
     free(filename);
     }
@@ -516,7 +516,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
     {
     for(i = 0; i < del; i++)
       {
-      tmp_string = bg_sprintf("%s/%s", parent_directory,
+      tmp_string = gavl_sprintf("%s/%s", parent_directory,
                               gavl_value_get_string(&child_ids->entries[idx + i]));
       bg_remove_file(tmp_string);
       free(tmp_string);
@@ -704,7 +704,7 @@ static int browse_children(bg_mdb_backend_t * b, const char * id, gavl_array_t *
     
     if((str = gavl_value_get_string(&child_ids->entries[i + start])))
       {
-      child_id = bg_sprintf("%s/%s", id, str);
+      child_id = gavl_sprintf("%s/%s", id, str);
 
       if(!(child_dict = browse_object(b, child_id)))
         {
@@ -749,13 +749,13 @@ static int browse_children(bg_mdb_backend_t * b, const char * id, gavl_array_t *
     if(i + start > 0)
       {
       gavl_dictionary_set_string_nocopy(child_m, GAVL_META_PREVIOUS_ID,
-                                        bg_sprintf("%s/%s", id, gavl_string_array_get(child_ids, i-1)));
+                                        gavl_sprintf("%s/%s", id, gavl_string_array_get(child_ids, i-1)));
       }
 
     if(i  + start < ret->num_entries - 1)
       {
       gavl_dictionary_set_string_nocopy(child_m, GAVL_META_NEXT_ID,
-                                        bg_sprintf("%s/%s", id, gavl_string_array_get(child_ids, i+1)));
+                                        gavl_sprintf("%s/%s", id, gavl_string_array_get(child_ids, i+1)));
                                         
       }
     
@@ -831,12 +831,12 @@ static int handle_msg_xml(void * priv, gavl_msg_t * msg)
               if(ix > 0)
                 {
                 gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID,
-                                                  bg_sprintf("%s/%s", parent_id, gavl_string_array_get(child_ids, ix-1)));
+                                                  gavl_sprintf("%s/%s", parent_id, gavl_string_array_get(child_ids, ix-1)));
                 }
               if(ix < child_ids->num_entries - 1)
                 {
                 gavl_dictionary_set_string_nocopy(m, GAVL_META_NEXT_ID,
-                                                  bg_sprintf("%s/%s", parent_id, gavl_string_array_get(child_ids, ix+1)));
+                                                  gavl_sprintf("%s/%s", parent_id, gavl_string_array_get(child_ids, ix+1)));
                 }
               item_idx = ix;
               total = child_ids->num_entries;

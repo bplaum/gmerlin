@@ -111,7 +111,7 @@ static char * append_row_noescape(char * str, const char * icon, const char * va
   if(str && (strlen(str) > 8))
     nl = "\n";
   
-  tmp_string = bg_sprintf("%s<span font_family=\"%s\" weight=\"normal\">%s</span>\t%s",
+  tmp_string = gavl_sprintf("%s<span font_family=\"%s\" weight=\"normal\">%s</span>\t%s",
                           nl, BG_ICON_FONT_FAMILY, icon, val);
   
   str = gavl_strcat(str, tmp_string);
@@ -200,7 +200,7 @@ static void append_link(bg_gtk_trackinfo_t * info,
 
   if(href[0] == '/')
     {
-    char * tmp_string = bg_sprintf("file://%s", href);
+    char * tmp_string = gavl_sprintf("file://%s", href);
     link = gtk_link_button_new_with_label(tmp_string, label);
     free(tmp_string);
     }
@@ -251,7 +251,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
     return;
 
   tmp_string = g_markup_escape_text(var_c, -1);
-  markup = bg_sprintf("<span weight=\"bold\" size=\"xx-large\">%s</span>", tmp_string);
+  markup = gavl_sprintf("<span weight=\"bold\" size=\"xx-large\">%s</span>", tmp_string);
   g_free(tmp_string);
   
   /* TODO Add more */

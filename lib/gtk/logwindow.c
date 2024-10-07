@@ -133,7 +133,7 @@ static int handle_log_message(void * data, gavl_msg_t * msg)
 
       if(*message == '\0') /* Empty string */
         {
-        str = bg_sprintf("[%s]\n", domain);
+        str = gavl_sprintf("[%s]\n", domain);
         gtk_text_buffer_insert_with_tags(w->buffer,
                                          &iter,
                                          str, -1, tag, NULL);
@@ -144,7 +144,7 @@ static int handle_log_message(void * data, gavl_msg_t * msg)
         i = 0;
         while(lines[i])
           {
-          str = bg_sprintf("[%s]: %s\n", domain, lines[i]);
+          str = gavl_sprintf("[%s]: %s\n", domain, lines[i]);
           gtk_text_buffer_insert_with_tags(w->buffer,
                                            &iter,
                                            str, -1, tag, NULL);
@@ -184,7 +184,7 @@ bg_gtk_log_window_t * bg_gtk_log_window_create(const char * app_name)
   ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_default_size(GTK_WINDOW(ret->window), 500, 300);
   
-  tmp_string = bg_sprintf(TR("%s messages"), app_name);
+  tmp_string = gavl_sprintf(TR("%s messages"), app_name);
   gtk_window_set_title(GTK_WINDOW(ret->window), tmp_string);
   free(tmp_string);
   

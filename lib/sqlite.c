@@ -330,8 +330,8 @@ char * bg_sqlite_make_group_condition(const char * id)
     }
   else if((*id >= 'a') && (*id <= 'z'))
     {
-    //    return bg_sprintf(" LIKE '%c%%'", *id);
-    return bg_sprintf(" GLOB '[%c%c]*'", *id, toupper(*id));
+    //    return gavl_sprintf(" LIKE '%c%%'", *id);
+    return gavl_sprintf(" GLOB '[%c%c]*'", *id, toupper(*id));
     }
   return NULL;
   }

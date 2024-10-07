@@ -207,7 +207,7 @@ static void set_enum(foreach_data_t * fd,
   str = get_enum_label(tab, val);
 
   gavl_dictionary_set_string_nocopy(fd->m, key,
-                          bg_sprintf("%d (%s)", val, str));
+                          gavl_sprintf("%d (%s)", val, str));
   }
 
 static void set_utf16le(foreach_data_t * fd,
@@ -266,7 +266,7 @@ static void set_rational(foreach_data_t * fd,
   den = get_long(e->data + 4, fd->bo);
 
   gavl_dictionary_set_string_nocopy(fd->m, key,
-                          bg_sprintf("%.4f [%d/%d]",
+                          gavl_sprintf("%.4f [%d/%d]",
                                      (float)num / (float)den,
                                      num, den));
   }
@@ -284,7 +284,7 @@ static void set_srational(foreach_data_t * fd,
   den = get_slong(e->data + 4, fd->bo);
   
   gavl_dictionary_set_string_nocopy(fd->m, key,
-                          bg_sprintf("%.4f [%d/%d]",
+                          gavl_sprintf("%.4f [%d/%d]",
                                      (float)num / (float)den,
                                      num, den));
   }
@@ -513,14 +513,14 @@ static void foreach2(ExifEntry * e, void * priv)
     return;
 
   tmp_string =
-    bg_sprintf("Exif::%s", exif_tag_get_name_in_ifd(e->tag, ifd));
+    gavl_sprintf("Exif::%s", exif_tag_get_name_in_ifd(e->tag, ifd));
 
   switch(e->tag)
     {
     case EXIF_TAG_COMPONENTS_CONFIGURATION:
       if(e->size == 4)
         gavl_dictionary_set_string_nocopy(fd->m, tmp_string,
-                                bg_sprintf("%s, %s, %s, %s",
+                                gavl_sprintf("%s, %s, %s, %s",
                                            get_enum_label(components, e->data[0]),
                                            get_enum_label(components, e->data[1]),
                                            get_enum_label(components, e->data[2]),

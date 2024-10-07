@@ -122,7 +122,7 @@ static char * create_filename(const bg_object_cache_t * cache, const uint32_t * 
   {
   char str[GAVL_MD5_LENGTH];
   gavl_md5_2_string(md5, str);
-  return bg_sprintf("%s/%s", cache->directory, str);
+  return gavl_sprintf("%s/%s", cache->directory, str);
   }
 
 static void load_disk_index(bg_object_cache_t * cache)
@@ -133,7 +133,7 @@ static void load_disk_index(bg_object_cache_t * cache)
 
   gavl_value_init(&val);
   
-  filename = bg_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
+  filename = gavl_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
   if(!access(filename, R_OK))
     bg_value_load_xml(&val, filename, ROOT_NAME_INDEX);
   free(filename);
@@ -165,7 +165,7 @@ static void save_disk_index(const bg_object_cache_t * cache)
   char md5_string[GAVL_MD5_LENGTH];
   
   gavl_value_init(&val);
-  filename = bg_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
+  filename = gavl_sprintf("%s/%s", cache->directory, INDEX_FILENAME);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving disk index %s", filename);
   

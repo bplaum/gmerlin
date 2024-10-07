@@ -67,18 +67,18 @@ static int make_thumbnail(bg_mdb_t * mdb, int64_t image_id,
     goto end;
 
   /* Make sure the directory exists */
-  tn_path = bg_sprintf("%s/thumbnails/%dx%d", mdb->path, width, height);
+  tn_path = gavl_sprintf("%s/thumbnails/%dx%d", mdb->path, width, height);
   gavl_ensure_directory(tn_path, 0);
   free(tn_path);
   tn_path = NULL;
 
   /* */
   
-  tn_file = bg_sprintf("%dx%d/%"PRId64".%s",
+  tn_file = gavl_sprintf("%dx%d/%"PRId64".%s",
                        width, height, image_id,
                        bg_mimetype_to_ext(mimetype));
   
-  tn_path = bg_sprintf("%s/thumbnails/%s",
+  tn_path = gavl_sprintf("%s/thumbnails/%s",
                        mdb->path, tn_file);
 
   /* Check if the thumbnail already exists. We just check for the existence of the file since the
@@ -270,7 +270,7 @@ get_thumbnail_callback(void * data, int argc, char **argv, char **azColName)
                                         "ID", mimetype_id);
       }
     if(!strcmp(azColName[i], GAVL_META_URI))
-      uri = bg_sprintf("%s/thumbnails/%s", tn->mdb->path, argv[i]);
+      uri = gavl_sprintf("%s/thumbnails/%s", tn->mdb->path, argv[i]);
     }
   
   gavl_metadata_add_image_uri(tn->m, tn->tag, width, height, mimetype, uri);
@@ -305,7 +305,7 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
      (path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_SRC, 0, NULL, NULL, NULL)) &&
      ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
     {
-    sql = bg_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
+    sql = gavl_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
     tn.tag = GAVL_META_ICON_URL;
     bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
     free(sql);
@@ -313,7 +313,7 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
   else if((path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_ICON_URL, 0, NULL, NULL, NULL)) &&
      ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
     {
-    sql = bg_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
+    sql = gavl_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
     tn.tag = GAVL_META_ICON_URL;
     bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
     free(sql);
@@ -323,7 +323,7 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
   if((path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_COVER_URL, 0, NULL, NULL, NULL)) &&
      ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
     {
-    sql = bg_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
+    sql = gavl_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
     tn.tag = GAVL_META_COVER_URL;
     bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
     free(sql);
@@ -333,7 +333,7 @@ void bg_mdb_get_thumbnails(bg_mdb_t * mdb, gavl_dictionary_t * track)
   if((path = gavl_dictionary_get_string_image_uri(tn.m, GAVL_META_POSTER_URL, 0, NULL, NULL, NULL)) &&
      ((id = bg_sqlite_string_to_id(mdb->thumbnail_db, "images", "ID", GAVL_META_URI, path)) > 0))
     {
-    sql = bg_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
+    sql = gavl_sprintf("SELECT * FROM thumbnails WHERE PARENT = %"PRId64";", id);
     tn.tag = GAVL_META_POSTER_URL;
     bg_sqlite_exec(mdb->thumbnail_db, sql, get_thumbnail_callback, &tn);
     free(sql);
@@ -389,10 +389,10 @@ void bg_mdb_init_thumbnails(bg_mdb_t * mdb)
   int result;
   pthread_mutex_init(&mdb->thumbnail_mutex, NULL);
 
-  mdb->thumbs_dir = bg_sprintf("%s/thumbnails", mdb->path);
+  mdb->thumbs_dir = gavl_sprintf("%s/thumbnails", mdb->path);
   gavl_ensure_directory(mdb->thumbs_dir, 0);
 
-  filename = bg_sprintf("%s/thumbnails/thumbs.sqlite", mdb->path);
+  filename = gavl_sprintf("%s/thumbnails/thumbs.sqlite", mdb->path);
   result = sqlite3_open(filename, &mdb->thumbnail_db);
 
   if(result)
@@ -456,7 +456,7 @@ remove_thumb_callback(void * data, int argc, char **argv, char **azColName)
   
   if(!strcmp(azColName[0], GAVL_META_URI))
     {
-    tmp_string = bg_sprintf("%s/%s", (char*)data, argv[0]);
+    tmp_string = gavl_sprintf("%s/%s", (char*)data, argv[0]);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing %s", tmp_string);
     remove(tmp_string);
     free(tmp_string);
@@ -477,7 +477,7 @@ void bg_mdb_purge_thumbnails(bg_mdb_t * mdb)
 
   bg_sqlite_id_tab_init(&tab);
 
-  sql = bg_sprintf("SELECT * FROM images;");
+  sql = gavl_sprintf("SELECT * FROM images;");
   
   bg_sqlite_exec(mdb->thumbnail_db, sql, exists_callback, &tab);
   

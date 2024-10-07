@@ -225,7 +225,7 @@ static void set_root_child(rb_t * rb, gavl_dictionary_t * dict, const gavl_array
     gavl_dictionary_copy(m, arr_dict);
     
     /* Replace ID */
-    id = bg_sprintf("%s%s/%s", rb->root_id, path, gavl_dictionary_get_string(arr_dict, GAVL_META_ID));
+    id = gavl_sprintf("%s%s/%s", rb->root_id, path, gavl_dictionary_get_string(arr_dict, GAVL_META_ID));
     gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, id);
     }
   
@@ -308,19 +308,19 @@ static int set_station(bg_mdb_backend_t * be,
   
   v = dict_get_string(child, "stationuuid");
   
-  tmp_string = bg_sprintf("%s/%s", parent_id, v);
+  tmp_string = gavl_sprintf("%s/%s", parent_id, v);
   gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, tmp_string);
 
   /* Streams are set via an own URI scheme, which s*/
   
-  tmp_string = bg_sprintf("%sm3u/url/%s", RADIO_BROWSER_ROOT, v);
+  tmp_string = gavl_sprintf("%sm3u/url/%s", RADIO_BROWSER_ROOT, v);
   gavl_metadata_add_src(m, GAVL_META_SRC, "audio/x-mpegurl", tmp_string);
 
   //  fprintf(stderr, "Adding mp3 url: %s\n", tmp_string);
 
   free(tmp_string);
   
-  tmp_string = bg_sprintf("%spls/url/%s", RADIO_BROWSER_ROOT, v);
+  tmp_string = gavl_sprintf("%spls/url/%s", RADIO_BROWSER_ROOT, v);
   gavl_metadata_add_src(m, GAVL_META_SRC, "audio/x-scpls", tmp_string);
   //  fprintf(stderr, "Adding pls url: %s\n", tmp_string);
   
@@ -426,7 +426,7 @@ static gavl_dictionary_t * create_root_folder(bg_mdb_backend_t * be, const char 
     }
 
   gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
-  gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf("/webradio/radiobrowser%s", id));
+  gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("/webradio/radiobrowser%s", id));
   gavl_dictionary_set_string(m, GAVL_META_LABEL, get_root_label(id));
   
   gavl_track_set_num_children(ret, arr->num_entries, 0);
@@ -484,7 +484,7 @@ static gavl_dictionary_t * browse_leaf(bg_mdb_backend_t * be,
   if(!pos)
     goto fail;
   
-  url = bg_sprintf(RADIO_BROWSER_ROOT "json/stations/byid/%s", pos+1);
+  url = gavl_sprintf(RADIO_BROWSER_ROOT "json/stations/byid/%s", pos+1);
   
   if(!(obj = bg_json_from_url(url, NULL)))
     goto fail;
@@ -643,7 +643,7 @@ static gavl_dictionary_t * browse_object(bg_mdb_backend_t * be,
             gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
             gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
             
-            new_id = bg_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
+            new_id = gavl_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
                                 group_id, 
                                 gavl_dictionary_get_string(m, GAVL_META_ID));
             
@@ -813,7 +813,7 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
                 gavl_track_set_num_children(dict, rb->tag_groups.num_entries, 0);
                 gavl_dictionary_set_string(m, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_CONTAINER);
                 }
-              gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf("%s%s", rb->root_id,
+              gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s%s", rb->root_id,
                                                                             root_folders[i + start].id));
 
               gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
@@ -850,7 +850,7 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
                   break;
                 
                 // /webradio/radiobrowser/language/Blabla
-                url = bg_sprintf("%s/json/stations/bylanguageexact/%s?offset=%d&limit=%d",
+                url = gavl_sprintf("%s/json/stations/bylanguageexact/%s?offset=%d&limit=%d",
                                  RADIO_BROWSER_ROOT, orig_id, start, num);
                 send_stations(be, url, &arr, ctx_id_orig);
                 free(url);
@@ -886,7 +886,7 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
                   break;
                 
                 // /webradio/radiobrowser/country/BlaBla
-                url = bg_sprintf("%s/json/stations/bycountrycodeexact/%s?offset=%d&limit=%d",
+                url = gavl_sprintf("%s/json/stations/bycountrycodeexact/%s?offset=%d&limit=%d",
                                  RADIO_BROWSER_ROOT, orig_id, start, num);
                 send_stations(be, url, &arr, ctx_id_orig);
                 free(url);
@@ -956,7 +956,7 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
                   gavl_dictionary_set_string(dst, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER_TAG);
                   gavl_dictionary_set_string(dst, GAVL_META_CHILD_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
                   
-                  new_id = bg_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
+                  new_id = gavl_sprintf("/webradio/radiobrowser"ROOT_BY_TAG"/%s/%s",
                                       group_id, 
                                       gavl_dictionary_get_string(dst, GAVL_META_ID));
                   
@@ -1005,7 +1005,7 @@ static int handle_msg_radiobrowser(void * priv, gavl_msg_t * msg)
 
                   
                   // /webradio/radiobrowser/tag/BlaBla
-                  url = bg_sprintf("%s/json/stations/bytagexact/%s?offset=%d&limit=%d",
+                  url = gavl_sprintf("%s/json/stations/bytagexact/%s?offset=%d&limit=%d",
                                    RADIO_BROWSER_ROOT, orig_id, start, num);
                   //                  fprintf(stderr, "url: %s\n", url);
                   
@@ -1251,7 +1251,7 @@ void bg_mdb_create_radio_browser(bg_mdb_backend_t * b)
   gavl_dictionary_set_string(child_m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
 
   gavl_dictionary_set_string_nocopy(child_m, GAVL_META_ID,
-                                    bg_sprintf("%s/radiobrowser",
+                                    gavl_sprintf("%s/radiobrowser",
                                                gavl_dictionary_get_string(container_m, GAVL_META_ID)));
 
   /* Update container children. Must be done after setting the media class */

@@ -95,7 +95,7 @@ FILE * bg_lock_directory(const char * directory)
   char * tmp_string;
   FILE * ret;
 
-  tmp_string = bg_sprintf("%s/lock", directory);
+  tmp_string = gavl_sprintf("%s/lock", directory);
 
   if(!(ret = fopen(tmp_string, "w")))
     {
@@ -121,7 +121,7 @@ void bg_unlock_directory(FILE * lockfile, const char * directory)
     return;
 
   bg_unlock_file(lockfile);
-  tmp_string = bg_sprintf("%s/lock", directory);
+  tmp_string = gavl_sprintf("%s/lock", directory);
   remove(tmp_string);
   free(tmp_string);
   }
@@ -278,7 +278,7 @@ int bg_remove_file(const char * file)
          !strcmp(dent_ptr->d_name, "."))
         continue;
       
-      filename = bg_sprintf("%s/%s", file, dent_ptr->d_name);
+      filename = gavl_sprintf("%s/%s", file, dent_ptr->d_name);
 
       if(!bg_remove_file(filename))
         return 0;
@@ -389,7 +389,7 @@ int bg_cache_directory_cleanup(const char * cache_dir)
   int locked = 0;
   time_t cur;
   
-  tmp_string = bg_sprintf("%s/" LASTCLEANUP_NAME, cache_dir);
+  tmp_string = gavl_sprintf("%s/" LASTCLEANUP_NAME, cache_dir);
   
   if(!stat(tmp_string, &st))
     {
@@ -409,7 +409,7 @@ int bg_cache_directory_cleanup(const char * cache_dir)
 
   locked = 1;
 
-  tmp_string = bg_sprintf("%s/*.*", cache_dir);
+  tmp_string = gavl_sprintf("%s/*.*", cache_dir);
   glob(tmp_string, 0, NULL /* errfunc */, &g);
 
   free(tmp_string);
@@ -462,7 +462,7 @@ int bg_load_cache_item(const char * cache_dir,
   struct stat st;
   
   
-  template = bg_sprintf("%s/%s.*", cache_dir, md5);
+  template = gavl_sprintf("%s/%s.*", cache_dir, md5);
 
   glob(template, 0, NULL /* errfunc */, &g);
 
@@ -500,7 +500,7 @@ void bg_save_cache_item(const char * cache_dir,
   if(md5 && mimetype && (ext = bg_mimetype_to_ext(mimetype)))
     {
     char * filename;
-    filename = bg_sprintf("%s/%s.%s", cache_dir, md5, ext);
+    filename = gavl_sprintf("%s/%s.%s", cache_dir, md5, ext);
     bg_write_file(filename, buf->buf, buf->len);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving cache item: %s", filename);
     free(filename);

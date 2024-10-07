@@ -249,7 +249,7 @@ void bg_gtk_plugin_info_show(const bg_plugin_info_t * info, GtkWidget * parent)
   char * mimetypes_string = gavl_value_join_arr(&info->mimetypes_val, ", ");
   
   flag_string = get_flag_string(info->flags);
-  text = bg_sprintf(TR("Name:\t %s\nLong name:\t %s\nType:\t %s\nFlags:\t %s\nPriority:\t %d\nDLL Filename:\t %s\nExtensions:\t %s\nProtocols:\t %s\nMimetypes:\t %s"),
+  text = gavl_sprintf(TR("Name:\t %s\nLong name:\t %s\nType:\t %s\nFlags:\t %s\nPriority:\t %d\nDLL Filename:\t %s\nExtensions:\t %s\nProtocols:\t %s\nMimetypes:\t %s"),
                     info->name, info->long_name, get_type_string(info->type),
                     flag_string, info->priority, info->module_filename, extensions_string, protocols_string,
                     mimetypes_string);

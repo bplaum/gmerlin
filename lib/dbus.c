@@ -486,7 +486,7 @@ char * bg_dbus_connection_request_name(bg_dbus_connection_t * conn, const char *
   switch(result)
     {
     case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
-      ret = bg_sprintf("%s.pid%d", name, getpid());
+      ret = gavl_sprintf("%s.pid%d", name, getpid());
       
       if(dbus_bus_request_name(conn->conn, ret, 0, &err) != 
          DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
@@ -567,7 +567,7 @@ static void handle_introspect(bg_dbus_connection_t * conn, const char * path, DB
 
     for(i = 0; i < el->num_entries; i++)
       {
-      tmp_string = bg_sprintf("  <node name=\"%s\"/>\n", el->entries[i].name);
+      tmp_string = gavl_sprintf("  <node name=\"%s\"/>\n", el->entries[i].name);
       xml = gavl_strcat(xml, tmp_string);
       free(tmp_string);
       }
@@ -1394,7 +1394,7 @@ void bg_dbus_register_object(bg_dbus_connection_t * conn, const char * path,
   
   bg_dbus_connection_unlock(conn);
   
-  match = bg_sprintf("type='method_call',path='%s'", path);
+  match = gavl_sprintf("type='method_call',path='%s'", path);
   bg_dbus_connection_add_listener(conn, match, sink, BG_MSG_NS_PRIVATE, 1);
   free(match);
   }

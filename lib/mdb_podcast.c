@@ -233,7 +233,7 @@ static char * parse_time(const char * pubDate)
   
   year = atoi(substr[3]);
   
-  ret = bg_sprintf("%04d-%02d-%02d %s", year, month, day,  substr[4]);
+  ret = gavl_sprintf("%04d-%02d-%02d %s", year, month, day,  substr[4]);
   
   fail:
 
@@ -500,7 +500,7 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   
   gavl_dictionary_set_string_nocopy(channel_m,
                                     GAVL_META_ID,
-                                    bg_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
+                                    gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
   
   item = NULL;
 
@@ -616,13 +616,13 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
         }
       gavl_metadata_add_src(it_m, GAVL_META_SRC, mimetype, url);
 
-      gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID, bg_sprintf("%s/%s/%s", BG_MDB_ID_PODCASTS, md5, url_md5));
+      gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID, gavl_sprintf("%s/%s/%s", BG_MDB_ID_PODCASTS, md5, url_md5));
       
       }
     else
       {
       gavl_dictionary_set_string(it_m, GAVL_META_CLASS, GAVL_META_CLASS_ITEM);
-      gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID, bg_sprintf("%s/%s/%d", BG_MDB_ID_PODCASTS, md5, idx));
+      gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID, gavl_sprintf("%s/%s/%d", BG_MDB_ID_PODCASTS, md5, idx));
       }
     
     //    fprintf(stderr, "Parsed Item:\n");
@@ -655,7 +655,7 @@ static void load_subscriptions(bg_mdb_backend_t * b)
   {
   char * filename;
   podcasts_t * priv = b->priv;
-  filename = bg_sprintf("%s/%s", priv->dir, "subscriptions");
+  filename = gavl_sprintf("%s/%s", priv->dir, "subscriptions");
     
   if(!access(filename, R_OK))
     bg_array_load_xml(&priv->subscriptions,
@@ -669,7 +669,7 @@ static void save_subscriptions(bg_mdb_backend_t * b)
   char * filename;
   podcasts_t * priv = b->priv;
   
-  filename = bg_sprintf("%s/%s", priv->dir, "subscriptions");
+  filename = gavl_sprintf("%s/%s", priv->dir, "subscriptions");
   
   bg_array_save_xml(&priv->subscriptions,
                     filename, "subscriptions");
@@ -724,7 +724,7 @@ static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl
     save_subscriptions(b);
     
     /* Save items */
-    filename = bg_sprintf("%s/%s", p->dir, md5);
+    filename = gavl_sprintf("%s/%s", p->dir, md5);
     bg_array_save_xml(&items, filename, "items");
     free(filename);
 
@@ -748,7 +748,7 @@ static void unsubscribe(bg_mdb_backend_t * b, int idx, gavl_array_t * index)
 
   bg_get_filename_hash(gavl_string_array_get(&p->subscriptions, idx), md5);
   
-  filename = bg_sprintf("%s/%s", p->dir, md5);
+  filename = gavl_sprintf("%s/%s", p->dir, md5);
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleting %s", filename);
   
   remove(filename);
@@ -790,7 +790,7 @@ static int check_update(bg_mdb_backend_t * b)
     full = 1;
     }
   gavl_array_init(&idx);
-  filename = bg_sprintf("%s/index", p->dir);
+  filename = gavl_sprintf("%s/index", p->dir);
   if(!access(filename, R_OK))
     bg_array_load_xml(&idx, filename, "items");
   free(filename);
@@ -886,7 +886,7 @@ static int check_update(bg_mdb_backend_t * b)
     gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
 
     gavl_dictionary_set_string_nocopy(&evt->header, GAVL_MSG_CONTEXT_ID,
-                                      bg_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
+                                      gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
     
     gavl_msg_set_arg_dictionary(evt, 0, channel);
     bg_msg_sink_put(b->ctrl.evt_sink);
@@ -898,7 +898,7 @@ static int check_update(bg_mdb_backend_t * b)
     gavl_msg_set_id_ns(evt, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
 
     gavl_dictionary_set_string_nocopy(&evt->header, GAVL_MSG_CONTEXT_ID,
-                                      bg_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
+                                      gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
     
     gavl_msg_set_last(evt, 1);
   
@@ -910,7 +910,7 @@ static int check_update(bg_mdb_backend_t * b)
     
 
     /* Save items */
-    filename = bg_sprintf("%s/%s", p->dir, md5);
+    filename = gavl_sprintf("%s/%s", p->dir, md5);
     bg_array_save_xml(&items_new, filename, "items");
     free(filename);
     
@@ -923,7 +923,7 @@ static int check_update(bg_mdb_backend_t * b)
     /* Save index */
     bg_mdb_set_next_previous(&idx);
     
-    filename = bg_sprintf("%s/index", p->dir);
+    filename = gavl_sprintf("%s/index", p->dir);
     bg_array_save_xml(&idx, filename, "items");
     free(filename);
     }
@@ -1595,7 +1595,7 @@ static int handle_msg_podcast(void * priv, gavl_msg_t * msg)
             
             gavl_value_init(&idx_val);
             idx = gavl_value_set_array(&idx_val);
-            filename = bg_sprintf("%s/index", p->dir);
+            filename = gavl_sprintf("%s/index", p->dir);
             bg_array_load_xml(idx, filename, "items");
             bg_mdb_tracks_sort(idx);
             bg_array_save_xml(idx, filename, "items");
@@ -1662,7 +1662,7 @@ void bg_mdb_create_podcasts(bg_mdb_backend_t * b)
                        bg_msg_sink_create(handle_msg_podcast, b, 0),
                        bg_msg_hub_create(1));
   
-  priv->dir = bg_sprintf("%s/%s", b->db->path, "podcasts");
+  priv->dir = gavl_sprintf("%s/%s", b->db->path, "podcasts");
   
   gavl_ensure_directory(priv->dir, 0);
 

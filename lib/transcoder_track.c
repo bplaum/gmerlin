@@ -424,7 +424,7 @@ static char * create_stream_label(const gavl_dictionary_t * m)
   language = gavl_dictionary_get_string(m, GAVL_META_LANGUAGE);
   
   if(language && info)
-    return bg_sprintf("%s [%s]", info, bg_get_language_name(language));
+    return gavl_sprintf("%s [%s]", info, bg_get_language_name(language));
   else if(language)
     return gavl_strdup(bg_get_language_name(language));
   else if(info)
@@ -983,9 +983,9 @@ bg_transcoder_track_split_at_chapters(gavl_array_t * ret, const bg_transcoder_tr
       }
     
     if(label_orig)
-      label_new = bg_sprintf("%s (Chapter %02d)", label_orig, i+1);
+      label_new = gavl_sprintf("%s (Chapter %02d)", label_orig, i+1);
     else
-      label_new = bg_sprintf("Chapter %02d", i+1);
+      label_new = gavl_sprintf("Chapter %02d", i+1);
     
     gavl_dictionary_set_string(new_m, GAVL_META_LABEL, label_new);
     gavl_array_splice_val_nocopy(ret, -1, 0, &new_track_val);

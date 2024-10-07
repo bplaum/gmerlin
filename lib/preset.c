@@ -80,7 +80,7 @@ load_presets(const char * directory, bg_preset_t * ret, int private)
     if(dent_ptr->d_name[0] == '.') /* Don't import hidden files */
       continue;
 
-    filename = bg_sprintf("%s/%s", directory, dent_ptr->d_name);
+    filename = gavl_sprintf("%s/%s", directory, dent_ptr->d_name);
     
     if(stat(filename, &stat_buf) ||
        !S_ISREG(stat_buf.st_mode) ||
@@ -197,7 +197,7 @@ bg_preset_t * bg_presets_load(const char * preset_path)
 
   if(home_dir)
     {
-    directory = bg_sprintf("%s/.gmerlin/presets/%s",
+    directory = gavl_sprintf("%s/.gmerlin/presets/%s",
                            home_dir, preset_path);
     if(!access(directory, R_OK|W_OK|X_OK))
       ret = load_presets(directory, ret, 1);
@@ -207,7 +207,7 @@ bg_preset_t * bg_presets_load(const char * preset_path)
   /* Second option: system wide directory. We only
      load presets, which are not available in $HOME */
   
-  directory = bg_sprintf("%s/presets/%s",
+  directory = gavl_sprintf("%s/presets/%s",
                          DATA_DIR, preset_path);
   if(!access(directory, R_OK|W_OK|X_OK))
     ret = load_presets(directory, ret, 0);
@@ -298,7 +298,7 @@ bg_preset_t * bg_preset_add(bg_preset_t * presets,
   if(!p)
     {
     char * dir;
-    dir = bg_sprintf("%s/.gmerlin/presets/%s", home_dir,
+    dir = gavl_sprintf("%s/.gmerlin/presets/%s", home_dir,
                      preset_path);
 
     if(!gavl_ensure_directory(dir, 1))
@@ -310,7 +310,7 @@ bg_preset_t * bg_preset_add(bg_preset_t * presets,
       }
     p = calloc(1, sizeof(*p));
     p->name = gavl_strrep(p->name, name);
-    p->file = bg_sprintf("%s/%s", dir, name);
+    p->file = gavl_sprintf("%s/%s", dir, name);
     p->next = presets;
     presets = p;
     free(dir);

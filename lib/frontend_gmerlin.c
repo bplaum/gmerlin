@@ -95,7 +95,7 @@ static int frontend_gmerlin_open(void * data, bg_controllable_t * ctrl, const ch
     return 1;
     
   root_uri = bg_http_server_get_root_url(srv);
-  uri = bg_sprintf("%s%s/ws/%s", uri_scheme, root_uri + 4 /* ://..." */, klass);
+  uri = gavl_sprintf("%s%s/ws/%s", uri_scheme, root_uri + 4 /* ://..." */, klass);
     
   /* Create local device */
 

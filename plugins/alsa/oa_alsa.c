@@ -328,7 +328,7 @@ static int open_alsa(void * data, gavl_audio_format_t * format)
       format->channel_locations[2] = GAVL_CHID_REAR_LEFT;
       format->channel_locations[3] = GAVL_CHID_REAR_RIGHT;
 
-      card = bg_sprintf("surround40");
+      card = gavl_sprintf("surround40");
 
       
       break;
@@ -341,7 +341,7 @@ static int open_alsa(void * data, gavl_audio_format_t * format)
       format->channel_locations[3] = GAVL_CHID_REAR_RIGHT;
       format->channel_locations[4] = GAVL_CHID_LFE;
 
-      card = bg_sprintf("surround41");
+      card = gavl_sprintf("surround41");
 
       
       break;
@@ -354,7 +354,7 @@ static int open_alsa(void * data, gavl_audio_format_t * format)
       format->channel_locations[3] = GAVL_CHID_REAR_RIGHT;
       format->channel_locations[4] = GAVL_CHID_FRONT_CENTER;
 
-      card = bg_sprintf("surround50");
+      card = gavl_sprintf("surround50");
       
       break;
     case PLAYBACK_SURROUND51:
@@ -367,7 +367,7 @@ static int open_alsa(void * data, gavl_audio_format_t * format)
       format->channel_locations[4] = GAVL_CHID_FRONT_CENTER;
       format->channel_locations[5] = GAVL_CHID_LFE;
 
-      card = bg_sprintf("surround51");
+      card = gavl_sprintf("surround51");
       break;
     }
 

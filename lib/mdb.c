@@ -1157,7 +1157,7 @@ void bg_mdb_set_root_icons(bg_mdb_t * db)
   
   m_root = gavl_dictionary_get_dictionary_nc(&db->root, GAVL_META_METADATA);
 
-  tmp_string = bg_sprintf("%s/static/icons/", bg_http_server_get_root_url(db->srv));
+  tmp_string = gavl_sprintf("%s/static/icons/", bg_http_server_get_root_url(db->srv));
 
   gavl_array_init(&icons);
   bg_array_add_application_icons(&icons, tmp_string, icon_name);
@@ -1246,7 +1246,7 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
   if(path)
     {
     char * pos;
-    ret->path     = bg_sprintf("%s/%s", path, MDB_DIR);
+    ret->path     = gavl_sprintf("%s/%s", path, MDB_DIR);
 
     /* Remove trailing /  */
     pos = ret->path + (strlen(ret->path) - 1);
@@ -1367,7 +1367,7 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
                       NULL, NULL);
     }
   
-  ret->config_file = bg_sprintf("%s/config.xml", ret->path);
+  ret->config_file = gavl_sprintf("%s/config.xml", ret->path);
   
   ret->cfg_reg = gavl_dictionary_create();
   

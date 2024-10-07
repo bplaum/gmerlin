@@ -1391,17 +1391,17 @@ static void value_2_xml(xmlNodePtr xml_val,
     case GAVL_TYPE_UNDEFINED:
       break;
     case GAVL_TYPE_INT:
-      tmp_string = bg_sprintf("%d", v->v.i);
+      tmp_string = gavl_sprintf("%d", v->v.i);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       break;
     case GAVL_TYPE_LONG:
-      tmp_string = bg_sprintf("%"PRId64, v->v.l);
+      tmp_string = gavl_sprintf("%"PRId64, v->v.l);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       break;
     case GAVL_TYPE_FLOAT:
-      tmp_string = bg_sprintf("%f", v->v.d);
+      tmp_string = gavl_sprintf("%f", v->v.d);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       break;
@@ -1424,21 +1424,21 @@ static void value_2_xml(xmlNodePtr xml_val,
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
-      tmp_string = bg_sprintf("%f %f %f",
+      tmp_string = gavl_sprintf("%f %f %f",
                               v->v.color[0], v->v.color[1],
                               v->v.color[2]);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       break;
     case GAVL_TYPE_COLOR_RGBA:
-      tmp_string = bg_sprintf("%f %f %f %f",
+      tmp_string = gavl_sprintf("%f %f %f %f",
                               v->v.color[0], v->v.color[1],
                               v->v.color[2], v->v.color[3]);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       break;
     case GAVL_TYPE_POSITION:
-      tmp_string = bg_sprintf("%f %f",
+      tmp_string = gavl_sprintf("%f %f",
                               v->v.position[0], v->v.position[1]);
       xmlAddChild(xml_val, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);

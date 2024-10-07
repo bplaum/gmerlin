@@ -49,7 +49,7 @@ struct bg_server_storage_s
 
 static char * index_filename(bg_server_storage_t * s)
   {
-  return bg_sprintf("%s/INDEX", s->path);
+  return gavl_sprintf("%s/INDEX", s->path);
   }
 
 static void read_index(bg_server_storage_t * s)
@@ -186,12 +186,12 @@ static char * make_path(bg_server_storage_t * s,
       i = 0;
       while(s->vars[i])
         {
-        path = bg_sprintf("%s/%s/%s", s->path, last_id, s->vars[i]);
+        path = gavl_sprintf("%s/%s/%s", s->path, last_id, s->vars[i]);
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleting %s", path);
         remove(path);
         free(path);
         }
-      path = bg_sprintf("%s/%s", s->path, last_id);
+      path = gavl_sprintf("%s/%s", s->path, last_id);
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Deleting %s", path);
       remove(path);
       free(path);
@@ -207,12 +207,12 @@ static char * make_path(bg_server_storage_t * s,
     s->client_ids[0] = gavl_strdup(id);
     
     /* Make directory */
-    path = bg_sprintf("%s/%s", s->path, id);
+    path = gavl_sprintf("%s/%s", s->path, id);
     gavl_ensure_directory(path, 1);
     free(path);
     }
   
-  return bg_sprintf("%s/%s/%s", s->path, id, var);
+  return gavl_sprintf("%s/%s/%s", s->path, id, var);
   }
 
 void * bg_server_storage_get(bg_server_storage_t * s,

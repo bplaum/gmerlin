@@ -162,7 +162,7 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   //  fprintf(stderr, "add_item:\n");
   //  gavl_dictionary_dump(dict, 2);
   
-  markup = bg_sprintf("<span weight=\"bold\">%s</span>\n%s",
+  markup = gavl_sprintf("<span weight=\"bold\">%s</span>\n%s",
                       gavl_dictionary_get_string(dict, GAVL_META_LABEL),
                       gavl_dictionary_get_string(dict, GAVL_META_URI));
 
@@ -174,7 +174,7 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   if((var = gavl_dictionary_get_string_image_max(dict, GAVL_META_ICON_URL, 48, 48, NULL)))
     icon = gavl_strdup(var);
   else if((var = gavl_dictionary_get_string(dict, GAVL_META_ICON_NAME)))
-    icon = bg_sprintf("appicon:%s", var);
+    icon = gavl_sprintf("appicon:%s", var);
   else
     icon = gavl_sprintf("icon:%s", bg_get_type_icon(klass));
   

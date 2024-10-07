@@ -64,7 +64,7 @@ xmlDocPtr bg_upnp_device_description_create(const char * type, int version)
   
   node = bg_xml_append_child_node(root, "device", NULL);
   
-  tmp_string = bg_sprintf("urn:schemas-upnp-org:device:%s:%d", type, version);
+  tmp_string = gavl_sprintf("urn:schemas-upnp-org:device:%s:%d", type, version);
   bg_xml_append_child_node(node, "deviceType", tmp_string);
   free(tmp_string);
   bg_xml_append_child_node(node, "presentationURL", "/");
@@ -136,7 +136,7 @@ void bg_upnp_device_description_set_uuid(xmlDocPtr ptr, uuid_t uuid)
   xmlNodePtr node = get_device_node(ptr);
 
   uuid_unparse_lower(uuid, uuid_str);
-  tmp_string = bg_sprintf("uuid:%s", uuid_str);
+  tmp_string = gavl_sprintf("uuid:%s", uuid_str);
   bg_xml_append_child_node(node, "UDN", tmp_string);
   free(tmp_string);
   }
@@ -165,23 +165,23 @@ void bg_upnp_device_description_add_service(xmlDocPtr ptr,
   
   service = bg_xml_append_child_node(servicelist, "service", NULL);
 
-  tmp_string = bg_sprintf("urn:schemas-upnp-org:service:%s:%d", type, version);
+  tmp_string = gavl_sprintf("urn:schemas-upnp-org:service:%s:%d", type, version);
   bg_xml_append_child_node(service, "serviceType", tmp_string);
   free(tmp_string);
   
-  tmp_string = bg_sprintf("urn:upnp-org:serviceId:%s", type);
+  tmp_string = gavl_sprintf("urn:upnp-org:serviceId:%s", type);
   bg_xml_append_child_node(service, "serviceId", tmp_string);
   free(tmp_string);
 
-  tmp_string = bg_sprintf("%s%s/desc.xml", dev->path, name);
+  tmp_string = gavl_sprintf("%s%s/desc.xml", dev->path, name);
   bg_xml_append_child_node(service, "SCPDURL", tmp_string);
   free(tmp_string);
   
-  tmp_string = bg_sprintf("%s%s/control", dev->path, name);
+  tmp_string = gavl_sprintf("%s%s/control", dev->path, name);
   bg_xml_append_child_node(service, "controlURL", tmp_string);
   free(tmp_string);
 
-  tmp_string = bg_sprintf("%s%s/event", dev->path, name);
+  tmp_string = gavl_sprintf("%s%s/event", dev->path, name);
   bg_xml_append_child_node(service, "eventSubURL", tmp_string);
   free(tmp_string);
   
@@ -204,15 +204,15 @@ void bg_upnp_device_description_add_icon(xmlDocPtr ptr,
   icon = xmlNewTextChild(iconlist, NULL, (xmlChar*)"icon", NULL);
   bg_xml_append_child_node(icon, "mimetype", mimetype);
 
-  tmp_string = bg_sprintf("%d", width);
+  tmp_string = gavl_sprintf("%d", width);
   bg_xml_append_child_node(icon, "width", tmp_string);
   free(tmp_string);
 
-  tmp_string = bg_sprintf("%d", height);
+  tmp_string = gavl_sprintf("%d", height);
   bg_xml_append_child_node(icon, "height", tmp_string);
   free(tmp_string);
 
-  tmp_string = bg_sprintf("%d", depth);
+  tmp_string = gavl_sprintf("%d", depth);
   bg_xml_append_child_node(icon, "depth", tmp_string);
   free(tmp_string);
   
@@ -237,9 +237,9 @@ static char * get_url_base(const char * desc_url)
     return NULL;
     }
   if(port == -1)
-    ret = bg_sprintf("http://%s", host);
+    ret = gavl_sprintf("http://%s", host);
   else
-    ret = bg_sprintf("http://%s:%d", host, port);
+    ret = gavl_sprintf("http://%s:%d", host, port);
   free(host);
   return ret;
   }
@@ -269,11 +269,11 @@ char * bg_upnp_device_description_make_url(const char * url, const char * base)
   if(!strncasecmp(url, "http://", 7))
     return gavl_strdup(url);
   else if((base[strlen(base)-1] == '/') && (url[0] == '/'))
-    return bg_sprintf("%s%s", base, url+1);
+    return gavl_sprintf("%s%s", base, url+1);
   else if((base[strlen(base)-1] == '/') || (url[0] == '/'))
-    return bg_sprintf("%s%s", base, url);
+    return gavl_sprintf("%s%s", base, url);
   else
-    return bg_sprintf("%s/%s", base, url);
+    return gavl_sprintf("%s/%s", base, url);
   }
 
 
@@ -409,11 +409,11 @@ static char * make_url(const char * url, const char * base)
   if(!strncasecmp(url, "http://", 7))
     return gavl_strdup(url);
   else if((base[strlen(base)-1] == '/') && (url[0] == '/'))
-    return bg_sprintf("%s%s", base, url+1);
+    return gavl_sprintf("%s%s", base, url+1);
   else if((base[strlen(base)-1] == '/') || (url[0] == '/'))
-    return bg_sprintf("%s%s", base, url);
+    return gavl_sprintf("%s%s", base, url);
   else
-    return bg_sprintf("%s/%s", base, url);
+    return gavl_sprintf("%s/%s", base, url);
   }
 
 char *
@@ -740,7 +740,7 @@ int bg_upnp_device_get_node_info(gavl_dictionary_t * dev, const char * device, i
     return 0;
   
   if((pos = strstr(uri, "://")))
-    real_uri = bg_sprintf("http%s", pos);
+    real_uri = gavl_sprintf("http%s", pos);
   else
     real_uri = gavl_strdup(uri);
 

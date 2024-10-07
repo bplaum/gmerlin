@@ -77,8 +77,8 @@ create_parameters(const LADSPA_Descriptor * desc)
       {
       is_int = 0;
       
-      ret[index].name =      bg_sprintf("%s", desc->PortNames[i]);
-      ret[index].long_name = bg_sprintf("%s", desc->PortNames[i]);
+      ret[index].name =      gavl_sprintf("%s", desc->PortNames[i]);
+      ret[index].long_name = gavl_sprintf("%s", desc->PortNames[i]);
 
       if(desc->PortRangeHints[i].HintDescriptor & LADSPA_HINT_TOGGLED)
         {
@@ -259,12 +259,12 @@ static bg_plugin_info_t * get_info(const LADSPA_Descriptor * desc)
   
   ret = calloc(1, sizeof(*ret));
 
-  ret->name        = bg_sprintf("fa_ladspa_%s", desc->Label);
+  ret->name        = gavl_sprintf("fa_ladspa_%s", desc->Label);
   ret->long_name   = gavl_strdup(desc->Name);
   ret->type        = BG_PLUGIN_FILTER_AUDIO;
   ret->api         = BG_PLUGIN_API_LADSPA;
   ret->flags       = BG_PLUGIN_FILTER_1;
-  ret->description = bg_sprintf(TR("ladspa plugin\nAuthor:\t%s\nCopyright:\t%s"),
+  ret->description = gavl_sprintf(TR("ladspa plugin\nAuthor:\t%s\nCopyright:\t%s"),
                                 desc->Maker, desc->Copyright);
   
   /* Check for ports */

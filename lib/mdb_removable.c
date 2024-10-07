@@ -135,7 +135,7 @@ static void add(bg_mdb_backend_t * b, const char * uri, const char * klass, cons
     if((child = gavl_get_track_nc(ret, i)) &&
        (child_m = gavl_track_get_metadata_nc(child)))
       {
-      gavl_dictionary_set_string_nocopy(child_m, GAVL_META_ID, bg_sprintf("%s/?track=%d", id, i+1));
+      gavl_dictionary_set_string_nocopy(child_m, GAVL_META_ID, gavl_sprintf("%s/?track=%d", id, i+1));
       bg_mdb_add_http_uris(b->db, child);
       }
     }

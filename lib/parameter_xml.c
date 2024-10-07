@@ -469,7 +469,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
       child = xmlNewTextChild(xml_info, NULL, (xmlChar*)multi_names_key, NULL);
       xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
       
-      tmp_string = bg_sprintf("%d", multi_num);
+      tmp_string = gavl_sprintf("%d", multi_num);
       BG_XML_SET_PROP(child, num_key, tmp_string);
       free(tmp_string);
             
@@ -488,7 +488,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
       child = xmlNewTextChild(xml_info, NULL, (xmlChar*)multi_labels_key, NULL);
       xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
       
-      tmp_string = bg_sprintf("%d", multi_num);
+      tmp_string = gavl_sprintf("%d", multi_num);
       BG_XML_SET_PROP(child, num_key, tmp_string);
       free(tmp_string);
       
@@ -506,7 +506,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
       child = xmlNewTextChild(xml_info, NULL, (xmlChar*)multi_descs_key, NULL);
       xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
       
-      tmp_string = bg_sprintf("%d", multi_num);
+      tmp_string = gavl_sprintf("%d", multi_num);
       BG_XML_SET_PROP(child, num_key, tmp_string);
       free(tmp_string);
       
@@ -524,7 +524,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
       child = xmlNewTextChild(xml_info, NULL, (xmlChar*)multi_parameters_key, NULL);
       xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
       
-      tmp_string = bg_sprintf("%d", multi_num);
+      tmp_string = gavl_sprintf("%d", multi_num);
       BG_XML_SET_PROP(child, num_key, tmp_string);
       free(tmp_string);
       
@@ -534,7 +534,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
           {
           grandchild = xmlNewTextChild(child, NULL, (xmlChar*)multi_parameter_key, NULL);
 
-          tmp_string = bg_sprintf("%d", i);
+          tmp_string = gavl_sprintf("%d", i);
           BG_XML_SET_PROP(grandchild, index_key, tmp_string);
           free(tmp_string);
 
@@ -579,7 +579,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
       {
       child = xmlNewTextChild(xml_info, NULL, (xmlChar*)num_digits_key, NULL);
       
-      tmp_string = bg_sprintf("%d", info[num_parameters].num_digits);
+      tmp_string = gavl_sprintf("%d", info[num_parameters].num_digits);
       xmlAddChild(child, BG_XML_NEW_TEXT(tmp_string));
       free(tmp_string);
       
@@ -590,7 +590,7 @@ void bg_parameters_2_xml(const bg_parameter_info_t * info,
     
     num_parameters++;
     }
-  tmp_string = bg_sprintf("%d", num_parameters);
+  tmp_string = gavl_sprintf("%d", num_parameters);
   BG_XML_SET_PROP(xml_parameters, num_key, tmp_string);
   free(tmp_string);
   }

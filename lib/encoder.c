@@ -561,7 +561,7 @@ static bg_plugin_handle_t * get_stream_handle(bg_encoder_t * enc,
     if(enc->total_streams > 1)
       {
       if(strcmp(enc->filename_base, "-"))
-        filename_base = bg_sprintf("%s_%s_%02d", enc->filename_base, type_string, in_index+1);
+        filename_base = gavl_sprintf("%s_%s_%02d", enc->filename_base, type_string, in_index+1);
       else
         filename_base = gavl_strdup(enc->filename_base);
 

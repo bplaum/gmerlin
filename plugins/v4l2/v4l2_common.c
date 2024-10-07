@@ -260,7 +260,7 @@ void bgv4l2_create_device_selector(bg_parameter_info_t * info,
   
   for(i = 0; i < 64; i++)
     {
-    tmp_string = bg_sprintf("/dev/video%d", i);
+    tmp_string = gavl_sprintf("/dev/video%d", i);
     
     fd = open(tmp_string, O_RDWR | O_NONBLOCK, 0);
     if(fd < 0)

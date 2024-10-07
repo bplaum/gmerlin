@@ -879,7 +879,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       new_info->parameters = bg_parameter_info_copy_array(parameter_info);
     if(new_info->parameters)
       {
-      prefix = bg_sprintf("plugins/%s", new_info->name);
+      prefix = gavl_sprintf("plugins/%s", new_info->name);
       set_preset_path(new_info->parameters, prefix);
       free(prefix);
       }
@@ -907,7 +907,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       new_info->audio_parameters = bg_parameter_info_copy_array(parameter_info);
       if(new_info->audio_parameters)
         {
-        prefix = bg_sprintf("plugins/%s/audio", new_info->name);
+        prefix = gavl_sprintf("plugins/%s/audio", new_info->name);
         set_preset_path(new_info->audio_parameters, prefix);
         free(prefix);
         }
@@ -919,7 +919,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       new_info->video_parameters = bg_parameter_info_copy_array(parameter_info);
       if(new_info->video_parameters)
         {
-        prefix = bg_sprintf("plugins/%s/video", new_info->name);
+        prefix = gavl_sprintf("plugins/%s/video", new_info->name);
         set_preset_path(new_info->video_parameters, prefix);
         free(prefix);
         }
@@ -930,7 +930,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       new_info->text_parameters = bg_parameter_info_copy_array(parameter_info);
       if(new_info->text_parameters)
         {
-        prefix = bg_sprintf("plugins/%s/text", new_info->name);
+        prefix = gavl_sprintf("plugins/%s/text", new_info->name);
         set_preset_path(new_info->text_parameters, prefix);
         free(prefix);
         }
@@ -942,7 +942,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
         bg_parameter_info_copy_array(parameter_info);
       if(new_info->overlay_parameters)
         {
-        prefix = bg_sprintf("plugins/%s/overlay", new_info->name);
+        prefix = gavl_sprintf("plugins/%s/overlay", new_info->name);
         set_preset_path(new_info->overlay_parameters, prefix);
         free(prefix);
         }
@@ -1414,9 +1414,9 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
   /* Native plugins */
   env = getenv("GMERLIN_PLUGIN_PATH");
   if(env)
-    path = bg_sprintf("%s:%s", env, PLUGIN_DIR);
+    path = gavl_sprintf("%s:%s", env, PLUGIN_DIR);
   else
-    path = bg_sprintf("%s", PLUGIN_DIR);
+    path = gavl_sprintf("%s", PLUGIN_DIR);
   
   tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_GMERLIN, opt, &ret->changed);
   if(tmp_info)
@@ -1426,9 +1426,9 @@ bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
   
   env = getenv("LADSPA_PATH");
   if(env)
-    path = bg_sprintf("%s:/usr/lib64/ladspa:/usr/local/lib64/ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa", env);
+    path = gavl_sprintf("%s:/usr/lib64/ladspa:/usr/local/lib64/ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa", env);
   else
-    path = bg_sprintf("/usr/lib64/ladspa:/usr/local/lib64/ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa");
+    path = gavl_sprintf("/usr/lib64/ladspa:/usr/local/lib64/ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa");
 
   tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_LADSPA, opt, &ret->changed);
   if(tmp_info)
@@ -1819,7 +1819,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
         gavl_dictionary_init(&url_vars);
 
         gavl_dictionary_set_string_nocopy(&url_vars, "byterange",
-                                          bg_sprintf("%"PRId64"-%"PRId64, offset, offset+size));
+                                          gavl_sprintf("%"PRId64"-%"PRId64, offset, offset+size));
         
         uri_priv = gavl_strdup(uri);
         uri_priv = bg_url_append_vars(uri_priv, &url_vars);
@@ -2546,7 +2546,7 @@ static void detect_album_cover(bg_plugin_registry_t * plugin_reg,
   if(!path)
     return;
   
-  file = bg_sprintf("%s/cover.jpg", path);
+  file = gavl_sprintf("%s/cover.jpg", path);
   result = check_image(plugin_reg, file, GAVL_META_COVER_URL, dict);
   free(file);
 
@@ -2564,7 +2564,7 @@ static int detect_movie_poster(bg_plugin_registry_t * plugin_reg,
   if(!path || !basename)
     return 0;
   
-  file = bg_sprintf("%s/%s.jpg", path, basename);
+  file = gavl_sprintf("%s/%s.jpg", path, basename);
   result = check_image(plugin_reg, file, GAVL_META_POSTER_URL, dict);
   free(file);
 
@@ -2581,7 +2581,7 @@ static int detect_movie_wallpaper(bg_plugin_registry_t * plugin_reg,
   if(!path || !basename)
     return 0;
   
-  file = bg_sprintf("%s/%s.fanart.jpg", path, basename);
+  file = gavl_sprintf("%s/%s.fanart.jpg", path, basename);
   result = check_image(plugin_reg, file, GAVL_META_WALLPAPER_URL, dict);
   free(file);
   
@@ -2619,7 +2619,7 @@ static void detect_nfo(const char * path, const char * basename, gavl_dictionary
   if(!path || !basename)
     return;
   
-  file = bg_sprintf("%s/%s.nfo", path, basename);
+  file = gavl_sprintf("%s/%s.nfo", path, basename);
   
   in = fopen(file, "r");
   if(!in)
@@ -2820,7 +2820,7 @@ void bg_plugin_registry_get_container_data(bg_plugin_registry_t * plugin_reg,
 
     gavl_dictionary_get_int(child_m, GAVL_META_SEASON, &season);
     gavl_dictionary_set_int(container_m, GAVL_META_SEASON, season);
-    gavl_dictionary_set_string_nocopy(container_m, GAVL_META_TITLE, bg_sprintf("Season %d", season));
+    gavl_dictionary_set_string_nocopy(container_m, GAVL_META_TITLE, gavl_sprintf("Season %d", season));
     
     if(basename)
       {
@@ -3702,7 +3702,7 @@ create_encoder_parameters(const bg_plugin_info_t * info, int stream_params)
     {
     char * tmp_string;
     ret->flags |= BG_PARAMETER_GLOBAL_PRESET;
-    tmp_string = bg_sprintf("plugins/%s", info->name);
+    tmp_string = gavl_sprintf("plugins/%s", info->name);
     ret->preset_path = gavl_strrep(ret->preset_path, tmp_string);
     free(tmp_string);
     }
@@ -3880,7 +3880,7 @@ void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
     if(info->parameters)
       num_parameters++; /* Registry */
     
-    //    prefix = bg_sprintf("%s.", info->name);
+    //    prefix = gavl_sprintf("%s.", info->name);
 
     
     if(info->parameters)
@@ -5419,7 +5419,7 @@ gavl_dictionary_t * bg_plugin_config_get_section_nc(bg_plugin_type_t type)
   if(!bg_cfg_registry)
     return NULL;
 
-  name = bg_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
+  name = gavl_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
 
   ret = bg_cfg_registry_find_section(bg_cfg_registry, name);
   free(name);
@@ -5434,7 +5434,7 @@ const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type)
   if(!bg_cfg_registry)
     return NULL;
 
-  name = bg_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
+  name = gavl_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
   ret = bg_cfg_section_find_subsection_c(bg_cfg_registry, name);
   free(name);
   return ret;

@@ -361,7 +361,7 @@ static int open_input(void * priv, const char * filename)
   if(pos_start != filename)
     inp->template = gavl_strncat(inp->template, filename, pos_start);
 
-  tmp_string = bg_sprintf("%%0%dd", (int)(pos_end - pos_start));
+  tmp_string = gavl_sprintf("%%0%dd", (int)(pos_end - pos_start));
   inp->template = gavl_strcat(inp->template, tmp_string);
   free(tmp_string);
 
@@ -1165,7 +1165,7 @@ static void create_mask(encoder_t * e, const char * ext)
   else
     pos = e->filename_base;
   
-  e->mask = bg_sprintf("%s/%s-%%0%d"PRId64, e->filename_base, pos, e->frame_digits);
+  e->mask = gavl_sprintf("%s/%s-%%0%d"PRId64, e->filename_base, pos, e->frame_digits);
   
   if(ext)
     {

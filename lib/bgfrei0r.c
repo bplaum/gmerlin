@@ -196,8 +196,8 @@ bg_frei0r_get_info(void * dll_handle, const char * filename)
 
   ret = calloc(1, sizeof(*ret));
 
-  ret->name      = bg_sprintf("bg_f0r_%s", plugin_info.name);
-  ret->long_name = bg_sprintf("frei0r %s", plugin_info.name);
+  ret->name      = gavl_sprintf("bg_f0r_%s", plugin_info.name);
+  ret->long_name = gavl_sprintf("frei0r %s", plugin_info.name);
   ret->type        = BG_PLUGIN_FILTER_VIDEO;
   ret->api         = BG_PLUGIN_API_FREI0R;
   ret->flags       = BG_PLUGIN_FILTER_1;
@@ -212,7 +212,7 @@ bg_frei0r_get_info(void * dll_handle, const char * filename)
     return ret;
     }
 
-  ret->description = bg_sprintf(TRS("Author: %s\n%s"),
+  ret->description = gavl_sprintf(TRS("Author: %s\n%s"),
                                 plugin_info.author, plugin_info.explanation);
 
   ret->parameters = create_parameters(dll_handle, &plugin_info);

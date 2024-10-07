@@ -189,7 +189,7 @@ bg_parameter_info_t * get_parameters(const gavl_dictionary_t * m, int common)
       {
       year = bg_metadata_get_year(m);
       if(year)
-        gavl_value_set_string_nocopy(&ret[i].val_default, bg_sprintf("%d", year));
+        gavl_value_set_string_nocopy(&ret[i].val_default, gavl_sprintf("%d", year));
       }
     SP_MULTI(GAVL_META_GENRE);
     SP(GAVL_META_COMMENT);
@@ -438,7 +438,7 @@ char * bg_create_track_name(const gavl_dictionary_t * metadata,
         tag_i = bg_metadata_get_year(metadata);
         if(tag_i > 0)
           {
-          buf = bg_sprintf("%d", tag_i);
+          buf = gavl_sprintf("%d", tag_i);
           ret = gavl_strcat(ret, buf);
           free(buf);
           }
@@ -456,7 +456,7 @@ char * bg_create_track_name(const gavl_dictionary_t * metadata,
           track_format[3] = 'd';
           track_format[4] = '\0';
           
-          buf = bg_sprintf(track_format, tag_i);
+          buf = gavl_sprintf(track_format, tag_i);
           ret = gavl_strcat(ret, buf);
           free(buf);
           end+=2;
@@ -509,7 +509,7 @@ char * bg_metadata_bitrate_string(const gavl_dictionary_t * m, const char * key)
   else if(val == GAVL_BITRATE_LOSSLESS)
     return gavl_strdup(TR("Lossless"));
   else if(val > 0)
-    return bg_sprintf("%.1f kbps", ((double)val / 1000.0));
+    return gavl_sprintf("%.1f kbps", ((double)val / 1000.0));
   
   return NULL;
   }

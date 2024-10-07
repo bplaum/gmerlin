@@ -201,20 +201,20 @@ static void set_value(GtkTreeModel * model,
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
-      tmp_string = bg_sprintf("%f %f %f",
+      tmp_string = gavl_sprintf("%f %f %f",
                               val->v.color[0],
                               val->v.color[1],
                               val->v.color[2]);
       break;
     case GAVL_TYPE_COLOR_RGBA:
-      tmp_string = bg_sprintf("%f %f %f %f",
+      tmp_string = gavl_sprintf("%f %f %f %f",
                               val->v.color[0],
                               val->v.color[1],
                               val->v.color[2],
                               val->v.color[3]);
       break;
     case GAVL_TYPE_POSITION:
-      tmp_string = bg_sprintf("%f %f",
+      tmp_string = gavl_sprintf("%f %f",
                               val->v.color[0],
                               val->v.color[1]);
       break;
@@ -234,7 +234,7 @@ static void set_value(GtkTreeModel * model,
       for(i = 0; i < arr->num_entries; i++)
         {
         gtk_tree_store_append(GTK_TREE_STORE(model), &child, iter);
-        tmp_string = bg_sprintf("#%d", i+1);
+        tmp_string = gavl_sprintf("#%d", i+1);
         gtk_tree_store_set(GTK_TREE_STORE(model), &child, COLUMN_1,
                            tmp_string, -1);
         free(tmp_string);
@@ -246,7 +246,7 @@ static void set_value(GtkTreeModel * model,
       break;
     case GAVL_TYPE_BINARY:
       {
-      tmp_string = bg_sprintf("Binary data (%d bytes)", val->v.buffer->len);
+      tmp_string = gavl_sprintf("Binary data (%d bytes)", val->v.buffer->len);
       }
       
     }

@@ -122,14 +122,14 @@ int bg_cdrdao_run(bg_cdrdao_t * c, const char * toc_file)
   /* Device */
   if(c->device)
     {
-    str = bg_sprintf(" --device %s", c->device);
+    str = gavl_sprintf(" --device %s", c->device);
     commandline = gavl_strcat(commandline, str);
     free(str);
     }
   /* Driver */
   if(c->driver)
     {
-    str = bg_sprintf(" --driver %s", c->driver);
+    str = gavl_sprintf(" --driver %s", c->driver);
     commandline = gavl_strcat(commandline, str);
     free(str);
     }
@@ -147,13 +147,13 @@ int bg_cdrdao_run(bg_cdrdao_t * c, const char * toc_file)
   /* Speed */
   if(c->speed > 0)
     {
-    str = bg_sprintf(" --speed %d", c->speed);
+    str = gavl_sprintf(" --speed %d", c->speed);
     commandline = gavl_strcat(commandline, str);
     free(str);
     }
   
   /* TOC-File and stderr redirection */
-  str = bg_sprintf(" \"%s\"", toc_file);
+  str = gavl_sprintf(" \"%s\"", toc_file);
   commandline = gavl_strcat(commandline, str);
   free(str);
   

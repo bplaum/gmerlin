@@ -262,16 +262,6 @@ void bg_get_filename_hash(const char * gml, char ret[GAVL_MD5_LENGTH]);
 
 char * bg_uri_to_uuid(const char * uri, char ret[37]);
 
-/** \brief Print into a string
- *  \param format printf like format
- *
- *  All other arguments must match the format like in printf.
- *  This function allocates the returned string, thus it must be
- *  freed by the caller.
- */
-
-char * bg_sprintf(const char * format,...) __attribute__ ((format (printf, 1, 2)));
-
 /** \brief Break a string into substrings
  *  \param str String
  *  \param delim Delimiter for the substrings

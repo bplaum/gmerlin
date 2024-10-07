@@ -1116,7 +1116,7 @@ static int set_video_pass(bg_transcoder_t * t, int i)
   
   if(!s->stats_file)
     {
-    s->stats_file = bg_sprintf("%s/%s_video_%02d.stats", t->output_directory, t->name, i+1);
+    s->stats_file = gavl_sprintf("%s/%s_video_%02d.stats", t->output_directory, t->name, i+1);
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using statistics file: %s", s->stats_file);
     }
 
@@ -1820,7 +1820,7 @@ set_parameter_general(void * data, const char * name,
     /* Create the subdirectory if necessary */
     if(t->subdir)
       {
-      t->output_directory = bg_sprintf("%s/%s", t->output_path, t->subdir);
+      t->output_directory = gavl_sprintf("%s/%s", t->output_path, t->subdir);
 
       if(mkdir(t->output_directory,
                S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IWOTH) == -1)
@@ -1880,16 +1880,16 @@ static void send_init_messages(bg_transcoder_t * t)
 
   if(t->pp_only)
     {
-    tmp_string = bg_sprintf(TR("Postprocessing %s"), t->location);
+    tmp_string = gavl_sprintf(TR("Postprocessing %s"), t->location);
     }
   else if(t->total_passes > 1)
     {
-    tmp_string = bg_sprintf(TR("Transcoding %s [Pass %d/%d]"),
+    tmp_string = gavl_sprintf(TR("Transcoding %s [Pass %d/%d]"),
                             t->location, t->pass, t->total_passes);
     }
   else
     {
-    tmp_string = bg_sprintf(TR("Transcoding %s"),
+    tmp_string = gavl_sprintf(TR("Transcoding %s"),
                             t->location);
     }
   bg_transcoder_send_msg_start(t->message_hub, tmp_string);
@@ -2589,7 +2589,7 @@ static int init_encoder(bg_transcoder_t * ret)
   
   bg_encoder_set_callbacks(ret->enc, &ret->cb);
   
-  tmp_string = bg_sprintf("%s/%s", ret->output_directory, ret->name);
+  tmp_string = gavl_sprintf("%s/%s", ret->output_directory, ret->name);
   
   bg_encoder_open(ret->enc, tmp_string,
                   &ret->metadata);
@@ -2916,7 +2916,7 @@ int bg_transcoder_init(bg_transcoder_t * ret,
      (!(var2 = gavl_dictionary_get_string(&ret->metadata, GAVL_META_DATE)) ||
       strncmp(var1, var2, 4)))
     gavl_dictionary_set_string_nocopy(&ret->metadata, GAVL_META_DATE,
-                                      bg_sprintf("%s-99-99", var1));
+                                      gavl_sprintf("%s-99-99", var1));
   
   bg_transcoder_track_get_duration(track, &duration, NULL);
 
@@ -3145,7 +3145,7 @@ static void next_pass(bg_transcoder_t * t)
   init_normalize(t);
   
   /* Send message */
-  tmp_string = bg_sprintf(TR("Transcoding %s [Pass %d/%d]"),
+  tmp_string = gavl_sprintf(TR("Transcoding %s [Pass %d/%d]"),
                           t->location, t->pass, t->total_passes);
   
   bg_transcoder_send_msg_start(t->message_hub, tmp_string);

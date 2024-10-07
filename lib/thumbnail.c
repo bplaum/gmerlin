@@ -99,7 +99,7 @@ static void make_fail_thumbnail(const char * gml,
   tmp_string = bg_string_to_uri(gml, -1);
   gavl_dictionary_set_string_nocopy(&metadata, "Thumb::URI", tmp_string);
 
-  tmp_string = bg_sprintf("%"PRId64, mtime);
+  tmp_string = gavl_sprintf("%"PRId64, mtime);
   gavl_dictionary_set_string_nocopy(&metadata, "Thumb::MTime", tmp_string);
 
   bg_plugin_registry_save_image(plugin_reg,
@@ -147,8 +147,8 @@ int bg_get_thumbnail(const char * gml,
     return 0;
     }
   
-  thumbs_dir_normal = bg_sprintf("%s/.thumbnails/normal",       home_dir);
-  thumbs_dir_fail   = bg_sprintf("%s/.thumbnails/fail/gmerlin", home_dir);
+  thumbs_dir_normal = gavl_sprintf("%s/.thumbnails/normal",       home_dir);
+  thumbs_dir_fail   = gavl_sprintf("%s/.thumbnails/fail/gmerlin", home_dir);
   
   if(!gavl_ensure_directory(thumbs_dir_normal, 1) ||
      !gavl_ensure_directory(thumbs_dir_fail, 1))
@@ -156,8 +156,8 @@ int bg_get_thumbnail(const char * gml,
   
   bg_get_filename_hash(gml, hash);
 
-  thumb_filename_normal = bg_sprintf("%s/%s.png", thumbs_dir_normal, hash);
-  thumb_filename_fail = bg_sprintf("%s/%s.png", thumbs_dir_fail, hash);
+  thumb_filename_normal = gavl_sprintf("%s/%s.png", thumbs_dir_normal, hash);
+  thumb_filename_fail = gavl_sprintf("%s/%s.png", thumbs_dir_fail, hash);
   
   if(access(thumb_filename_normal, R_OK)) /* Thumbnail file not present */
     {
@@ -211,7 +211,7 @@ int bg_get_thumbnail(const char * gml,
     }
 
   /* Regenerate */
-  command = bg_sprintf("gmerlin-video-thumbnailer \"%s\" %s", gml, thumb_filename_normal);
+  command = gavl_sprintf("gmerlin-video-thumbnailer \"%s\" %s", gml, thumb_filename_normal);
   sp = bg_subprocess_create(command, 0, 0, 0);
   bg_subprocess_close(sp);
   free(command);

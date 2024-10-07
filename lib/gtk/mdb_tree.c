@@ -783,7 +783,7 @@ static char * append_meta_tag(char * ret, const char * tag, char * icon)
 
   tmp_string = g_markup_printf_escaped("%s", tag);
   
-  tag_string = bg_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %s</span> ",
+  tag_string = gavl_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %s</span> ",
                           BG_ICON_FONT_FAMILY, icon, tmp_string);
   g_free(tmp_string);
 
@@ -822,10 +822,10 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
 
   if(locked)
     {
-    markup = bg_sprintf("<markup><span "LOCKED_ATTRIBUTES">%s <span font_family=\"%s\" weight=\"normal\">%s</span></span>\n", tmp_string, BG_ICON_FONT_FAMILY, BG_ICON_LOCK);
+    markup = gavl_sprintf("<markup><span "LOCKED_ATTRIBUTES">%s <span font_family=\"%s\" weight=\"normal\">%s</span></span>\n", tmp_string, BG_ICON_FONT_FAMILY, BG_ICON_LOCK);
     }
   else
-    markup = bg_sprintf("<markup><span "NORMAL_ATTRIBUTES">%s</span>\n", tmp_string);
+    markup = gavl_sprintf("<markup><span "NORMAL_ATTRIBUTES">%s</span>\n", tmp_string);
   
   g_free(tmp_string);
 
@@ -843,7 +843,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
     if((child_class = bg_mdb_get_child_class(dict)) &&
        (child_icon = bg_get_type_icon(child_class)))
       {
-      tmp_string = bg_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
+      tmp_string = gavl_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
                               BG_ICON_FONT_FAMILY, child_icon, items + containers);
       markup = gavl_strcat(markup, tmp_string);
       free(tmp_string);
@@ -852,7 +852,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
       {
       if(containers)
         {
-        tmp_string = bg_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
+        tmp_string = gavl_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
                                 BG_ICON_FONT_FAMILY, BG_ICON_FOLDER, containers);
         
         markup = gavl_strcat(markup, tmp_string);
@@ -864,7 +864,7 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * dict, const char 
         if(containers)
           markup = gavl_strcat(markup , " ");
         
-        tmp_string = bg_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
+        tmp_string = gavl_sprintf("<span "META_ATTRIBUTES"><span font_family=\"%s\" weight=\"normal\">%s</span> %d</span> ",
                                 BG_ICON_FONT_FAMILY, BG_ICON_FILE, items);
         
         markup = gavl_strcat(markup, tmp_string);

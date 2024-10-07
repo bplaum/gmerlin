@@ -414,7 +414,7 @@ static char * get_track_markup(const gavl_dictionary_t * m)
   if((var = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
     {
     tmp_string = g_markup_printf_escaped("%s", var);
-    markup = bg_sprintf("<markup><span font_weight=\"bold\">%s</span>\n", tmp_string);
+    markup = gavl_sprintf("<markup><span font_weight=\"bold\">%s</span>\n", tmp_string);
     free(tmp_string);
     }
   else

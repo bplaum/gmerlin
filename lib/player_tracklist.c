@@ -414,7 +414,7 @@ static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int d
 
 char * bg_player_tracklist_make_id(const char * hash)
   {
-  return bg_sprintf(BG_PLAYQUEUE_ID"/%s", hash);
+  return gavl_sprintf(BG_PLAYQUEUE_ID"/%s", hash);
   }
 
 char * bg_player_tracklist_id_from_uri(const char * location)
@@ -916,7 +916,7 @@ void bg_player_tracklist_init(bg_player_tracklist_t * l, bg_msg_sink_t * evt_sin
   m = gavl_dictionary_get_dictionary_create(l->cnt, GAVL_META_METADATA);
 
   if((label = bg_app_get_label()))
-    gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%s queue", label));
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%s queue", label));
   else
     gavl_dictionary_set_string(m, GAVL_META_LABEL, "Player queue");
   gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_PLAYQUEUE);

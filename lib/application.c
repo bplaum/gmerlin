@@ -137,10 +137,10 @@ void bg_array_add_application_icons(gavl_array_t * arr, const char * prefix, con
   else
     slash = "";
   
-  add_application_icon(arr, bg_sprintf("%s%s%s_48.png", prefix, slash, name), 48, "image/png");
-  add_application_icon(arr, bg_sprintf("%s%s%s_48.jpg", prefix, slash, name), 48, "image/jpeg");
-  add_application_icon(arr, bg_sprintf("%s%s%s_96.png", prefix, slash, name), 96, "image/png");
-  add_application_icon(arr, bg_sprintf("%s%s%s_96.jpg", prefix, slash, name), 96, "image/jpeg");
+  add_application_icon(arr, gavl_sprintf("%s%s%s_48.png", prefix, slash, name), 48, "image/png");
+  add_application_icon(arr, gavl_sprintf("%s%s%s_48.jpg", prefix, slash, name), 48, "image/jpeg");
+  add_application_icon(arr, gavl_sprintf("%s%s%s_96.png", prefix, slash, name), 96, "image/png");
+  add_application_icon(arr, gavl_sprintf("%s%s%s_96.jpg", prefix, slash, name), 96, "image/jpeg");
   }
 
 

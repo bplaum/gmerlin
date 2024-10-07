@@ -43,6 +43,6 @@ void bg_chapter_list_set_default_names(gavl_chapter_list_t * list)
     {
     gavl_dictionary_t * dict = gavl_chapter_list_get_nc(list, i);
     if(!gavl_dictionary_get_string(dict, GAVL_META_LABEL))
-      gavl_dictionary_set_string(dict, GAVL_META_LABEL, bg_sprintf(TR("Chapter %d"), i+1));
+      gavl_dictionary_set_string(dict, GAVL_META_LABEL, gavl_sprintf(TR("Chapter %d"), i+1));
     }
   }

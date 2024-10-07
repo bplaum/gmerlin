@@ -125,7 +125,7 @@ static void fetch_cover_art(gavl_dictionary_t * m, const char * id)
   gavl_buffer_init(&buf);
   gavl_value_init(&val);
   
-  uri = bg_sprintf("http://coverartarchive.org/release/%s", id);
+  uri = gavl_sprintf("http://coverartarchive.org/release/%s", id);
 
   if(!(obj = bg_json_from_url(uri, NULL)))
     goto fail;

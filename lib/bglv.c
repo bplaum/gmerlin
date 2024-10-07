@@ -68,7 +68,7 @@ static void log_error(const char *message,
                       const char *funcname, void *priv)
   {
   char * domain;
-  domain = bg_sprintf("lv.%s", funcname);
+  domain = gavl_sprintf("lv.%s", funcname);
   gavl_log_notranslate(GAVL_LOG_ERROR, domain, "%s", message);
   free(domain);
   }
@@ -77,7 +77,7 @@ static void log_info(const char *message,
                       const char *funcname, void *priv)
   {
   char * domain;
-  domain = bg_sprintf("lv.%s", funcname);
+  domain = gavl_sprintf("lv.%s", funcname);
   gavl_log_notranslate(GAVL_LOG_INFO, domain, "%s", message);
   free(domain);
   }
@@ -86,7 +86,7 @@ static void log_warning(const char *message,
                         const char *funcname, void *priv)
   {
   char * domain;
-  domain = bg_sprintf("lv.%s", funcname);
+  domain = gavl_sprintf("lv.%s", funcname);
   gavl_log_notranslate(GAVL_LOG_WARNING, domain, "%s", message);
   free(domain);
   }
@@ -428,44 +428,44 @@ bg_plugin_info_t * bg_lv_get_info(const char * filename)
   info = visual_plugin_get_info(visual_actor_get_plugin(actor));
     
   
-  ret->name        = bg_sprintf("vis_lv_%s", actor_name);
+  ret->name        = gavl_sprintf("vis_lv_%s", actor_name);
   ret->long_name   = gavl_strdup(info->name);
   ret->type        = BG_PLUGIN_VISUALIZATION;
   ret->api         = BG_PLUGIN_API_LV;
-  ret->description = bg_sprintf(TR("libvisual plugin"));
+  ret->description = gavl_sprintf(TR("libvisual plugin"));
   ret->module_filename = gavl_strdup(filename);
   /* Optional info */
   if(info->author && *info->author)
     {
-    tmp_string = bg_sprintf(TR("\nAuthor: %s"),
+    tmp_string = gavl_sprintf(TR("\nAuthor: %s"),
                             info->author);
     ret->description = gavl_strcat(ret->description, tmp_string);
     free(tmp_string);
     }
   if(info->version && *info->version)
     {
-    tmp_string = bg_sprintf(TR("\nVersion: %s"),
+    tmp_string = gavl_sprintf(TR("\nVersion: %s"),
                             info->version);
     ret->description = gavl_strcat(ret->description, tmp_string);
     free(tmp_string);
     }
   if(info->about && *info->about)
     {
-    tmp_string = bg_sprintf(TR("\nAbout: %s"),
+    tmp_string = gavl_sprintf(TR("\nAbout: %s"),
                             info->about);
     ret->description = gavl_strcat(ret->description, tmp_string);
     free(tmp_string);
     }
   if(info->help && *info->help)
     {
-    tmp_string = bg_sprintf(TR("\nHelp: %s"),
+    tmp_string = gavl_sprintf(TR("\nHelp: %s"),
                             info->help);
     ret->description = gavl_strcat(ret->description, tmp_string);
     free(tmp_string);
     }
   if(info->license && *info->license)
     {
-    tmp_string = bg_sprintf(TR("\nLicense: %s"),
+    tmp_string = gavl_sprintf(TR("\nLicense: %s"),
                             info->license);
     ret->description = gavl_strcat(ret->description, tmp_string);
     free(tmp_string);

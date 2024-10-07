@@ -47,7 +47,7 @@ char * bg_search_var_dir(const char * directory)
   if(!(home_dir = getenv("HOME")))
     return NULL;
   
-  testdir  = bg_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
+  testdir  = gavl_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
   if(!gavl_ensure_directory(testdir, 1))
     {
     free(testdir);
@@ -71,7 +71,7 @@ char * bg_search_file_read(const char * directory, const char * file)
   
   if((testpath = bg_search_var_dir(directory)))
     {
-    test_file_name = bg_sprintf("%s/%s", testpath, file);
+    test_file_name = gavl_sprintf("%s/%s", testpath, file);
     testfile = fopen(test_file_name, "r");
     if(testfile)
       {
@@ -83,7 +83,7 @@ char * bg_search_file_read(const char * directory, const char * file)
     }
   
   /* Second step: Try Data directory */
-  test_file_name = bg_sprintf("%s/%s/%s", DATA_DIR, directory, file);
+  test_file_name = gavl_sprintf("%s/%s/%s", DATA_DIR, directory, file);
 
   testfile = fopen(test_file_name, "r");
   if(testfile)
@@ -109,7 +109,7 @@ static char * search_file_write(const char * directory, const char * file, int d
 
   testdir = bg_search_var_dir(directory);
   
-  //   bg_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
+  //   gavl_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
 
   if(!do_create && access(testdir, R_OK|W_OK|X_OK))
     {
@@ -132,7 +132,7 @@ static char * search_file_write(const char * directory, const char * file, int d
       return NULL;
     }
   
-  testpath = bg_sprintf("%s/%s", testdir, file);
+  testpath = gavl_sprintf("%s/%s", testdir, file);
   
   testfile = fopen(testpath, "a");
   if(testfile)
@@ -173,7 +173,7 @@ int bg_search_file_exec(const char * file, char ** _path)
   struct stat st;
 
   /* Try the dependencies path first */
-  test_filename = bg_sprintf("/opt/gmerlin/bin/%s", file);
+  test_filename = gavl_sprintf("/opt/gmerlin/bin/%s", file);
   if(!stat(test_filename, &st) && (st.st_mode & S_IXOTH))
     {
     if(_path)
@@ -192,7 +192,7 @@ int bg_search_file_exec(const char * file, char ** _path)
   i = 0;
   while(searchpaths[i])
     {
-    test_filename = bg_sprintf("%s/%s", searchpaths[i], file);
+    test_filename = gavl_sprintf("%s/%s", searchpaths[i], file);
     if(!stat(test_filename, &st) && (st.st_mode & S_IXOTH))
       {
       if(_path)
@@ -227,7 +227,7 @@ char * bg_search_desktop_file(const char * name)
 
   if((home_dir = getenv("HOME")))
     {
-    file = bg_sprintf("%s/.local/share/applications/%s.desktop", home_dir, name);
+    file = gavl_sprintf("%s/.local/share/applications/%s.desktop", home_dir, name);
 
     if(access(file, R_OK))
       {
@@ -239,7 +239,7 @@ char * bg_search_desktop_file(const char * name)
   if(file)
     return file;
 
-  file = bg_sprintf("/usr/local/share/applications/%s.desktop", name);
+  file = gavl_sprintf("/usr/local/share/applications/%s.desktop", name);
 
   if(access(file, R_OK))
     {
@@ -250,7 +250,7 @@ char * bg_search_desktop_file(const char * name)
   if(file)
     return file;
 
-  file = bg_sprintf("/usr/share/applications/%s.desktop", name);
+  file = gavl_sprintf("/usr/share/applications/%s.desktop", name);
 
   if(access(file, R_OK))
     {
@@ -281,7 +281,7 @@ int bg_search_icons(const char * file, gavl_dictionary_t * ret, const char * str
 
 static char * search_application_icon_internal(const char * dir, int size, const char * file)
   {
-  char * ret = bg_sprintf("%s/hicolor/%dx%d/apps/%s.png", dir, size, size, file);
+  char * ret = gavl_sprintf("%s/hicolor/%dx%d/apps/%s.png", dir, size, size, file);
 
   if(access(ret, R_OK))
     {
@@ -304,7 +304,7 @@ char * bg_search_application_icon(const char * file, int size)
   
   if(home)
     {
-    tmp_string = bg_sprintf("%s/.icons", home);
+    tmp_string = gavl_sprintf("%s/.icons", home);
     ret = search_application_icon_internal(tmp_string, size, file);
     free(tmp_string);
     
@@ -386,8 +386,8 @@ void bg_display_html_help(const char * path)
   if(!url_launcher)
     return;
   
-  complete_path = bg_sprintf("file://%s/%s", DOC_DIR, path);
-  command = bg_sprintf(url_launcher, complete_path);
+  complete_path = gavl_sprintf("file://%s/%s", DOC_DIR, path);
+  command = gavl_sprintf(url_launcher, complete_path);
   command = gavl_strcat(command, " &");
   bg_system(command);
   free(command);

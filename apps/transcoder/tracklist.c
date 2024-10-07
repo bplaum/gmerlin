@@ -442,7 +442,7 @@ static void track_list_update(track_list_t * w)
       {
       gavl_time_prettyprint(track_duration, string_buffer);
       gavl_time_prettyprint(track_duration_total, string_buffer1);
-      buf = bg_sprintf("%s/%s", string_buffer, string_buffer1);
+      buf = gavl_sprintf("%s/%s", string_buffer, string_buffer1);
       gtk_list_store_set(GTK_LIST_STORE(model),
                          &iter,
                          COLUMN_DURATION,

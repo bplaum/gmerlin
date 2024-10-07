@@ -73,7 +73,7 @@ void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
   int num_options, i;
 
   if(pfx)
-    dst->name = bg_sprintf("%s.%s", pfx, src->name);
+    dst->name = gavl_sprintf("%s.%s", pfx, src->name);
   else
     dst->name = gavl_strrep(dst->name, src->name);
   

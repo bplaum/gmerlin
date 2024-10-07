@@ -387,7 +387,7 @@ void bg_cmdline_print_help(char * argv0, bg_help_format_t format)
     {
     case BG_HELP_FORMAT_TERM:
     case BG_HELP_FORMAT_PLAIN:
-      tmp_string = bg_sprintf(TRD(app_data->synopsis, app_data->package), argv0);
+      tmp_string = gavl_sprintf(TRD(app_data->synopsis, app_data->package), argv0);
       printf("Usage: %s\n\n", tmp_string);
       free(tmp_string);
       printf("%s\n", app_data->help_before);
@@ -803,7 +803,7 @@ static char * create_stream_key(int stream)
   if(stream < 0)
     return gavl_strdup("opt");
   else
-    return bg_sprintf("opt_%d", stream);
+    return gavl_sprintf("opt_%d", stream);
   }
 
 int bg_cmdline_set_stream_options(gavl_dictionary_t * m,
@@ -950,7 +950,7 @@ static void print_help_parameters(int indent,
       case BG_PARAMETER_BUTTON:
         break;
       case BG_PARAMETER_CHECKBUTTON:
-        tmp_string = bg_sprintf(TR("[1|0] (default: %d)"), parameters[i].val_default.v.i);
+        tmp_string = gavl_sprintf(TR("[1|0] (default: %d)"), parameters[i].val_default.v.i);
         print_string(out, tmp_string, format);
         free(tmp_string);
         if(format == BG_HELP_FORMAT_MAN)
@@ -976,7 +976,7 @@ static void print_help_parameters(int indent,
         pos += fprintf(out, TR("<number> ("));
         if(parameters[i].val_min.v.d < parameters[i].val_max.v.d)
           {
-          tmp_string = bg_sprintf("%%.%df..%%.%df, ",
+          tmp_string = gavl_sprintf("%%.%df..%%.%df, ",
                                   parameters[i].num_digits,
                                   parameters[i].num_digits);
           pos += fprintf(out, tmp_string,
@@ -984,7 +984,7 @@ static void print_help_parameters(int indent,
           free(tmp_string);
           }
         tmp_string =
-          bg_sprintf(TR("default: %%.%df)"),
+          gavl_sprintf(TR("default: %%.%df)"),
                      parameters[i].num_digits);
         fprintf(out, tmp_string,
                 parameters[i].val_default.v.d);
@@ -1002,7 +1002,7 @@ static void print_help_parameters(int indent,
         pos += fprintf(out, TR("<string>"));
         if(parameters[i].val_default.v.str)
           {
-          tmp_string = bg_sprintf(TR(" (Default: %s)"), parameters[i].val_default.v.str);
+          tmp_string = gavl_sprintf(TR(" (Default: %s)"), parameters[i].val_default.v.str);
           print_string(out, tmp_string, format);
           free(tmp_string);
           }
@@ -1051,7 +1051,7 @@ static void print_help_parameters(int indent,
         do_indent(out, indent+2, format);
         pos += indent+2;
 
-        tmp_string = bg_sprintf(TR("Default: %s"), parameters[i].val_default.v.str);
+        tmp_string = gavl_sprintf(TR("Default: %s"), parameters[i].val_default.v.str);
         print_string(out, tmp_string, format);
         free(tmp_string);
         print_linebreak(out, format);
@@ -1244,12 +1244,12 @@ static void print_help_parameters(int indent,
           
           if(parameters[i].type == BG_PARAMETER_MULTI_MENU)
             {
-            tmp_string = bg_sprintf(TR("Suboptions for %s=%s"),
+            tmp_string = gavl_sprintf(TR("Suboptions for %s=%s"),
                                     parameters[i].name,parameters[i].multi_names[j]);
             }
           else
             {
-            tmp_string = bg_sprintf(TR("Suboptions for %s"),
+            tmp_string = gavl_sprintf(TR("Suboptions for %s"),
                                     parameters[i].multi_names[j]);
             }
           print_bold(out, tmp_string, format);

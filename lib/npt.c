@@ -86,12 +86,12 @@ char * bg_npt_range_to_string(gavl_time_t start, gavl_time_t end)
   start_str = bg_npt_to_string(start);
   
   if(end == GAVL_TIME_UNDEFINED)
-    ret = bg_sprintf("%s-", start_str);
+    ret = gavl_sprintf("%s-", start_str);
   else
     {
     char * end_str;
     end_str = bg_npt_to_string(end);
-    ret = bg_sprintf("%s-%s", start_str, end_str);
+    ret = gavl_sprintf("%s-%s", start_str, end_str);
     free(end_str);
     }
   free(start_str);

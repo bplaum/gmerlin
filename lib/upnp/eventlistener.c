@@ -101,7 +101,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
     }
   else // Initial
     {
-    tmp_string = bg_sprintf("<%s>", l->local_url);
+    tmp_string = gavl_sprintf("<%s>", l->local_url);
     gavl_dictionary_set_string(&req, "CALLBACK", tmp_string);
     free(tmp_string);
     gavl_dictionary_set_string(&req, "NT", "upnp:event");
@@ -230,16 +230,16 @@ bg_upnp_event_listener_create(const char * event_url_remote,
   ret->name = gavl_strdup(name);
 
   if(gavl_string_ends_with(url_local, "/"))
-    ret->path = bg_sprintf("evt/%s", name);
+    ret->path = gavl_sprintf("evt/%s", name);
   else
-    ret->path = bg_sprintf("/evt/%s", name);
+    ret->path = gavl_sprintf("/evt/%s", name);
 
   bg_http_server_add_handler(bg_http_server_get(),
                              event_listener_handle_http,
                              BG_HTTP_PROTO_HTTP,
                              ret->path, ret);
   
-  ret->local_url = bg_sprintf("%s%s", url_local, ret->path);
+  ret->local_url = gavl_sprintf("%s%s", url_local, ret->path);
   
   ret->timer = gavl_timer_create();
 
@@ -256,7 +256,7 @@ bg_upnp_event_listener_create(const char * event_url_remote,
                             port, SOCK_STREAM))
     goto fail;
   
-  ret->remote_host = bg_sprintf("%s:%d", host, port);
+  ret->remote_host = gavl_sprintf("%s:%d", host, port);
 
   /* Subscribe */
   

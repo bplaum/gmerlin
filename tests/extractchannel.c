@@ -129,7 +129,7 @@ int main(int argc, char ** argv)
         return -1;
         }
       tmp_string =
-        bg_sprintf("%s_%s.gavi",
+        gavl_sprintf("%s_%s.gavi",
                    gavl_pixelformat_to_string(tmp_format.pixelformat),
                    channels[j].name);
 

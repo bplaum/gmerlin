@@ -330,7 +330,7 @@ static int handle_msg(void * data, gavl_msg_t * msg)
 
           gavl_time_prettyprint(remaining_time, time_str);
 
-          status_msg = bg_sprintf("Remaining time: %s", time_str);
+          status_msg = gavl_sprintf("Remaining time: %s", time_str);
           
           gtk_progress_bar_set_text(GTK_PROGRESS_BAR(win->progress_bar), status_msg);
           free(status_msg);

@@ -317,7 +317,7 @@ static int send_event(gavl_dictionary_t * es,
   else
     gavl_http_request_init(&m, "NOTIFY", "/", "HTTP/1.1");
     
-  tmp_string = bg_sprintf("%s:%d", host, port);
+  tmp_string = gavl_sprintf("%s:%d", host, port);
   gavl_dictionary_set_string(&m, "HOST", tmp_string);
   free(tmp_string);
   
@@ -325,7 +325,7 @@ static int send_event(gavl_dictionary_t * es,
   gavl_dictionary_set_int(&m, "CONTENT-LENGTH", len);
   gavl_dictionary_set_string(&m, "NT", "upnp:event");
   gavl_dictionary_set_string(&m, "NTS", "upnp:propchange");
-  tmp_string = bg_sprintf("uuid:%s", uuid);  
+  tmp_string = gavl_sprintf("uuid:%s", uuid);  
   gavl_dictionary_set_string(&m, "SID", tmp_string);
   free(tmp_string);
   gavl_dictionary_set_long(&m, "SEQ", key++);
@@ -453,8 +453,8 @@ static int add_subscription(gavl_dictionary_t * dict,
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
   gavl_dictionary_set_string_nocopy(&conn->res, "SERVER", bg_upnp_make_server_string());
-  gavl_dictionary_set_string_nocopy(&conn->res, "SID", bg_sprintf("uuid:%s", uuid_str));
-  gavl_dictionary_set_string_nocopy(&conn->res, "TIMEOUT", bg_sprintf("Second-%d", seconds));
+  gavl_dictionary_set_string_nocopy(&conn->res, "SID", gavl_sprintf("uuid:%s", uuid_str));
+  gavl_dictionary_set_string_nocopy(&conn->res, "TIMEOUT", gavl_sprintf("Second-%d", seconds));
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got new event subscription: uuid: %s, url: %s, timeout: %d",
          uuid_str, gavl_dictionary_get_string(s, GAVL_META_URI), seconds);

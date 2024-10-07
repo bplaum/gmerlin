@@ -135,14 +135,14 @@ static xmlDocPtr soap_create(const char * function, const char * service,
     
   if(response)
     {
-    tmp_string = bg_sprintf("%sResponse", function);
+    tmp_string = gavl_sprintf("%sResponse", function);
     xml_action = xmlNewChild(xml_body, NULL, (xmlChar*)tmp_string, NULL);
     free(tmp_string);
     }
   else
     xml_action = xmlNewChild(xml_body, NULL, (xmlChar*)function, NULL);
 
-  tmp_string = bg_sprintf("urn:schemas-upnp-org:service:%s:%d",
+  tmp_string = gavl_sprintf("urn:schemas-upnp-org:service:%s:%d",
                           service, version);
 
   upnp_ns = xmlNewNs(xml_action, (xmlChar*)tmp_string,  (xmlChar*)"u");
@@ -365,12 +365,12 @@ int bg_soap_request_init(gavl_dictionary_t * s, const char * control_uri,
     port = 80;
     }
   else
-    request_host = bg_sprintf("%s:%d", host, port);
+    request_host = gavl_sprintf("%s:%d", host, port);
   
   gavl_dictionary_set_string(req_vars, "HOST", request_host);
   gavl_dictionary_set_string(req_vars, "Connection", "keep-alive");
   
-  tmp_string = bg_sprintf("\"urn:schemas-upnp-org:service:%s:%d#%s\"",
+  tmp_string = gavl_sprintf("\"urn:schemas-upnp-org:service:%s:%d#%s\"",
                           service, version, function);
 
   gavl_dictionary_set_string_nocopy(req_vars, "SOAPACTION", tmp_string);

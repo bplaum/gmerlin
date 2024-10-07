@@ -200,7 +200,7 @@ void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t 
     
     while(formats[idx].name)
       {
-      uri = bg_sprintf("%s/container/%s%s/%s.%s",
+      uri = gavl_sprintf("%s/container/%s%s/%s.%s",
                        root_uri, formats[idx].name, id, title, formats[idx].name);
 
       gavl_metadata_add_src(m, GAVL_META_SRC, formats[idx].mimetype, uri);

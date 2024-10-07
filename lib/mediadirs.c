@@ -262,11 +262,11 @@ void bg_media_dirs_add_path(bg_media_dirs_t * d, const char * path)
   if(path[strlen(path)-1] == '/')
     gavl_dictionary_set_string(dict, LOCAL_PATH, path);
   else
-    gavl_dictionary_set_string_nocopy(dict, LOCAL_PATH, bg_sprintf("%s/", path));
+    gavl_dictionary_set_string_nocopy(dict, LOCAL_PATH, gavl_sprintf("%s/", path));
 
   bg_get_filename_hash(gavl_dictionary_get_string(dict, LOCAL_PATH), md5);
     
-  gavl_dictionary_set_string_nocopy(dict, HTTP_PATH, bg_sprintf(PATH_PREFIX"%s/", md5));
+  gavl_dictionary_set_string_nocopy(dict, HTTP_PATH, gavl_sprintf(PATH_PREFIX"%s/", md5));
 
   pthread_mutex_lock(&d->mutex);
   gavl_array_splice_val_nocopy(&d->dirs, -1, 0, &val);
@@ -336,7 +336,7 @@ char * bg_media_dirs_local_to_http(bg_media_dirs_t * d, const char * path)
      (str_local = gavl_dictionary_get_string(dict, LOCAL_PATH)) &&
      (str_http = gavl_dictionary_get_string(dict, HTTP_PATH)))
     {
-    ret = bg_sprintf("%s%s", str_http, path + strlen(str_local));
+    ret = gavl_sprintf("%s%s", str_http, path + strlen(str_local));
     }
   else
     {
@@ -382,7 +382,7 @@ char * bg_media_dirs_local_to_http_uri(bg_media_dirs_t * d, const char * path)
     {
     char * path_enc = bg_string_to_uri(path + strlen(str_local), -1);
     
-    ret = bg_sprintf("%s%s%s", d->root_uri, str_http, path_enc);
+    ret = gavl_sprintf("%s%s%s", d->root_uri, str_http, path_enc);
     free(path_enc);
     }
   else
@@ -416,7 +416,7 @@ char * bg_media_dirs_http_to_local(bg_media_dirs_t * d, const char *  path)
      (str_local = gavl_dictionary_get_string(dict, LOCAL_PATH)) &&
      (str_http = gavl_dictionary_get_string(dict, HTTP_PATH)))
     {
-    ret = bg_sprintf("%s%s", str_local, path + strlen(str_http));
+    ret = gavl_sprintf("%s%s", str_local, path + strlen(str_http));
     }
 
   if(ret && !do_export(d, ret))

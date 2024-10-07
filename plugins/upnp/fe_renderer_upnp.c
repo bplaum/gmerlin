@@ -343,7 +343,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
               int volume_DB;
               if(gavl_value_get_float(&val, &volume))
                 {
-                char * str = bg_sprintf("%d", (int)(volume * BG_PLAYER_VOLUME_INT_MAX + 0.5));
+                char * str = gavl_sprintf("%d", (int)(volume * BG_PLAYER_VOLUME_INT_MAX + 0.5));
                 bg_upnp_event_context_server_set_value(&p->rc_evt, "Volume",
                                                        str, EVT_INTERVAL);
                 free(str);
@@ -358,7 +358,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
                 else if(volume_DB > 0)
                   volume_DB = 0;
                 
-                str = bg_sprintf("%d", volume_DB);
+                str = gavl_sprintf("%d", volume_DB);
                 bg_upnp_event_context_server_set_value(&p->rc_evt, "VolumeDB",
                                                        str, EVT_INTERVAL);
                 free(str);
@@ -503,7 +503,7 @@ static int handle_player_message_upnp(void * priv, gavl_msg_t * msg)
               
               if(gavl_value_get_int(&val, &mute))
                 {
-                char * str = bg_sprintf("%d", mute);
+                char * str = gavl_sprintf("%d", mute);
                 bg_upnp_event_context_server_set_value(&p->rc_evt, "Mute",
                                                        str, EVT_INTERVAL);
                 free(str);
@@ -1231,12 +1231,12 @@ static int open_renderer_upnp(void * data, bg_controllable_t * ctrl)
     
   root_uri = bg_http_server_get_root_url(bg_http_server_get());
   
-  uri = bg_sprintf("%s/upnp/renderer/desc.xml", root_uri);
+  uri = gavl_sprintf("%s/upnp/renderer/desc.xml", root_uri);
 
 
   gavl_dictionary_init(&local_dev);
   gavl_dictionary_set_string_nocopy(&local_dev, GAVL_META_URI,
-                                    bg_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, uri + 7));
+                                    gavl_sprintf("%s://%s", BG_BACKEND_URI_SCHEME_UPNP_RENDERER, uri + 7));
 
   gavl_dictionary_set_string(&local_dev, GAVL_META_CLASS, GAVL_META_CLASS_BACKEND_RENDERER);
 
@@ -1259,7 +1259,7 @@ static int open_renderer_upnp(void * data, bg_controllable_t * ctrl)
     icons = gavl_strdup("");
     
   bg_uri_to_uuid(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), uuid_str);
-  priv->desc = bg_sprintf(dev_desc, uuid_str, server_label, icons);
+  priv->desc = gavl_sprintf(dev_desc, uuid_str, server_label, icons);
     
   bg_resourcemanager_publish(gavl_dictionary_get_string(&local_dev, GAVL_META_URI), &local_dev);
     
@@ -1277,7 +1277,7 @@ static int open_renderer_upnp(void * data, bg_controllable_t * ctrl)
     if(i)
       priv->protocol_info = gavl_strcat(priv->protocol_info, ",");
 
-    tmp_string = bg_sprintf("http-get:*:%s:*", gavl_string_array_get(arr, i));
+    tmp_string = gavl_sprintf("http-get:*:%s:*", gavl_string_array_get(arr, i));
     priv->protocol_info = gavl_strcat(priv->protocol_info, tmp_string);
     free(tmp_string);
     }

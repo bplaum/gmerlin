@@ -104,7 +104,7 @@ void renderer_init(renderer_t * s, gavl_array_t * fe_arr)
   /* Load state */
 
   if(!s->state_file)
-    s->state_file = bg_sprintf("%s/state.xml", s->vardir);
+    s->state_file = gavl_sprintf("%s/state.xml", s->vardir);
 
   if(!bg_dictionary_load_xml(&s->state, s->state_file, "state") ||
      !(uuid_val =  bg_state_get(&s->state, "server", "uuid")) ||

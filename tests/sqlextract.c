@@ -71,7 +71,7 @@ static void dump_albums_album(sqlite3 * db, int64_t album, const char * artist, 
   const char * var;
   
   gavl_dictionary_init(&dict);
-  sql = bg_sprintf("SELECT "GAVL_META_TITLE", "GAVL_META_DATE" FROM albums WHERE DBID = %"PRId64";", album);
+  sql = gavl_sprintf("SELECT "GAVL_META_TITLE", "GAVL_META_DATE" FROM albums WHERE DBID = %"PRId64";", album);
   
   bg_sqlite_exec(db, sql, query_album_callback, &dict);
   
@@ -98,7 +98,7 @@ static void dump_albums_album(sqlite3 * db, int64_t album, const char * artist, 
     gavl_array_t songs;
     gavl_array_init(&songs);
 
-    sql = bg_sprintf("SELECT DBID FROM songs WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_TRACKNUMBER";", album);
+    sql = gavl_sprintf("SELECT DBID FROM songs WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_TRACKNUMBER";", album);
     bg_sqlite_exec(db, sql, append_id_callback, &songs);
     free(sql);
 
@@ -108,7 +108,7 @@ static void dump_albums_album(sqlite3 * db, int64_t album, const char * artist, 
       gavl_array_t artists;
       gavl_array_init(&artists);
 
-      sql = bg_sprintf("SELECT song_artists.NAME FROM song_artists JOIN song_artists_arr ON song_artists.ID = song_artists_arr.NAME_ID WHERE song_artists_arr.OBJ_ID = %s ORDER BY song_artists_arr.ID;", gavl_value_get_string(&songs.entries[i]));
+      sql = gavl_sprintf("SELECT song_artists.NAME FROM song_artists JOIN song_artists_arr ON song_artists.ID = song_artists_arr.NAME_ID WHERE song_artists_arr.OBJ_ID = %s ORDER BY song_artists_arr.ID;", gavl_value_get_string(&songs.entries[i]));
       bg_sqlite_exec(db, sql, append_id_callback, &artists);
       free(sql);
       
@@ -122,7 +122,7 @@ static void dump_albums_album(sqlite3 * db, int64_t album, const char * artist, 
         }
       printf(" - ");
 
-      sql = bg_sprintf("SELECT TITLE, substr(DATE, 1, 4) FROM songs WHERE DBID = %s;", gavl_value_get_string(&songs.entries[i]));
+      sql = gavl_sprintf("SELECT TITLE, substr(DATE, 1, 4) FROM songs WHERE DBID = %s;", gavl_value_get_string(&songs.entries[i]));
       bg_sqlite_exec(db, sql, dump_song_callback, NULL);
       free(sql);
       
@@ -142,7 +142,7 @@ static void dump_albums_artist(sqlite3 * db, int64_t genre, int64_t artist, int 
   gavl_array_t albums;
   gavl_array_init(&albums);
 
-  sql = bg_sprintf("SELECT album_artists_arr.OBJ_ID "
+  sql = gavl_sprintf("SELECT album_artists_arr.OBJ_ID "
                    "FROM "
                    "album_artists_arr INNER JOIN album_genres_arr "
                    "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
@@ -182,7 +182,7 @@ static void dump_albums_genre(sqlite3 * db, int64_t genre, int songs)
   printf("GENRE: %s\n", genre_str);
   free(genre_str);
   
-  sql = bg_sprintf("SELECT ID FROM album_artists WHERE ID in (SELECT DISTINCT album_artists_arr.NAME_ID "
+  sql = gavl_sprintf("SELECT ID FROM album_artists WHERE ID in (SELECT DISTINCT album_artists_arr.NAME_ID "
                    "FROM album_artists_arr INNER JOIN album_genres_arr "
                    "ON album_artists_arr.OBJ_ID = album_genres_arr.OBJ_ID "
                    "WHERE album_genres_arr.NAME_ID = %"PRId64") ORDER BY NAME;", genre);
@@ -209,7 +209,7 @@ static void dump_albums(sqlite3 * db, int songs)
   gavl_array_t genres;
   gavl_array_init(&genres);
 
-  sql = bg_sprintf("SELECT ID FROM album_genres ORDER BY NAME;");
+  sql = gavl_sprintf("SELECT ID FROM album_genres ORDER BY NAME;");
   bg_sqlite_exec(db, sql, append_id_callback, &genres);  /* An open database */
   free(sql);
 
@@ -234,7 +234,7 @@ static int query_movie_callback(void * data, int argc, char **argv, char **azCol
 static void dump_movies(sqlite3 * db)
   {
   char * sql;
-  sql = bg_sprintf("SELECT "GAVL_META_TITLE", substr("GAVL_META_DATE", 1, 4) FROM movies ORDER BY "GAVL_META_TITLE";");
+  sql = gavl_sprintf("SELECT "GAVL_META_TITLE", substr("GAVL_META_DATE", 1, 4) FROM movies ORDER BY "GAVL_META_TITLE";");
   bg_sqlite_exec(db, sql, query_movie_callback, NULL);  /* An open database */
   free(sql);
   }
@@ -254,7 +254,7 @@ static void write_string(FILE * out, const char * str)
 static void query_array(sqlite3 * db, gavl_array_t * ret, const char * id, const char * table)
   {
   char * sql;
-  sql = bg_sprintf("SELECT %s.NAME FROM %s JOIN %s_arr on %s.ID = %s_arr.NAME_ID where %s_arr.OBJ_ID = %s ORDER BY %s_arr.ID;",
+  sql = gavl_sprintf("SELECT %s.NAME FROM %s JOIN %s_arr on %s.ID = %s_arr.NAME_ID where %s_arr.OBJ_ID = %s ORDER BY %s_arr.ID;",
                    table, table, table, table, table, table, id, table);
   bg_sqlite_exec(db, sql, append_id_callback, ret);  /* An open database */
   free(sql);
@@ -282,7 +282,7 @@ static int query_movie_nfo_callback(void * data, int argc, char **argv, char **a
   originaltitle = argv[3];
   plot          = argv[4];
   
-  basename = bg_sprintf("%s (%s)", title, year);
+  basename = gavl_sprintf("%s (%s)", title, year);
 
   /* Remove characters forbidden in filenames */
   pos = basename;
@@ -300,7 +300,7 @@ static int query_movie_nfo_callback(void * data, int argc, char **argv, char **a
 
   gavl_ensure_directory(basename, 0);
 
-  nfoname = bg_sprintf("%s/%s.nfo", basename, basename);
+  nfoname = gavl_sprintf("%s/%s.nfo", basename, basename);
 
   out = fopen(nfoname, "w");
 
@@ -386,7 +386,7 @@ static int query_movie_nfo_callback(void * data, int argc, char **argv, char **a
 static void dump_movie_nfos(sqlite3 * db)
   {
   char * sql;
-  sql = bg_sprintf("SELECT DBID, "GAVL_META_TITLE", substr("GAVL_META_DATE", 1, 4), "GAVL_META_ORIGINAL_TITLE", "GAVL_META_PLOT
+  sql = gavl_sprintf("SELECT DBID, "GAVL_META_TITLE", substr("GAVL_META_DATE", 1, 4), "GAVL_META_ORIGINAL_TITLE", "GAVL_META_PLOT
                    " FROM movies ORDER BY "GAVL_META_TITLE";");
   bg_sqlite_exec(db, sql, query_movie_nfo_callback, db);  /* An open database */
   free(sql);
@@ -426,7 +426,7 @@ static void dump_episodes_season(sqlite3 * db, const char * show, int64_t season
   s.show = show;
   s.season = bg_sqlite_id_to_id(db, "seasons", GAVL_META_SEASON, "DBID", season_id);
   
-  sql = bg_sprintf("SELECT "GAVL_META_IDX", "GAVL_META_TITLE", "GAVL_META_DATE" FROM episodes WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_IDX";",
+  sql = gavl_sprintf("SELECT "GAVL_META_IDX", "GAVL_META_TITLE", "GAVL_META_DATE" FROM episodes WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_IDX";",
                    season_id);
   bg_sqlite_exec(db, sql, query_episode_callback, &s);  /* An open database */
   free(sql);
@@ -442,7 +442,7 @@ static void dump_episodes_show(sqlite3 * db, int64_t show_id)
 
   show = bg_sqlite_id_to_string(db, "shows", GAVL_META_TITLE, "DBID", show_id);
   
-  sql = bg_sprintf("SELECT DBID FROM seasons WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_SEASON";", show_id);
+  sql = gavl_sprintf("SELECT DBID FROM seasons WHERE ParentID = %"PRId64" ORDER BY "GAVL_META_SEASON";", show_id);
   bg_sqlite_exec(db, sql, append_id_callback, &seasons);  /* An open database */
   free(sql);
 
@@ -464,7 +464,7 @@ static void dump_episodes(sqlite3 * db)
   gavl_array_t shows;
   gavl_array_init(&shows);
 
-  sql = bg_sprintf("SELECT DBID FROM shows ORDER BY "GAVL_META_TITLE";");
+  sql = gavl_sprintf("SELECT DBID FROM shows ORDER BY "GAVL_META_TITLE";");
   bg_sqlite_exec(db, sql, append_id_callback, &shows);  /* An open database */
   free(sql);
 

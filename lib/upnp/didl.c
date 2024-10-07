@@ -799,7 +799,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
     
     gavl_dictionary_get_int(m, GAVL_META_NUM_CHILDREN, &num_children);
 
-    tmp_string = bg_sprintf("%d", num_children);
+    tmp_string = gavl_sprintf("%d", num_children);
     BG_XML_SET_PROP(data.node, "childCount", tmp_string);
     free(tmp_string);
     }
@@ -811,7 +811,7 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
     
     gavl_dictionary_get_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, &num_children);
     
-    tmp_string = bg_sprintf("%d", num_children);
+    tmp_string = gavl_sprintf("%d", num_children);
     BG_XML_SET_PROP(data.node, "childContainerCount", tmp_string);
     free(tmp_string);
     }
@@ -843,11 +843,11 @@ xmlNodePtr bg_track_to_didl(xmlDocPtr ret, const gavl_dictionary_t * track, char
       
       if(content_features)
         {
-        protocol_info = bg_sprintf("http-get:*:%s:%s", mimetype, content_features);
+        protocol_info = gavl_sprintf("http-get:*:%s:%s", mimetype, content_features);
         free(content_features);
         }
       else
-        protocol_info = bg_sprintf("http-get:*:%s:*", mimetype);
+        protocol_info = gavl_sprintf("http-get:*:%s:*", mimetype);
       }
     
     if(!protocol_info)

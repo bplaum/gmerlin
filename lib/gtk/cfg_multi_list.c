@@ -132,13 +132,13 @@ static void set_sub_param(void * priv, const char * name,
   if(!name)
     tmp_string = NULL;
   else if(list->is_chain)
-    tmp_string = bg_sprintf("%s.%d.%s", w->info->name, list->selected,
+    tmp_string = gavl_sprintf("%s.%d.%s", w->info->name, list->selected,
                             name);
   else if(list->param_selected < 0)
     return;
   else
     {
-    tmp_string = bg_sprintf("%s.%s.%s", w->info->name,
+    tmp_string = gavl_sprintf("%s.%s.%s", w->info->name,
                             w->info->multi_names[list->param_selected],
                             name);
     }
@@ -684,7 +684,7 @@ static void button_callback(GtkWidget * wid, gpointer data)
     params[0].help_string        = w->info->help_string;
     params[0].multi_parameters   = w->info->multi_parameters;
     
-    tmp_string = bg_sprintf(TR("Add %s"),
+    tmp_string = gavl_sprintf(TR("Add %s"),
                             TRD(w->info->long_name, priv->translation_domain));
     
     dialog = bg_dialog_create(NULL, add_func, w, params, tmp_string);

@@ -136,7 +136,7 @@ int bg_backend_gmerlin_open(void * priv, const char * uri_1)
   gmerlin_backend_t * g = priv;
   
   if((pos = strstr(uri_1, "://")))
-    uri = bg_sprintf("ws%s", pos);
+    uri = gavl_sprintf("ws%s", pos);
   else
     uri = gavl_strdup(uri_1);
   
@@ -185,7 +185,7 @@ int bg_backend_get_node_info(gavl_dictionary_t * ret)
   gavl_dictionary_init(&dict);
   
   pos = strstr(addr, "://");
-  uri = bg_sprintf("http%s/info", pos);
+  uri = gavl_sprintf("http%s/info", pos);
 
   // fprintf(stderr, "Getting node info for %s (info URI: %s)\n", addr, uri);
 

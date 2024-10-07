@@ -172,7 +172,7 @@ static void menu_set_cur(menu_t * m, int cur)
 static char * append_icon(char * str, const char * icon)
   {
   char * tmp_string =
-    bg_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>",
+    gavl_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>",
                BG_ICON_FONT_FAMILY, icon);
   
   str = gavl_strcat(str, tmp_string);
@@ -215,7 +215,7 @@ static char * menu_markup(menu_t * m)
     else
       ret = append_icon(ret, BG_ICON_BOX);
 
-    tmp_string = bg_sprintf(" %s", m->items[i]);
+    tmp_string = gavl_sprintf(" %s", m->items[i]);
     ret = gavl_strcat(ret, tmp_string);
     free(tmp_string);
     }
@@ -298,7 +298,7 @@ static void set_font(bg_osd_t * osd, float size)
   {
   gavl_value_t val;
   gavl_value_init(&val);
-  gavl_value_set_string_nocopy(&val, bg_sprintf("%s %.1f", BG_ICON_FONT_FAMILY, size));
+  gavl_value_set_string_nocopy(&val, gavl_sprintf("%s %.1f", BG_ICON_FONT_FAMILY, size));
   bg_text_renderer_set_parameter(osd->renderer, "fontname", &val);
   gavl_value_free(&val);
   }
@@ -566,7 +566,7 @@ static char * make_time_string(bg_osd_t * osd)
 
   gavl_time_prettyprint(osd->track_time, track_time_str);
   
-  tmp_string = bg_sprintf("<span font_family=\"monospace\">%s</span>", track_time_str);
+  tmp_string = gavl_sprintf("<span font_family=\"monospace\">%s</span>", track_time_str);
   str = gavl_strcat(str, tmp_string);
   free(tmp_string);
     
@@ -574,12 +574,12 @@ static char * make_time_string(bg_osd_t * osd)
     {
     char bar[TIME_BAR_SIZE_TOTAL+1];
 
-    tmp_string = bg_sprintf(" / <span font_family=\"monospace\">%s</span>\n", osd->track_duration_str);
+    tmp_string = gavl_sprintf(" / <span font_family=\"monospace\">%s</span>\n", osd->track_duration_str);
     str = gavl_strcat(str, tmp_string);
     free(tmp_string);
     
     print_bar(bar, osd->percentage, TIME_BAR_SIZE);
-    tmp_string = bg_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>",
+    tmp_string = gavl_sprintf("<span font_family=\"%s\" weight=\"normal\">%s</span>",
                             BG_ICON_FONT_FAMILY, bar);
     
     str = gavl_strcat(str, tmp_string);
@@ -691,7 +691,7 @@ static void osd_set(bg_osd_t * osd, char * str,
 static void show_icon(bg_osd_t * osd, const char * icon, int type)
   {
   char * ret = 
-    bg_sprintf("<markup><span font_family=\"%s\" weight=\"normal\" size=\"larger\">%s</span></markup>",
+    gavl_sprintf("<markup><span font_family=\"%s\" weight=\"normal\" size=\"larger\">%s</span></markup>",
                BG_ICON_FONT_FAMILY, icon);
   osd_set(osd, ret, "center", "center", type, 0, 1);
   }
@@ -732,7 +732,7 @@ static void print_float(bg_osd_t * osd, float val, char * c, int type)
   
   print_bar(buf, val, FLOAT_BAR_SIZE);
 
-  str = bg_sprintf("<markup><span size=\"larger\" font_family=\"%s\" weight=\"normal\">%s</span></markup>",
+  str = gavl_sprintf("<markup><span size=\"larger\" font_family=\"%s\" weight=\"normal\">%s</span></markup>",
                    BG_ICON_FONT_FAMILY, buf1);
 
   osd_set(osd, str, "center", "center", type, 0, 1);
@@ -800,7 +800,7 @@ static char * append_header(char * str, const char * val)
   if(str && (strlen(str) > 8))
     nl = "\n";
 
-  tmp_string = bg_sprintf("%s<span size=\"larger\" weight=\"heavy\">%s</span>", nl, val);
+  tmp_string = gavl_sprintf("%s<span size=\"larger\" weight=\"heavy\">%s</span>", nl, val);
   str = gavl_strcat(str, tmp_string);
   free(tmp_string);
   return str;
@@ -814,7 +814,7 @@ static char * append_row(char * str, const char * icon, const char * val)
   if(str && (strlen(str) > 8))
     nl = "\n";
   
-  tmp_string = bg_sprintf("%s<span font_family=\"%s\" weight=\"normal\">%s</span>\t%s",
+  tmp_string = gavl_sprintf("%s<span font_family=\"%s\" weight=\"normal\">%s</span>\t%s",
                           nl, BG_ICON_FONT_FAMILY, icon, val);
 
   str = gavl_strcat(str, tmp_string);
@@ -882,7 +882,7 @@ void bg_osd_show_info(bg_osd_t * osd)
      (var = gavl_dictionary_get_string(sm, GAVL_META_FORMAT)))
     {
     char * bitrate;
-    char * tmp_string = bg_sprintf("%s, %.2f kHz, %d Ch", var,
+    char * tmp_string = gavl_sprintf("%s, %.2f kHz, %d Ch", var,
                                    (float)afmt->samplerate / 1000.0,
                                    afmt->num_channels);
     
@@ -903,7 +903,7 @@ void bg_osd_show_info(bg_osd_t * osd)
      (var = gavl_dictionary_get_string(sm, GAVL_META_FORMAT)))
     {
     char * bitrate;
-    char * tmp_string = bg_sprintf("%s, %dx%d", var,
+    char * tmp_string = gavl_sprintf("%s, %dx%d", var,
                                    vfmt->image_width,
                                    vfmt->image_height);
     

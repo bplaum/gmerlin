@@ -211,7 +211,7 @@ static int handle_static(bg_http_connection_t * conn, void * data)
        (path_len = strlen(http_path)) &&
        (conn->path[path_len] == '/'))
       {
-      path = bg_sprintf("%s%s", local_path, conn->path + path_len);
+      path = gavl_sprintf("%s%s", local_path, conn->path + path_len);
       break;
       }
     }
@@ -327,7 +327,7 @@ static int generate_client_id(bg_http_connection_t * conn, void * data)
     uuid_unparse(cid, cid_str);
     gavl_dictionary_set_string(&conn->url_vars, BG_URL_VAR_CLIENT_ID, cid_str);
     
-    location = bg_sprintf("http://%s/", gavl_dictionary_get_string_i(&conn->req, "Host"));
+    location = gavl_sprintf("http://%s/", gavl_dictionary_get_string_i(&conn->req, "Host"));
     location = bg_url_append_vars(location, &conn->url_vars);
 
     bg_http_connection_init_res(conn, conn->protocol, 303, "See Other");
@@ -354,7 +354,7 @@ static int handle_root(bg_http_connection_t * conn, void * data)
   if(!(url_vars = strchr(conn->path, '?')))
     url_vars = "";
   
-  new_path = bg_sprintf("%s%s", s->root_file, url_vars);
+  new_path = gavl_sprintf("%s%s", s->root_file, url_vars);
   
   gavl_http_request_set_path(&conn->req, new_path);
   conn->path = gavl_http_request_get_path(&conn->req);
@@ -652,7 +652,7 @@ int bg_http_server_start(bg_http_server_t * s)
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Socket listening on %s:%d", addr, s->port);
   
   gavl_socket_address_to_string(s->addr, addr_str);
-  s->root_url = bg_sprintf("http://%s", addr_str);
+  s->root_url = gavl_sprintf("http://%s", addr_str);
 
   if(s->dirs)
     bg_media_dirs_set_root_uri(s->dirs, s->root_url);

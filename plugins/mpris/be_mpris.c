@@ -271,7 +271,7 @@ static void mpris2_set_player_property(void * priv, const char * name, const gav
           char * artist;
           if((artist = gavl_metadata_join_arr(m, GAVL_META_ARTIST, ", ")))
             {
-            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, bg_sprintf("%s - %s", artist, title));
+            gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%s - %s", artist, title));
             free(artist);
             }
           else
@@ -472,7 +472,7 @@ static int open_renderer(void * priv, const char * uri)
   if((pos = strstr(uri, "://")))
     uri = pos + 3;
 
-  real_name = bg_sprintf("%s%s", MPRIS2_NAME_PREFIX, uri);
+  real_name = gavl_sprintf("%s%s", MPRIS2_NAME_PREFIX, uri);
 
   r->addr = bg_dbus_get_name_owner(r->conn, real_name);
   
@@ -484,7 +484,7 @@ static int open_renderer(void * priv, const char * uri)
     return 0;
 
   /* Connect property changed callback */
-  rule = bg_sprintf("sender='%s',type='signal',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
+  rule = gavl_sprintf("sender='%s',type='signal',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
                     r->addr);
   
   bg_dbus_connection_add_listener(r->conn,

@@ -159,7 +159,7 @@ static char * write_xspf(const gavl_dictionary_t * dict, int local)
     /* trackNum */
     if(gavl_dictionary_get_int(m, GAVL_META_TRACKNUMBER, &val_i))
       {
-      char * tmp_string = bg_sprintf("%d", val_i);
+      char * tmp_string = gavl_sprintf("%d", val_i);
       bg_xml_append_child_node(track, "trackNum", tmp_string);
       free(tmp_string);
       }
@@ -167,7 +167,7 @@ static char * write_xspf(const gavl_dictionary_t * dict, int local)
     /* duration */
     if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
       {
-      char * tmp_string = bg_sprintf("%"PRId64, duration / (GAVL_TIME_SCALE/1000));
+      char * tmp_string = gavl_sprintf("%"PRId64, duration / (GAVL_TIME_SCALE/1000));
       bg_xml_append_child_node(track, "duration", tmp_string);
       free(tmp_string);
       }
@@ -229,7 +229,7 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local)
     else
       duration = -1;
     
-    tmp_string = bg_sprintf("#EXTINF:%"PRId64",%s\n%s\n", duration, val, location);
+    tmp_string = gavl_sprintf("#EXTINF:%"PRId64",%s\n%s\n", duration, val, location);
     ret = gavl_strcat(ret, tmp_string);
 
     free(tmp_string);
@@ -360,7 +360,7 @@ static char * write_pls(const gavl_dictionary_t * dict, int local)
       duration = -1;
 
     idx++;
-    tmp_string = bg_sprintf("File%d=%s\r\nTitle%d=%s\r\nLength%d=%"PRId64"\r\n",
+    tmp_string = gavl_sprintf("File%d=%s\r\nTitle%d=%s\r\nLength%d=%"PRId64"\r\n",
                             idx, location,
                             idx, val,
                             idx, duration);
@@ -370,7 +370,7 @@ static char * write_pls(const gavl_dictionary_t * dict, int local)
     free(tmp_string);
     }
 
-  tmp_string = bg_sprintf("NumberOfEntries=%d\nVersion=2\r\n", idx);
+  tmp_string = gavl_sprintf("NumberOfEntries=%d\nVersion=2\r\n", idx);
   ret = gavl_strcat(ret, tmp_string);
   free(tmp_string);
   

@@ -136,7 +136,7 @@ void bg_gtk_multi_info_show(const bg_parameter_info_t * info, int i,
   char * text;
   multiwindow_t * win;
   
-  text = bg_sprintf(TR("Name:\t %s\nLabel:\t %s"),
+  text = gavl_sprintf(TR("Name:\t %s\nLabel:\t %s"),
                     info->multi_names[i],
                     (info->multi_labels?TR_DOM(info->multi_labels[i]):info->multi_names[i]));
   

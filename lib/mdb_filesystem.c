@@ -169,7 +169,7 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
     ret = &fs->directory;
     }
   
-  pattern = bg_sprintf("%s/*", path);
+  pattern = gavl_sprintf("%s/*", path);
   pattern = gavl_escape_string(pattern, "[]?");
   
   glob(pattern, 0, NULL /* errfunc */, &g);
@@ -1267,7 +1267,7 @@ static int add_directory(bg_mdb_backend_t * b, dir_type_t type, int * idx, const
       parent = fs->photo_container;
       break;
     case DIR_TYPE_FS_REMOVABLE:
-      gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, bg_sprintf(REMOVABLE_ID_PREFIX"-%"PRId64,
+      gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf(REMOVABLE_ID_PREFIX"-%"PRId64,
                                                                     ++fs->removable_counter));
       gavl_dictionary_set_string(m, VOLUME_ID, volume_id);
       gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM); 
@@ -1429,13 +1429,13 @@ static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int i
   switch(type)
     {
     case DIR_TYPE_FS_LOCAL:
-      tmp_string = bg_sprintf("%s/"LOCAL_DIRS_NAME, b->db->path);
+      tmp_string = gavl_sprintf("%s/"LOCAL_DIRS_NAME, b->db->path);
       bg_array_save_xml(&fs->local_dirs, tmp_string, DIRS_ROOT);
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved %s", tmp_string);
       free(tmp_string);
       break;
     case DIR_TYPE_PHOTOALBUMS:
-      tmp_string = bg_sprintf("%s/"PHOTO_DIRS_NAME, b->db->path);
+      tmp_string = gavl_sprintf("%s/"PHOTO_DIRS_NAME, b->db->path);
       bg_array_save_xml(&fs->photo_dirs, tmp_string, DIRS_ROOT);
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved %s", tmp_string);
       free(tmp_string);
@@ -1650,19 +1650,19 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   bg_mdb_set_editable(priv->photo_container);
   
   /* Create cache */  
-  tmp_string = bg_sprintf("%s/fs_cache", b->db->path);
+  tmp_string = gavl_sprintf("%s/fs_cache", b->db->path);
   priv->cache = bg_object_cache_create(1024, 32, tmp_string);
   free(tmp_string);
 
   /* Load directories */
 
-  tmp_string = bg_sprintf("%s/"LOCAL_DIRS_NAME, b->db->path);
+  tmp_string = gavl_sprintf("%s/"LOCAL_DIRS_NAME, b->db->path);
   if(!access(tmp_string, R_OK))
     bg_array_load_xml(&priv->local_dirs, tmp_string, DIRS_ROOT);
   gavl_track_set_num_children(priv->local_container, priv->local_dirs.num_entries, 0);
   free(tmp_string);
   
-  tmp_string = bg_sprintf("%s/"PHOTO_DIRS_NAME, b->db->path);
+  tmp_string = gavl_sprintf("%s/"PHOTO_DIRS_NAME, b->db->path);
   if(!access(tmp_string, R_OK))
     bg_array_load_xml(&priv->photo_dirs, tmp_string, DIRS_ROOT);
   gavl_track_set_num_children(priv->photo_container, priv->photo_dirs.num_entries, 0);
