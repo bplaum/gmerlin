@@ -326,7 +326,6 @@ static void parse_cdata_description(const char * str1, gavl_dictionary_t * m)
   if(!doc)
     goto fail;
   
-  //  child = bg_xml_find_doc_child(doc, )  
   child = doc->children;
 
   if(!(child = bg_xml_find_doc_child(doc, "html")) ||
