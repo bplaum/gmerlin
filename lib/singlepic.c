@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -43,101 +41,20 @@
 #include <gmerlin/bggavl.h>
 
 #include <gavl/metatags.h>
+#include <gavl/packetindex.h>
 
 #define LOG_DOMAIN_ENC "singlepicture-encoder"
 #define LOG_DOMAIN_DEC "singlepicture-decoder"
 
+#define TIMESCALE_KEY "#TIMESCALE: "
+#define FRAMEDUR_KEY  "#FRAMEDUR: "
+
+#define DURATION_KEY  "#DURATION: "
+#define PTS_KEY       "#PTS: "
+
+#define IMGLIST_EXT "imglist"
+
 /* Image list */
-
-typedef struct
-  {
-  gavl_io_t * io;
-  int timescale;
-  int frame_duration;
-  
-  char * line;
-  int line_alloc;
-  int64_t frame_counter;
-
-  int have_line;
-  } img_list_reader_t;
-
-
-static int img_list_start_read(img_list_reader_t * list, const char * filename, gavl_dictionary_t * s)
-  {
-  if((list->io = gavl_io_from_filename(filename, 0)))
-    return 0;
-
-  while(1)
-    {
-    if(!gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
-      return 0;
-    if(gavl_string_starts_with(list->line, "#TIMESCALE: "))
-      {
-      list->timescale = atoi(list->line + strlen("#TIMESCALE: "));
-      }
-    else if(gavl_string_starts_with(list->line, "#FRAMEDUR: "))
-      {
-      list->frame_duration = atoi(list->line + strlen("#FRAMEDUR: "));
-      }
-    else
-      {
-      list->have_line = 1;
-      break;
-      }
-    }
-  return 1;
-  }
-
-static const char * img_list_read(img_list_reader_t * list, int64_t * pts)
-  {
-  while(1)
-    {
-    if(!list->have_line &&
-       !gavl_io_read_line(list->io, &list->line, &list->line_alloc, 1024))
-      return 0;
-
-    list->have_line = 0;
-    
-    if(list->line[0] != '#')
-      return list->line;
-
-    else if(gavl_string_starts_with(list->line, "#PTS: "))
-      *pts = strtoll(list->line + 6, NULL, 10);
-    
-    }
-  
-  return 0;
-  }
-
-static void img_list_close_read(img_list_reader_t * list)
-  {
-  if(list->io)
-    gavl_io_destroy(list->io);
-  if(list->line)
-    free(list->line);
-  }
-
-typedef struct
-  {
-  FILE * f;
-  } img_list_writer_t;
-
-static int img_list_start_write(FILE * f, const gavl_video_format_t * fmt)
-  {
-  fprintf(f, "#TIMESCALE: %d\n", fmt->timescale);
-  
-  if(fmt->framerate_mode == GAVL_FRAMERATE_CONSTANT)
-    fprintf(f, "#FRAMEDUR: %d\n", fmt->frame_duration);
-  
-  return 1;
-  }
-
-static int img_list_write(FILE * f, int64_t pts, const char * filename)
-  {
-  fprintf(f, "#PTS: %"PRId64"\n%s\n", pts, filename);
-  return 1;
-  }
 
 
 static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
@@ -205,35 +122,126 @@ static const bg_parameter_info_t parameters_input_still[] =
 typedef struct
   {
   gavl_dictionary_t mi;
-  
   gavl_dictionary_t * track_info;
+
+  gavl_video_format_t * fmt;
+  gavl_compression_info_t ci;
   
-  int timescale;
-  int frame_duration;
+  //  int timescale;
+  //  int frame_duration;
 
   gavl_time_t display_time;
   
-  char * template;
-  
-  int64_t frame_start;
-  int64_t frame_end;
-  int64_t current_frame;
-
   bg_plugin_handle_t * handle;
   bg_image_reader_plugin_t * image_reader;
 
   char * filename_buffer;
-  int header_read;
-  
   int do_still;
   
   bg_controllable_t controllable;
 
   bg_media_source_t ms;
 
-  img_list_reader_t list;
+  gavl_packet_index_t idx;
+  int idx_pos;
+  
+  gavl_io_t * io;
 
+  char * line;
+  int line_alloc;
+  
+  char * path;
   } input_t;
+
+static int init_reader(input_t * inp)
+  {
+  int64_t line_start;
+  int64_t pts = 0;
+  int64_t duration = 0;
+  
+  inp->fmt->framerate_mode = GAVL_FRAMERATE_VARIABLE;
+  
+  /* Read global variables */
+  while(1)
+    {
+    line_start = gavl_io_position(inp->io);
+
+
+    if(!gavl_io_read_line(inp->io, &inp->line, &inp->line_alloc, 1024))
+      return 0;
+    /* Global parameters */
+    if(gavl_string_starts_with(inp->line, TIMESCALE_KEY))
+      inp->fmt->timescale = atoi(inp->line + strlen(TIMESCALE_KEY));
+    else if(gavl_string_starts_with(inp->line, FRAMEDUR_KEY))
+      {
+      inp->fmt->frame_duration = atoi(inp->line + strlen(FRAMEDUR_KEY));
+      inp->fmt->framerate_mode = GAVL_FRAMERATE_CONSTANT;
+      }
+    else
+      break;
+    }
+
+  while(1)
+    {
+    if(gavl_string_starts_with(inp->line, PTS_KEY))
+      pts = strtoll(inp->line + strlen(PTS_KEY), NULL, 10);
+    else if(gavl_string_starts_with(inp->line, DURATION_KEY))
+      duration = strtoll(inp->line + strlen(DURATION_KEY), NULL, 10);
+    else
+      {
+      /* Filename */
+      if(inp->fmt->framerate_mode == GAVL_FRAMERATE_CONSTANT)
+        duration = inp->fmt->frame_duration;
+      
+      gavl_packet_index_add(&inp->idx,
+                            line_start,
+                            strlen(inp->line),
+                            0,
+                            pts,
+                            GAVL_PACKET_KEYFRAME, duration);
+      pts += duration;
+      duration = 0;
+      }
+    line_start = gavl_io_position(inp->io);
+    if(!gavl_io_read_line(inp->io, &inp->line, &inp->line_alloc, 1024))
+      break;
+    }
+  
+  return 1;
+  }
+
+static int probe_image(input_t * inp, const char * filename)
+  {
+  const bg_plugin_info_t * info;
+  
+  info = bg_plugin_find_by_filename(filename, BG_PLUGIN_IMAGE_READER);
+  if(!info)
+    return 0;
+  
+  inp->handle = bg_plugin_load(info);
+
+  if(!inp->handle)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN_DEC,
+           "Plugin %s could not be loaded",
+           info->name);
+    return 0;
+    }
+  
+  inp->image_reader = (bg_image_reader_plugin_t*)inp->handle->plugin;
+
+  if(!inp->image_reader->read_header(inp->handle->priv,
+                                     inp->filename_buffer,
+                                     inp->fmt))
+    return 0;
+  
+  if(inp->image_reader->get_compression_info)
+    inp->image_reader->get_compression_info(inp->handle->priv, &inp->ci);
+
+  inp->image_reader->read_image(inp->handle->priv, NULL);
+  
+  return 1;
+  }
 
 static const bg_parameter_info_t * get_parameters_input(void * priv)
   {
@@ -253,15 +261,7 @@ static void set_parameter_input(void * priv, const char * name,
   if(!name)
     return;
 
-  else if(!strcmp(name, "timescale"))
-    {
-    inp->timescale = val->v.i;
-    }
-  else if(!strcmp(name, "frame_duration"))
-    {
-    inp->frame_duration = val->v.i;
-    }
-  else if(!strcmp(name, "display_time"))
+  if(!strcmp(name, "display_time"))
     {
     inp->display_time = val->v.l;
     if(!inp->display_time)
@@ -292,106 +292,71 @@ static void finalize_metadata_input(gavl_video_format_t * format,
       gavl_dictionary_set_long(src, GAVL_META_MTIME, st.st_mtime);
     
     }
+  }
 
-    
-     
+static char * get_filename(input_t * inp)
+  {
+  if(inp->do_still)
+    return inp->filename_buffer;
+  
+  gavl_io_seek(inp->io, inp->idx.entries[inp->idx_pos].position, SEEK_SET);
+  
+  if(gavl_io_read_data(inp->io, (uint8_t*)inp->line, inp->idx.entries[inp->idx_pos].size) < inp->idx.entries[inp->idx_pos].size)
+    return NULL;
+  
+  inp->line[inp->idx.entries[inp->idx_pos].size]='\0';
+  
+  /* TODO */
+  if(*inp->line == '/')
+    return inp->line;
+  else if(inp->path)
+    {
+    if(!inp->filename_buffer)
+      inp->filename_buffer = malloc(PATH_MAX);
+    snprintf(inp->filename_buffer, PATH_MAX, "%s/%s", inp->path, inp->line);
+    return inp->filename_buffer;
+    }
+  else
+    return inp->line;
   }
 
 static int open_input(void * priv, const char * filename)
   {
-  const bg_plugin_info_t * info;
-  char * tmp_string;
   const char * pos;
-  const char * pos_start;
-  const char * pos_end;
   const gavl_dictionary_t * m;
-  gavl_video_format_t * fmt;
+  
+  gavl_dictionary_t * s;
   input_t * inp = priv;
   gavl_dictionary_t * tm;
-  gavl_compression_info_t ci;
-  
-  /* Check if the first file exists */
-  
-  if(access(filename, R_OK))
-    return 0;
+  gavl_stream_stats_t stats;
 
-  
-  
-  /* Load plugin */
+  /* Create stream (must be first) */
 
-  info = bg_plugin_find_by_filename(filename,
-                                    BG_PLUGIN_IMAGE_READER);
-  if(!info)
-    return 0;
-  
-  inp->handle = bg_plugin_load(info);
-  inp->image_reader = (bg_image_reader_plugin_t*)inp->handle->plugin;
-  
-  /* Create template */
-  
-  pos = filename + strlen(filename) - 1;
-  while((*pos != '.') && (pos != filename))
-    pos--;
-
-  if(pos == filename)
-    return 0;
-
-  /* pos points now to the last dot */
-
-  pos--;
-  while(!isdigit(*pos) && (pos != filename))
-    pos--;
-  if(pos == filename)
-    return 0;
-
-  /* pos points now to the last digit */
-
-  pos_end = pos+1;
-
-  while(isdigit(*pos) && (pos != filename))
-    pos--;
-
-  if(pos != filename)
-    pos_start = pos+1;
-  else
-    pos_start = pos;
-
-  /* Now, cut the pieces together */
-
-  if(pos_start != filename)
-    inp->template = gavl_strncat(inp->template, filename, pos_start);
-
-  tmp_string = gavl_sprintf("%%0%dd", (int)(pos_end - pos_start));
-  inp->template = gavl_strcat(inp->template, tmp_string);
-  free(tmp_string);
-
-  inp->template = gavl_strcat(inp->template, pos_end);
-
-  inp->frame_start = strtoll(pos_start, NULL, 10);
-  inp->frame_end = inp->frame_start+1;
-
-  inp->filename_buffer = malloc(strlen(filename)+100);
-
-  while(1)
-    {
-    sprintf(inp->filename_buffer, inp->template, inp->frame_end);
-    if(access(inp->filename_buffer, R_OK))
-      break;
-    inp->frame_end++;
-    }
-  
-  /* Create stream */
-  
-  gavl_track_set_num_video_streams(inp->track_info, 1);
-  
+  s = gavl_track_append_video_stream(inp->track_info);
   tm = gavl_track_get_metadata_nc(inp->track_info);
+  inp->fmt = gavl_stream_get_video_format_nc(s);
   
-  gavl_dictionary_set_long(tm, GAVL_META_APPROX_DURATION,
-                           gavl_frames_to_time(inp->timescale,
-                                               inp->frame_duration,
-                                               inp->frame_end -
-                                               inp->frame_start));
+  
+  if((pos = strrchr(filename, '/')))
+    inp->path = gavl_strndup(filename, pos);
+  
+  if(!(inp->io = gavl_io_from_filename(filename, 0)))
+    return 0;
+  
+  if(!init_reader(inp))
+    return 0;
+  
+  gavl_stream_stats_init(&stats);
+  gavl_packet_index_set_stream_stats(&inp->idx, 0, &stats);
+  
+  
+  if(!probe_image(inp, get_filename(inp)))
+    return 0;
 
+  gavl_packet_index_set_stream_stats(&inp->idx, 0, &stats);
+  gavl_stream_set_stats(s, &stats);
+  gavl_stream_set_compression_info(s, &inp->ci);
+  
   gavl_track_append_msg_stream(inp->track_info, GAVL_META_STREAM_ID_MSG_PROGRAM);
   
   /* Get track name */
@@ -401,35 +366,11 @@ static int open_input(void * priv, const char * filename)
   gavl_dictionary_set_int(tm, GAVL_META_CAN_SEEK, 1);
   gavl_dictionary_set_int(tm, GAVL_META_CAN_PAUSE, 1);
   
-  inp->current_frame = inp->frame_start;
+  /* Load image header and get format */
 
-  sprintf(inp->filename_buffer, inp->template, inp->current_frame);
-
-  /* Load image header */
-  fmt = gavl_track_get_video_format_nc(inp->track_info, 0);  
-
-  if(!inp->image_reader->read_header(inp->handle->priv,
-                                     inp->filename_buffer,
-                                     fmt))
+  if(!probe_image(inp, inp->filename_buffer))
     return 0;
-
-  fmt->timescale      = inp->timescale;
-  fmt->frame_duration = inp->frame_duration;
-  fmt->framerate_mode = GAVL_FRAMERATE_CONSTANT;
   
-  gavl_compression_info_init(&ci);
-  
-  if(inp->image_reader &&
-     inp->image_reader->get_compression_info &&
-     inp->image_reader->get_compression_info(inp->handle->priv, &ci) &&
-     (!gavl_compression_need_pixelformat(ci.id) ||
-      (fmt->pixelformat != GAVL_PIXELFORMAT_NONE)))
-    {
-    gavl_stream_set_compression_info(gavl_track_get_video_stream_nc(inp->track_info, 0), &ci);
-    }
-  gavl_compression_info_free(&ci);
-
-  inp->header_read = 1;
 
   /* Metadata */
 
@@ -442,7 +383,7 @@ static int open_input(void * priv, const char * filename)
   gavl_dictionary_set_string(gavl_track_get_video_metadata_nc(inp->track_info, 0),
                              GAVL_META_FORMAT, "Single images");
 
-  finalize_metadata_input(fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
+  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
   
   gavl_track_finalize(inp->track_info);
   return 1;
@@ -451,11 +392,10 @@ static int open_input(void * priv, const char * filename)
 static int open_stills_input(void * priv, const char * filename)
   {
   const char * tag;
-  const bg_plugin_info_t * info;
   const gavl_dictionary_t * m;
-  gavl_video_format_t * fmt;  
+  
   gavl_dictionary_t * tm;
-
+  gavl_dictionary_t * s;
   input_t * inp = priv;
   
   /* Check if the first file exists */
@@ -463,31 +403,13 @@ static int open_stills_input(void * priv, const char * filename)
   if(access(filename, R_OK))
     return 0;
   
-  /* First of all, check if there is a plugin for this format */
-
-  info = bg_plugin_find_by_filename(filename,
-                                    BG_PLUGIN_IMAGE_READER);
-  if(!info)
-    return 0;
-  
-  inp->handle = bg_plugin_load(info);
-
-  if(!inp->handle)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN_DEC,
-           "Plugin %s could not be loaded",
-           info->name);
-    return 0;
-    }
-  
-  inp->image_reader = (bg_image_reader_plugin_t*)inp->handle->plugin;
-  
   /* Create stream */
   
-  gavl_track_set_num_video_streams(inp->track_info, 1);
+  s = gavl_track_append_video_stream(inp->track_info);
+  
   tm = gavl_track_get_metadata_nc(inp->track_info);
   
-  fmt = gavl_track_get_video_format_nc(inp->track_info, 0);
+  inp->fmt = gavl_stream_get_video_format_nc(s);
   
   gavl_dictionary_set_long(tm, GAVL_META_APPROX_DURATION, inp->display_time);
   
@@ -496,14 +418,12 @@ static int open_stills_input(void * priv, const char * filename)
   bg_set_track_name_default(inp->track_info, filename);
 
   inp->filename_buffer = gavl_strrep(inp->filename_buffer, filename);
-
-  if(!inp->image_reader->read_header(inp->handle->priv,
-                                     inp->filename_buffer,
-                                     fmt))
+  
+  if(!probe_image(inp, inp->filename_buffer))
     return 0;
-  fmt->timescale = GAVL_TIME_SCALE;
-  fmt->frame_duration = 0;
-  fmt->framerate_mode = GAVL_FRAMERATE_STILL;
+  inp->fmt->timescale = GAVL_TIME_SCALE;
+  inp->fmt->frame_duration = 0;
+  inp->fmt->framerate_mode = GAVL_FRAMERATE_STILL;
 
   /* Add message stream */
   gavl_track_append_msg_stream(inp->track_info, GAVL_META_STREAM_ID_MSG_PROGRAM);
@@ -530,8 +450,7 @@ static int open_stills_input(void * priv, const char * filename)
                              GAVL_META_FORMAT, "Still image");
 
 
-  inp->header_read = 1;
-  finalize_metadata_input(fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
+  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
   gavl_track_finalize(inp->track_info);
   return 1;
 
@@ -543,32 +462,18 @@ static gavl_dictionary_t * get_media_info_input(void * priv)
   return &inp->mi;
   }
 
-#if 0
-static int get_compression_info_input(void * priv, int stream,
-                                      gavl_compression_info_t * ci)
+static int check_eof(input_t * inp)
   {
-  input_t * inp = priv;
-  const gavl_video_format_t * fmt;
-
-  if(inp->ci.id == GAVL_CODEC_ID_NONE)
+  if(inp->do_still)
     {
-    if(!inp->image_reader || !inp->image_reader->get_compression_info)
-      return 0;
-    
-    if(!inp->image_reader->get_compression_info(inp->handle->priv, &inp->ci))
-      return 0;
+    if(inp->idx_pos)
+      return 1;
     }
- 
-  fmt = gavl_track_get_video_format(inp->track_info, 0);
- 
-  if(gavl_compression_need_pixelformat(inp->ci.id) &&
-     (fmt->pixelformat == GAVL_PIXELFORMAT_NONE))
-    return 0;
+  else if(inp->idx_pos >= inp->idx.num_entries)
+    return 1;
   
-  gavl_compression_info_copy(ci, &inp->ci);
-  return 1;
+  return 0;
   }
-#endif
 
 static gavl_source_status_t
 read_video_func_input(void * priv, gavl_video_frame_t ** fp)
@@ -576,85 +481,74 @@ read_video_func_input(void * priv, gavl_video_frame_t ** fp)
   gavl_video_format_t format;
   input_t * inp = priv;
   gavl_video_frame_t * f = *fp;
+  char * filename;
+
   
-  if(inp->do_still)
-    {
-    if(inp->current_frame)
-      return GAVL_SOURCE_EOF;
-    }
-  else if(inp->current_frame == inp->frame_end)
+  if(check_eof(inp))
+    return GAVL_SOURCE_EOF;
+
+  
+  filename = get_filename(inp);
+  //  fprintf(stderr, "read_video_func_input %s %d\n", filename, inp->idx_pos);
+  
+  if(!inp->image_reader->read_header(inp->handle->priv, filename, &format))
     return GAVL_SOURCE_EOF;
   
-  if(!inp->header_read)
-    {
-    if(!inp->do_still)
-      sprintf(inp->filename_buffer, inp->template, inp->current_frame);
-    
-    if(!inp->image_reader->read_header(inp->handle->priv,
-                                       inp->filename_buffer,
-                                       &format))
-      return GAVL_SOURCE_EOF;
-    }
   if(!inp->image_reader->read_image(inp->handle->priv, f))
     {
     return GAVL_SOURCE_EOF;
     }
+  
   if(f)
     {
-    f->timestamp = (inp->current_frame - inp->frame_start) * inp->frame_duration;
-
     if(inp->do_still)
+      {
+      f->timestamp = 0;
       f->duration = -1;
+      }
     else
-      f->duration = inp->frame_duration;
+      {
+      f->timestamp = inp->idx.entries[inp->idx_pos].pts;
+      f->duration  = inp->idx.entries[inp->idx_pos].duration;
+      }
     }
-  inp->header_read = 0;
-  inp->current_frame++;
+  inp->idx_pos++;
   return GAVL_SOURCE_OK;
   }
 
 static gavl_source_status_t read_video_packet_input(void * priv, gavl_packet_t ** p)
   {
   FILE * in;
-  int64_t size;
   input_t * inp = priv;
-  
-  sprintf(inp->filename_buffer, inp->template, inp->current_frame);
-  
-  if(inp->do_still)
-    {
-    if(inp->current_frame)
-      return GAVL_SOURCE_EOF;
-    }
-  else if(inp->current_frame == inp->frame_end)
+  char * filename;
+
+  if(check_eof(inp))
     return GAVL_SOURCE_EOF;
+
+  filename = get_filename(inp);
   
-  in = fopen(inp->filename_buffer, "rb");
+  in = fopen(filename, "rb");
   if(!in)
     return 0;
 
-  fseek(in, 0, SEEK_END);
-  size = ftell(in);
-  fseek(in, 0, SEEK_SET);
+  gavl_buffer_reset(&(*p)->buf);
 
-  gavl_packet_alloc(*p, size);
-
-  (*p)->buf.len = fread((*p)->buf.buf, 1, size, in);
+  if(!bg_read_file(filename, &(*p)->buf))
+    return GAVL_SOURCE_EOF;
   
-  fclose(in);
-  
-  if((*p)->buf.len < size)
-    return 0;
-
-  (*p)->pts = (inp->current_frame - inp->frame_start) * inp->frame_duration;
+  if(inp->do_still)
+    {
+    (*p)->pts = 0;
+    (*p)->duration = -1;
+    }
+  else
+    {
+    (*p)->pts = inp->idx.entries[inp->idx_pos].pts;
+    (*p)->duration  = inp->idx.entries[inp->idx_pos].duration;
+    }
   
   (*p)->flags = GAVL_PACKET_KEYFRAME;
-  
-  if(!inp->do_still)
-    (*p)->duration = inp->frame_duration;
-  
-  inp->current_frame++;
-  
+  inp->idx_pos++;
   return 1;
   }
 
@@ -704,18 +598,13 @@ static bg_media_source_t * get_src_input(void * priv)
   return &inp->ms;
   }
 
-static int set_track_input_stills(void * priv, int track)
+static int set_track_input(void * priv)
   {
   input_t * inp = priv;
   
   /* Reset image reader */
-  inp->current_frame = 0;
-  if(inp->header_read)
-    {
-    inp->image_reader->read_image(inp->handle->priv,
-                                  NULL);
-    inp->header_read = 0;
-    }
+  inp->idx_pos = 0;
+  
 
   bg_media_source_cleanup(&inp->ms);
   bg_media_source_init(&inp->ms);
@@ -728,13 +617,11 @@ static int set_track_input_stills(void * priv, int track)
 static void seek_input(void * priv, int64_t * time, int scale)
   {
   input_t * inp = priv;
-  int64_t time_scaled = gavl_time_rescale(scale, inp->timescale, *time);
-  
-  inp->current_frame = inp->frame_start + time_scaled / inp->frame_duration;
+  int64_t time_scaled = gavl_time_rescale(scale, inp->fmt->timescale, *time);
 
-  time_scaled = (int64_t)inp->current_frame * inp->frame_duration;
-  
-  *time = gavl_time_rescale(inp->timescale, scale, time_scaled);
+  inp->idx_pos = gavl_packet_index_seek(&inp->idx, 0, time_scaled);
+  time_scaled = inp->idx.entries[inp->idx_pos].pts;
+  *time = gavl_time_rescale(inp->fmt->timescale, scale, time_scaled);
   }
 
 static void stop_input(void * priv)
@@ -749,19 +636,15 @@ static void stop_input(void * priv)
   */
   }
 
+#define FREE(p) if(p) { free(p); p = NULL; }
+
 static void close_input(void * priv)
   {
   input_t * inp = priv;
-  if(inp->template)
-    {
-    free(inp->template);
-    inp->template = NULL;
-    }
-  if(inp->filename_buffer)
-    {
-    free(inp->filename_buffer);
-    inp->filename_buffer = NULL;
-    }
+  FREE(inp->filename_buffer);
+  FREE(inp->path);
+  FREE(inp->line);
+  
   gavl_dictionary_reset(&inp->mi);
   /* Unload the plugin */
   if(inp->handle)
@@ -769,6 +652,9 @@ static void close_input(void * priv)
   inp->handle = NULL;
   inp->image_reader = NULL;
 
+  gavl_compression_info_free(&inp->ci);
+  gavl_compression_info_init(&inp->ci);
+  
   bg_media_source_cleanup(&inp->ms);
   bg_media_source_init(&inp->ms);
   }
@@ -878,9 +764,8 @@ const bg_plugin_common_t * bg_singlepic_stills_input_get()
   return (const bg_plugin_common_t*)&input_plugin_stills;
   }
 
-static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin)
+static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin, int still)
   {
-  char * str;
   bg_plugin_info_t * ret;
   
   if(!bg_get_num_plugins(BG_PLUGIN_IMAGE_READER,
@@ -888,21 +773,26 @@ static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin)
     return NULL;
 
   ret = bg_plugin_info_create(&plugin->common);
-
-  str = get_extensions(BG_PLUGIN_IMAGE_READER,
-                       BG_PLUGIN_FILE);
-
   ret->extensions = gavl_value_set_array(&ret->extensions_val);
+
+  if(still)  
+    {
+    char * str;
+    str = get_extensions(BG_PLUGIN_IMAGE_READER,
+                         BG_PLUGIN_FILE);
+    bg_string_to_string_array(str, ret->extensions);
+    free(str);
+    }
+  else
+    gavl_string_array_add(ret->extensions, IMGLIST_EXT);
   
-  bg_string_to_string_array(str, ret->extensions);
-  free(str);
   return ret;
   }
 
 bg_plugin_info_t * bg_singlepic_input_info(void)
   {
   bg_plugin_info_t * ret;
-  ret = get_input_info(&input_plugin);
+  ret = get_input_info(&input_plugin, 0);
   if(ret)
     ret->parameters = bg_parameter_info_copy_array(parameters_input);
   return ret;
@@ -911,7 +801,7 @@ bg_plugin_info_t * bg_singlepic_input_info(void)
 bg_plugin_info_t * bg_singlepic_stills_input_info(void)
   {
   bg_plugin_info_t * ret;
-  ret = get_input_info(&input_plugin_stills);
+  ret = get_input_info(&input_plugin_stills, 1);
   if(ret)
     ret->parameters = bg_parameter_info_copy_array(parameters_input_still);
   return ret;
@@ -947,17 +837,7 @@ static int handle_cmd_input(void * data, gavl_msg_t * msg)
           break;
         case GAVL_CMD_SRC_SELECT_TRACK:
           {
-          if(priv->do_still)
-            {
-            int track = gavl_msg_get_arg_int(msg, 0);
-            if(!set_track_input_stills(priv, track))
-              {
-            
-              }
-            }
-
-          
-
+          set_track_input(priv);
           }
           break;
 
@@ -1022,28 +902,13 @@ static const bg_parameter_info_t parameters_encoder[] =
       .long_name =   TRS("Plugin"),
       .type =        BG_PARAMETER_MULTI_MENU,
     },
-    {
-      .name =        "frame_digits",
-      .long_name =   TRS("Framenumber digits"),
-      .type =        BG_PARAMETER_INT,
-      .val_min =     GAVL_VALUE_INIT_INT(1),
-      .val_max =     GAVL_VALUE_INIT_INT(9),
-      .val_default = GAVL_VALUE_INIT_INT(4),
-    },
-    {
-      .name =        "frame_offset",
-      .long_name =   TRS("Framenumber offset"),
-      .type =        BG_PARAMETER_INT,
-      .val_min =     GAVL_VALUE_INIT_INT(0),
-      .val_max =     GAVL_VALUE_INIT_INT(1000000),
-      .val_default = GAVL_VALUE_INIT_INT(0),
-    },
     { /* End */ }
   };
 
 typedef struct
   {
   char * filename_base;
+  int base_len;
   
   bg_plugin_handle_t * plugin_handle;
   bg_image_writer_plugin_t * image_writer;
@@ -1052,7 +917,6 @@ typedef struct
   
   bg_parameter_info_t * parameters;
   
-  int frame_digits, frame_offset;
   int64_t frame_counter;
   
   char * mask;
@@ -1062,17 +926,16 @@ typedef struct
   
   bg_encoder_callbacks_t * cb;
   
-  int have_header;
-  
   bg_iw_callbacks_t iw_callbacks;
   
-  const gavl_compression_info_t * ci;
-
   gavl_video_sink_t * sink;
   gavl_packet_sink_t * psink;
   
   int64_t pts;
+  int64_t duration;
 
+  int compressed;
+  
   FILE * list;
   
   } encoder_t;
@@ -1080,8 +943,45 @@ typedef struct
 static int iw_callbacks_create_output_file(void * priv, const char * filename)
   {
   encoder_t * e = priv;
-  if(e->list)
-    img_list_write(e->list, e->pts, filename);
+
+  if(e->frame_counter < 0)
+    return 1;
+  
+  if(!e->frame_counter)
+    {
+    switch(e->format.framerate_mode)
+      {
+      case GAVL_FRAMERATE_CONSTANT:
+        fprintf(e->list, "%s%d\n", TIMESCALE_KEY, e->format.timescale);
+        fprintf(e->list, "%s%d\n", FRAMEDUR_KEY, e->format.frame_duration);
+        break;
+      case GAVL_FRAMERATE_VARIABLE:
+      case GAVL_FRAMERATE_STILL:
+        fprintf(e->list, "%s%d\n", TIMESCALE_KEY, e->format.timescale);
+        break;
+      case GAVL_FRAMERATE_UNKNOWN:
+        return 0;
+      }
+    }
+  
+  if(e->format.framerate_mode == GAVL_FRAMERATE_VARIABLE)
+    {
+    fprintf(e->list, "%s%"PRId64"\n", PTS_KEY, e->pts);
+    if(e->duration > 0)
+      fprintf(e->list, "%s%"PRId64"\n", DURATION_KEY, e->duration);
+    }
+  else if(e->format.framerate_mode == GAVL_FRAMERATE_CONSTANT)
+    {
+    if((e->pts != 0) && !e->frame_counter)
+      fprintf(e->list, "%s%"PRId64"\n", PTS_KEY, e->pts);
+    }
+  else if(e->format.framerate_mode == GAVL_FRAMERATE_STILL)
+    {
+    fprintf(e->list, "%s%"PRId64"\n", PTS_KEY, e->pts);
+    }
+  
+  fprintf(e->list, "%s\n", filename + e->base_len);
+  
   return 1;
   }
 
@@ -1133,14 +1033,6 @@ static void set_parameter_encoder(void * priv, const char * name,
         e->image_writer->set_callbacks(e->plugin_handle->priv, &e->iw_callbacks);
       }
     }
-  else if(!strcmp(name, "frame_digits"))
-    {
-    e->frame_digits = val->v.i;
-    }
-  else if(!strcmp(name, "frame_offset"))
-    {
-    e->frame_offset = val->v.i;
-    }
   else
     {
     if(e->plugin_handle && e->plugin_handle->plugin->set_parameter)
@@ -1161,11 +1053,17 @@ static void create_mask(encoder_t * e, const char * ext)
   int filename_len;
   const char * pos;
   if((pos = strrchr(e->filename_base, '/')))
+    {
     pos++;
+    e->base_len = (int)(pos - e->filename_base);
+    }
   else
+    {
+    e->base_len = 0;
     pos = e->filename_base;
+    }
   
-  e->mask = gavl_sprintf("%s/%s-%%0%d"PRId64, e->filename_base, pos, e->frame_digits);
+  e->mask = gavl_sprintf("%s/%s-%%08"PRId64, e->filename_base, pos);
   
   if(ext)
     {
@@ -1173,20 +1071,28 @@ static void create_mask(encoder_t * e, const char * ext)
     e->mask = gavl_strcat(e->mask, ext);
     }
   
-  filename_len = strlen(e->mask) + e->frame_digits + 32;
+  filename_len = strlen(e->mask) + 8 + 32;
   e->filename_buffer = malloc(filename_len);
   }
 
 static int open_encoder(void * data, const char * filename,
                         const gavl_dictionary_t * metadata)
   {
+  char * list_file;
   encoder_t * e = data;
   
-  e->frame_counter = e->frame_offset;
   e->filename_base = gavl_strrep(e->filename_base, filename);
 
   if(!gavl_ensure_directory(e->filename_base, 1))
     return 0;
+
+  list_file = gavl_sprintf("%s."IMGLIST_EXT, e->filename_base);
+  if(!bg_encoder_cb_create_output_file(e->cb, list_file))
+    return 0;
+
+  if(!(e->list = fopen(list_file, "w")))
+    return 0;
+
   
   if(metadata)
     gavl_dictionary_copy(&e->metadata, metadata);
@@ -1197,20 +1103,27 @@ static int open_encoder(void * data, const char * filename,
 static int write_frame_header(encoder_t * e)
   {
   int ret;
-  e->have_header = 1;
-
+  
   /* Create filename */
 
-  sprintf(e->filename_buffer, e->mask, e->frame_counter);
+  if(e->frame_counter < 0)
+    sprintf(e->filename_buffer, e->mask, 0);
+  else
+    sprintf(e->filename_buffer, e->mask, e->frame_counter);
   
   ret = e->image_writer->write_header(e->plugin_handle->priv,
                                       e->filename_buffer,
                                       &e->format, &e->metadata);
-  
-  if(!ret)
+
+  if(ret && (e->frame_counter < 0))
     {
-    e->have_header = 0;
+    gavl_video_frame_t * f = gavl_video_frame_create(&e->format);
+    gavl_video_frame_clear(f, &e->format);
+
+    ret = e->image_writer->write_image(e->plugin_handle->priv, f);
+    gavl_video_frame_destroy(f);
     }
+  
   e->frame_counter++;
   return ret;
   }
@@ -1222,13 +1135,12 @@ write_video_func_encoder(void * data, gavl_video_frame_t * frame)
   encoder_t * e = data;
 
   e->pts = frame->timestamp;
+  e->pts = frame->timestamp;
   
-  if(!e->have_header)
-    ret = write_frame_header(e);
+  ret = write_frame_header(e);
+  
   if(ret)
     ret = e->image_writer->write_image(e->plugin_handle->priv, frame);
-  
-  e->have_header = 0;
   
   return ret ? GAVL_SINK_OK : GAVL_SINK_ERROR;
   }
@@ -1242,8 +1154,9 @@ static gavl_sink_status_t write_packet_encoder(void * data, gavl_packet_t * pack
   //  if(!bg_encoder_cb_create_output_file(e->cb, e->filename_buffer))
   //    return GAVL_SINK_ERROR;
 
-  img_list_write(e->list, packet->pts, e->filename_buffer);
-    
+  e->pts = packet->pts;
+  e->duration = packet->duration;
+  
   out = fopen(e->filename_buffer, "wb");
   if(!out)
     {
@@ -1265,27 +1178,16 @@ static gavl_sink_status_t write_packet_encoder(void * data, gavl_packet_t * pack
 
 static int start_encoder(void * data)
   {
-  char * list_file;
   encoder_t * e = data;
 
-  if(e->have_header)
-    e->sink = gavl_video_sink_create(NULL, write_video_func_encoder,
-                                     e, &e->format);
-  else if(e->ci)
+  if(e->compressed)
     e->psink = gavl_packet_sink_create(NULL, write_packet_encoder,
                                        e);
-
-  list_file = gavl_sprintf("%s.imglist", e->filename_base);
-  if(!bg_encoder_cb_create_output_file(e->cb, list_file))
-    return 0;
-
-  if(!(e->list = fopen(list_file, "w")))
-    return 0;
-
-  if(!img_list_start_write(e->list, &e->format))
-    return 0;
+  else
+    e->sink = gavl_video_sink_create(NULL, write_video_func_encoder,
+                                     e, &e->format);
   
-  return (e->have_header || e->ci) ? 1 : 0;
+  return !!e->psink || !!e->sink;
   }
 
 static gavl_video_sink_t * get_video_sink_encoder(void * priv, int stream)
@@ -1312,8 +1214,6 @@ static int writes_compressed_video(void * priv,
   return 0;
   }
 
-
-
 static int add_video_stream_encoder(void * data,
                                     const gavl_dictionary_t * m,
                                     const gavl_video_format_t * format)
@@ -1323,7 +1223,7 @@ static int add_video_stream_encoder(void * data,
   gavl_video_format_copy(&e->format, format);
   create_mask(e, NULL);
   /* Write image header so we know the format */
-  
+  e->frame_counter = -1;
   write_frame_header(e);
   return 0;
   }
@@ -1335,8 +1235,7 @@ add_video_stream_compressed_encoder(void * data,
                                     const gavl_compression_info_t * info)
   {
   encoder_t * e = data;
-  e->ci = info;
-  create_mask(e, gavl_compression_get_extension(e->ci->id, NULL));
+  create_mask(e, gavl_compression_get_extension(info->id, NULL));
   return 0;
   }
 
@@ -1351,7 +1250,7 @@ static int close_encoder(void * data, int do_delete)
 
   if(do_delete)
     {
-    for(i = e->frame_offset; i < e->frame_counter; i++)
+    for(i = 0; i < e->frame_counter; i++)
       {
       sprintf(e->filename_buffer, e->mask, i);
       remove(e->filename_buffer);
