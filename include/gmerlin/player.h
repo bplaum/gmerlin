@@ -82,9 +82,7 @@ typedef struct
   
   } bg_player_tracklist_t;
 
-
 char * bg_player_tracklist_make_id(const char * hash);
-char * bg_player_tracklist_id_from_uri(const char * hash);
 
 int bg_player_tracklist_handle_message(bg_player_tracklist_t * l, gavl_msg_t * msg);
 

@@ -345,8 +345,8 @@ void bg_player_tracklist_get_times(bg_player_tracklist_t * l,
 /* Returns 0 if the track is already in the list */
 static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val)
   {
+  char hash_buf[GAVL_MD5_LENGTH];
   const char * hash;
-  const char * track_id;
 
   char * new_id;
 
@@ -360,12 +360,18 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val)
 
   if(!(hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Track got no hash");
-    return 0;
+    const char * location = NULL;
+
+    /* Sometimes the hash is missing for mysterious reasons */
+    if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0,
+                              NULL, &location))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Track got no hash and no location");
+      return 0;
+      }
+    gavl_md5_buffer_str(location, strlen(location), hash_buf);
+    hash = hash_buf;
     }
-  
-  if(!(track_id = gavl_dictionary_get_string(m, GAVL_META_ID)))
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Track got no id");
   
   new_id = bg_player_tracklist_make_id(hash);
   
@@ -417,12 +423,6 @@ char * bg_player_tracklist_make_id(const char * hash)
   return gavl_sprintf(BG_PLAYQUEUE_ID"/%s", hash);
   }
 
-char * bg_player_tracklist_id_from_uri(const char * location)
-  {
-  char md5[33];
-  gavl_md5_buffer_str(location, strlen(location), md5);
-  return bg_player_tracklist_make_id(md5);
-  }
 
 static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
                    gavl_value_t * val)
