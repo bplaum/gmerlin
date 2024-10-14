@@ -62,7 +62,7 @@ static int ensure_mdb(int do_create)
     else
       {
       if(!(mdb = bg_mdb_create(path, 1, NULL)))
-        return EXIT_FAILURE;
+        return 0;
     
       mdb_ctrl =  bg_mdb_get_controllable(mdb);
       }
@@ -81,7 +81,7 @@ static int ensure_mdb(int do_create)
     else
       {
       if(!(mdb = bg_mdb_create(path, 0, NULL)))
-        return EXIT_FAILURE;
+        return 0;
     
       mdb_ctrl =  bg_mdb_get_controllable(mdb);
       }
