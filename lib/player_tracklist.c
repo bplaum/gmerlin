@@ -343,7 +343,7 @@ void bg_player_tracklist_get_times(bg_player_tracklist_t * l,
   }
 
 /* Returns 0 if the track is already in the list */
-static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const char * client_id)
+static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val)
   {
   const char * hash;
   const char * track_id;
@@ -373,7 +373,7 @@ static int set_id(bg_player_tracklist_t * l, gavl_value_t * track_val, const cha
   return 1;
   }
 
-static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int del, const char * client_id)
+static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int del)
   {
   int idx1;
   const gavl_dictionary_t * dict;
@@ -381,7 +381,7 @@ static int can_add(bg_player_tracklist_t * l, gavl_value_t * val, int idx, int d
   const char * id;
   const char * klass;
 
-  if(!set_id(l, val, client_id))
+  if(!set_id(l, val))
     return 0;
   
   if(!(dict = gavl_value_get_dictionary(val)))
@@ -425,7 +425,7 @@ char * bg_player_tracklist_id_from_uri(const char * location)
   }
 
 static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
-                   gavl_value_t * val, const char * client_id)
+                   gavl_value_t * val)
   {
   gavl_msg_t * evt;
   const gavl_dictionary_t * cur;
@@ -459,7 +459,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
 
     while(i < val->v.array->num_entries)
       {
-      if(!can_add(l, &val->v.array->entries[i], idx, del, client_id))
+      if(!can_add(l, &val->v.array->entries[i], idx, del))
         gavl_array_splice_val(val->v.array, i, 1, NULL);
       else
         i++;
@@ -479,7 +479,7 @@ static void splice(bg_player_tracklist_t * l, int idx, int del, int last,
     }
   else // GAVL_TYPE_DICTIONARY
     {
-    if(!val || !can_add(l, val, idx, del, client_id))
+    if(!val || !can_add(l, val, idx, del))
       {
       if(!del)
         return;
@@ -676,13 +676,8 @@ int bg_player_tracklist_set_current_by_id(bg_player_tracklist_t * l, const char 
 int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
                                        gavl_msg_t * msg)
   {
-  const char * client_id;
   int ret = 0;
   
-  //  fprintf(stderr, "bg_player_tracklist_handle_message\n");
-  //  gavl_msg_dump(msg, 2);
-
-  client_id = gavl_msg_get_client_id(msg);
   
   switch(msg->NS)
     {
@@ -715,11 +710,11 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
              growing infinitely from repeated calls to BG_PLAYER_CMD_SET_NEXT_LOCATION */
           if(l->idx_real > 0)
             {
-            splice(l, 0, l->idx_real, 0, NULL, client_id);
+            splice(l, 0, l->idx_real, 0, NULL);
             l->idx_real = 0;
             }
           gavl_msg_get_arg(msg, 0, &val);
-          splice(l, l->idx_real+1, -1, 1, &val, client_id);
+          splice(l, l->idx_real+1, -1, 1, &val);
           l->has_next = 1;
           gavl_value_free(&val);
           }
@@ -755,7 +750,7 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
           
           bg_tracks_resolve_locations(&add, add_arr, BG_INPUT_FLAG_GET_FORMAT);
           
-          splice(l, idx, del, last, &add_arr_val, client_id);
+          splice(l, idx, del, last, &add_arr_val);
           
           
           l->has_next = 0;
@@ -880,12 +875,6 @@ int bg_player_tracklist_handle_message(bg_player_tracklist_t * l,
   return ret;
   }
 
-void bg_player_tracklist_splice(bg_player_tracklist_t * l, int idx, int del,
-                                gavl_value_t * val, const char * client_id)
-  {
-  splice(l, idx, del, 1, val, client_id);
-  l->has_next = 0;
-  }
 
 void bg_player_tracklist_free(bg_player_tracklist_t * l)
   {
