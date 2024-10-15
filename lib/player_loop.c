@@ -100,9 +100,8 @@ static void interrupt_cmd(bg_player_t * p, int new_state)
 static void start_playback(bg_player_t * p)
   {
   bg_player_set_status(p, BG_PLAYER_STATUS_PLAYING);
-    
-  /* Start timer */
-  
+
+  /* Start software timer */
   bg_player_time_start(p);
 
   if(DO_AUDIO(p->flags))
@@ -621,11 +620,9 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
     bg_video_filter_chain_reset(player->video_stream.fc);
 
   /* Resync */
-  
+
   t = bg_player_time_sync(player);
-  
-  //  fprintf(stderr, "seek_cmd: %f %f\n", (double)t / (double)scale, gavl_time_to_seconds(sync_time));
-  
+
   if(DO_VIDEO(player->flags))
     bg_player_ov_reset(player);
 
