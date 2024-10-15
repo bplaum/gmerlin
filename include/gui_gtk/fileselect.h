@@ -33,24 +33,6 @@ bg_gtk_filesel_create(const char * title,
                       const char * ctx,
                       GtkWidget * parent_window);
 
-/* Create directory selector (for addig directories to the tree) */
-
-#if 0
-bg_gtk_filesel_t *
-bg_gtk_dirsel_create(const char * title,
-                     void (*add_dir)(char * dir, int recursive,
-                                     int subdirs_as_subalbums,
-                                     int watch,
-                                     const char * plugin,
-                                     int prefer_edl,
-                                     void * data),
-                     void (*close_notify)(bg_gtk_filesel_t *,
-                                          void * data),
-                     void * user_data,
-                     GtkWidget * parent_window,
-                     bg_plugin_registry_t * plugin_reg, int type_mask, int flag_mask);
-#endif
-
 /* Destroy fileselector */
 
 void bg_gtk_filesel_destroy(bg_gtk_filesel_t * filesel);

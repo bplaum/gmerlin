@@ -1555,8 +1555,8 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->album_menu.info_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_INFO, "Info", 0, 0);
   
   m->album_menu.sort_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_SORT, "Sort", 0, 0);
-  m->album_menu.load_files_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER_OPEN, "Add file(s)", 0, 0);
-  m->album_menu.load_url_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_GLOBE, "Add URL", 0, 0);
+  m->album_menu.load_files_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER_OPEN, "Add file(s)...", 0, 0);
+  m->album_menu.load_url_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_GLOBE, "Add URL...", 0, 0);
   m->album_menu.new_container_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "New container...", 0, 0);
   m->album_menu.new_stream_source_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_NETWORK, "New source...", 0, 0);
   m->album_menu.add_directory_item = create_list_menu_item(tree, m->album_menu.menu, BG_ICON_FOLDER, "Add folder...", 0, 0);

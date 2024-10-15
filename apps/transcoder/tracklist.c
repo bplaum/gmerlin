@@ -1067,10 +1067,10 @@ static void button_callback(GtkWidget * w, gpointer data)
   if((w == t->add_file_button) || (w == t->menu.add_menu.add_files_item))
     {
     if(!t->filesel)
-      t->filesel = bg_gtk_filesel_create("Add URLs",
+      t->filesel = bg_gtk_filesel_create("Add Files",
                                          t->dlg_sink,
                                          CTX_FILESELECT,
-                                         NULL /* parent */);
+                                         bg_gtk_get_toplevel(t->add_file_button)/* parent */);
     
     bg_gtk_filesel_set_directory(t->filesel, t->open_path);
     gtk_widget_set_sensitive(t->add_file_button, 0);
@@ -1085,11 +1085,11 @@ static void button_callback(GtkWidget * w, gpointer data)
     if(!t->urlsel)
       t->urlsel = bg_gtk_urlsel_create(TR("Add URLs"),
                                        t->dlg_sink, CTX_URLSELECT,
-                                       NULL);
+                                       bg_gtk_get_toplevel(t->add_url_button));
     
     gtk_widget_set_sensitive(t->add_url_button, 0);
     gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 0);
-    bg_gtk_urlsel_run(t->urlsel, 0, t->add_url_button);
+    bg_gtk_urlsel_run(t->urlsel, 0);
     //    bg_gtk_urlsel_destroy(urlsel);
     }
   else if((w == t->add_drives_button) || (w == t->menu.add_menu.add_drives_item))

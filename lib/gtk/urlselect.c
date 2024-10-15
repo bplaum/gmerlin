@@ -60,7 +60,7 @@ response_callback(GtkWidget *chooser,
       {
       gavl_array_t filenames;
       const char * str;
-      fprintf(stderr, "Apply\n");
+      //      fprintf(stderr, "Apply\n");
       gavl_array_init(&filenames);
 
       str = gtk_entry_get_text(GTK_ENTRY(f->entry));
@@ -76,7 +76,7 @@ response_callback(GtkWidget *chooser,
       break;
     default:
       {
-      fprintf(stderr, "Close\n");
+      //      fprintf(stderr, "Close\n");
       gtk_widget_hide(f->dialog);
 
       msg = bg_msg_sink_get(f->sink);
@@ -111,7 +111,7 @@ bg_gtk_urlsel_create(const char * title,
   
   /* Create window */
   flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-  ret->dialog = gtk_dialog_new_with_buttons("Message",
+  ret->dialog = gtk_dialog_new_with_buttons("Load URL",
                                             GTK_WINDOW(parent_window),
                                             flags,
                                             TR("Add"),
@@ -148,14 +148,15 @@ bg_gtk_urlsel_create(const char * title,
 
 void bg_gtk_urlsel_destroy(bg_gtk_urlsel_t * urlsel)
   {
-  //  g_object_unref(G_OBJECT(urlsel));
+  g_object_unref(G_OBJECT(urlsel->dialog));
   free(urlsel);
   }
 
 /* Show the window */
 
-void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal, GtkWidget * parent)
+void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal)
   {
+  gtk_window_set_modal(GTK_WINDOW(urlsel->dialog), modal);
   gtk_widget_show(urlsel->dialog);
   
   urlsel->is_modal = modal;
