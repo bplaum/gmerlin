@@ -48,6 +48,7 @@ void bg_player_time_init(bg_player_t * player)
     {
     s->sync_mode = SYNC_SOFTWARE;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Synchronizing with software timer");
+    gavl_timer_set(s->timer, gavl_track_get_start_time(player->src->track_info));
     }
   }
 
@@ -60,7 +61,6 @@ void bg_player_time_start(bg_player_t * player)
   if(ctx->sync_mode == SYNC_SOFTWARE)
     {
     pthread_mutex_lock(&ctx->time_mutex);
-    gavl_timer_set(ctx->timer, gavl_track_get_start_time(player->src->track_info));
     gavl_timer_start(ctx->timer);
     pthread_mutex_unlock(&ctx->time_mutex);
     }
@@ -77,6 +77,7 @@ void bg_player_time_stop(bg_player_t * player)
     }
   }
 
+/* Called when we enter the stop or error state */
 void bg_player_time_reset(bg_player_t * player)
   {
   bg_player_audio_stream_t * ctx = &player->audio_stream;
