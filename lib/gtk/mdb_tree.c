@@ -1996,6 +1996,74 @@ static int handle_player_message(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
+static int handle_dlg_message(void * data, gavl_msg_t * msg)
+  {
+  bg_gtk_mdb_tree_t * tree = data;
+  
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_DIALOG:
+      {
+      switch(msg->ID)
+        {
+#if 0
+        case BG_MSG_DIALOG_CLOSED:
+          {
+          const char * ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          
+          if(!strcmp(ctx_id, CTX_FILESELECT))
+            {
+            gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 1);
+            gtk_widget_set_sensitive(t->add_file_button, 1);
+            t->filesel = NULL;
+            }
+          else if(!strcmp(ctx_id, CTX_URLSELECT))
+            {
+            
+            }
+          else if(!strcmp(ctx_id, CTX_DRIVESELECT))
+            {
+            gtk_widget_set_sensitive(t->add_drives_button, 1);
+            gtk_widget_set_sensitive(t->menu.add_menu.add_drives_item, 1);
+            
+            }
+          }
+          break;
+#endif
+        case BG_MSG_DIALOG_ADD_LOCATIONS:
+          {
+          gavl_array_t arr;
+          gavl_array_init(&arr);
+          gavl_msg_get_arg_array(msg, 0, &arr);
+
+          if((arr.num_entries > 0) && tree->menu_ctx.album)
+            {
+            bg_msg_sink_t * sink;
+            gavl_msg_t * msg;
+            const char * id;
+      
+            sink = tree->ctrl.cmd_sink;
+
+            id = gavl_track_get_id(tree->menu_ctx.album);
+
+            if(!strcmp(id, BG_PLAYQUEUE_ID))
+              sink = tree->player_ctrl.cmd_sink;
+      
+            msg = bg_msg_sink_get(sink);
+            bg_mdb_set_load_uris(msg, id, -1, &arr);
+            bg_msg_sink_put(sink);
+            }
+          gavl_array_free(&arr);
+          }
+          break;
+        }
+      }
+    }
+  return 1;
+
+  }
+
+
 bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
   {
   GtkTreeStore      *store;
@@ -2174,6 +2242,8 @@ bg_gtk_mdb_tree_t * bg_gtk_mdb_tree_create(bg_controllable_t * mdb_ctrl)
   gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_ROOT_PLAYQUEUE);
   gavl_dictionary_set_string(m, GAVL_META_ID, BG_PLAYQUEUE_ID);
 #endif
+
+  ret->dlg_sink = bg_msg_sink_create(handle_dlg_message, ret, 1);
   
   return ret;
   }
@@ -2218,6 +2288,7 @@ void bg_gtk_mdb_tree_destroy(bg_gtk_mdb_tree_t * t)
   if(t->playqueue.id)
     free(t->playqueue.id);
 
+  bg_msg_sink_destroy(t->dlg_sink);
   
   free(t);
   }

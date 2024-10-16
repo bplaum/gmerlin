@@ -78,7 +78,9 @@ response_callback(GtkWidget *chooser,
       {
       //      fprintf(stderr, "Close\n");
       gtk_widget_hide(f->dialog);
-
+      if(f->is_modal)
+        gtk_main_quit();
+      
       msg = bg_msg_sink_get(f->sink);
       gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
       gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
@@ -148,7 +150,7 @@ bg_gtk_urlsel_create(const char * title,
 
 void bg_gtk_urlsel_destroy(bg_gtk_urlsel_t * urlsel)
   {
-  g_object_unref(G_OBJECT(urlsel->dialog));
+  gtk_widget_destroy(urlsel->dialog);
   free(urlsel);
   }
 

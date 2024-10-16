@@ -43,6 +43,7 @@
 #include <gui_gtk/mdb.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/fileselect.h>
+#include <gui_gtk/urlselect.h>
 #include <gavl/metatags.h>
 
 #include <gmerlin/cfg_dialog.h>
@@ -118,6 +119,8 @@ static int dst_track_format_from_atom(GdkAtom target)
   g_free(name);
   return -1;
   }
+
+
 
 static char * iter_to_id_list(GtkTreeView *treeview, GtkTreeIter * iter)
   {
@@ -715,7 +718,6 @@ void bg_gtk_mdb_list_destroy(list_t * l)
   //  else if(l->widget)
   //    gtk_widget_destroy(l->widget);
   
-  
   free(l);
   }
 
@@ -745,17 +747,6 @@ static void close_button_callback(GtkWidget * wid, gpointer data)
 
   }
 
-#if 0
-static const char * close_button_css =
-  "GtkButton {"
-  " -GtkButton-default-border: 0;"
-  " -GtkButton-default-outside-border: 0;"
-  " -GtkButton-inner-border: 0;"
-  " -GtkWidget-focus-padding: 0;"
-  " -GtkWidget-focus-line-width: 0;"
-  " margin: 0;"
-  " padding: 0; }";
-#endif
 
 static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
   {
@@ -777,11 +768,6 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
   
   g_signal_connect(G_OBJECT(ret), "clicked",
                    G_CALLBACK(close_button_callback), tree);
-
-  //  gtk_style_context_add_provider(gtk_widget_get_style_context(ret),
-  //                                 GTK_STYLE_PROVIDER (provider),
-  //                                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  //  g_object_unref(provider);
   
   gtk_widget_show(ret);
   return ret;
@@ -1364,6 +1350,7 @@ static void clipboard_received_func(GtkClipboard *clipboard,
   insert_selection_data(a, selection_data, -1);
   }
 
+
 static void list_menu_callback(GtkWidget * item, gpointer data)
   {
   //  const char * id;
@@ -1887,15 +1874,6 @@ static void drag_get_callback(GtkWidget *widget,
 
   }
 
-#if 0
-static const char * tree_css =
-  "GtkTreeView row:nth-child(even), GtkTreeView row:nth-child(even) {"
-  " -GtkWidget-focus-padding: 1px;"
-  " -GtkWidget-focus-line-width: 1px;"
-  " border-width: 1px;"
-  " margin: 1px;"
-  " padding: 1px; }";
-#endif
 
 
 list_t * bg_gtk_mdb_list_create(album_t * a)
@@ -1968,12 +1946,6 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
 
   l->listview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
 
-#if 0  
-  gtk_style_context_add_provider(gtk_widget_get_style_context(l->listview),
-                                 GTK_STYLE_PROVIDER (provider),
-                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  g_object_unref(provider);
-#endif
   
   gtk_widget_add_events(l->listview,
                         GDK_KEY_PRESS_MASK |
@@ -2132,8 +2104,6 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
       }
     }
 
-  /* */
-  
   return l;
   }
 
@@ -2455,89 +2425,14 @@ static void save_tracks(bg_gtk_mdb_tree_t * tree)
 
 static void load_files(bg_gtk_mdb_tree_t * tree)
   {
-  int result;
-  GtkWidget * filechooser;
+  bg_gtk_filesel_t * filesel = 
+    bg_gtk_filesel_create("Load file(s)",
+                          tree->dlg_sink,
+                          "tree",
+                          tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
 
-  filechooser = gtk_file_chooser_dialog_new("Load files",
-                                            GTK_WINDOW(bg_gtk_get_toplevel(tree->menu_ctx.widget)),
-                                            GTK_FILE_CHOOSER_ACTION_OPEN,
-                                            "_Cancel",
-                                            GTK_RESPONSE_CANCEL,
-                                            "_Load",
-                                            GTK_RESPONSE_ACCEPT,
-                                            NULL);
-
-  gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(filechooser), TRUE);
-
-  result = gtk_dialog_run(GTK_DIALOG(filechooser));
-
-  if(result == GTK_RESPONSE_ACCEPT)
-    {
-    int i = 0;
-    char * filename;
-    gavl_array_t arr;
-    
-    GSList * filenames = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(filechooser));
-
-    gavl_array_init(&arr);
-    while((filename = g_slist_nth_data(filenames, i)))
-      {
-      // fprintf(stderr, "Loading %s into %s\n", filename, gavl_track_get_id(tree->menu_ctx.album));
-      gavl_string_array_add(&arr, filename);
-      g_free(filename);
-      i++;
-      }
-    g_slist_free(filenames);
-
-#if 1
-    if((arr.num_entries > 0) && tree->menu_ctx.album)
-      {
-      bg_msg_sink_t * sink;
-      gavl_msg_t * msg;
-      const char * id;
-      
-      sink = tree->ctrl.cmd_sink;
-
-      id = gavl_track_get_id(tree->menu_ctx.album);
-
-      if(!strcmp(id, BG_PLAYQUEUE_ID))
-        sink = tree->player_ctrl.cmd_sink;
-      
-      msg = bg_msg_sink_get(sink);
-      bg_mdb_set_load_uris(msg, id, -1, &arr);
-      bg_msg_sink_put(sink);
-      
-      }
-#endif
-    gavl_array_free(&arr);
-    }
-  gtk_widget_destroy(filechooser); 
-  }
-
-static void set_parameter_ask_string(void * data, const char * name, const gavl_value_t * val)
-  {
-  char **ret = data;
-  if(!name)
-    return;
-  *ret = gavl_strdup(gavl_value_get_string(val));
-  }
-
-static char * ask_string(GtkWidget * w, const char * title, const char * label)
-  {
-  bg_dialog_t * dlg;
-  bg_parameter_info_t info[2];
-  char * str = NULL;
-
-  memset(&info[0], 0, sizeof(info));
-
-  info[0].name = "val";
-  info[0].long_name = (char*)label;
-  info[0].type = BG_PARAMETER_STRING;
-  
-  dlg = bg_dialog_create(NULL, set_parameter_ask_string, &str, info, title);
-  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
-  bg_dialog_destroy(dlg);
-  return str;
+  bg_gtk_filesel_run(filesel, 1);
+  bg_gtk_filesel_destroy(filesel);
   }
 
 static void set_parameter_ask_container(void * data, const char * name, const gavl_value_t * val)
@@ -2596,16 +2491,6 @@ static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
   bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
   bg_dialog_destroy(dlg);
   }
-
-#if 0
-static void ask_container(GtkWidget * w, gavl_dictionary_t * ret)
-  {
-  bg_dialog_t * dlg;
-  dlg = bg_dialog_create(NULL, set_parameter_ask_container, ret, container_params, TRS("Add Folder"));
-  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
-  bg_dialog_destroy(dlg);
-  }
-#endif
 
 
 static void create_container_generic(bg_gtk_mdb_tree_t * tree,
@@ -2738,28 +2623,13 @@ static void create_directory(bg_gtk_mdb_tree_t * tree)
 
 static void load_uri(bg_gtk_mdb_tree_t * tree)
   {
-  char * str;
-  gavl_msg_t * msg;
-  const char * id;
-  bg_msg_sink_t * sink = tree->ctrl.cmd_sink;
+  bg_gtk_urlsel_t * urlsel = 
+    bg_gtk_urlsel_create("Load URL(s)",
+                         tree->dlg_sink,
+                          "tree",
+                          tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
 
-  id = gavl_track_get_id(tree->menu_ctx.album);
-
-  str = ask_string(tree->menu_ctx.widget, "Load URI", "URI");
-  if(!str)
-    return;
-  
-  // fprintf(stderr, "Load URI %s\n", str);
-  
-  if(!strcmp(id, BG_PLAYQUEUE_ID))
-    sink = tree->player_ctrl.cmd_sink;
-  
-  msg = bg_msg_sink_get(sink);
-
-  bg_mdb_set_load_uri(msg, id, -1, str);
-  
-  bg_msg_sink_put(sink);
-  
-  free(str);
+  bg_gtk_urlsel_run(urlsel, 1);
+  bg_gtk_urlsel_destroy(urlsel);
   }
 

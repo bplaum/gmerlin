@@ -102,7 +102,7 @@ fileselect_callback(GtkWidget *chooser,
   if(f->unsensitive)
     return;
 
-  if(response_id == GTK_RESPONSE_OK)
+  if(response_id == GTK_RESPONSE_APPLY)
     {
     add_files(f);
     }
@@ -117,7 +117,6 @@ fileselect_callback(GtkWidget *chooser,
     gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
     gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
     bg_msg_sink_put(f->sink);
-    bg_gtk_filesel_destroy(f);
     }
   }
 
@@ -139,9 +138,10 @@ bg_gtk_filesel_create(const char * title,
     gtk_file_chooser_dialog_new(title,
                                 GTK_WINDOW(parent_window),
                                 GTK_FILE_CHOOSER_ACTION_OPEN,
-                                TR("_Cancel"),
-                                GTK_RESPONSE_CANCEL,
-                                TR("_OK"), GTK_RESPONSE_OK,
+                                TR("Add"),
+                                GTK_RESPONSE_APPLY,
+                                TR("Close"),
+                                GTK_RESPONSE_CLOSE,
                                 NULL);
   gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(ret->filesel),
                                        TRUE);
@@ -167,7 +167,7 @@ void bg_gtk_filesel_destroy(bg_gtk_filesel_t * filesel)
   {
   if(filesel->cwd)
     g_free(filesel->cwd);
-  //  g_object_unref(G_OBJECT(filesel));
+  gtk_widget_destroy(filesel->filesel);
   free(filesel);
   }
 
@@ -230,13 +230,6 @@ write_callback(GtkWidget *chooser,
   gtk_main_quit();
   }
 
-static gboolean write_delete_callback(GtkWidget * w,
-                                      GdkEventAny * evt,
-                                      gpointer data)
-  {
-  write_callback(w, GTK_RESPONSE_CANCEL, data);
-  return TRUE;
-  }
 
 char * bg_gtk_get_filename_write(const char * title,
                                  char ** directory,
@@ -272,10 +265,8 @@ char * bg_gtk_get_filename_write(const char * title,
   f.answer = 0;
   
   /* Set callbacks */
+
   
-  g_signal_connect(G_OBJECT(f.w), "delete_event",
-                   G_CALLBACK(write_delete_callback),
-                   (gpointer)(&f));
   g_signal_connect(G_OBJECT(f.w), "response",
                    G_CALLBACK(write_callback),
                    (gpointer)(&f));
@@ -345,9 +336,6 @@ char * bg_gtk_get_filename_read(const char * title,
   
   /* Set callbacks */
   
-  g_signal_connect(G_OBJECT(f.w), "delete_event",
-                   G_CALLBACK(write_delete_callback),
-                   (gpointer)(&f));
   g_signal_connect(G_OBJECT(f.w), "response",
                    G_CALLBACK(write_callback),
                    (gpointer)(&f));
@@ -414,9 +402,6 @@ char * bg_gtk_get_directory(const char * title,
   
   /* Set callbacks */
   
-  g_signal_connect(G_OBJECT(f.w), "delete_event",
-                   G_CALLBACK(write_delete_callback),
-                   (gpointer)(&f));
   g_signal_connect(G_OBJECT(f.w), "response",
                    G_CALLBACK(write_callback),
                    (gpointer)(&f));

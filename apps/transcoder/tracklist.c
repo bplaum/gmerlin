@@ -690,11 +690,15 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
             {
             gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 1);
             gtk_widget_set_sensitive(t->add_file_button, 1);
+            bg_gtk_filesel_destroy(t->filesel);
             t->filesel = NULL;
             }
           else if(!strcmp(ctx_id, CTX_URLSELECT))
             {
-            
+            gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 1);
+            gtk_widget_set_sensitive(t->add_url_button, 1);
+            bg_gtk_urlsel_destroy(t->urlsel);
+            t->urlsel = NULL;
             }
           else if(!strcmp(ctx_id, CTX_DRIVESELECT))
             {
@@ -1066,31 +1070,25 @@ static void button_callback(GtkWidget * w, gpointer data)
 
   if((w == t->add_file_button) || (w == t->menu.add_menu.add_files_item))
     {
-    if(!t->filesel)
-      t->filesel = bg_gtk_filesel_create("Add Files",
-                                         t->dlg_sink,
-                                         CTX_FILESELECT,
-                                         bg_gtk_get_toplevel(t->add_file_button)/* parent */);
+    t->filesel = bg_gtk_filesel_create("Add Files",
+                                       t->dlg_sink,
+                                       CTX_FILESELECT,
+                                       bg_gtk_get_toplevel(t->add_file_button)/* parent */);
     
     bg_gtk_filesel_set_directory(t->filesel, t->open_path);
     gtk_widget_set_sensitive(t->add_file_button, 0);
     gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 0);
     bg_gtk_filesel_run(t->filesel, 0);     
-    
-    //    bg_gtk_filesel_destroy(filesel);
-    
     }
   else if((w == t->add_url_button) || (w == t->menu.add_menu.add_urls_item))
     {
-    if(!t->urlsel)
-      t->urlsel = bg_gtk_urlsel_create(TR("Add URLs"),
-                                       t->dlg_sink, CTX_URLSELECT,
-                                       bg_gtk_get_toplevel(t->add_url_button));
+    t->urlsel = bg_gtk_urlsel_create(TR("Add URLs"),
+                                     t->dlg_sink, CTX_URLSELECT,
+                                     bg_gtk_get_toplevel(t->add_url_button));
     
     gtk_widget_set_sensitive(t->add_url_button, 0);
     gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 0);
     bg_gtk_urlsel_run(t->urlsel, 0);
-    //    bg_gtk_urlsel_destroy(urlsel);
     }
   else if((w == t->add_drives_button) || (w == t->menu.add_menu.add_drives_item))
     {

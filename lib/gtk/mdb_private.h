@@ -132,6 +132,7 @@ typedef struct
   GtkTreePath * last_path;
 
   int select_on_release;
+
   } list_t;
 
 struct album_s
@@ -203,7 +204,8 @@ struct bg_gtk_mdb_tree_s
     const gavl_dictionary_t * parent; // Parent album
     int tree; // Menu was fired from the tree view
     } menu_ctx;
-    
+  
+  bg_msg_sink_t * dlg_sink;
   };
 
 void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
