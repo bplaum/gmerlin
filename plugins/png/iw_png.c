@@ -122,7 +122,7 @@ static const bg_parameter_info_t * get_parameters_png(void * p)
   return parameters;
   }
 
-static const char * get_extensions_png(void *)
+static const char * get_extensions_png(void * priv)
   {
   return "png";
   }
