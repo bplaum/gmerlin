@@ -317,7 +317,7 @@ static int read_image_png(void * priv, gavl_video_frame_t * frame)
   return 1;
   }
 
-static const char * get_extensions_png(void *)
+static const char * get_extensions_png(void * priv)
   {
   return "png";
   }
