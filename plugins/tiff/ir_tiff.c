@@ -897,7 +897,7 @@ static const gavl_dictionary_t * get_metadata_tiff(void * priv)
   return &t->m;
   }
 
-static const char * get_extensions_tiff(void *)
+static const char * get_extensions_tiff(void * priv)
   {
   return "tif tiff";
   }

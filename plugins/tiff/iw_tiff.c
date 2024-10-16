@@ -106,7 +106,7 @@ static void set_parameter_tiff(void * p, const char * name,
   bg_tiff_writer_set_parameter(tiff->tiff, name, val);
   }
 
-static const char * get_extensions_tiff(void *)
+static const char * get_extensions_tiff(void * priv)
   {
   return "tif tiff";
   }
