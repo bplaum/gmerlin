@@ -130,6 +130,30 @@ typedef struct
   
   } fs_t;
 
+static void save_root_children(bg_mdb_backend_t * be, dir_type_t type)
+  {
+  char * tmp_string;
+  fs_t * fs = be->priv;
+  
+  switch(type)
+    {
+    case DIR_TYPE_FS_LOCAL:
+      tmp_string = gavl_sprintf("%s/"LOCAL_DIRS_NAME, be->db->path);
+      bg_array_save_xml(&fs->local_dirs, tmp_string, DIRS_ROOT);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved %s", tmp_string);
+      free(tmp_string);
+      break;
+    case DIR_TYPE_PHOTOALBUMS:
+      tmp_string = gavl_sprintf("%s/"PHOTO_DIRS_NAME, be->db->path);
+      bg_array_save_xml(&fs->photo_dirs, tmp_string, DIRS_ROOT);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved %s", tmp_string);
+      free(tmp_string);
+      break;
+    default:
+      break;
+    }
+  }
+
 static int load_dirent(gavl_dictionary_t * ret, const char * location)
   {
   struct stat st;
@@ -385,8 +409,9 @@ static int load_directory_info(bg_mdb_backend_t * be,
   src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
   gavl_dictionary_copy_value(src, &dirent, GAVL_META_MTIME);
   gavl_track_set_num_children(ret, num_containers, num_items);
-  
 
+  fprintf(stderr, "Loaded %s, %d containers %d items\n", uri, num_containers, num_items);
+  
   gavl_dictionary_free(&dirent);
 
   if(uri)
@@ -534,9 +559,6 @@ static int load_item_info(bg_mdb_backend_t * be,
   else
     {
     gavl_dictionary_move(ret, gavl_get_track_nc(mi, 0));
-
-    
-
     }
   
   if(mi)
@@ -694,6 +716,9 @@ static int refresh_root_children(bg_mdb_backend_t * be,
   int64_t child_mtime;
   int i;
   struct stat st;
+  int changed = 0;
+
+  //  fs_t * fs = be->priv;
   
   for(i = 0; i < num; i++)
     {
@@ -713,22 +738,40 @@ static int refresh_root_children(bg_mdb_backend_t * be,
 
     if(child_mtime != st.st_mtime)
       {
+      char hash[GAVL_MD5_LENGTH];
       gavl_dictionary_t dirent;
       gavl_dictionary_init(&dirent);
       
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reloading toplevel directory %s (mtime changed)", uri);
-
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+               "Reloading toplevel directory %s (mtime changed, %"PRId64" != %"PRId64")",
+               uri, child_mtime, st.st_mtime);
+      
       if(!load_dirent(&dirent, uri))
         {
         /* Error */
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+                 "Reloading toplevel directory %s failed", uri);
         }
       
       gavl_dictionary_reset(child);
       load_directory_info(be, child, &dirent, type);
+
+      bg_get_filename_hash(uri, hash);
+
+      if(type == DIR_TYPE_FS_LOCAL)
+        gavl_track_set_id_nocopy(child, gavl_sprintf("%s/%s", BG_MDB_ID_DIRECTORIES, hash));
+      else if(type == DIR_TYPE_PHOTOALBUMS)
+        gavl_track_set_id_nocopy(child, gavl_sprintf("%s/%s", BG_MDB_ID_PHOTOS, hash));
+      
       gavl_dictionary_free(&dirent);
+      changed = 1;
       ret++;
       }
     }
+
+  if(changed)
+    save_root_children(be, type);
+  
   return ret;
   }
 
@@ -1003,7 +1046,6 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
   gavl_array_t arr_tmp;
   gavl_time_t last_flush_time, cur;
   fs_t * fs = be->priv;
-
   
   gavl_array_init(&arr_static);
   gavl_array_init(&arr_tmp);
@@ -1160,8 +1202,13 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
       res = bg_msg_sink_get(be->ctrl.evt_sink);
       bg_mdb_set_browse_children_response(res, &arr_tmp, msg, &idx, (i == num-1), arr->num_entries);
       bg_msg_sink_put(be->ctrl.evt_sink);
+
+      //      fprintf(stderr, "Flush 1\n");
+      //      gavl_array_dump(&arr_tmp, 2);
+      
       gavl_array_reset(&arr_tmp);
 
+      
       last_flush_time = cur;
       }
     }
@@ -1169,8 +1216,12 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
   if(arr_tmp.num_entries)
     {
     res = bg_msg_sink_get(be->ctrl.evt_sink);
-    bg_mdb_set_browse_children_response(res, &arr_tmp, msg, &start, 1, arr->num_entries);
+    bg_mdb_set_browse_children_response(res, &arr_tmp, msg, &idx, 1, arr->num_entries);
     bg_msg_sink_put(be->ctrl.evt_sink);
+
+    //    fprintf(stderr, "Flush 2\n");
+    //    gavl_array_dump(&arr_tmp, 2);
+    
     }
   
   ret = 1;
@@ -1208,7 +1259,7 @@ static int add_directory(bg_mdb_backend_t * b, dir_type_t type, int * idx, const
   gavl_array_t * arr = NULL;
   gavl_msg_t * evt;
   gavl_dictionary_t * m;
-  char hash[33];
+  char hash[GAVL_MD5_LENGTH];
   
   const char * parent_id = NULL;
   gavl_dictionary_t * parent = NULL;
@@ -1329,15 +1380,12 @@ static int add_directory(bg_mdb_backend_t * b, dir_type_t type, int * idx, const
   return ret;
   }
 
-
-
 static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx,
                       int del, gavl_value_t * add, int sendmsg)
   {
   dir_type_t type;
   const gavl_dictionary_t * dict;
   const gavl_dictionary_t * m;
-  char * tmp_string;
   fs_t * fs = b->priv;
   gavl_array_t * arr;
   
@@ -1425,7 +1473,10 @@ static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int i
     }
   
   /* Save directory list */
-  
+
+  save_root_children(b, type);
+
+#if 0  
   switch(type)
     {
     case DIR_TYPE_FS_LOCAL:
@@ -1443,6 +1494,7 @@ static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int i
     default:
       break;
     }
+#endif
   
   }
 
