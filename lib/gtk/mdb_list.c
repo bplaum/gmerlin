@@ -1199,23 +1199,10 @@ static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
       list_favorites(a);
       break;
     case GDK_KEY_a:
-      {
-#if 0
-      if(evt->state & GDK_SHIFT_MASK)
-        {
-        album_add(a->t, a->a, 1, 0);
-        }
-      else
-#endif
-        {
-        selected_add(a->t, a, 0, 0);
-        }
-      }
+      selected_add(a->t, a, 0, 0);
       break;
     case GDK_KEY_A:
-      {
       album_add(a->t, a->a, 1, 0);
-      }
       break;
     case GDK_KEY_Return:
       {
