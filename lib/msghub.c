@@ -164,8 +164,8 @@ void bg_msg_hub_disconnect_sink(bg_msg_hub_t * h, bg_msg_sink_t * sink)
               sizeof(*h->sinks) * (h->num_sinks - 1 - i));
     h->num_sinks--;
     }
-  else
-    fprintf(stderr, "bg_msg_hub_disconnect_sink: No such sink %p\n", sink);
+  //  else
+  //    fprintf(stderr, "bg_msg_hub_disconnect_sink: No such sink %p\n", sink);
   pthread_mutex_unlock(&h->mutex);
   }
 
