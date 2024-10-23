@@ -920,11 +920,11 @@ bg_mimetype_t bg_mimetypes[] =
     { "mkv",  "video/x-matroska",       "MKV"            },
     { "avi",  "video/x-msvideo",        "AVI"            },
     { "gavf", "video/gavf",             "GAVF"           },
+    { BG_IMGLIST_EXT, BG_IMGLIST_MIMETYPE, "Image list"  },
     /* Other stuff */
     { "xspf", "application/xspf+xml",  "XSPF", NULL, BG_MIME_SUPPORTS_MULTITRACK      },
     { "nfo",  "text/x-nfo",            "NFO"             },
     { "cue",  "application/x-cue",     "Cuesheet", NULL, BG_MIME_SUPPORTS_MULTITRACK  },
-    
     { /* End */ },
   };
 
