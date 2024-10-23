@@ -410,7 +410,8 @@ static int load_directory_info(bg_mdb_backend_t * be,
   gavl_dictionary_copy_value(src, &dirent, GAVL_META_MTIME);
   gavl_track_set_num_children(ret, num_containers, num_items);
 
-  fprintf(stderr, "Loaded %s, %d containers %d items\n", uri, num_containers, num_items);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+           "Loaded %s, %d containers %d items", uri, num_containers, num_items);
   
   gavl_dictionary_free(&dirent);
 
