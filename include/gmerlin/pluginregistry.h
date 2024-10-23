@@ -62,6 +62,9 @@
 /* For sections, which have a single plugin as parameter */
 #define BG_PARAMETER_NAME_PLUGIN "p"
 
+#define BG_IMGLIST_EXT      "imglist"
+#define BG_IMGLIST_MIMETYPE "video/x-gmerlin-imglist"
+
 
 void
 bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
