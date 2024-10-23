@@ -52,7 +52,6 @@
 #define DURATION_KEY  "#DURATION: "
 #define PTS_KEY       "#PTS: "
 
-#define IMGLIST_EXT "imglist"
 
 /* Image list */
 
@@ -270,13 +269,17 @@ static void set_parameter_input(void * priv, const char * name,
   }
 
 static void finalize_metadata_input(gavl_video_format_t * format,
-                                    gavl_dictionary_t * m, const char * uri)
+                                    gavl_dictionary_t * m,
+                                    const char * mimetype,
+                                    const char * uri)
   {
-  const char * mimetype;
   struct stat st;
   // const char * format = NULL;
 
-  if((mimetype = gavl_dictionary_get_string(m, GAVL_META_MIMETYPE)))
+  if(!mimetype)
+    mimetype = gavl_dictionary_get_string(m, GAVL_META_MIMETYPE);
+  
+  if(mimetype)
     {
     gavl_dictionary_t * src;
     
@@ -290,7 +293,6 @@ static void finalize_metadata_input(gavl_video_format_t * format,
 
     if(!stat(uri, &st))
       gavl_dictionary_set_long(src, GAVL_META_MTIME, st.st_mtime);
-    
     }
   }
 
@@ -383,7 +385,9 @@ static int open_input(void * priv, const char * filename)
   gavl_dictionary_set_string(gavl_track_get_video_metadata_nc(inp->track_info, 0),
                              GAVL_META_FORMAT, "Single images");
 
-  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
+  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info),
+                          BG_IMGLIST_MIMETYPE,
+                          filename);
   
   gavl_track_finalize(inp->track_info);
   return 1;
@@ -450,7 +454,7 @@ static int open_stills_input(void * priv, const char * filename)
                              GAVL_META_FORMAT, "Still image");
 
 
-  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info), filename);
+  finalize_metadata_input(inp->fmt, gavl_track_get_metadata_nc(inp->track_info), NULL, filename);
   gavl_track_finalize(inp->track_info);
   return 1;
 
@@ -784,7 +788,7 @@ static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin, int s
     free(str);
     }
   else
-    gavl_string_array_add(ret->extensions, IMGLIST_EXT);
+    gavl_string_array_add(ret->extensions, BG_IMGLIST_EXT);
   
   return ret;
   }
@@ -1086,7 +1090,7 @@ static int open_encoder(void * data, const char * filename,
   if(!gavl_ensure_directory(e->filename_base, 1))
     return 0;
 
-  list_file = gavl_sprintf("%s."IMGLIST_EXT, e->filename_base);
+  list_file = gavl_sprintf("%s."BG_IMGLIST_EXT, e->filename_base);
   if(!bg_encoder_cb_create_output_file(e->cb, list_file))
     return 0;
 
