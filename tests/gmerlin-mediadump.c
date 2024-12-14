@@ -73,6 +73,7 @@ int main(int argc, char ** argv)
   gavl_video_frame_t * vf;
   gavl_packet_t * pkt;
   bg_media_source_stream_t * st;
+  int num_variants = 0;
   
   bg_app_init("mediadump", TRS("Dump media frames"), NULL);
 
@@ -86,7 +87,7 @@ int main(int argc, char ** argv)
   gavl_dictionary_init(&track);
   gavl_track_from_location(&track, argv[1]);
 
-  if(!(h = bg_load_track(&track)))
+  if(!(h = bg_load_track(&track, 0, &num_variants)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couln't open location");
     return EXIT_FAILURE;
