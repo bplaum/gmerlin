@@ -317,26 +317,16 @@ typedef struct
 
   gavl_dictionary_t track; // External metadata
 
-  //  gavl_dictionary_t url_vars; // URL variables
-  
   const bg_plugin_info_t * plugin_info;
   
   int next_track; // if > 0, we just switch to that index (Shortcut e.g. for audio CDs)
   
-  // int track_idx;
-  
-  //  int can_pause;
-  //  int can_seek;
-
-  /* Take plugin from last track and just switch the track */
-  //  int switch_track;
-
   int flags;
   
   gavl_time_t duration;
   bg_controllable_t * input_ctrl;
   
-  
+  int num_variants;
   
   } bg_player_source_t;
 
@@ -463,6 +453,7 @@ struct bg_player_s
   
   int64_t last_seconds;
   
+  int variant;
   };
 
 // void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
@@ -820,12 +811,19 @@ const bg_parameter_info_t * bg_player_get_osd_parameters(bg_player_t * player);
 void bg_player_set_osd_parameter(void*data, const char * name, const gavl_value_t*val);
 
 void bg_player_set_eof(bg_player_t * p);
-void bg_player_next_variant(bg_player_t * p);
+
+/*
+ *  Video is lagging behind audio, try to speed it up.
+ *  Plan-A is to choose a lower-quality network URL (if avaiable)
+ *  Plan-B is to tell the video decoder to skip frames
+ */
+
+void bg_player_speed_up(bg_player_t * p);
 
 /* BG_MSG_NS_PLAYER_PRIVATE */
 
 #define BG_PLAYER_CMD_EOF          1
-#define BG_PLAYER_CMD_NEXT_VARIANT 2
+#define BG_PLAYER_CMD_SPEED_UP     2
 
 #endif // PLAYERPRIVATE_H_INCLUDED
 
