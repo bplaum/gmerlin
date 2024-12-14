@@ -69,12 +69,6 @@
 void
 bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
 
-void
-bg_track_set_variant(gavl_dictionary_t * dict, int variant);
-
-int
-bg_track_next_variant(gavl_dictionary_t * dict);
-
 
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
@@ -82,9 +76,6 @@ bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
 
 int
 bg_track_get_force_raw(const gavl_dictionary_t * dict);
-
-int
-bg_track_get_variant(const gavl_dictionary_t * dict);
 
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict);
@@ -479,8 +470,8 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
  *  due to slow system or network.
  */
 
-bg_plugin_handle_t *  bg_load_track(const gavl_dictionary_t * track);
-
+bg_plugin_handle_t *  bg_load_track(const gavl_dictionary_t * track,
+                                    int variant, int * num_variants);
 
 void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, int flags);
 
