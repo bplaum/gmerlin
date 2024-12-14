@@ -34,9 +34,9 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-// #define DUMP_TIMESTAMPS
+#define DUMP_TIMESTAMPS
 
-// #define NOSKIP
+#define NOSKIP
 
 #define STATE_READ  1  // Try to read frame
 #define STATE_WAIT  2  // Wait to show frame
@@ -342,7 +342,7 @@ static gavl_source_status_t read_frame(bg_player_t * p)
   
   s->decode_duration = gavl_timer_get(s->timer) - time_before;
   
-  //      fprintf(stderr, "do read done\n");
+  //  fprintf(stderr, "Reading took %f seconds\n", gavl_time_to_seconds(s->decode_duration));
 
   frame_time = gavl_time_unscale(s->output_format.timescale,
                                  s->frame->timestamp);
@@ -378,6 +378,8 @@ static gavl_source_status_t read_frame(bg_player_t * p)
   return GAVL_SOURCE_OK;
   }
 
+#define QOS_FRAMES 100 // Check QOS after this many frames
+
 void * bg_player_ov_thread(void * data)
   {
   bg_player_video_stream_t * s;
@@ -389,7 +391,11 @@ void * bg_player_ov_thread(void * data)
   int warn_wait = 0;
   int done = 0;
   int still_shown = 0;
-  int frames_shown = 0;
+
+  /* Evaluate QOS after this number of frames */
+  int frames_since_qos = 0;
+
+  gavl_time_t current_time;
   
   s = &p->video_stream;
 
@@ -402,8 +408,18 @@ void * bg_player_ov_thread(void * data)
 
   s->frame = NULL;
 
-  if(read_frame(p) != GAVL_SOURCE_OK)
-    return NULL;
+
+  bg_player_time_get(p, 1, &current_time);
+  while(1)
+    {
+    if(read_frame(p) != GAVL_SOURCE_OK)
+      return NULL;
+
+    if(s->frame_time >= current_time)
+      break;
+    else
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Skipping initial video frame");
+    }
   
   bg_thread_wait_for_start(s->th);
   
@@ -461,10 +477,25 @@ void * bg_player_ov_thread(void * data)
         {
         gavl_time_delay(&diff_time);
         s->state = STATE_SHOW;
+        s->skip = 0;
         }
-#ifndef NOSKIP
+
+      if(frames_since_qos >= QOS_FRAMES)
+        {
+        /* If we lag by more than half a second, assume we cannot
+           keep sync */
+        if(diff_time < -GAVL_TIME_SCALE)
+          {
+          bg_player_speed_up(p);
+          }
+        frames_since_qos = 0;
+        }
+      else
+        frames_since_qos++;
+      
+#if 0
       /* Drop frame */
-      else if((diff_time < -GAVL_TIME_SCALE / 20) && !frames_shown) // 50 ms
+      else if((diff_time < -GAVL_TIME_SCALE / 20) && (frames_shown > 10)) // 50 ms
         {
         gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Dropping frame (diff: %f, cur: %f, frame: %f)",
                  gavl_time_to_seconds(diff_time),
@@ -475,8 +506,7 @@ void * bg_player_ov_thread(void * data)
         continue;
         }
 #endif
-      else
-        s->state = STATE_SHOW;
+      s->state = STATE_SHOW;
       }
     
     if(s->state == STATE_STILL)
@@ -536,7 +566,6 @@ void * bg_player_ov_thread(void * data)
       
       s->frame = NULL;
 
-      frames_shown++;
       
       if(DO_STILL(p->flags))
         s->state = STATE_STILL;
