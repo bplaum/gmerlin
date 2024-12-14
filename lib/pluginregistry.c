@@ -269,15 +269,12 @@ static void make_cmp_name(bg_plugin_info_t * i)
   bg_bindtextdomain(i->gettext_domain,
                     i->gettext_directory);
 
-  tmp_string =
-    bg_utf8_to_system(TRD(i->long_name, i->gettext_domain), -1);
+  tmp_string = TRD(i->long_name, i->gettext_domain);
   
   len = strxfrm(NULL, tmp_string, 0);
   i->cmp_name = malloc(len+1);
   strxfrm(i->cmp_name, tmp_string, len+1);
-  free(tmp_string);
-
-
+  
   }
 
 static int compare_swap(bg_plugin_info_t * i1,
@@ -3422,120 +3419,17 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
   return ret;
   }
 
-#if 0
-static int input_plugin_load_full(bg_plugin_registry_t * reg,
-                                  const char * location,
-                                  bg_plugin_handle_t ** ret,
-                                  char ** redirect_url)
-  {
-  const char * url;
-  const char * klass;
-  gavl_dictionary_t * track_info;
-  int track_index = 0;
-  gavl_dictionary_t vars;
-  int result = 0;
-  gavl_dictionary_t * tm;
-  int variant = 0;
-  
-  gavl_dictionary_init(&vars);
-  gavl_url_get_vars_c(location, &vars);
-
-  if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
-    track_index--;
-  
-  gavl_dictionary_get_int(&vars, GAVL_URL_VAR_VARIANT, &variant);
-  
-  gavl_dictionary_free(&vars);
-  
-  if(!(*ret = bg_input_plugin_load(location)))
-    goto end;
-  
-  track_info = bg_input_plugin_get_track_info(*ret, track_index);
-  
-  if(!track_info)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No track %d in %s", track_index + 1, location);
-    bg_plugin_unref(*ret);
-    return 0;
-    }
-  
-  tm = gavl_track_get_metadata_nc(track_info);
-
-  /* Do redirection */
-  if((klass = gavl_dictionary_get_string(tm, GAVL_META_CLASS)) &&
-     !strcmp(klass, GAVL_META_CLASS_LOCATION))
-    {
-    //    const gavl_dictionary_t * src;
-
-#if 0 // TODO: Handle multivariant    
-    val_i = 0;
-    gavl_dictionary_get_int(tm, GAVL_META_MULTIVARIANT, &val_i);
-    if(val_i)
-      {
-      int num_src = gavl_dictionary_get_num_items(tm, GAVL_META_SRC);
-      if(variant >= num_src)
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No such variant %d. Track seems unplayable.", variant);
-        goto end;
-        }
-      
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Choosing variant %d", variant);
-      src = gavl_metadata_get_src(tm, GAVL_META_SRC, variant, NULL, &url);
-      }
-    else
-#endif
-      
-
-    if(gavl_metadata_get_src(tm, GAVL_META_SRC, 0, NULL, &url) && url)
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirected to %s", url);
-      *redirect_url = gavl_strdup(url);
-      return 1;
-      }
-    }
-  else
-    result = 1;
-  
-  if(!result)
-    goto end;
-  
-  /* Select track */
-  bg_input_plugin_set_track(*ret, track_index);
-  //  fprintf(stderr, "Select track:\n");
-  //  gavl_dictionary_dump(track_info, 2);
-
-  /* Check for external subtitles */
-  if(gavl_track_get_num_video_streams(track_info) > 0)
-    bg_track_find_subtitles(track_info);
-
-  /* Check for external streams */
-  if(gavl_track_get_num_external_streams(track_info))
-    {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, " %s", url);
-    }
-  
-  end:
-
-  if(!result)
-    {
-    if(*ret)
-      {
-      bg_plugin_unref(*ret);
-      *ret = NULL;
-      }
-    }
-  
-  return result;
-  }
-#endif
 
 bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
   {
   bg_plugin_handle_t * ret;
   gavl_dictionary_t track;
+  int num_variants = 0;
+  int variant = 0;
+  
   gavl_dictionary_init(&track);
   gavl_track_from_location(&track, location);
-  ret = bg_load_track(&track);
+  ret = bg_load_track(&track, variant, &num_variants);
   gavl_dictionary_free(&track);
   return ret;
   }
@@ -5805,21 +5699,20 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
   globfree(&g);
   }
 
-bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
+bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
+                                   int variant, int * num_variants)
   {
   int i;
   
   gavl_dictionary_t dict;
 
   const gavl_dictionary_t * src_track = track; // Track (or subtrack) containing the location
-  int num_variants;
   const gavl_dictionary_t * edl = NULL;
   bg_plugin_handle_t * ret = NULL;
 
   int src_idx;
   int track_index = 0;
   gavl_dictionary_t vars;
-  int variant;
   
   gavl_dictionary_init(&vars);
   gavl_dictionary_init(&dict);
@@ -5827,8 +5720,6 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
   /* Multipart movie */
   if(get_multipart_edl(track, &dict))
     edl = &dict;
-  
-  variant = bg_track_get_variant(track);
   
   /* Loop until we get real media */
   for(i = 0; i < MAX_REDIRECTIONS; i++)
@@ -5845,7 +5736,7 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
       goto end;
       }
     
-    if((num_variants = gavl_track_get_num_variants(track)))
+    if((*num_variants = gavl_track_get_num_variants(track)))
       {
       src_track = gavl_track_get_variant(track, variant);
       if(!src_track)
@@ -5979,7 +5870,6 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track)
 
 #define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
 #define BG_TRACK_CURRENT_LOCATION "location"
-#define BG_TRACK_VARIANT          "variant"
 
 void
 bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw)
@@ -5988,12 +5878,6 @@ bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw)
   gavl_dictionary_set_int(dict, BG_TRACK_FORCE_RAW, force_raw);
   }
 
-void
-bg_track_set_variant(gavl_dictionary_t * dict, int variant)
-  {
-  dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
-  gavl_dictionary_set_int(dict, BG_TRACK_VARIANT, variant);
-  }
 
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location)
@@ -6012,32 +5896,6 @@ bg_track_get_force_raw(const gavl_dictionary_t * dict)
   return ret;
   }
 
-int
-bg_track_get_variant(const gavl_dictionary_t * dict)
-  {
-  int ret = 0;
-  if(!(dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
-    return 0;
-  gavl_dictionary_get_int(dict, BG_TRACK_VARIANT, &ret);
-  return ret;
-  }
-
-int
-bg_track_next_variant(gavl_dictionary_t * dict)
-  {
-  int val = bg_track_get_variant(dict);
-  int num_variants = gavl_track_get_num_variants(dict);
-  
-  val++;
-  
-  if(val >= num_variants)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No variants left");
-    return 0;
-    }
-  bg_track_set_variant(dict, val);
-  return 1;
-  }
 
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict)
