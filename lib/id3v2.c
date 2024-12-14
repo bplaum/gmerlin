@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/charset.h>
 
 #include <gmerlin/utils.h>
 
@@ -182,14 +181,14 @@ static int write_32_syncsave(gavl_io_t * output, uint32_t num)
 
 
 static int write_string(gavl_io_t * output, const char * str,
-                        bg_charset_converter_t * cnv)
+                        gavl_charset_converter_t * cnv)
   {
   int len;
 
   if(cnv)
     {
     char * str1;
-    str1 = bg_convert_string(cnv, str, -1, NULL );
+    str1 = gavl_convert_string(cnv, str, -1, NULL );
     len = strlen(str1)+1;
     if(gavl_io_write_data(output, (uint8_t*)str1, len) < len)
       return 0;
@@ -210,7 +209,7 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
   uint8_t flags[2] = { 0x00, 0x00 };
   uint8_t comm_header[4] = { 'X', 'X', 'X', 0x00 };
   uint32_t size_pos, end_pos, size;
-  bg_charset_converter_t * cnv = NULL;
+  gavl_charset_converter_t * cnv = NULL;
   int ret = 0;
 
   if((frame->val.type == GAVL_TYPE_STRING) &&
@@ -280,7 +279,7 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
         {
         const char * val_str;
         if(encoding == BG_ID3_ENCODING_LATIN1)
-          cnv = bg_charset_converter_create("UTF-8", "ISO-8859-1");
+          cnv = gavl_charset_converter_create("UTF-8", "ISO-8859-1");
       
         if((val_str = gavl_value_get_string(&frame->val)) &&
            !write_string(output, val_str, cnv))
@@ -294,7 +293,7 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
         int i = 0;
         
         if(encoding == BG_ID3_ENCODING_LATIN1)
-          cnv = bg_charset_converter_create("UTF-8", "ISO-8859-1");
+          cnv = gavl_charset_converter_create("UTF-8", "ISO-8859-1");
         
         while((v = gavl_value_get_item(&frame->val, i)) &&
               (s = gavl_value_get_string(v)))
@@ -323,7 +322,7 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
   fail:
 
   if(cnv)
-    bg_charset_converter_destroy(cnv);
+    gavl_charset_converter_destroy(cnv);
   
   return ret;
   }
