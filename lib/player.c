@@ -660,10 +660,10 @@ void bg_player_set_eof(bg_player_t * p)
   bg_msg_sink_put(p->ctrl.cmd_sink);
   }
 
-void bg_player_next_variant(bg_player_t * p)
+void bg_player_speed_up(bg_player_t * p)
   {
   gavl_msg_t * msg = bg_msg_sink_get(p->ctrl.cmd_sink);
-  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_NEXT_VARIANT, BG_MSG_NS_PLAYER_PRIVATE);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SPEED_UP, BG_MSG_NS_PLAYER_PRIVATE);
   bg_msg_sink_put(p->ctrl.cmd_sink);
   
   }

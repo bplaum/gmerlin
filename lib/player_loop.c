@@ -375,7 +375,7 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
   else
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening next location");
 
-  if(!(h = bg_load_track(&src->track)))
+  if(!(h = bg_load_track(&src->track, p->variant, &src->num_variants)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading failed (primary: %d)", primary);
     // fprintf(stderr, "Loading %s failed (primary: %d)\n", src->location, primary);
@@ -513,7 +513,6 @@ static void stop_cmd(bg_player_t * player, int new_state)
     bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val);
     }
   }
-
 
 void bg_player_stream_change_init(bg_player_t * player)
   {
@@ -722,9 +721,11 @@ static void chapter_cmd(bg_player_t * player, int chapter)
   
   }
 
-static void play_cmd(bg_player_t * player)
+static void play_variant_cmd(bg_player_t * player, int variant)
   {
   stop_cmd(player, BG_PLAYER_STATUS_CHANGING);
+
+  player->variant = variant;
   
   if(!(player->src->flags & SRC_HAS_TRACK))
     {
@@ -785,6 +786,11 @@ static void play_cmd(bg_player_t * player)
   
   play_source(player, BG_PLAYER_STATUS_PLAYING);
 
+  }
+
+static void play_cmd(bg_player_t * player)
+  {
+  play_variant_cmd(player, 0);
   }
 
 /* Process command, return FALSE if thread should be ended */
@@ -1419,18 +1425,36 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             }
           }
           break;
-        case BG_PLAYER_CMD_NEXT_VARIANT:
+        case BG_PLAYER_CMD_SPEED_UP:
           {
           gavl_dictionary_t * dict;
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Poor system or network performance");
+
+          if(!(dict = player->src->track_info))
+            break; // No track loaded
+
+          if((player->src->num_variants > 0) &&
+             (player->variant < player->src->num_variants -1))
+            {
+            gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Switching to next variant");
+            play_variant_cmd(player, player->variant+1);
+            }
+          else
+            {
+            /* Increase skip */
+            gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Couldn't switch to next variant: %d",
+                     gavl_track_get_num_variants(dict));
+            }
+#if 0
           if(!(dict = bg_player_tracklist_get_current_track(&player->tl)) ||
              !bg_track_next_variant(dict))
             {
             /* TODO: Switch to next track */
             }
           
-          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Poor playback performance, selecting lower quality stream");
           /* Stop playback start again */
           play_cmd(player);
+#endif     
           }
           break;
         }

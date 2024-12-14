@@ -122,11 +122,11 @@ int bg_player_audio_init(bg_player_t * player, int audio_stream)
                                  &s->output_format);
   gavl_peak_detector_set_format(s->peak_detector,
                                 &s->output_format);
-
+  
   /* Initialize time */
   
   s->samples_written = 0;
-
+  
   gavl_stream_stats_init(&stats);
   
   if((sd = gavl_track_get_audio_stream(player->src->track_info, audio_stream)) &&

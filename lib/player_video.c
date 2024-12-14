@@ -98,13 +98,17 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
     return 0;
     }
   
-  if(!bg_player_ov_init
-     (&player->video_stream))
+  if(!bg_player_ov_init(&player->video_stream))
     return 0;
   
   if(!DO_SUBTITLE_ONLY(player->flags))
     gavl_video_source_set_dst(s->src, 0, &s->output_format);
 
+  /* Read first video frame(s). Here we skip initial video frames if the
+     audio stream starts later */
+
+  
+  
 #if 0  
   if(DO_SUBTITLE_ONLY(player->flags))
     {
