@@ -120,7 +120,6 @@ cfg_registry.c \
 cfg_section.c \
 cfg_xml.c \
 chapterlist.c \
-charset.c \
 cleanup.c \
 cmdline.c \
 colormatrix.c \
@@ -213,7 +212,6 @@ transcoder.c \
 transcoder_track.c \
 translation.c \
 urilist.c \
-utf8.c \
 videofilters.c \
 visualize.c \
 websocket.c \
