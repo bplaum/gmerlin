@@ -30,67 +30,6 @@
 
 #define BYTES_INCREMENT 10
 
-static char * do_convert(iconv_t cd, char * in_string, int len, int * got_error)
-  {
-  char * ret;
-
-  char *inbuf;
-  char *outbuf;
-  int alloc_size;
-  int output_pos;
-  int keep_going = 1;
-  size_t inbytesleft;
-  size_t outbytesleft;
-
-  alloc_size = len + BYTES_INCREMENT;
-
-  inbytesleft  = len;
-  outbytesleft = alloc_size;
-
-  ret    = malloc(alloc_size);
-  inbuf  = in_string;
-  outbuf = ret;
-  
-  while(keep_going)
-    {
-    if(iconv(cd, &inbuf, &inbytesleft,
-             &outbuf, &outbytesleft) == (size_t)-1)
-      {
-      switch(errno)
-        {
-        case E2BIG:
-          output_pos = (int)(outbuf - ret);
-
-          alloc_size   += BYTES_INCREMENT;
-          outbytesleft += BYTES_INCREMENT;
-
-          ret = realloc(ret, alloc_size);
-          outbuf = &ret[output_pos];
-          break;
-        default:
-          keep_going = 0;
-          if(got_error)
-            *got_error = 1;
-          break;
-        }
-      }
-    if(!inbytesleft)
-      break;
-    }
-  /* Zero terminate */
-
-  output_pos = (int)(outbuf - ret);
-  
-  if(!outbytesleft)
-    {
-    alloc_size++;
-    ret = realloc(ret, alloc_size);
-    outbuf = &ret[output_pos];
-    }
-  *outbuf = '\0';
-  return ret;
-  }
-
 static char const * const try_charsets[] = 
   {
     "ISO8859-1",
@@ -101,7 +40,9 @@ static char const * const try_charsets[] =
 char * bg_system_to_utf8(const char * str, int len)
   {
   int i;
-  iconv_t cd;
+
+  gavl_charset_converter_t * cnv;
+  
   char * system_charset;
   char * ret;
   int got_error = 0;
@@ -113,7 +54,6 @@ char * bg_system_to_utf8(const char * str, int len)
   system_charset = nl_langinfo(CODESET);
   //  if(!strcmp(system_charset, "UTF-8"))
   //    return gavl_strndup(str, str+len);
-
   
   tmp_string = malloc(len+1);
   memcpy(tmp_string, str, len);

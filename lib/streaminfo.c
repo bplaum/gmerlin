@@ -90,7 +90,7 @@ char * bg_get_track_name_default(const char * location)
     end_pos = strrchr(start_pos, '.');
     if(!end_pos)
       end_pos = &start_pos[strlen(start_pos)];
-    tmp_string = bg_system_to_utf8(start_pos, end_pos - start_pos);
+    tmp_string = gavl_strndup(start_pos, end_pos);
     }
 
   gavl_dictionary_init(&url_vars);

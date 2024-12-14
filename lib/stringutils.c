@@ -43,7 +43,6 @@
 #include <sys/stat.h>
 
 #include <unistd.h>
-#include <gmerlin/charset.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>

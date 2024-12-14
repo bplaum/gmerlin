@@ -50,7 +50,6 @@
 #include <gmerlin/parameter.h>
 #include <gmerlin/textrenderer.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/charset.h>
 
 /* Text alignment */
 
