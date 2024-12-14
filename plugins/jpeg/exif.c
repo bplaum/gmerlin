@@ -26,7 +26,6 @@
 #include <gavl/metadata.h>
 #include <gavl/metatags.h>
 #include <gmerlin/utils.h>
-#include <gmerlin/charset.h>
 
 #include <stdlib.h>
 
@@ -164,7 +163,7 @@ static uint16_t get_short(uint8_t * data, ExifByteOrder bo)
 typedef struct
   {
   gavl_dictionary_t * m;
-  bg_charset_converter_t * cnv;
+  gavl_charset_converter_t * cnv;
   ExifByteOrder bo;
   gavl_video_format_t * fmt;
   } foreach_data_t;
@@ -216,7 +215,7 @@ static void set_utf16le(foreach_data_t * fd,
   {
   if(e->format == EXIF_FORMAT_BYTE)
     gavl_dictionary_set_string_nocopy(fd->m, key,
-                            bg_convert_string(fd->cnv, (char*)e->data,
+                            gavl_convert_string(fd->cnv, (char*)e->data,
                                               e->size, NULL));
   }
 
@@ -625,13 +624,13 @@ void bg_exif_read_metadata(const gavl_buffer_t * buf,
   if(!d)
     return;
 
-  fd.cnv = bg_charset_converter_create("UTF-16LE", "UTF-8");
+  fd.cnv = gavl_charset_converter_create("UTF-16LE", "UTF-8");
   fd.bo = exif_data_get_byte_order(d);
   
   exif_data_foreach_content(d, foreach1, &fd);
   exif_data_unref(d);
 
-  bg_charset_converter_destroy(fd.cnv);
+  gavl_charset_converter_destroy(fd.cnv);
   }
 
 /* EXIF writing taken from
