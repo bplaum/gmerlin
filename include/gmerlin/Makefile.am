@@ -12,7 +12,6 @@ bgthread.h \
 cfg_dialog.h \
 cfg_registry.h \
 cfgctx.h \
-charset.h \
 cmdline.h \
 colormatrix.h \
 encoder.h \
