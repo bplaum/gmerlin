@@ -120,7 +120,7 @@ static void splice(bg_gtk_widget_t * w, int idx, int num_delete, int num_add)
   for(i = 0; i < num_add; i++)
     {
     GtkTreeIter new_iter;
-    
+    memset(&new_iter, 0, sizeof(new_iter));
     if(!i)
       {
       if(idx == num)
