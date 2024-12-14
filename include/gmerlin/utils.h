@@ -340,25 +340,6 @@ char ** bg_urilist_decode(const char * str, int len);
 
 void bg_urilist_free(char ** uri_list);
 
-/** \brief Convert a string from the system character set to UTF-8
- *  \param str String
- *  \param len Length or -1
- *  \returns A newly allocated string
- *
- *  The "system charset" is obtained with nl_langinfo().
- */
-
-char * bg_system_to_utf8(const char * str, int len);
-
-/** \brief Convert a string from UTF-8 to the system character set
- *  \param str String
- *  \param len Length or -1
- *  \returns A newly allocated string
- *
- *  The "system charset" is obtained with nl_langinfo().
- */
-
-char * bg_utf8_to_system(const char * str, int len);
 
 /** \brief Get a language name
  *  \param iso An iso-639 3 character code
