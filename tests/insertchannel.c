@@ -50,7 +50,7 @@ int main(int argc, char ** argv)
   char * tmp_string;
   
   gavl_video_frame_t * in_frame;
-  gavl_video_frame_t * out_frame;
+  gavl_video_frame_t * out_frame = NULL;
   
   gavl_video_format_t in_format;
   gavl_video_format_t out_format;
