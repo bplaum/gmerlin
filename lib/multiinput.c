@@ -136,10 +136,20 @@ static void start_multi(void * priv)
         {
         real_uri = gavl_strdup(uri);
 
-        /* Go 100 ms later to ensure that we have the same segments even if clock_time_start
-           if rounded down to values smaller than the segment start time */
+        /*
+         *  Load external streams from 0.5 seconds before time of the main stream.
+         *  Most likely external URIs are audio or subtitles, which are cheaper to skip.
+         *  This makes it easier to quickly synchonize the stream if indivudual
+         *  start times differ.
+         */
+        
+        //        real_uri = gavl_url_add_var_long(real_uri, GAVL_URL_VAR_CLOCK_TIME,
+        //                                         clock_time_start - GAVL_TIME_SCALE/2);
+        
+        /* Make sure we end up in the same segment */
         real_uri = gavl_url_add_var_long(real_uri, GAVL_URL_VAR_CLOCK_TIME,
-                                         clock_time_start + GAVL_TIME_SCALE / 10);
+                                         clock_time_start + GAVL_TIME_SCALE/2);
+        
         uri = real_uri;
         }
       
