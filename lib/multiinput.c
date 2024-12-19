@@ -154,7 +154,9 @@ static void start_multi(void * priv)
         }
       
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading external uri: %s", uri);
-      h = bg_input_plugin_load(uri);
+      if(!(h = bg_input_plugin_load(uri)))
+        return;
+      
       /* Stream is external */
       m->src.streams[i]->user_data = h;
       m->src.streams[i]->free_user_data = free_stream;
