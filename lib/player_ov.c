@@ -34,7 +34,7 @@
 #define LOG_DOMAIN "player.video_output"
 
 // #define DUMP_SUBTITLE
-#define DUMP_TIMESTAMPS
+// #define DUMP_TIMESTAMPS
 
 #define NOSKIP
 
@@ -418,7 +418,10 @@ void * bg_player_ov_thread(void * data)
     if(s->frame_time >= current_time)
       break;
     else
+      {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Skipping initial video frame");
+      s->frame = NULL;
+      }
     }
   
   bg_thread_wait_for_start(s->th);
