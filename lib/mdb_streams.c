@@ -1073,7 +1073,7 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   gavl_array_init(&siblings);
   bg_sqlite_id_tab_init(&sibling_ids);
   
-  fprintf(stderr, "Streams: browse_object %s\n", id);
+  //  fprintf(stderr, "Streams: browse_object %s\n", id);
   
   path = gavl_strbreak(id+1, '/');
   
@@ -1397,9 +1397,27 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
     
     }
 
-  
+  /* Leaf */
   
   /* TODO: IDX + total, next, previous */
+
+  if(!query_children(be, &sibling_ids,
+                     browse_mode,
+                     source_id,
+                     attr_id,
+                     group))
+    goto end;
+  
+  //  fprintf(stderr, "ID: %s path[path_idx]: %s\n", id, path[path_idx]);
+  //  fprintf(stderr, "siblings\n");
+  //  gavl_array_dump(&siblings, 2);
+  //  fprintf(stderr, "number of sibling_ids %d\n", sibling_ids.num_val);
+  //  gavl_array_dump(sibling_ids.num_val, 2);
+
+  if(!browse_station(be, ret, strtoll(path[path_idx], NULL, 10)))
+    goto end;
+
+  result = 1;
   
   end:
   
