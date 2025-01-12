@@ -5095,8 +5095,8 @@ function init_complete()
       if(cfg.renderer)
 	break;
       }
-    if(!cfg.renderer)
-      alert("no Renderer found, playback will be impossible");
+//    if(!cfg.renderer)
+//      alert("no Renderer found, playback will be impossible");
     }
       
   /* Apply parameters */
