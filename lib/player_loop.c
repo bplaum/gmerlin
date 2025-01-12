@@ -633,10 +633,10 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
     if(new_chapter != player->current_chapter)
       {
       gavl_value_t val;
-
+#if 0
       fprintf(stderr, "Chapter changed: %d -> %d\n", 
               player->current_chapter, new_chapter);
-      
+#endif 
       player->current_chapter = new_chapter;
       
       gavl_value_init(&val);
