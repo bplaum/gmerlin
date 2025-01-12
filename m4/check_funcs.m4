@@ -69,6 +69,45 @@ fi
 
 ])
 
+dnl
+dnl Check for pipewire
+dnl
+
+AC_DEFUN([GMERLIN_CHECK_PIPEWIRE],[
+
+AH_TEMPLATE([HAVE_PIPEWIRE],
+            [Do we have pipewire installed?])
+
+have_pipewire="false"
+
+
+AC_ARG_ENABLE(pipewire,
+[AS_HELP_STRING([--disable-pipewire],[Disable pipewire (default: autodetect)])],
+[case "${enableval}" in
+   yes) test_pipewire=true ;;
+   no)  test_pipewire=false ;;
+esac],[test_pipewire=true])
+
+if test x$test_pipewire = xtrue; then
+PKG_CHECK_MODULES(PIPEWIRE, libpipewire-0.3, have_pipewire="true", have_pipewire="false")
+fi
+
+
+
+AC_SUBST(PIPEWIRE_REQUIRED)
+AC_SUBST(PIPEWIRE_LIBS)
+AC_SUBST(PIPEWIRE_CFLAGS)
+
+AM_CONDITIONAL(HAVE_PIPEWIRE, test x$have_pipewire = xtrue)
+
+if test "x$have_pipewire" = "xtrue"; then
+AC_DEFINE([HAVE_PIPEWIRE])
+fi
+
+])
+
+
+
 nl
 dnl libtiff
 dnl
