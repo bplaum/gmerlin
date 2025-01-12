@@ -41,6 +41,13 @@ else
 pulseaudio_subdirs = 
 endif
 
+if HAVE_PIPEWIRE
+# pipewire_subdirs = pipewire
+pipewire_subdirs =
+else
+pipewire_subdirs = 
+endif
+
 if HAVE_DBUS
 dbus_subdirs = mpris
 else
@@ -70,6 +77,7 @@ $(png_subdirs) \
 $(tiff_subdirs) \
 $(x11_subdirs) \
 $(cdio_subdirs) \
+$(pipewire_subdirs) \
 $(pulseaudio_subdirs) \
 upnp \
 wavwrite \
