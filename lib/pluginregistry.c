@@ -2599,8 +2599,9 @@ static char * normalize_genre(char * genre)
   return bg_capitalize(genre);
   }
 
-static void detect_nfo(const char * path, const char * basename, gavl_dictionary_t * dict)
+static int detect_nfo(const char * path, const char * basename, gavl_dictionary_t * dict)
   {
+  int ret = 0;
   char * file = NULL;
 
   FILE * in = NULL;
@@ -2614,8 +2615,8 @@ static void detect_nfo(const char * path, const char * basename, gavl_dictionary
   int num_directors = 0;
 
   if(!path || !basename)
-    return;
-  
+    goto fail;
+    
   file = gavl_sprintf("%s/%s.nfo", path, basename);
   
   in = fopen(file, "r");
@@ -2766,13 +2767,15 @@ static void detect_nfo(const char * path, const char * basename, gavl_dictionary
   /* Set country to unknown */
   if(!gavl_dictionary_get(dict, GAVL_META_COUNTRY))
     gavl_dictionary_set_string(dict, GAVL_META_COUNTRY, "Unknown");
-  
+
+  ret = 1;
   fail:
   if(in)
     fclose(in);
   if(doc)
     xmlFreeDoc(doc);
   free(file);
+  return ret;
   }
 
 void bg_plugin_registry_get_container_data(bg_plugin_registry_t * plugin_reg,
@@ -3034,9 +3037,13 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
 
       gavl_dictionary_init(&show_m);
       gavl_dictionary_set_string(&show_m, GAVL_META_CLASS, GAVL_META_CLASS_TV_SHOW);
+
+      /* Detecting the NFO a second time might fail if the title inside the .nfo and
+         the filename don't match */
       
-      detect_nfo(path, gavl_dictionary_get_string(m, GAVL_META_SHOW), &show_m);
-      gavl_dictionary_set(m, GAVL_META_SHOW, gavl_dictionary_get(&show_m, GAVL_META_TITLE));
+      if(detect_nfo(path, gavl_dictionary_get_string(m, GAVL_META_SHOW), &show_m))
+        gavl_dictionary_set(m, GAVL_META_SHOW, gavl_dictionary_get(&show_m, GAVL_META_TITLE));
+      
       gavl_dictionary_free(&show_m);
       bg_track_find_subtitles(ti);
       create_language_arrays(ti);
