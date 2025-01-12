@@ -41,7 +41,6 @@ driveselect.c \
 fileselect.c \
 fileentry.c \
 gtkutils.c \
-infowindow.c \
 logwindow.c \
 mdb_list.c \
 mdb_tree.c \

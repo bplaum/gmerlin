@@ -642,7 +642,7 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
                  !(m = gavl_track_get_metadata(dict)))
                 break;
               
-              bg_gtk_info_window_set(w->g->info_window, dict);
+              bg_gtk_trackinfo_set(w->g->info_window, dict);
               
               if((pbuf = bg_gtk_load_track_image(dict, 80, 80)))
                 {

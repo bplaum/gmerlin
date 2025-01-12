@@ -29,7 +29,7 @@
 #include <gmerlin/playermsg.h>
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/pluginregistry.h>
-#include <gui_gtk/infowindow.h>
+// #include <gui_gtk/infowindow.h>
 #include <gui_gtk/logwindow.h>
 #include <gui_gtk/mdb.h>
 
@@ -188,7 +188,7 @@ struct gmerlin_s
   bg_gtk_mdb_tree_t * mdb_tree;
   GtkWidget * mdb_window;
   
-  bg_gtk_info_window_t * info_window;
+  bg_gtk_trackinfo_t * info_window;
   bg_gtk_log_window_t * log_window;
   
   bg_cfg_ctx_t * cfg_player;

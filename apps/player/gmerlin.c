@@ -57,18 +57,18 @@ static bg_accelerator_t accels[] =
     { GAVL_KEY_NONE,      0,                                     0                             },
   };
 
+static void info_hide_callback(GtkWidget * w, gpointer data)
+  {
+  gmerlin_t * g = (gmerlin_t*)data;
+  main_menu_set_info_window_item(g->main_menu, FALSE);
+  }
+
 static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
                                 gpointer data)
   {
   gmerlin_t * g = (gmerlin_t*)data;
   
-  if(w == bg_gtk_info_window_get_widget(g->info_window))
-    {
-    gtk_widget_hide(w);
-    main_menu_set_info_window_item(g->main_menu, FALSE);
-    return TRUE;
-    }
-  else if(w == bg_gtk_log_window_get_widget(g->log_window))
+  if(w == bg_gtk_log_window_get_widget(g->log_window))
     {
     gtk_widget_hide(w);
     main_menu_set_log_window_item(g->main_menu, FALSE);
@@ -701,10 +701,10 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   /* Create subwindows */
 
-  ret->info_window = bg_gtk_info_window_create();
-  g_signal_connect(G_OBJECT(bg_gtk_info_window_get_widget(ret->info_window)),
-                   "delete_event",
-                   G_CALLBACK(delete_callback), ret);
+  ret->info_window = bg_gtk_trackinfo_create();
+  g_signal_connect(G_OBJECT(bg_gtk_trackinfo_get_widget(ret->info_window)),
+                   "hide",
+                   G_CALLBACK(info_hide_callback), ret);
   
   //  ret->lcdproc = bg_lcdproc_create(ret->player);
 
@@ -808,7 +808,7 @@ void gmerlin_destroy(gmerlin_t * g)
     bg_parameter_info_destroy_array(g->image_reader_parameters);
   
   if(g->info_window)
-    bg_gtk_info_window_destroy(g->info_window);
+    bg_gtk_trackinfo_destroy(g->info_window);
 
   if(g->log_window)
     bg_gtk_log_window_destroy(g->log_window);

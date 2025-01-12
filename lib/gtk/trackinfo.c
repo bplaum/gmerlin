@@ -54,7 +54,7 @@ static const char * css =
   "background-image: none;"
   " }";
 
-typedef struct bg_gtk_trackinfo_s
+struct bg_gtk_trackinfo_s
   {
   GtkWidget * window;
   GtkWidget * close_button;
@@ -68,7 +68,7 @@ typedef struct bg_gtk_trackinfo_s
   GtkWidget * notebook;
   bg_gtk_dict_view_t * dw;
   
-  } bg_gtk_trackinfo_t;
+  };
 
 static void button_callback(GtkWidget * w, gpointer data)
   {
@@ -77,8 +77,6 @@ static void button_callback(GtkWidget * w, gpointer data)
   if(w == win->close_button)
     {
     gtk_widget_hide(win->window);
-    gtk_widget_destroy(win->window);
-    free(win);
     }
   else if(w == win->mode_button)
     {
@@ -95,13 +93,6 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   
   } 
-
-static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
-                                gpointer data)
-  {
-  button_callback(w, data);
-  return TRUE;
-  }
 
 static char * append_row_noescape(char * str, const char * icon, const char * val)
   {
@@ -136,9 +127,25 @@ static void pixbuf_from_uri_callback(void * data, const char * id, GdkPixbuf * p
   gtk_image_set_from_pixbuf(GTK_IMAGE(image), pb);
   }
 
-static GtkWidget * create_cover(const gavl_dictionary_t * dict)
+static GtkWidget * create_cover(void)
   {
   GtkWidget * ret = NULL;
+  
+  ret = gtk_image_new();
+  
+  gtk_widget_set_hexpand(ret, FALSE);
+  gtk_widget_set_vexpand(ret, FALSE);
+
+  gtk_widget_set_valign(ret, GTK_ALIGN_START);
+  gtk_widget_set_halign(ret, GTK_ALIGN_START);
+  
+  gtk_widget_show(ret);
+  
+  return ret;
+  }
+
+static void set_cover(GtkWidget * w, const gavl_dictionary_t * dict)
+  {
   const char * klass;
   int max_width;
   int max_height;
@@ -146,8 +153,10 @@ static GtkWidget * create_cover(const gavl_dictionary_t * dict)
     
   if(!(m = gavl_track_get_metadata(dict)) ||
      !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
-    return NULL;
-  
+    {
+    gtk_widget_hide(w);
+    return;
+    }
   if(gavl_string_starts_with(klass, "item.audio"))
     {
     max_width  = COVER_WIDTH;
@@ -159,23 +168,12 @@ static GtkWidget * create_cover(const gavl_dictionary_t * dict)
     max_height = POSTER_HEIGHT;
     }
 
-  // fprintf(stderr, "Loading image\n");
-  
-  ret = gtk_image_new();
-
   bg_gtk_load_track_image_async(pixbuf_from_uri_callback,
-                                ret,
+                                w,
                                 dict, max_width, max_height);
   
-  gtk_widget_set_hexpand(ret, FALSE);
-  gtk_widget_set_vexpand(ret, FALSE);
-
-  gtk_widget_set_valign(ret, GTK_ALIGN_START);
-  gtk_widget_set_halign(ret, GTK_ALIGN_START);
+  gtk_widget_show(w);
   
-  gtk_widget_show(ret);
-  
-  return ret;
   }
 
 static void append_link(bg_gtk_trackinfo_t * info,
@@ -230,7 +228,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   char * var;
   const char * var_c;
   GtkTextBuffer * buf;
-  GtkTextIter iter;
+  GtkTextIter start, end;
   const char * location;
   const char * mimetype;
   const char * format;
@@ -242,7 +240,10 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   
   buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(info->textview));
 
-  gtk_text_buffer_get_start_iter(buf, &iter);
+  gtk_text_buffer_get_bounds(buf, &start, &end);
+  gtk_text_buffer_delete(buf, &start, &end);
+  
+  gtk_text_buffer_get_start_iter(buf, &start);
   
   //  klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
 
@@ -334,7 +335,7 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
     markup = append_row(markup, BG_ICON_TAG, var_c);
   
   gtk_text_buffer_insert_markup(buf,
-                                &iter,
+                                &start,
                                 markup,
                                 -1);
 
@@ -364,12 +365,12 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
       {
       markup = gavl_strdup("\n");
       markup = append_row(markup, BG_ICON_DOWNLOAD, "");
-      gtk_text_buffer_insert_markup(buf, &iter, markup, -1);
+      gtk_text_buffer_insert_markup(buf, &start, markup, -1);
       }
     else
-      gtk_text_buffer_insert_markup(buf, &iter, " ", -1);
+      gtk_text_buffer_insert_markup(buf, &start, " ", -1);
     
-    append_link(info, &iter, location, format);
+    append_link(info, &start, location, format);
     num_links++;
     }
   
@@ -381,14 +382,14 @@ static void create_markup(bg_gtk_trackinfo_t * info, const gavl_dictionary_t * d
   if((var_c = gavl_dictionary_get_string(dict,
                                          GAVL_META_PLOT)))
     {
-    gtk_text_buffer_insert(buf, &iter, "\n\n", -1);
-    gtk_text_buffer_insert(buf, &iter, var_c, -1);
+    gtk_text_buffer_insert(buf, &start, "\n\n", -1);
+    gtk_text_buffer_insert(buf, &start, var_c, -1);
     }
   
   }
 
-static bg_gtk_trackinfo_t *
-bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
+bg_gtk_trackinfo_t *
+bg_gtk_trackinfo_create(void)
   {
   PangoTabArray * tabs;
   
@@ -398,13 +399,6 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   GtkWidget * scrolledwindow;
   GtkWidget * w;
   
-  const gavl_dictionary_t * m;
-
-  //  fprintf(stderr, "bg_gtk_trackinfo_create\n");
-  //  gavl_dictionary_dump(dictp, 2);
-  
-  if(!(m = gavl_track_get_metadata(dictp)))
-    return NULL;
   
   ret = calloc(1, sizeof(*ret));
 
@@ -418,9 +412,9 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   
   gtk_window_set_position(GTK_WINDOW(ret->window),
                           GTK_WIN_POS_CENTER);
-  
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
-                   G_CALLBACK(delete_callback), (gpointer)ret);
+
+  g_signal_connect(G_OBJECT(ret->window), "delete-event",
+                   G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 
   gtk_window_set_title(GTK_WINDOW(ret->window), "Track info");
   
@@ -452,8 +446,8 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   gtk_container_set_border_width(GTK_CONTAINER(table), 5);
 
   /* Create cover */
-  ret->cover = create_cover(dictp);
-  
+  ret->cover = create_cover();
+
   /* Create text */
   
   ret->textview = gtk_text_view_new();
@@ -481,8 +475,6 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   gtk_container_add(GTK_CONTAINER(scrolledwindow), ret->textview);
   gtk_widget_show(scrolledwindow);
   
-  create_markup(ret, m);
-  
   gtk_widget_set_can_focus(ret->textview, FALSE);
   
   gtk_widget_set_valign(ret->textview, GTK_ALIGN_START);
@@ -507,7 +499,6 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
 
   ret->dw = bg_gtk_dict_view_create();                           
   
-  bg_gtk_dict_view_set_dict(ret->dw, dictp);
   w = bg_gtk_dict_view_get_widget(ret->dw);
   
   scrolledwindow =
@@ -543,6 +534,23 @@ bg_gtk_trackinfo_create(const gavl_dictionary_t * dictp)
   return ret;
   }
 
+void bg_gtk_trackinfo_set(bg_gtk_trackinfo_t * w,
+                          const gavl_dictionary_t * dictp)
+  {
+  const gavl_dictionary_t * m;
+
+  //  fprintf(stderr, "bg_gtk_trackinfo_create\n");
+  //  gavl_dictionary_dump(dictp, 2);
+  
+  if(!(m = gavl_track_get_metadata(dictp)))
+    return;
+  
+  create_markup(w, m);
+  set_cover(w->cover, dictp);
+  bg_gtk_dict_view_set_dict(w->dw, dictp);
+  
+  }
+
 static void trackinfo_show(bg_gtk_trackinfo_t * w, int modal, GtkWidget * parent)
   {
   parent = bg_gtk_get_toplevel(parent);
@@ -559,12 +567,35 @@ static void trackinfo_show(bg_gtk_trackinfo_t * w, int modal, GtkWidget * parent
 
 /* This pops up a window which shows all informations about a selected track */
 
-void bg_gtk_trackinfo_show(const gavl_dictionary_t * dict,
+static void hide_callback(GtkWidget * w, gpointer data)
+  {
+  bg_gtk_trackinfo_destroy((bg_gtk_trackinfo_t*)data);
+  }
+
+void bg_gtk_trackinfo_show(bg_gtk_trackinfo_t * win,
+                           const gavl_dictionary_t * dict,
                            GtkWidget * parent)
   {
-  bg_gtk_trackinfo_t * win;
-  win = bg_gtk_trackinfo_create(dict);
+  if(!win)
+    {
+    win = bg_gtk_trackinfo_create();
+    g_signal_connect(G_OBJECT(win->window), "hide", G_CALLBACK(hide_callback), (gpointer)win);
+    }
+
+  if(dict)
+    bg_gtk_trackinfo_set(win, dict);
+  
   trackinfo_show(win, 0, parent);
   }
 
+void bg_gtk_trackinfo_destroy(bg_gtk_trackinfo_t * win)
+  {
+  bg_gtk_dict_view_destroy(win->dw);
+  gtk_widget_destroy(win->window);
+  free(win);
+  }
 
+GtkWidget * bg_gtk_trackinfo_get_widget(bg_gtk_trackinfo_t * win)
+  {
+  return win->window;
+  }

@@ -237,9 +237,9 @@ static void menu_callback(GtkWidget * w, gpointer data)
   else if(w == the_menu->windows_menu.infowindow)
     {
     if(gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(the_menu->windows_menu.infowindow)))
-      gtk_widget_show(bg_gtk_info_window_get_widget(g->info_window));
+      gtk_widget_show(bg_gtk_trackinfo_get_widget(g->info_window));
     else
-      gtk_widget_hide(bg_gtk_info_window_get_widget(g->info_window));
+      gtk_widget_hide(bg_gtk_trackinfo_get_widget(g->info_window));
     }
   else if(w == the_menu->windows_menu.logwindow)
     {

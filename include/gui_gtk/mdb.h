@@ -41,7 +41,20 @@ void bg_gtk_mdb_tree_unset_player_ctrl(bg_gtk_mdb_tree_t * t);
 
 GtkWidget * bg_gtk_mdb_tree_get_widget(bg_gtk_mdb_tree_t * w);
 
-void bg_gtk_trackinfo_show(const gavl_dictionary_t * m,
+typedef struct bg_gtk_trackinfo_s bg_gtk_trackinfo_t;
+
+bg_gtk_trackinfo_t *
+bg_gtk_trackinfo_create(void);
+
+void bg_gtk_trackinfo_show(bg_gtk_trackinfo_t * w,
+                           const gavl_dictionary_t * track,
                            GtkWidget * parent);
+
+void bg_gtk_trackinfo_set(bg_gtk_trackinfo_t * w,
+                          const gavl_dictionary_t * track);
+
+void bg_gtk_trackinfo_destroy(bg_gtk_trackinfo_t * win);
+
+GtkWidget * bg_gtk_trackinfo_get_widget(bg_gtk_trackinfo_t * win);
 
 #endif // BG_GTK_MDB_H_INCLUDED

@@ -11,7 +11,6 @@ fileentry.h \
 driveselect.h \
 fileselect.h \
 gtkutils.h \
-infowindow.h \
 logwindow.h \
 message.h \
 textview.h \
