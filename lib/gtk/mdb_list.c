@@ -1283,7 +1283,7 @@ static int handle_msg_show_track_info(void * data, gavl_msg_t * msg)
     
     gavl_msg_get_arg_dictionary(msg, 0, &dict);
 
-    bg_gtk_trackinfo_show(&dict, data);
+    bg_gtk_trackinfo_show(NULL, &dict, data);
     gavl_dictionary_free(&dict);
     }
   return 1;
