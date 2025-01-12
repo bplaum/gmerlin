@@ -228,6 +228,7 @@ AC_SUBST(GTK_REQUIRED)
 dnl Always be in sync with the newest gtk
 GTK_CFLAGS="$GTK_CFLAGS -DGTK_DISABLE_DEPRECATED -DGDK_DISABLE_DEPRECATED"
 
+
 dnl
 dnl X11
 dnl
@@ -251,6 +252,12 @@ dnl Pulseaudio
 dnl
 
 GMERLIN_CHECK_PULSEAUDIO
+
+dnl
+dnl pipewire
+dnl
+
+dnl GMERLIN_CHECK_PIPEWIRE
 
 
 dnl
