@@ -55,7 +55,7 @@ static const size_t tga_id_length = 26; /* tga_id + \0 */
 
 struct read_struct
   {
-  int len;
+  uint32_t len;
   uint8_t * ptr;
   };
 
@@ -226,6 +226,7 @@ tga_result tga_read_from_memory(tga_image *dest, uint8_t * buf, int len)
           dest = letoh16(dest); }
 
     struct read_struct s;
+
     s.ptr = buf;
     s.len = len;
     
