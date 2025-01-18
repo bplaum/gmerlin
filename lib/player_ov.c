@@ -338,12 +338,16 @@ static gavl_source_status_t read_frame(bg_player_t * p)
     bg_player_video_set_eof(p);
     if(!bg_thread_wait_for_start(s->th))
       return GAVL_SOURCE_EOF;
+    
     }
   
   s->decode_duration = gavl_timer_get(s->timer) - time_before;
   
   //  fprintf(stderr, "Reading took %f seconds\n", gavl_time_to_seconds(s->decode_duration));
 
+  if(!s->frame)
+    return GAVL_SOURCE_EOF;
+    
   frame_time = gavl_time_unscale(s->output_format.timescale,
                                  s->frame->timestamp);
 
