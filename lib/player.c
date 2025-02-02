@@ -502,6 +502,7 @@ void bg_player_destroy(bg_player_t * player)
 
   gavl_dictionary_free(&player->state);
   gavl_dictionary_free(&player->seek_window);
+  gavl_dictionary_free(&player->uri_vars);
   
   free(player);
   }

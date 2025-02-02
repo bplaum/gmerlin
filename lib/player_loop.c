@@ -375,7 +375,21 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
   else
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening next location");
 
-  if(!(h = bg_load_track(&src->track, p->variant, &src->num_variants)))
+  if(p->uri_vars.num_entries > 0)
+    {
+    bg_track_set_uri_vars(&src->track, &p->uri_vars);
+    fprintf(stderr, "Using Uri vars");
+    gavl_dictionary_dump(&p->uri_vars, 2);
+    }
+  else
+    fprintf(stderr, "Got no URI vars");
+  
+  h = bg_load_track(&src->track, p->variant, &src->num_variants);
+
+  bg_track_set_uri_vars(&src->track, NULL);
+  gavl_dictionary_reset(&p->uri_vars);
+  
+  if(!h)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading failed (primary: %d)", primary);
     // fprintf(stderr, "Loading %s failed (primary: %d)\n", src->location, primary);
@@ -384,7 +398,6 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     goto fail;
     }
   
-
   /* Shut down from last playback if necessary */
   if((src == p->src) && src->input_handle)
     player_cleanup(p);
@@ -1445,16 +1458,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Couldn't switch to next variant: %d",
                      gavl_track_get_num_variants(dict));
             }
-#if 0
-          if(!(dict = bg_player_tracklist_get_current_track(&player->tl)) ||
-             !bg_track_next_variant(dict))
-            {
-            /* TODO: Switch to next track */
-            }
-          
-          /* Stop playback start again */
-          play_cmd(player);
-#endif     
           }
           break;
         }

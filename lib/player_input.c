@@ -657,10 +657,11 @@ int bg_player_handle_input_message(void * priv, gavl_msg_t * msg)
     case GAVL_MSG_NS_SRC:
       switch(msg->ID)
         {
-#if 0
-        case GAVL_MSG_SRC_RESTART:
-          bg_player_set_restart(p, gavl_msg_get_arg_int(msg, 0));
-#endif
+        case GAVL_MSG_SRC_RESTART_VARS:
+          gavl_msg_get_arg_dictionary(msg, 0, &p->uri_vars);
+          fprintf(stderr, "Got restart vars:\n");
+          gavl_dictionary_dump(&p->uri_vars, 2);
+          break;
         }
       break;
       

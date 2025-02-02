@@ -454,6 +454,10 @@ struct bg_player_s
   int64_t last_seconds;
   
   int variant;
+
+  /* Uri vars to be appended. These can e.g. be set by
+     input plugins with GAVL_MSG_SRC_RESTART_VARS messages */
+  gavl_dictionary_t uri_vars;
   };
 
 // void bg_player_set_resync(bg_player_t * player, int64_t time, int scale);
