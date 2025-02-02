@@ -423,9 +423,9 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   if(!track)
     track = bg_input_plugin_get_track_info(h, -1);
   
-  fprintf(stderr, "bg_input_plugin_load_multi\n");
-  gavl_dictionary_dump(track, 2);
-  fprintf(stderr, "\n");
+  //  fprintf(stderr, "bg_input_plugin_load_multi\n");
+  //  gavl_dictionary_dump(track, 2);
+  //  fprintf(stderr, "\n");
   
   //  pthread_mutex_init(&ret->mutex, NULL);
 
