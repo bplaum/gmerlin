@@ -69,16 +69,22 @@
 void
 bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
 
-
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
 
+void
+bg_track_set_uri_vars(gavl_dictionary_t * dict, const gavl_dictionary_t * uri_vars);
 
 int
 bg_track_get_force_raw(const gavl_dictionary_t * dict);
 
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict);
+
+
+const gavl_dictionary_t * 
+bg_track_get_uri_vars(const gavl_dictionary_t * dict);
+
 
 
 

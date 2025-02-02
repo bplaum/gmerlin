@@ -5716,6 +5716,7 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
   const gavl_dictionary_t * src_track = track; // Track (or subtrack) containing the location
   const gavl_dictionary_t * edl = NULL;
   bg_plugin_handle_t * ret = NULL;
+  const gavl_dictionary_t * extra_vars = NULL;
 
   int src_idx;
   int track_index = 0;
@@ -5727,6 +5728,21 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
   /* Multipart movie */
   if(get_multipart_edl(track, &dict))
     edl = &dict;
+
+  //  fprintf(stderr, "bg_load_track:\n");
+  //  gavl_dictionary_dump(track, 2);
+  //  fprintf(stderr, "\n");
+  
+  extra_vars = bg_track_get_uri_vars(track);
+
+#if 0  
+  if(extra_vars)
+    {
+    fprintf(stderr, "bg_load_track: Got extra vars\n");
+    gavl_dictionary_dump(extra_vars, 2);
+    fprintf(stderr, "\n");
+    }
+#endif
   
   /* Loop until we get real media */
   for(i = 0; i < MAX_REDIRECTIONS; i++)
@@ -5785,6 +5801,9 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
       if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_index))
         track_index--;
       
+      if(extra_vars)
+        gavl_dictionary_merge2(&vars, extra_vars);
+      
       real_location = gavl_url_append_vars(real_location, &vars);
       
       gavl_dictionary_free(&vars);
@@ -5837,6 +5856,10 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
       
       if(gavl_track_get_num_external_streams(ti))
         {
+        /* Propagate uri vars */
+        if(extra_vars)
+          bg_track_set_uri_vars(ti, extra_vars);
+        
         ret = bg_input_plugin_load_multi(NULL, ret);
         bg_input_plugin_set_track(ret, 0);
         }
@@ -5845,8 +5868,16 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
     else // Redirector -> Prepare for next iteration
       {
       gavl_dictionary_copy(&dict, ti);
+      /* Propagate uri vars */
+      if(extra_vars)
+        bg_track_set_uri_vars(&dict, extra_vars);
+      
       track = &dict;
       src_track = &dict;
+
+      //      fprintf(stderr, "Got redirector:\n");
+      //      gavl_dictionary_dump(&dict, 2);
+      
       }
     
     } // Redirector loop
@@ -5869,14 +5900,7 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
 #define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
 #define BG_TRACK_CURRENT_LOCATION "location"
 #define BG_TRACK_CURRENT_TRACK    "track"
-
-/*
- *  Values in the track dictionary for configuring
- */
-#define BG_TRACK_DICT_PLUGINREG   "$plugin_reg"
-
-#define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
-#define BG_TRACK_CURRENT_LOCATION "location"
+#define BG_TRACK_URIVARS          "urivars"
 
 void
 bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw)
@@ -5892,6 +5916,44 @@ bg_track_set_current_location(gavl_dictionary_t * dict, const char * location)
   dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
   gavl_dictionary_set_string(dict, BG_TRACK_CURRENT_LOCATION, location);
   }
+
+void
+bg_track_set_uri_vars(gavl_dictionary_t * track, const gavl_dictionary_t * uri_vars)
+  {
+  int num_variants;
+  gavl_dictionary_t * dict;
+  
+  dict = gavl_dictionary_get_dictionary_create(track, BG_TRACK_DICT_PLUGINREG);
+
+  if(!uri_vars)
+    gavl_dictionary_set(dict, BG_TRACK_URIVARS, NULL);
+  else
+    gavl_dictionary_set_dictionary(dict, BG_TRACK_URIVARS, uri_vars);
+
+  num_variants = gavl_track_get_num_variants(track);
+
+  //  fprintf(stderr, "bg_track_set_uri_vars, num_variants: %d\n", num_variants);
+  
+  if(num_variants)
+    {
+    int i;
+    for(i = 0; i < num_variants; i++)
+      {
+      bg_track_set_uri_vars(gavl_track_get_variant_nc(track, i),
+                            uri_vars);
+      }
+    }
+  }
+
+const gavl_dictionary_t * 
+bg_track_get_uri_vars(const gavl_dictionary_t * dict)
+  {
+  if((dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
+    return gavl_dictionary_get_dictionary(dict, BG_TRACK_URIVARS);
+  else
+    return NULL;
+  }
+
 
 int
 bg_track_get_force_raw(const gavl_dictionary_t * dict)
