@@ -41,12 +41,12 @@ else
 pulseaudio_subdirs = 
 endif
 
-if HAVE_PIPEWIRE
+# if HAVE_PIPEWIRE
 # pipewire_subdirs = pipewire
-pipewire_subdirs =
-else
-pipewire_subdirs = 
-endif
+# pipewire_subdirs =
+# else
+# pipewire_subdirs = 
+# endif
 
 if HAVE_DBUS
 dbus_subdirs = mpris
