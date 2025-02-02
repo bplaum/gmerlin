@@ -19,8 +19,6 @@ libdca-dev
 libdvdnav-dev
 libdvdread-dev
 libegl1-mesa-dev
-libfaac0
-libfaac-dev
 libflac-dev
 libfontconfig-dev
 libgl-dev
