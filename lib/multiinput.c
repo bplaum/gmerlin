@@ -405,7 +405,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   
   /* Main URI */
   const gavl_dictionary_t * s;
-  const gavl_dictionary_t * vars;
+  const gavl_dictionary_t * vars = NULL;
   
   bg_plugin_handle_t * ret;
   int num, i;

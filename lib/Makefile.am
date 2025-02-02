@@ -91,7 +91,6 @@ $(ncurses_libs) \
 $(pulseaudio_libs) \
 @FREETYPE_LIBS@ \
 @XML2_LIBS@ \
-@ICONV_LIBS@ \
 @MQ_LIBS@ \
 @LIBINTL@ \
 @JSON_LIBS@ \
