@@ -400,9 +400,12 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
   //  int num_streams;
   const char * uri = NULL;
   gavl_stream_type_t type;
+
+  char * real_uri = NULL;
   
   /* Main URI */
   const gavl_dictionary_t * s;
+  const gavl_dictionary_t * vars;
   
   bg_plugin_handle_t * ret;
   int num, i;
@@ -411,14 +414,18 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
 
   ret = calloc(1, sizeof(*ret));
 
+  if(track)
+    vars = bg_track_get_uri_vars(track);
+  
   ret->plugin = (bg_plugin_common_t*)&multi_plugin;
   ret->info = bg_plugin_find_by_name("i_multi");
 
   if(!track)
     track = bg_input_plugin_get_track_info(h, -1);
   
-  //  fprintf(stderr, "bg_input_plugin_load_multi\n");
-  //  gavl_dictionary_dump(track, 2);
+  fprintf(stderr, "bg_input_plugin_load_multi\n");
+  gavl_dictionary_dump(track, 2);
+  fprintf(stderr, "\n");
   
   //  pthread_mutex_init(&ret->mutex, NULL);
 
@@ -434,10 +441,24 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
     {
     if(gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
       {
+      if(vars)
+        {
+        real_uri = gavl_strdup(uri);
+        real_uri = gavl_url_append_vars(real_uri, vars);
+        uri = real_uri;
+        }
+
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading primary uri: %s", uri);
+      
       if(!(h = bg_input_plugin_load(uri)))
         goto fail;
       bg_input_plugin_set_track(h, 0);
+
+      if(real_uri)
+        {
+        free(real_uri);
+        real_uri = NULL;
+        }
       }
     }
 
