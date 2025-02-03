@@ -7,7 +7,7 @@ else
 gtk_pc = 
 endif
 
-SUBDIRS = iconfont web lib plugins tests apps icons include m4 utils . po
+SUBDIRS = iconfont web lib plugins tests apps icons include m4 utils . po doc
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gmerlin.pc $(gtk_pc) 
@@ -21,6 +21,4 @@ EXTRA_DIST= \
 config.rpath \
 gmerlin.pc.in \
 autogen.sh \
-make_potfiles \
-README.gavftools
-
+make_potfiles

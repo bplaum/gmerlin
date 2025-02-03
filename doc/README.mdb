@@ -104,4 +104,10 @@ country *
 Metadata tags with "*" can have multiple entries. 
 
 3.4 Multi part movies
+Multipart movies are opened ad played back as if they were a single file.
 
+Filenames:    Movie name (2012) part1.avi
+              Movie name (2012) part2.avi
+Movie poster: Movie name (2012).jpg
+Wallpaper:    Movie name (2012).fanart.jpg
+NFO-file:     Movie name (2012).nfo

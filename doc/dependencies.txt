@@ -1,11 +1,12 @@
-Packages to install before compiling all gmerlin packages
-
-This list is for Raspbian Bookworm (64 bit). Package names might
-differ on your system.
-
+# Packages to install before compiling all gmerlin packages
+# 
+# This list is for Raspbian Bookworm (64 bit). Package names might
+# differ on your system.
+#
 autoconf
 automake
 autotools-dev
+gettext
 liba52-0.7.4-dev
 libavcodec-dev
 libavformat-dev
