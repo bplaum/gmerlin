@@ -12,6 +12,7 @@ driveselect.h \
 fileselect.h \
 gtkutils.h \
 logwindow.h \
+mdb.h \
 message.h \
 textview.h \
 urlselect.h

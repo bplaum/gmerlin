@@ -7,6 +7,7 @@ bg_version.h \
 bgcairo.h \
 bggavl.h \
 bgmsg.h \
+bgdbus.h \
 bgplug.h \
 bgthread.h \
 cfg_dialog.h \
@@ -14,6 +15,7 @@ cfg_registry.h \
 cfgctx.h \
 cmdline.h \
 colormatrix.h \
+downloader.h \
 encoder.h \
 filters.h \
 frametimer.h \
@@ -26,6 +28,7 @@ log.h \
 lpcm_handler.h \
 mdb.h \
 mediaconnector.h \
+objectcache.h \
 ocr.h \
 osd.h \
 ov.h \
@@ -38,6 +41,7 @@ pluginregistry.h \
 preset.h \
 recorder.h \
 resourcemanager.h \
+ringbuffer.h \
 singlepic.h \
 state.h \
 streaminfo.h \

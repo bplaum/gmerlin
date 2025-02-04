@@ -40,7 +40,7 @@
 #include <gmerlin/iconfont.h>
 #include <gmerlin/frontend.h>
 #include <gmerlin/application.h>
-#include <gmerlin/recordingdevice.h>
+#include <gmerlin/resourcemanager.h>
 
 
 #define LOG_DOMAIN "gmerlin-play"

@@ -1,5 +1,5 @@
 
-AC_INIT([gmerlin], [2.0.0])
+AC_INIT([gmerlin], [2.0.0pre1])
 AC_CONFIG_SRCDIR([include/gmerlin/player.h])
 
 AM_INIT_AUTOMAKE
@@ -74,26 +74,6 @@ dnl
 
 AM_GNU_GETTEXT([external])
 
-dnl
-dnl Doxygen
-dnl
-
-test_doxygen="true"
-have_doxygen="false"
-
-AC_ARG_WITH(doxygen,
-    AS_HELP_STRING([--without-doxygen],
-    [disable documentation generation]),
-    test_doxygen="false")
-
-if test "x$test_doxygen" = "xtrue"; then
-  AC_CHECK_PROG(DOXYGEN, doxygen, "doxygen")
-  if test "x$DOXYGEN" != "x"; then
-    have_doxygen="true"
-  fi
-fi
-
-AM_CONDITIONAL(HAVE_DOXYGEN, test "x$have_doxygen" = "xtrue")
 
 dnl
 dnl texinfo
@@ -833,7 +813,6 @@ apps/remote/Makefile \
 apps/renderer/Makefile \
 apps/server/Makefile \
 doc/Makefile \
-doc/Doxyfile \
 icons/Makefile \
 m4/Makefile \
 utils/Makefile \
@@ -857,7 +836,6 @@ plugins/audiofilters/Makefile \
 plugins/x11/Makefile \
 plugins/cdaudio/Makefile \
 plugins/edl/Makefile \
-plugins/gavl/Makefile \
 plugins/jpeg/Makefile \
 plugins/png/Makefile \
 plugins/pulseaudio/Makefile \

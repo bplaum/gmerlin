@@ -70,4 +70,17 @@ void bg_resourcemanager_cleanup();
 gavl_dictionary_t * bg_resource_get_by_id(int local, const char * id);
 gavl_dictionary_t * bg_resource_get_by_idx(int local, int idx);
 
+/* List recording devices */
+void bg_opt_list_recording_sources(void * data, int * argc,
+                                   char *** _argv, int arg);
+
+#define BG_OPT_LIST_RECORDERS                  \
+  { \
+  .arg =         "-list-rec-src", \
+  .help_string = TRS("List recording sources"), \
+  .callback =    bg_opt_list_recording_sources, \
+  }
+
+
+
 #endif // BG_RESOURCEMANAGER_H_INCLUDED

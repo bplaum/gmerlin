@@ -24,7 +24,7 @@
 
 #include <config.h>
 #include <gmerlin/mdb.h>
-#include <gmerlin/recordingdevice.h>
+// #include <gmerlin/recordingdevice.h>
 
 #include <gavl/utils.h>
 #include <gavl/metatags.h>
@@ -34,7 +34,6 @@
 typedef struct
   {
   gavl_array_t devices;
-  //  bg_recording_device_registry_t * reg;
   
   gavl_dictionary_t * root;
   
