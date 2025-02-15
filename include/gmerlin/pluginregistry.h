@@ -126,10 +126,6 @@ struct bg_plugin_info_s
   gavl_array_t * extensions;
   gavl_array_t * protocols;
   
-  // char * mimetypes;       //!< Mimetypes, this plugin can handle
-  // char * extensions;      //!< Extensions, this plugin can handle
-  // char * protocols;       //!< Network protocols, this plugin can handle
-  
   gavl_codec_id_t * compressions; //!< Compressions, this plugin can handle
   uint32_t        * codec_tags;   //!< Codec tags, this plugin can handle
 
@@ -228,10 +224,9 @@ struct bg_plugin_handle_s
   bg_controllable_t * ctrl_plugin; // From the plugin
   bg_control_t control;          // Internally used
   
-  bg_controllable_t ctrl_ext;    // For exrernal use
+  bg_controllable_t ctrl_ext;    // For external use
 
   bg_media_source_t * src;
-  bg_media_sink_t   * sink;
   };
 
 /*
