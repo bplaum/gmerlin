@@ -23,8 +23,7 @@ endif
 
 bin_PROGRAMS = gmerlin-mediadump
 
-noinst_PROGRAMS = audioplayer1 \
-videoplayer1 \
+noinst_PROGRAMS = \
 fvtest \
 server \
 client \
@@ -50,9 +49,6 @@ gmerlin_vanalyze \
 gmerlin_vpsnr
 
 # noinst_HEADERS = player1.h
-
-audioplayer1_SOURCES = audioplayer1.c
-audioplayer1_LDADD = ../lib/libgmerlin.la -ldl
 
 
 sqlextract_SOURCES = sqlextract.c
@@ -116,9 +112,6 @@ gmerlin_imgdiff_LDADD = ../lib/libgmerlin.la -ldl
 
 textrenderer_SOURCES = textrenderer.c
 textrenderer_LDADD = ../lib/libgmerlin.la -ldl
-
-videoplayer1_SOURCES = videoplayer1.c
-videoplayer1_LDADD = ../lib/libgmerlin.la -ldl
 
 fvtest_SOURCES = fvtest.c
 fvtest_LDADD = ../lib/libgmerlin.la -ldl
