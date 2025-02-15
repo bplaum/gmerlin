@@ -378,11 +378,11 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
   if(p->uri_vars.num_entries > 0)
     {
     bg_track_set_uri_vars(&src->track, &p->uri_vars);
-    fprintf(stderr, "Using Uri vars");
-    gavl_dictionary_dump(&p->uri_vars, 2);
+    //    fprintf(stderr, "Using Uri vars\n");
+    //    gavl_dictionary_dump(&p->uri_vars, 2);
     }
   else
-    fprintf(stderr, "Got no URI vars");
+    fprintf(stderr, "Got no URI vars\n");
   
   h = bg_load_track(&src->track, p->variant, &src->num_variants);
 
