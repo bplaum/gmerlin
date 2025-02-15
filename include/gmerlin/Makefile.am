@@ -8,7 +8,6 @@ bgcairo.h \
 bggavl.h \
 bgmsg.h \
 bgdbus.h \
-bgplug.h \
 bgthread.h \
 cfg_dialog.h \
 cfg_registry.h \
