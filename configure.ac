@@ -14,7 +14,7 @@ BG_VERSION_MICRO=`echo $VERSION | cut -d . -f 3 | cut -d p -f 1`
 
 BUILD_ID=`date +%Y-%m-%d-%H-%M`
 
-LTVERSION_CURRENT="2"
+LTVERSION_CURRENT="3"
 LTVERSION_REVISION="0"
 LTVERSION_AGE="0"
 
