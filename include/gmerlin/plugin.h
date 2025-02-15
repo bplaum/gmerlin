@@ -177,34 +177,6 @@ typedef enum
  *  which access multiple drives. For output plugins, devices are normal parameters.
  */
 
-#if 0
-typedef struct
-  {
-  char * device; //!< String, which can be passed to the open() method
-  char * name;   //!< More humanized description, might be NULL
-  } bg_device_info_t;
-
-/** \ingroup plugin
- *  \brief Append device info to an existing array and return the new array.
- *  \param arr An array (can be NULL)
- *  \param device Device string
- *  \param name Humanized description (can be NULL)
- *  \returns Newly allocated array. The source array is freed.
- *
- *  This is used mainly by the device detection routines of the plugins
- */
-
-bg_device_info_t * bg_device_info_append(bg_device_info_t * arr,
-                                         const char * device,
-                                         const char * name);
-
-/** \ingroup plugin
- *  \brief Free an array of device descriptions
- *  \param arr a device array
- */
-
-void bg_device_info_destroy(bg_device_info_t * arr);
-#endif
 
 /* Common part */
 
