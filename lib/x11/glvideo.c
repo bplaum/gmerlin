@@ -73,7 +73,8 @@
 /* Use textures imported from DMA-Buffers */
 #define MODE_TEXTURE_DMABUF  3
 
-#define DEFAULT_GL_MODE GAVL_HW_EGL_GLES_X11
+// #define DEFAULT_GL_MODE GAVL_HW_EGL_GLES_X11
+// #define DEFAULT_GL_MODE GAVL_HW_EGL_GL_X11
 
 typedef struct
   {
@@ -125,27 +126,19 @@ typedef struct
   int use_cmat_ovl;
   
   gavl_gl_frame_info_t * cur_frame;
+  gavl_hw_type_t hwtype;
+  
   } gl_priv_t;
 
 static int supports_hw_gl(driver_data_t* d,
                           gavl_hw_context_t * ctx)
   {
   gavl_hw_type_t type = gavl_hw_ctx_get_type(ctx);
-
-#ifdef HAVE_DRM  
   gl_priv_t * p = d->priv;
-#endif
   
-  switch(type)
-    {
-    case GAVL_HW_EGL_GL_X11:
-    case GAVL_HW_EGL_GLES_X11:
-      return 1;
-      break;
-    default:
-      break;
-    }
-
+  if(type == p->hwtype)
+    return 1;
+  
 #if 0 // No hardware context supports these yet
   if(gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GL_X11) ||
      gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GLES_X11))
@@ -210,7 +203,7 @@ static void matrix_init(double dst[4][5])
   }
                         
 
-static const int default_attributes[] =
+static const int default_attributes_gles[] =
   {
     EGL_RED_SIZE,   8,
     EGL_GREEN_SIZE, 8,
@@ -219,6 +212,23 @@ static const int default_attributes[] =
     EGL_CONFORMANT, EGL_OPENGL_ES3_BIT,
     EGL_NONE
   };
+
+static const int default_attributes_gl[] =
+  {
+    EGL_RED_SIZE,   8,
+    EGL_GREEN_SIZE, 8,
+    EGL_BLUE_SIZE,  8,
+    EGL_ALPHA_SIZE, 8,
+    EGL_NONE
+  };
+
+static const int * default_attributes(gavl_hw_type_t type)
+  {
+  if(type == GAVL_HW_EGL_GLES_X11)
+    return default_attributes_gles;
+  else
+    return default_attributes_gl;
+  }
 
 static void update_colormatrix(driver_data_t* d);
 
@@ -660,27 +670,55 @@ static void set_pixelformat_matrix(double ret[4][5], gavl_pixelformat_t pfmt)
     matrix_init(ret);
   }
 
-static int init_gl(driver_data_t * d)
+static void dump_image_formats(gavl_pixelformat_t * fmts)
+  {
+  int idx = 0;
+  while(fmts[idx])
+    {
+    fprintf(stderr, "  %s\n", gavl_pixelformat_to_string(fmts[idx]));
+    idx++;
+    }
+  }
+
+static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   {
   gl_priv_t * priv;
   priv = calloc(1, sizeof(*priv));
+  priv->hwtype = type;
+  
   /* Create initial context to check if that works */
-  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, DEFAULT_GL_MODE, d->win->dpy)))
+  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes(priv->hwtype), priv->hwtype, d->win->dpy)))
     {
     free(priv);
     return 0;
     }
-
+  
   d->priv = priv;
   
   d->img_formats = gavl_hw_ctx_get_image_formats(priv->hwctx_priv);
   d->ovl_formats = gavl_hw_ctx_get_overlay_formats(priv->hwctx_priv);
 
+  fprintf(stderr, "Type: %s\n", gavl_hw_type_to_string(type));
+  fprintf(stderr, "Image formats:\n");
+  dump_image_formats(d->img_formats);
+  fprintf(stderr, "Overlay formats:\n");
+  dump_image_formats(d->ovl_formats);
+  
+  
   d->flags |= (DRIVER_FLAG_BRIGHTNESS | DRIVER_FLAG_SATURATION | DRIVER_FLAG_CONTRAST);
   
   return 1;
   }
 
+static int init_gl(driver_data_t * d)
+  {
+  return init_gl_internal(d, GAVL_HW_EGL_GL_X11);
+  }
+
+static int init_gles(driver_data_t * d)
+  {
+  return init_gl_internal(d, GAVL_HW_EGL_GLES_X11);
+  }
 
 static void set_overlay_gl(driver_data_t* d, overlay_stream_t * str)
   {
@@ -898,12 +936,12 @@ static int open_gl(driver_data_t * d)
   switch(priv->mode)
     {
     case MODE_TEXTURE_DIRECT:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (direct)",
-               (src_type == GAVL_HW_EGL_GL_X11) ? "" : "ES");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL%s via EGL (direct)",
+               (src_type == GAVL_HW_EGL_GL_X11) ? "" : " ES");
       break;
     case MODE_TEXTURE_COPY:
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL %s via EGL (indirect)",
-               (DEFAULT_GL_MODE == GAVL_HW_EGL_GL_X11) ? "" : "ES");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL%s via EGL (indirect)",
+               (priv->hwtype == GAVL_HW_EGL_GL_X11) ? "" : " ES");
       break;
     case MODE_TEXTURE_DMABUF:
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing DMA buffers with OpenGL ES via EGL");
@@ -1311,10 +1349,8 @@ static void close_gl(driver_data_t * d)
     {
     /* Re-create the hw context */
     gavl_hw_ctx_destroy(priv->hwctx_priv);
-    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes, DEFAULT_GL_MODE, d->win->dpy);
+    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes(priv->hwtype), priv->hwtype, d->win->dpy);
     }
-
-  
   }
 
 static void cleanup_gl(driver_data_t * d)
@@ -1395,7 +1431,6 @@ static void update_colormatrix(driver_data_t* d)
   priv->bsc[3][3] = 1.0;
   priv->bsc[3][4] = 0.0;
   
-  
   priv->colormatrix_changed = 1;
   priv->colormatrix_changed_ovl = 1;
   }
@@ -1422,6 +1457,7 @@ static void set_saturation_gl(driver_data_t* d,float val)
   update_colormatrix(d);
   
   }
+
 static void set_contrast_gl(driver_data_t* d,float val)
   {
   gl_priv_t * priv;
@@ -1433,13 +1469,32 @@ static void set_contrast_gl(driver_data_t* d,float val)
   update_colormatrix(d);
   }
 
-
 const video_driver_t gl_driver =
   {
     .name               = "OpenGL",
     .can_scale          = 1,
     .supports_hw        = supports_hw_gl,
     .init               = init_gl,
+    .open               = open_gl,
+    .create_frame       = create_frame_gl,
+    .set_brightness     = set_brightness_gl,
+    .set_saturation     = set_saturation_gl,
+    .set_contrast       = set_contrast_gl,
+    .set_frame          = set_frame_gl,
+    .put_frame          = put_frame_gl,
+    .close              = close_gl,
+    .cleanup            = cleanup_gl,
+    .init_overlay_stream = init_overlay_stream_gl,
+    .create_overlay     = create_overlay_gl,
+    .set_overlay        = set_overlay_gl,
+  };
+
+const video_driver_t gles_driver =
+  {
+    .name               = "OpenGL ES",
+    .can_scale          = 1,
+    .supports_hw        = supports_hw_gl,
+    .init               = init_gles,
     .open               = open_gl,
     .create_frame       = create_frame_gl,
     .set_brightness     = set_brightness_gl,

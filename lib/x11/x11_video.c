@@ -35,6 +35,7 @@
 static video_driver_t const * const drivers[] =
   {
 #if defined (HAVE_EGL)
+    &gles_driver,
     &gl_driver,
 #endif
 

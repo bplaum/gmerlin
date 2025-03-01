@@ -136,6 +136,7 @@ extern const video_driver_t xv_driver;
 
 #if defined(HAVE_GLX) || defined(HAVE_EGL)
 extern const video_driver_t gl_driver;
+extern const video_driver_t gles_driver;
 #endif
 
 #ifdef HAVE_MMAL
