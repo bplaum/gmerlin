@@ -191,8 +191,8 @@ int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record)
 
   if(!p->pa)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection to Pulseaudio failed: %s",
-           pa_strerror(error));
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection to Pulseaudio (%s/%s) failed: %s",
+             server, dev, pa_strerror(error));
     return 0;
     }
   p->block_align = p->format.num_channels *

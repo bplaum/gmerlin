@@ -38,7 +38,7 @@
 
 typedef struct
   {
-  //  gavl_overlay_blend_context_t * ctx;
+  gavl_overlay_blend_context_t * ctx;
   gavl_overlay_t * ovl;
   gavl_video_format_t format;
     
@@ -110,21 +110,22 @@ void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   }
 
 
-int bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect)
+int bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format)
   {
   int ret;
 
   //  fprintf(stderr, "open_ov\n");
   
   LOCK(ov);
-  ret = ov->plugin->open(ov->priv, format, keep_aspect);
+  ret = ov->plugin->open(ov->priv, uri, format);
   if(ret)
     ov->sink_int = ov->plugin->get_sink(ov->priv);
   UNLOCK(ov);
 
-  gavl_video_sink_set_lock_funcs(ov->sink_int,
-                                 bg_plugin_lock, bg_plugin_unlock,
-                                 ov->h);
+  if(ov->sink_int)
+    gavl_video_sink_set_lock_funcs(ov->sink_int,
+                                   bg_plugin_lock, bg_plugin_unlock,
+                                   ov->h);
   
   if(!ret)
     return ret;
@@ -156,7 +157,7 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
   
   ov->num_ovl_str++;
 
-#if 0  
+#if 1
   if(!format->image_width || !format->image_height)
     {
     format->image_width = ov->format.image_width;
@@ -169,12 +170,26 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
   
   /* Try hardware overlay */
   LOCK(ov);
-  str->sink_int = ov->plugin->add_overlay_stream(ov->priv, format);
+  if(ov->plugin->add_overlay_stream)
+    str->sink_int = ov->plugin->add_overlay_stream(ov->priv, format);
   UNLOCK(ov);
+
+  if(str->sink_int)
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+             "Using hardeware overlay for stream %d",
+             ov->num_ovl_str-1);
+    }
+  else
+    {
+    str->ctx = gavl_overlay_blend_context_create();
+    gavl_overlay_blend_context_init(str->ctx, &ov->format, format);
+    str->sink_int = gavl_overlay_blend_context_get_sink(str->ctx);
+    
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+             "Using software overlay for stream %d", ov->num_ovl_str-1);
+    }
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
-           "Using hardeware overlay for stream %d",
-           ov->num_ovl_str-1);
   return str->sink_int;
   }
 

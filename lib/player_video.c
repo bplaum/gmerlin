@@ -66,6 +66,10 @@ void bg_player_video_destroy(bg_player_t * p)
   bg_osd_destroy(s->osd);
   bg_accelerator_map_destroy(s->accel_map);
   bg_subtitle_handler_destroy(s->sh);
+
+  if(s->sink_uri)
+    free(s->sink_uri);
+  
   }
 
 

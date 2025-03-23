@@ -848,13 +848,6 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
         }
       }
       break;
-    case BG_MSG_NS_BACKEND:
-      {
-      switch(msg->ID)
-        {
-        }
-      }
-      break;
     case GAVL_MSG_NS_GENERIC:
       {
       switch(msg->ID)

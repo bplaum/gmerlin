@@ -822,3 +822,25 @@ const char * bg_player_get_state_icon(int status)
     }
   return NULL;
   }
+
+void bg_player_set_audio_sink_m(gavl_msg_t * msg, const char * uri)
+  {
+  gavl_value_t val;
+  gavl_value_init(&val);
+  gavl_value_set_string(&val, uri);
+  gavl_msg_set_state(msg,
+                     BG_CMD_SET_STATE, 1, BG_PLAYER_STATE_CTX,
+                     BG_PLAYER_STATE_OA_URI, &val);
+  gavl_value_free(&val);
+  }
+
+void bg_player_set_video_sink_m(gavl_msg_t * msg, const char * uri)
+  {
+  gavl_value_t val;
+  gavl_value_init(&val);
+  gavl_value_set_string(&val, uri);
+  gavl_msg_set_state(msg,
+                     BG_CMD_SET_STATE, 1, BG_PLAYER_STATE_CTX,
+                     BG_PLAYER_STATE_OV_URI, &val);
+  gavl_value_free(&val);
+  }

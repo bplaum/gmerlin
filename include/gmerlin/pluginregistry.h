@@ -453,8 +453,13 @@ bg_plugin_handle_t * bg_input_plugin_load_full(const char * location);
  *  If ret is non-null before the call, the old plugin will be unrefed.
  */
 
+
 bg_plugin_handle_t * bg_input_plugin_load_edl(const gavl_dictionary_t * edl);
 bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track, bg_plugin_handle_t * h);
+
+bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type);
+
+
 
 /*
  *  Load a track with the global plugin registry
@@ -850,20 +855,6 @@ bg_plugin_handle_t * bg_plugin_load(const bg_plugin_info_t * info);
 
 bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict);
 
-
-/** \ingroup plugin_registry
- *  \brief Load a video output plugin
- *  \param reg A plugin registry
- *  \param info The plugin info
- *  \param window_id The window ID or NULL
- *
- *  Load a video output plugin for embedding into an already existing window
- *  and return handle with reference count of 1
- */
-
-bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options,
-                                       const char * window_id);
-
 /** \ingroup plugin_registry
  *  \brief Lock a plugin
  *  \param h A plugin handle
@@ -1035,11 +1026,6 @@ void bg_plugins_cleanup();
 void bg_plugin_registry_list_input(void * data, int * argc,
                                    char *** _argv, int arg);
 
-void bg_plugin_registry_list_oa(void * data, int * argc,
-                                char *** _argv, int arg);
-
-void bg_plugin_registry_list_ov(void * data, int * argc,
-                                char *** _argv, int arg);
 
 void bg_plugin_registry_list_fa(void * data, int * argc,
                                 char *** _argv, int arg);
@@ -1081,6 +1067,8 @@ void bg_plugin_registry_opt_fv(void * data, int * argc,
 void bg_plugin_registry_opt_vis(void * data, int * argc,
                                 char *** _argv, int arg);
 
+
+
 /* Store plugin options globally */
 const gavl_value_t * bg_plugin_config_get(bg_plugin_type_t type);
 void bg_plugin_config_set(bg_plugin_type_t type, const gavl_value_t *);
@@ -1112,7 +1100,6 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
 int bg_plugin_config_parse_multi(gavl_array_t * arr,
                                  const char * str);
 
-
 #define BG_PLUGIN_OPT_INPUT \
   { \
   .arg =         "-ip", \
@@ -1123,7 +1110,6 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
   .callback =    bg_plugin_registry_opt_ip, \
   }
 
-
 #define BG_PLUGIN_OPT_LIST_INPUT \
   { \
   .arg =         "-list-input", \
@@ -1131,19 +1117,6 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
   .callback =    bg_plugin_registry_list_input, \
   }
 
-#define BG_PLUGIN_OPT_LIST_OA        \
-  { \
-  .arg =         "-list-oa", \
-  .help_string = TRS("List the names of the installed audio output plugins"), \
-  .callback =    bg_plugin_registry_list_oa, \
-  }
-
-#define BG_PLUGIN_OPT_LIST_OV \
-  { \
-  .arg =         "-list-ov", \
-  .help_string = TRS("List the names of the installed video output plugins"), \
-  .callback =    bg_plugin_registry_list_ov, \
-  }
 
 #define BG_PLUGIN_OPT_LIST_FA \
   { \
@@ -1179,8 +1152,8 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
 #define BG_PLUGIN_OPT_OA      \
   { \
   .arg =         "-oa", \
-  .help_arg    = "plugin[?param1=val1[&param2=val2...]]", \
-  .help_string = TRS("Set audio output plugin. Use -list-oa to list available plugins "\
+    .help_arg    = "protocol://host/path[?param1=val1[&param2=val2...]]",             \
+  .help_string = TRS("Set audio output plugin. Use -list-oa to list available sinks "\
                      "and -list-plugin-parameters <plugin> to list all supported options"), \
   .callback =    bg_plugin_registry_opt_oa, \
   }
@@ -1188,8 +1161,8 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
 #define BG_PLUGIN_OPT_OV                    \
   { \
   .arg =         "-ov", \
-  .help_arg    = "plugin[?param1=val1[&param2=val2...]]", \
-  .help_string = TRS("Set video output plugin. Use -list-ov to list available plugins "\
+  .help_arg    = "protocol://host/path[?param1=val1[&param2=val2...]]", \
+  .help_string = TRS("Set video output plugin. Use -list-ov to list available sinks "\
                      "and -list-plugin-parameters <plugin> to list all supported options"), \
   .callback =    bg_plugin_registry_opt_ov, \
   }
@@ -1244,6 +1217,7 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
 
 const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_type_t type);
 
+char * bg_get_default_sink_uri(int plugin_type);
 
 
 

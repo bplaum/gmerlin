@@ -117,57 +117,40 @@ static void set_backend_id(gavl_dictionary_t * dict)
   gavl_dictionary_set_string_nocopy(dict, GAVL_META_HASH, bg_make_backend_id(klass));
   }
 
-static int resource_supported(const gavl_dictionary_t * dict)
+static int resource_supported(gavl_dictionary_t * dict)
   {
   int ret = 0;
-  char * protocol = NULL;
+  const bg_plugin_info_t * info;
   const char * klass;
-
+  int plugin_type = 0;
+  const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+  
   if(!(klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS)))
     return 0;
 
   if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
-    {
-    const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
-    
-    if(!uri)
-      goto fail;
-    
-    if(!gavl_url_split(uri, &protocol, NULL, NULL, NULL, NULL, NULL))
-      goto fail;
-    
-    if(!bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_RENDERER))
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No plugin found for resource %s", uri);
-      goto fail;
-      }
-    ret = 1;
-    }
+    plugin_type = BG_PLUGIN_BACKEND_RENDERER;
   else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
+    plugin_type = BG_PLUGIN_BACKEND_MDB;
+  else if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
+    plugin_type = BG_PLUGIN_OUTPUT_AUDIO;
+  else if(!strcmp(klass, GAVL_META_CLASS_SINK_VIDEO))
+    plugin_type = BG_PLUGIN_OUTPUT_VIDEO;
+  else if(gavl_string_starts_with(klass, "item.recorder."))
+    plugin_type = BG_PLUGIN_INPUT;
+  
+  if(!plugin_type || !(info = bg_plugin_find_by_protocol(uri, plugin_type)))
     {
-    const char * uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
-    
-    if(!uri)
-      goto fail;
-    
-    if(!gavl_url_split(uri, &protocol, NULL, NULL, NULL, NULL, NULL))
-      goto fail;
-    
-    if(!bg_plugin_find_by_protocol(protocol, BG_PLUGIN_BACKEND_MDB))
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No plugin found for resource %s", uri);
-      goto fail;
-      }
-    ret = 1;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "No plugin found for resource %s, klass: %s type: %s", uri,
+             klass, bg_plugin_type_to_string(plugin_type));
+    goto fail;
     }
-  else
-    {
-    ret = 1;
-    }
-
+  
+  gavl_dictionary_set_string(dict, BG_RESOURCE_PLUGIN, info->name);
+  
+  ret = 1;
+  
   fail:
-  if(protocol)
-    free(protocol);
   
   return ret;
   }
@@ -235,9 +218,9 @@ static void del(int local, int idx)
   if(!local)
     {
     const char * id;
-    const gavl_dictionary_t * dict;
+    gavl_dictionary_t * dict;
 
-    if((dict = gavl_value_get_dictionary(&arr->entries[idx])) &&
+    if((dict = gavl_value_get_dictionary_nc(&arr->entries[idx])) &&
        (id = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
        resource_supported(dict))
       {
@@ -413,19 +396,55 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
   return 1;
   }
 
+static void add_x11_resources()
+  {
+  gavl_dictionary_t dict;
+  if(bg_plugin_find_by_name("i_x11"))
+    {
+    gavl_dictionary_init(&dict);
+
+    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 grabber");
+    gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-src:///");
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_RECORDER);
+    
+    add(0, &dict, "x11-src");
+    
+    gavl_dictionary_free(&dict);
+    }
+
+  if(bg_plugin_find_by_name("ov_x11"))
+    {
+    gavl_dictionary_init(&dict);
+
+    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 output");
+    gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-sink:///");
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_VIDEO);
+    
+    add(0, &dict, "x11-sink");
+    
+    gavl_dictionary_free(&dict);
+    }
+  
+  
+  }
+
 static void * thread_func(void * data)
   {
   int result;
   int i;
   gavl_time_t delay_time = GAVL_TIME_SCALE; // 1000 ms
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Started thread");
+
   /* Delay for 1 sec to give other modules a chance to connect their
      message sinks */
   gavl_time_delay(&delay_time);
+
+  add_x11_resources();
+  
   
   delay_time = GAVL_TIME_SCALE / 20; // 50 ms
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Started thread");
 
   while(1)
     {
@@ -758,7 +777,8 @@ static void list_resource_array(gavl_array_t * arr)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])))
       {
-      printf("# %s\n", gavl_dictionary_get_string(dict, GAVL_META_LABEL));
+      printf("# %s [Plugin: %s]\n", gavl_dictionary_get_string(dict, GAVL_META_LABEL),
+             gavl_dictionary_get_string(dict, BG_RESOURCE_PLUGIN));
       printf("%s\n", gavl_dictionary_get_string(dict, GAVL_META_URI));
       }
     }
@@ -785,7 +805,19 @@ void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_ti
 void bg_opt_list_recording_sources(void * data, int * argc,
                                    char *** _argv, int arg)
   {
-  bg_resource_list_by_class("item.recorder.", 0, 1000);
+  bg_resource_list_by_class("item.recorder.", 0, 5 * GAVL_TIME_SCALE /* 1 sec */ );
+  }
+
+void bg_opt_list_audio_sinks(void * data, int * argc,
+                            char *** _argv, int arg)
+  {
+  bg_resource_list_by_class(GAVL_META_CLASS_SINK_AUDIO, 1, 5 * GAVL_TIME_SCALE /* 1 sec */ );
+  }
+
+void bg_opt_list_video_sinks(void * data, int * argc,
+                             char *** _argv, int arg)
+  {
+  bg_resource_list_by_class(GAVL_META_CLASS_SINK_VIDEO, 1, 5 * GAVL_TIME_SCALE /* 1 sec */ );
   }
 
 void bg_resourcemanager_cleanup()

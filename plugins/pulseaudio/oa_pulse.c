@@ -20,6 +20,7 @@
 
 
 
+#include <unistd.h>
 #include <string.h>
 
 #include <pulseaudio_common.h>
@@ -45,25 +46,52 @@ write_func_pulse(void * p, gavl_audio_frame_t * f)
   return GAVL_SINK_OK;
   }
 
-static int open_pulse(void * data,
+static int open_pulse(void * data, const char * uri,
                       gavl_audio_format_t * format)
   {
+  char thishost[HOST_NAME_MAX];
   bg_pa_output_t * priv;
-  char * server;
-  char * dev;
+
+  char * host = NULL;
+  char * path = NULL;
+  
   priv = data;
+  
+  if(!gavl_url_split(uri, NULL, NULL, NULL, &host, NULL, &path))
+    return 0;
 
-  server = priv->server;
-  dev = priv->dev;
+  if(*host == '\0')
+    {
+    free(host);
+    host = NULL;
+    }
+  
+  if(path && ((*path == '\0') || !strcmp(path, "/")))
+    {
+    free(path);
+    path = NULL;
+    }
+  
+  //  if(!host)
+  //    host = gavl_strdup("default");
 
-  if(!strcmp(server, "default"))
-    server = NULL;
-  if(!strcmp(dev, "default"))
-    dev = NULL;
+  if(host)
+    {
+    gethostname(thishost, HOST_NAME_MAX);
+    if(!strcmp(thishost, host) || !strcmp(host, "default")) // Revert to default
+      {
+      free(host);
+      host = NULL;
+      }
+    }
+  
+  //  if(!path)
+  //    path = gavl_strdup("/default");
+  
   
   gavl_audio_format_copy(&priv->com.format, format);
   
-  if(!bg_pa_open(&priv->com, server, dev, 0))
+  if(!bg_pa_open(&priv->com, host, (path ? (path+1) : NULL), 0))
     return 0;
   
   gavl_audio_format_copy(format, &priv->com.format);
@@ -73,6 +101,14 @@ static int open_pulse(void * data,
   
   return 1;
   }
+
+static char const * const protocols = PULSE_SINK_PROTOCOL;
+
+static const char * get_protocols_pulse(void * priv)
+  {
+  return protocols;
+  }
+
 
 static int start_pulse(void * p)
   {
@@ -126,53 +162,8 @@ static void destroy_pulse_output(void * priv)
   bg_pa_output_t * p = priv;
   bg_controllable_cleanup(&p->com.ctrl);
 
-  if(p->server)
-    free(p->server);
-  if(p->dev)
-    free(p->dev);
   
   free(p);
-  }
-
-static bg_parameter_info_t parameters[] =
-  {
-    {
-      .name =        "server",
-      .long_name =   TRS("Server"),
-      .type =        BG_PARAMETER_STRING,
-      .val_default = GAVL_VALUE_INIT_STRING("default"),
-      .help_string = TRS("Pulseaudio server to use. Enter \"default\" to use system default"),
-    },
-    {
-      .name =        "sink",
-      .long_name =   TRS("Sink"),
-      .type =        BG_PARAMETER_STRING,
-      .val_default = GAVL_VALUE_INIT_STRING("default"),
-      .help_string = TRS("Pulseaudio sink to use. Call \"pactl list sinks\" for a list of available sinks. Enter \"default\" to use system default"),
-    },
-    { /* End */ }
-  };
-
-static const bg_parameter_info_t * get_parameters_pulse(void * priv)
-  {
-  return parameters;
-  }
-
-static void set_parameter_pulse(void * priv, const char * name, const gavl_value_t * val)
-  {
-  bg_pa_output_t * p = priv;
-  
-  if(!name)
-    return;
-  
-  if(!strcmp(name, "server"))
-    {
-    p->server = gavl_strrep(p->server, val->v.str);
-    }
-  else if(!strcmp(name, "sink"))
-    {
-    p->dev = gavl_strrep(p->dev, val->v.str);
-    }
   }
 
 const bg_oa_plugin_t the_plugin =
@@ -189,8 +180,7 @@ const bg_oa_plugin_t the_plugin =
       .create =        create_pulse_output,
       .destroy =       destroy_pulse_output,
       
-      .get_parameters = get_parameters_pulse,
-      .set_parameter =  set_parameter_pulse,
+      .get_protocols = get_protocols_pulse,
     },
 
     .open =          open_pulse,

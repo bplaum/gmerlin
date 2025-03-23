@@ -40,5 +40,8 @@ void bg_gtk_backend_menu_destroy(bg_gtk_backend_menu_t * );
 
 void bg_gtk_backend_menu_ping(bg_gtk_backend_menu_t *);
 
+void bg_gtk_backend_menu_set_from_uri(bg_gtk_backend_menu_t * m, const char * uri);
+
+
 #endif // BG_GTK_BACKENDMENU_H_INCLUDED
 

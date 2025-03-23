@@ -36,7 +36,6 @@
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/backendmenu.h>
 
-
 typedef struct stream_menu_s
   {
   GSList * group;
@@ -151,8 +150,12 @@ struct main_menu_s
   GtkWidget * preferences_item;
   GtkWidget * command_item;
   
-  GtkWidget * audio_stream_item;
-  GtkWidget * video_stream_item;
+  //  GtkWidget * audio_stream_item;
+  //  GtkWidget * video_stream_item;
+
+  GtkWidget * audio_item;
+  GtkWidget * video_item;
+  
   GtkWidget * subtitle_stream_item;
   GtkWidget * chapter_item;
   GtkWidget * visualization_item;
@@ -165,6 +168,8 @@ struct main_menu_s
 
   bg_gtk_backend_menu_t * player_backend_menu;
   bg_gtk_backend_menu_t * mdb_backend_menu;
+  bg_gtk_backend_menu_t * oa_menu;
+  bg_gtk_backend_menu_t * ov_menu;
   
   };
 
@@ -539,6 +544,18 @@ main_menu_set_subtitle_index(main_menu_t * m, int index)
   stream_menu_set_index(&m->subtitle_stream_menu, index);
   }
 
+void
+main_menu_set_oa_uri(main_menu_t * m, const char * uri)
+  {
+  bg_gtk_backend_menu_set_from_uri(m->oa_menu, uri);
+  }
+
+void
+main_menu_set_ov_uri(main_menu_t * m, const char * uri)
+  {
+  bg_gtk_backend_menu_set_from_uri(m->ov_menu, uri);
+  }
+
 
 void main_menu_set_num_streams(main_menu_t * m,
                                int audio_streams,
@@ -642,6 +659,8 @@ void main_menu_set_subtitle_info(main_menu_t * m, int stream,
 main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   {
   main_menu_t * ret;
+  GtkWidget * menu;
+  
   ret = calloc(1, sizeof(*ret));
   ret->g = gmerlin;
   /* Windows */
@@ -862,26 +881,52 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   ret->player_backend_menu =
     bg_gtk_backend_menu_create(GAVL_META_CLASS_BACKEND_RENDERER,
                                1,
-                               /* Will send BG_MSG_SET_BACKEND events */
+                               /* Will send GAVL_CMD_SET_RESOURCE events */
                                gmerlin->mainwin.player_ctrl.evt_sink);
   
   ret->mdb_backend_menu =
     bg_gtk_backend_menu_create(GAVL_META_CLASS_BACKEND_MDB,
-                               1, /* Will send BG_MSG_SET_BACKEND events */
+                               1, /* Will send GAVL_CMD_SET_RESOURCE events */
+                               gmerlin->mainwin.player_ctrl.evt_sink);
+
+  ret->oa_menu =
+    bg_gtk_backend_menu_create(GAVL_META_CLASS_SINK_AUDIO,
+                               0, /* Will send GAVL_CMD_SET_RESOURCE events */
+                               gmerlin->mainwin.player_ctrl.evt_sink);
+
+  ret->ov_menu =
+    bg_gtk_backend_menu_create(GAVL_META_CLASS_SINK_VIDEO,
+                               0, /* Will send GAVL_CMD_SET_RESOURCE events */
                                gmerlin->mainwin.player_ctrl.evt_sink);
   
   /* Main menu */
     
   ret->menu = create_menu();
 
-  ret->audio_stream_item = create_submenu_item(TR("Audio..."), BG_ICON_MUSIC,
-                                               ret->audio_stream_menu.menu,
-                                               ret->menu);
+  menu = create_menu();
+  create_submenu_item(TR("Streams"), NULL,
+                      ret->audio_stream_menu.menu,
+                      menu);
+  create_submenu_item(TR("Sink"), NULL,
+                      bg_gtk_backend_menu_get_widget(ret->oa_menu),
+                      menu);
+  
+  ret->audio_item = create_submenu_item(TR("Audio..."), BG_ICON_MUSIC,
+                                        menu,
+                                        ret->menu);
 
-  ret->video_stream_item = create_submenu_item(TR("Video..."), BG_ICON_FILM,
-                                               ret->video_stream_menu.menu,
-                                               ret->menu);
-
+  menu = create_menu();
+  create_submenu_item(TR("Streams"), NULL,
+                      ret->video_stream_menu.menu,
+                      menu);
+  create_submenu_item(TR("Sink"), NULL,
+                      bg_gtk_backend_menu_get_widget(ret->ov_menu),
+                      menu);
+  
+  ret->video_item = create_submenu_item(TR("Video..."), BG_ICON_FILM,
+                                        menu,
+                                        ret->menu);
+  
   ret->subtitle_stream_item = create_submenu_item(TR("Subtitles..."), BG_ICON_SUBTITLE,
                                                   ret->subtitle_stream_menu.menu,
                                                   ret->menu);
@@ -931,6 +976,15 @@ void main_menu_destroy(main_menu_t * m)
   stream_menu_free(&m->audio_stream_menu);
   stream_menu_free(&m->video_stream_menu);
   stream_menu_free(&m->subtitle_stream_menu);
+
+  if(m->player_backend_menu)
+    bg_gtk_backend_menu_destroy(m->player_backend_menu);
+  if(m->mdb_backend_menu)
+    bg_gtk_backend_menu_destroy(m->mdb_backend_menu);
+  if(m->oa_menu)
+    bg_gtk_backend_menu_destroy(m->oa_menu);
+  if(m->ov_menu)
+    bg_gtk_backend_menu_destroy(m->ov_menu);
   
   free(m);
   }
@@ -973,5 +1027,7 @@ void main_menu_ping(main_menu_t * m)
   {
   bg_gtk_backend_menu_ping(m->player_backend_menu);
   bg_gtk_backend_menu_ping(m->mdb_backend_menu);
+  bg_gtk_backend_menu_ping(m->oa_menu);
+  bg_gtk_backend_menu_ping(m->ov_menu);
   }
 

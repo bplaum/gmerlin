@@ -58,6 +58,8 @@ static const bg_state_var_desc_t state_vars[] =
     { BG_PLAYER_STATE_CHAPTER,              GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_QUEUE_IDX,       GAVL_TYPE_INT,        },
     { BG_PLAYER_STATE_QUEUE_LEN,       GAVL_TYPE_INT,        },
+    { BG_PLAYER_STATE_OA_URI,          GAVL_TYPE_STRING,     },
+    { BG_PLAYER_STATE_OV_URI,          GAVL_TYPE_STRING,     },
     { /* End */ },
   };
 
@@ -191,7 +193,7 @@ static void state_init_track(gavl_dictionary_t * dict)
 
 void bg_player_state_init(gavl_dictionary_t * dict)
   {
-    
+  gavl_value_t val;
   bg_state_init_ctx(dict, BG_PLAYER_STATE_CTX, state_vars);
   
   bg_state_set_range_float(dict,
@@ -201,7 +203,16 @@ void bg_player_state_init(gavl_dictionary_t * dict)
   bg_state_set_range_float(dict,
                            BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME_PERC,
                            0.0, 1.0);
-
+  gavl_value_init(&val);
+  gavl_value_set_string_nocopy(&val, bg_get_default_sink_uri(BG_PLUGIN_OUTPUT_AUDIO));
+  
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_OA_URI, &val, NULL, 0);
+  
+  gavl_value_reset(&val);
+  gavl_value_set_string_nocopy(&val, bg_get_default_sink_uri(BG_PLUGIN_OUTPUT_VIDEO));
+  
+  bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_OV_URI, &val, NULL, 0);
+  
   
   //  fprintf(stderr, "player_state_init %s\n", label);
   //  gavl_dictionary_dump(dict, 2);
@@ -307,23 +318,10 @@ void bg_player_apply_cmdline(bg_cfg_ctx_t * ctx)
     gavl_dictionary_set(s, BG_FILTER_CHAIN_PARAM_PLUGINS, val);
     }
   
-
   if((s = ctx[BG_PLAYER_CFG_VIDEOFILTER].s) && (val = bg_plugin_config_get(BG_PLUGIN_FILTER_VIDEO)))
     {
     gavl_dictionary_set(s, BG_FILTER_CHAIN_PARAM_PLUGINS, val);
     }
-
-
-  if((s = ctx[BG_PLAYER_CFG_AUDIOPLUGIN].s) && (val = bg_plugin_config_get(BG_PLUGIN_OUTPUT_AUDIO)))
-    {
-    gavl_dictionary_set(s, BG_PARAMETER_NAME_PLUGIN, val);
-    }
-
-  if((s = ctx[BG_PLAYER_CFG_VIDEOPLUGIN].s) && (val = bg_plugin_config_get(BG_PLUGIN_OUTPUT_VIDEO)))
-    {
-    gavl_dictionary_set(s, BG_PARAMETER_NAME_PLUGIN, val);
-    }
-  
   }
 
 bg_player_t * bg_player_create()
@@ -425,21 +423,6 @@ bg_player_t * bg_player_create()
                   "videofilter",
                   TR("Video filter"),
                   bg_player_set_video_filter_parameter,
-                  ret);
-  
-  
-  bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_AUDIOPLUGIN], 
-                  bg_player_get_oa_plugin_parameters(ret),
-                  "oa",
-                  TR("Audio output plugin"),
-                  bg_player_set_oa_plugin_parameter,
-                  ret);
-  
-  bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_VIDEOPLUGIN], 
-                  bg_player_get_ov_plugin_parameters(ret),
-                  "ov",
-                  TR("Video output plugin"),
-                  bg_player_set_ov_plugin_parameter,
                   ret);
   
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_SUBTITLE], 

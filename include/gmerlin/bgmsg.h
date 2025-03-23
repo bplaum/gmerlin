@@ -341,7 +341,7 @@ void bg_control_cleanup(bg_control_t * c);
 /* Gmerlin specific messages */
 
 #define BG_MSG_NS_PARAMETER         100
-#define BG_MSG_NS_BACKEND           101
+// #define BG_MSG_NS_BACKEND           101
 #define BG_MSG_NS_PLAYER            102 // playermsg.h
 #define BG_MSG_NS_TRANSCODER        103
 #define BG_MSG_NS_VISUALIZER        104
@@ -484,16 +484,6 @@ void bg_control_cleanup(bg_control_t * c);
 /* Prepare the visualizer for a longer interruption of audio samples */
 
 #define BG_CMD_VISUALIZER_PAUSE       2
-
-
-// BG_MSG_NS_BACKEND
-
-// #define BG_MSG_ADD_BACKEND            1
-// #define BG_MSG_DEL_BACKEND            2
-
-#define BG_CMD_BACKEND_REGISTER_LOCAL    1
-#define BG_CMD_SET_BACKEND               2
-#define BG_MSG_BACKENDS_RESCAN           3
 
 // BG_MSG_NS_DIALOG
 // GAVL_MSG_CONTEXT_ID must always be the name of the dialog

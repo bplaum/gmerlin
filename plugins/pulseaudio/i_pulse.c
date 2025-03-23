@@ -258,7 +258,7 @@ static gavl_dictionary_t * get_media_info_pulse(void * priv)
   return &p->mi;
   }
 
-static char const * const protocols = "pulseaudio-source";
+static char const * const protocols = PULSE_SOURCE_PROTOCOL;
 
 static const char * get_protocols_pulse(void * priv)
   {
@@ -284,11 +284,11 @@ const bg_input_plugin_t the_plugin =
       .get_parameters = get_parameters_pulse,
       .set_parameter =  set_parameter_pulse,
       .get_controllable = bg_pa_get_controllable,
+      .get_protocols = get_protocols_pulse,
     },
     
     .get_media_info  = get_media_info_pulse,
     .get_src       = get_source_pulse,
-    .get_protocols = get_protocols_pulse,
     .open          = open_pulse,
     .close         = close_pulse,
   };

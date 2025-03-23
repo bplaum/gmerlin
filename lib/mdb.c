@@ -628,26 +628,6 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
           break;
         }
       break;
-    case BG_MSG_NS_BACKEND:
-      {
-      int i;
-      /* Forward to backends */
-      switch(msg->ID)
-        {
-        case BG_MSG_BACKENDS_RESCAN:
-          //  bg_backend_registry_rescan();
-          break;
-        }
-      
-      //   fprintf(stderr, "Got remote msg\n");
-      
-      for(i = 0; i < num_backends; i++)
-        {
-        if(db->backends[i].flags & BE_FLAG_RESOURCES)
-          bg_msg_sink_put_copy(db->backends[i].ctrl.cmd_sink, msg);
-        }
-      break;
-      }
     case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {

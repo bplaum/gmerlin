@@ -669,7 +669,7 @@ static void init_visualization(bg_visualizer_t * v)
 
   gavl_video_format_copy(&v->vfmt_ov, &v->vfmt_vis);
     
-  if(bg_ov_open(v->ov, &v->vfmt_ov, 1))
+  if(bg_ov_open(v->ov, NULL, &v->vfmt_ov))
     {
 #if 0
     fprintf(stderr, "Opened OV for visualization\n");

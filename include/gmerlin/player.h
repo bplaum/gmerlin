@@ -38,17 +38,15 @@
 #define BG_PLAYER_SEEK_FAST_STEP 120 // Seconds
 
 #define BG_PLAYER_CFG_INPUT         0
-#define BG_PLAYER_CFG_AUDIOPLUGIN   1
-#define BG_PLAYER_CFG_AUDIO         2
-#define BG_PLAYER_CFG_AUDIOFILTER   3
-#define BG_PLAYER_CFG_VIDEOPLUGIN   4
-#define BG_PLAYER_CFG_VIDEO         5
-#define BG_PLAYER_CFG_VIDEOFILTER   6
-#define BG_PLAYER_CFG_SUBTITLE      7
-#define BG_PLAYER_CFG_OSD           8
-#define BG_PLAYER_CFG_VISUALIZATION 9
+#define BG_PLAYER_CFG_AUDIO         1
+#define BG_PLAYER_CFG_AUDIOFILTER   2
+#define BG_PLAYER_CFG_VIDEO         3
+#define BG_PLAYER_CFG_VIDEOFILTER   4
+#define BG_PLAYER_CFG_SUBTITLE      5
+#define BG_PLAYER_CFG_OSD           6
+#define BG_PLAYER_CFG_VISUALIZATION 7
 
-#define BG_PLAYER_CFG_NUM           10
+#define BG_PLAYER_CFG_NUM           8
 
 typedef struct bg_player_s bg_player_t;
 
@@ -127,8 +125,6 @@ bg_player_t * bg_player_create(void);
 
 /* What to do when the queue is empty */
 void bg_player_set_empty_mode(bg_player_t *, int do_quit);
-
-void bg_player_set_window_config(bg_player_t *, const char * display_string);
 
 /** \ingroup player
  *  \brief Get parameters

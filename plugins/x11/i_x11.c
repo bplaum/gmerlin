@@ -29,8 +29,56 @@
 typedef struct
   {
   bg_x11_grab_window_t * win;
-  gavl_video_source_t * src;
+  gavl_video_source_t * vsrc;
+  bg_controllable_t ctrl;
+  gavl_dictionary_t mi;
+  bg_media_source_t src;
+  gavl_dictionary_t * s;
   } x11_t;
+
+static gavl_dictionary_t * get_media_info_x11(void * priv)
+  {
+  x11_t * x11 = priv;
+  return &x11->mi;
+  }
+
+static bg_media_source_t * get_src_x11(void * priv)
+  {
+  x11_t * x11;
+  x11 = priv;
+  return &x11->src;
+  }
+
+
+static int handle_cmd(void * data, gavl_msg_t * msg)
+  {
+  //  x11_t * x11 = data;
+  
+  switch(msg->NS)
+    {
+    case GAVL_MSG_NS_SRC:
+      switch(msg->ID)
+        {
+        case GAVL_CMD_SRC_START:
+          {
+          }
+          break;
+        case GAVL_CMD_SRC_PAUSE:
+          break;
+        case GAVL_CMD_SRC_RESUME:
+          break;
+        }
+      break;
+    }
+  return 1;
+  }
+
+static bg_controllable_t * get_controllable_x11(void * priv)
+  {
+  x11_t * x11;
+  x11 = priv;
+  return &x11->ctrl;
+  }
 
 static void * create_x11()
   {
@@ -38,6 +86,11 @@ static void * create_x11()
   x11 = calloc(1, sizeof(*x11));
 
   x11->win = bg_x11_grab_window_create();
+
+  bg_controllable_init(&x11->ctrl,
+                       bg_msg_sink_create(handle_cmd, x11, 1),
+                       bg_msg_hub_create(1));
+
   
   return x11;
   }
@@ -63,15 +116,32 @@ static int get_parameter_x11(void * priv, const char * name,
   return bg_x11_grab_window_get_parameter(x11->win, name, val);
   }
 
-static int open_x11(void * priv,
-                    gavl_audio_format_t * audio_format,
-                    gavl_video_format_t * format, gavl_dictionary_t * m)
+static int open_x11(void * priv, const char * location)
   {
   x11_t * x11 = priv;
-  if(!bg_x11_grab_window_init(x11->win, format))
+
+  gavl_dictionary_t * t;
+  //  gavl_dictionary_t * m;
+  bg_media_source_stream_t * st;
+  gavl_video_format_t * fmt;
+  
+  t = gavl_append_track(&x11->mi, NULL);
+  //  m = gavl_track_get_metadata_nc(t);
+
+  x11->s = gavl_track_append_video_stream(t);
+
+  fmt = gavl_stream_get_video_format_nc(x11->s);
+
+  /* Move to start () */
+  if(!bg_x11_grab_window_init(x11->win, fmt))
     return 0;
-  x11->src = gavl_video_source_create(bg_x11_grab_window_grab, x11->win,
-                                      GAVL_SOURCE_SRC_ALLOC, format);
+  x11->vsrc = gavl_video_source_create(bg_x11_grab_window_grab, x11->win,
+                                       GAVL_SOURCE_SRC_ALLOC, fmt);
+
+  bg_media_source_set_from_track(&x11->src, t);
+  st = bg_media_source_get_video_stream(&x11->src, 0);
+  st->vsrc = x11->vsrc;
+  
   return 1;
   }
 
@@ -79,30 +149,34 @@ static void close_x11(void * priv)
   {
   x11_t * x11 = priv;
   bg_x11_grab_window_close(x11->win);
-  gavl_video_source_destroy(x11->src);
-  x11->src = NULL;
+  gavl_video_source_destroy(x11->vsrc);
+  x11->vsrc = NULL;
   }
 
 static void destroy_x11(void * priv)
   {
   x11_t * x11 = priv;
 
-  if(x11->src)
+  if(x11->vsrc)
     close_x11(priv);
 
+  bg_controllable_cleanup(&x11->ctrl);
+  gavl_dictionary_free(&x11->mi);
+  bg_media_source_cleanup(&x11->src);
   bg_x11_grab_window_destroy(x11->win);
   free(priv);  
   }
 
 
+static char const * const protocols = "x11-src";
 
-static gavl_video_source_t * get_video_source_x11(void * priv)
+static const char * get_protocols_x11(void * priv)
   {
-  x11_t * x11 = priv;
-  return x11->src;
+  return protocols;
   }
 
-const bg_recorder_plugin_t the_plugin =
+
+const bg_input_plugin_t the_plugin =
   {
     .common =
     {
@@ -110,20 +184,23 @@ const bg_recorder_plugin_t the_plugin =
       .name =          "i_x11",
       .long_name =     TRS("X11"),
       .description =   TRS("X11 grabber"),
-      .type =          BG_PLUGIN_RECORDER_VIDEO,
+      .type =          BG_PLUGIN_INPUT,
       .flags =         0,
-      .priority =      BG_PLUGIN_PRIORITY_MAX-1,
+      .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_x11,
       .destroy =       destroy_x11,
 
       .get_parameters = get_parameters_x11,
       .set_parameter =  set_parameter_x11,
       .get_parameter =  get_parameter_x11,
+      .get_controllable = get_controllable_x11,
+      .get_protocols = get_protocols_x11,
     },
     
-    .open =       open_x11,
-    .close =      close_x11,
-    .get_video_source = get_video_source_x11,
+    .get_media_info  = get_media_info_x11,
+    .get_src       = get_src_x11,
+    .open          = open_x11,
+    .close         = close_x11,
   };
 
 /* Include this into all plugin modules exactly once

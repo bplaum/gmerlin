@@ -499,6 +499,9 @@ void bg_cfg_registry_opt_c(void * data, int * argc, char *** _argv, int arg);
 /* Save config if bg_cfg_registry_opt_sc was called before */
 void bg_cfg_registry_save_config();
 
+void bg_cfg_section_from_strings(const gavl_dictionary_t * src, gavl_dictionary_t * dst,
+                                 const bg_parameter_info_t * info);
+
 
 #define BG_OPT_SAVE_CONFIG \
   { \

@@ -27,7 +27,7 @@
 #include <asm/types.h>          /* for videodev2.h */
 #include <linux/videodev2.h>
 
-
+#if 0
 gavl_pixelformat_t bgv4l2_pixelformat_v4l2_2_gavl(int csp);
 
 uint32_t bgv4l2_pixelformat_gavl_2_v4l2(gavl_pixelformat_t scp);
@@ -79,3 +79,8 @@ typedef enum
   } bgv4l2_io_method_t;
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
+
+#endif
+
+#define V4L2_PROTOCOL_CAPTURE "v4l2-capture"
+#define V4L2_PROTOCOL_OUTPUT  "v4l2-output"

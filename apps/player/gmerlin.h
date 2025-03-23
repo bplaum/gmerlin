@@ -97,6 +97,13 @@ void main_menu_set_mdb_window_item(main_menu_t * m, int state);
 
 void main_menu_set_log_window_item(main_menu_t * m, int state);
 
+void
+main_menu_set_oa_uri(main_menu_t *, const char *);
+
+void
+main_menu_set_ov_uri(main_menu_t *, const char *);
+
+
 void main_menu_ping(main_menu_t * m);
 
 

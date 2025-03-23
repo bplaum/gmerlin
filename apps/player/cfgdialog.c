@@ -73,11 +73,7 @@ void gmerlin_create_dialog(gmerlin_t * g)
   bg_dialog_add_child_ctx(g->cfg_dialog,
                           parent,
                           &g->cfg_player[BG_PLAYER_CFG_AUDIOFILTER]);
-
-  bg_dialog_add_child_ctx(g->cfg_dialog,
-                          parent,
-                          &g->cfg_player[BG_PLAYER_CFG_AUDIOPLUGIN]);
-
+  
   /* Video */
   parent = bg_dialog_add_parent(g->cfg_dialog, NULL, TR("Video"));
 
@@ -88,10 +84,6 @@ void gmerlin_create_dialog(gmerlin_t * g)
   bg_dialog_add_child_ctx(g->cfg_dialog,
                           parent,
                           &g->cfg_player[BG_PLAYER_CFG_VIDEOFILTER]);
-
-  bg_dialog_add_child_ctx(g->cfg_dialog,
-                          parent,
-                          &g->cfg_player[BG_PLAYER_CFG_VIDEOPLUGIN]);
 
   /* Media DB */
   parent = bg_dialog_add_parent(g->cfg_dialog, NULL, TR("Media Database"));

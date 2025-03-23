@@ -256,7 +256,7 @@ int bg_player_oa_init(bg_player_audio_stream_t * ctx)
   int result;
   bg_plugin_lock(ctx->plugin_handle);
   result =
-    ctx->plugin->open(ctx->priv, &ctx->output_format);
+    ctx->plugin->open(ctx->priv, ctx->sink_uri, &ctx->output_format);
   if(result)
     ctx->output_open = 1;
   else
@@ -273,6 +273,7 @@ int bg_player_oa_init(bg_player_audio_stream_t * ctx)
   bg_plugin_unlock(ctx->plugin_handle);
   
   ctx->samples_written = 0;
+  
   return result;
   }
 
@@ -347,6 +348,41 @@ int bg_player_oa_get_latency(bg_player_audio_stream_t * ctx)
   return ret;
   }
 
+void bg_player_set_oa_uri(bg_player_t * player, const char * uri)
+  {
+  bg_plugin_handle_t * handle;
+  bg_player_audio_stream_t * ctx = &player->audio_stream;
+
+  ctx->sink_uri = gavl_strrep(ctx->sink_uri, uri);
+
+  if(!ctx->sink_uri)
+    ctx->sink_uri = bg_get_default_sink_uri(BG_PLUGIN_OUTPUT_AUDIO);    
+
+  
+  if(!(handle = bg_output_plugin_load(ctx->sink_uri, BG_PLUGIN_OUTPUT_AUDIO)))
+    return;
+
+  /* Remove urlvars */
+  gavl_url_get_vars(ctx->sink_uri, NULL);
+  
+  bg_player_stream_change_init(player);
+  
+  if(ctx->plugin_handle)
+    bg_plugin_unref(ctx->plugin_handle);
+  
+  ctx->plugin_handle = handle;
+
+  if(handle)
+    {
+    ctx->plugin = (bg_oa_plugin_t*)ctx->plugin_handle->plugin;
+    ctx->priv = ctx->plugin_handle->priv;
+    }
+
+  bg_player_stream_change_done(player);
+  
+  }
+
+#if 0
 static int oa_set_plugin(bg_player_t * player,
                          const gavl_value_t * val)
   {
@@ -373,33 +409,9 @@ static int oa_set_plugin(bg_player_t * player,
     }
   return 1;
   }
+#endif
 
-static const bg_parameter_info_t plugin_params[] =
-  {
-    {
-
-      .name =      BG_PARAMETER_NAME_PLUGIN,
-      .long_name = "Audio output plugin",
-      .type =      BG_PARAMETER_MULTI_MENU,
-    },
-    { /* End */ }
-  };
-
-
-const bg_parameter_info_t * bg_player_get_oa_plugin_parameters(bg_player_t * p)
-  {
-  if(!p->audio_stream.plugin_params)
-    {
-    p->audio_stream.plugin_params = bg_parameter_info_copy_array(plugin_params);
-
-    bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                          BG_PLUGIN_OUTPUT_AUDIO,
-                                          0,
-                                          &p->audio_stream.plugin_params[0]);
-    }
-  return p->audio_stream.plugin_params;
-  }
-
+#if 0
 void bg_player_set_oa_plugin_parameter(void * data, const char * name,
                                        const gavl_value_t * val)
   {
@@ -421,3 +433,4 @@ void bg_player_set_oa_plugin_parameter(void * data, const char * name,
     bg_plugin_unlock(h);
     }
   }
+#endif

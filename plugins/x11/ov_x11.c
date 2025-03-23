@@ -67,8 +67,6 @@ typedef struct
 
   bg_accelerator_map_t * accel_map;
   
-  int keep_aspect;
-    
   } x11_t;
 
 /* Utility functions */
@@ -160,7 +158,7 @@ static void set_accel_map_x11(void * data, const bg_accelerator_map_t * accel_ma
   bg_accelerator_map_append_array(priv->accel_map, bg_accelerator_map_get_accels(accel_map));
   }
 
-static int open_x11(void * data, gavl_video_format_t * format, int keep_aspect)
+static int open_x11(void * data, const char * uri, gavl_video_format_t * format)
   {
   x11_t * priv = data;
   int result;
@@ -174,7 +172,6 @@ static int open_x11(void * data, gavl_video_format_t * format, int keep_aspect)
   priv->window_format.pixel_width = 1;
   priv->window_format.pixel_height = 1;
   
-  priv->keep_aspect = keep_aspect;
   priv->is_open = 1;
   
   
@@ -221,6 +218,14 @@ static bg_controllable_t * get_controllable_x11(void * data)
   return bg_x11_window_get_controllable(priv->win);
   }
 
+static char const * const protocols = "x11-sink";
+
+static const char * get_protocols_x11(void * priv)
+  {
+  return protocols;
+  }
+
+
 const bg_ov_plugin_t the_plugin =
   {
     .common =
@@ -238,7 +243,7 @@ const bg_ov_plugin_t the_plugin =
       .get_parameters   = get_parameters_x11,
       .set_parameter    = set_parameter_x11,
       .get_controllable = get_controllable_x11,
-      
+      .get_protocols = get_protocols_x11,
     },
     .set_accel_map      = set_accel_map_x11,
     

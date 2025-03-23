@@ -66,3 +66,6 @@ int bg_pa_open(bg_pa_common_t * p, char * server, char * dev, int record);
 void bg_pa_close_common(bg_pa_common_t * priv);
 
 bg_controllable_t * bg_pa_get_controllable(void * p);
+
+#define PULSE_SOURCE_PROTOCOL "pulseaudio-source"
+#define PULSE_SINK_PROTOCOL   "pulseaudio-sink"

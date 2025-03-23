@@ -899,3 +899,35 @@ int bg_parameter_parse_string(const char * str, gavl_dictionary_t * dict, const 
   gavl_strbreak_free(args);
   return ret;
   }
+
+typedef struct
+  {
+  gavl_dictionary_t * dst;
+  const bg_parameter_info_t * info;
+  } from_strings_t;
+
+static void from_strings_foreach_func(void * priv, const char * name,
+                                      const gavl_value_t * val)
+  {
+  gavl_value_t val1;
+  const bg_parameter_info_t * info;
+  from_strings_t * f = priv;
+
+  if(!(info = bg_parameter_find(f->info, name)))
+    return;     /* Ignore */
+
+  gavl_value_init(&val1);
+  val1.type = bg_parameter_type_to_gavl(info->type);
+  gavl_value_from_string(&val1, gavl_value_get_string(val));
+  gavl_dictionary_set_nocopy(f->dst, name, &val1);
+  }
+
+void bg_cfg_section_from_strings(const gavl_dictionary_t * src, gavl_dictionary_t * dst,
+                                 const bg_parameter_info_t * info)
+  {
+  from_strings_t f;
+
+  f.info = info;
+  f.dst = dst;
+  gavl_dictionary_foreach(src, from_strings_foreach_func, &f);
+  }

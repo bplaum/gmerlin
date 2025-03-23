@@ -42,7 +42,7 @@ void bg_ov_set_window(bg_ov_t * ov, const char * window_id);
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title);
 
-int  bg_ov_open(bg_ov_t * ov, gavl_video_format_t * format, int keep_aspect);
+int  bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format);
 
 gavl_video_sink_t * bg_ov_get_sink(bg_ov_t * ov);
 

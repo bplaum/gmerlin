@@ -248,7 +248,7 @@ write_func_alsa(void * p, gavl_audio_frame_t * f)
   return GAVL_SINK_OK;
   }
 
-static int open_alsa(void * data, gavl_audio_format_t * format)
+static int open_alsa(void * data, const char * str, gavl_audio_format_t * format)
   {
   int playback_mode;
   int num_front_channels;

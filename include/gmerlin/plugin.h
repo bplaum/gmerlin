@@ -101,7 +101,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 41
+#define BG_PLUGIN_API_VERSION 42
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -142,7 +142,6 @@ typedef enum
     BG_PLUGIN_INPUT                      = (1<<0), //!< Media input
     BG_PLUGIN_OUTPUT_AUDIO               = (1<<1), //!< Audio output
     BG_PLUGIN_OUTPUT_VIDEO               = (1<<2), //!< Video output
-    BG_PLUGIN_RECORDER_VIDEO             = (1<<4), //!< Video recorder
     BG_PLUGIN_ENCODER_AUDIO              = (1<<5), //!< Encoder for audio only
     BG_PLUGIN_ENCODER_VIDEO              = (1<<6), //!< Encoder for video only
     BG_PLUGIN_ENCODER_TEXT               = (1<<7), //!< Encoder for text subtitles only
@@ -259,6 +258,12 @@ struct bg_plugin_common_s
    *  \returns A space separated list of extensions
    */
   const char * (*get_extensions)(void * priv);
+
+  /** \brief Get supported protocols
+   *  \param priv The handle returned by the create() method
+   *  \returns A space separated list of protocols
+   */
+  const char * (*get_protocols)(void * priv);
   
   };
 
@@ -290,11 +295,6 @@ struct bg_input_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
 
-  /** \brief Get supported protocols
-   *  \param priv The handle returned by the create() method
-   *  \returns A space separated list of protocols
-   */
-  const char * (*get_protocols)(void * priv);
   /** \brief Get supported mimetypes
    *  \param priv The handle returned by the create() method
    *  \returns A space separated list of mimetypes
@@ -393,7 +393,7 @@ struct bg_oa_plugin_s
    *  use a \ref gavl_audio_converter_t
    */
 
-  int (*open)(void * priv, gavl_audio_format_t* format);
+  int (*open)(void * priv, const char * uri, gavl_audio_format_t* format);
 
   /** \brief Start playback
    *  \param priv The handle returned by the create() method
@@ -433,62 +433,6 @@ struct bg_oa_plugin_s
    *  \param priv The handle returned by the create() method
    *
    * Close the plugin. After this call, the plugin can be opened with another format
-   */
-  
-  void (*close)(void * priv);
-  };
-
-/*******************************************
- * Recorder
- *******************************************/
-
-/** \defgroup plugin_r Recorder
- *  \ingroup plugin
- *  \brief Recorder
- */ 
-
-/** \ingroup plugin_r
- *  \brief Typedef for recorder
- */
-
-typedef struct bg_recorder_plugin_s bg_recorder_plugin_t;
-
-/** \ingroup plugin_ra
- *  \brief Recorder
- *
- *  Recording support from hardware devices
- */
-
-struct bg_recorder_plugin_s
-  {
-  bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-  
-  /** \brief Open plugin
-   *  \param priv The handle returned by the create() method
-   *  \param format The desired format
-   *
-   *  The format will be changed to the nearest format, which is supported
-   *  by the plugin. To convert the source format to the output format,
-   *  use a \ref gavl_audio_converter_t
-   */
-
-  
-  int (*open)(void * priv, gavl_audio_format_t * audio_format,
-              gavl_video_format_t * video_format, gavl_dictionary_t * m);
-  
-
-  /** \brief Get audio source
-   */
-
-  gavl_audio_source_t * (*get_audio_source)(void * priv);
-  
-  /** \brief Get video source
-   */
-  
-  gavl_video_source_t * (*get_video_source)(void * priv);
-  
-  /** \brief Close plugin
-   *  \param priv The handle returned by the create() method
    */
   
   void (*close)(void * priv);
@@ -562,7 +506,7 @@ struct bg_ov_plugin_s
    *  use a \ref gavl_video_converter_t
    */
   
-  int  (*open)(void * priv, gavl_video_format_t * format, int keep_aspect);
+  int  (*open)(void * priv, const char * uri, gavl_video_format_t * format);
   
   /** \brief Add a stream for transparent overlays
    *  \param priv The handle returned by the create() method

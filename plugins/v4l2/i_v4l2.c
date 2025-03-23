@@ -62,10 +62,13 @@ static void close_v4l(void * priv)
   v4l2_t * v4l = priv;
   
   if(v4l->hwctx)
+    {
     gavl_hw_ctx_destroy(v4l->hwctx);
-
-  gavl_dictionary_free(&v4l->mi);
+    v4l->hwctx = NULL;
+    }
+  gavl_dictionary_reset(&v4l->mi);
   bg_media_source_cleanup(&v4l->src);
+  bg_media_source_init(&v4l->src);
   }
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
@@ -113,6 +116,7 @@ static void  destroy_v4l(void * priv)
   v4l = priv;
   close_v4l(priv);
   bg_controllable_cleanup(&v4l->ctrl);
+  bg_media_source_cleanup(&v4l->src);
   free(v4l);
   }
 
@@ -225,7 +229,7 @@ static int open_v4l(void * priv, const char * location)
 
   bg_media_source_set_from_track(&v4l->src, t);
   
-  fprintf(stderr, "Open v4l\n");
+  //  fprintf(stderr, "Open v4l\n");
 
   st = bg_media_source_get_video_stream(&v4l->src, 0);
 
@@ -254,7 +258,7 @@ static int open_v4l(void * priv, const char * location)
   return ret;
   }
 
-static char const * const protocols = "v4l4-capture";
+static char const * const protocols = "v4l2-capture";
 
 static const char * get_protocols_v4l(void * priv)
   {
@@ -299,11 +303,11 @@ const bg_input_plugin_t the_plugin =
       .set_parameter =  set_parameter_v4l,
       .get_parameter =  get_parameter_v4l,
       .get_controllable = get_controllable_v4l,
+      .get_protocols = get_protocols_v4l,
     },
     
     .get_media_info  = get_media_info_v4l,
     .get_src       = get_src_v4l,
-    .get_protocols = get_protocols_v4l,
     .open          = open_v4l,
     .close         = close_v4l,
   };

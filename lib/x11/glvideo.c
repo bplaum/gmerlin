@@ -670,6 +670,7 @@ static void set_pixelformat_matrix(double ret[4][5], gavl_pixelformat_t pfmt)
     matrix_init(ret);
   }
 
+#if 0
 static void dump_image_formats(gavl_pixelformat_t * fmts)
   {
   int idx = 0;
@@ -679,6 +680,7 @@ static void dump_image_formats(gavl_pixelformat_t * fmts)
     idx++;
     }
   }
+#endif
 
 static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   {
@@ -698,12 +700,13 @@ static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   d->img_formats = gavl_hw_ctx_get_image_formats(priv->hwctx_priv);
   d->ovl_formats = gavl_hw_ctx_get_overlay_formats(priv->hwctx_priv);
 
+#if 0  
   fprintf(stderr, "Type: %s\n", gavl_hw_type_to_string(type));
   fprintf(stderr, "Image formats:\n");
   dump_image_formats(d->img_formats);
   fprintf(stderr, "Overlay formats:\n");
   dump_image_formats(d->ovl_formats);
-  
+#endif
   
   d->flags |= (DRIVER_FLAG_BRIGHTNESS | DRIVER_FLAG_SATURATION | DRIVER_FLAG_CONTRAST);
   

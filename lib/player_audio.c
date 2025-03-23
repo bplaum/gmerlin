@@ -75,6 +75,9 @@ void bg_player_audio_destroy(bg_player_t * p)
 
   if(s->plugin_params)
     bg_parameter_info_destroy_array(s->plugin_params);
+
+  if(s->sink_uri)
+    free(s->sink_uri);
   
   bg_thread_destroy(s->th); 
   

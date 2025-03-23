@@ -43,7 +43,6 @@
 #define BG_PLAYER_STATE_VOLUME        "volume"        // float
 #define BG_PLAYER_STATE_STATUS        "status"        // int
 #define BG_PLAYER_STATE_CURRENT_TRACK "track"         // dictionary
-// #define BG_PLAYER_STATE_CURRENT_TIME  "current_time"  // dictionary
 
 #define BG_PLAYER_STATE_TIME          "time"         // long
 #define BG_PLAYER_STATE_TIME_REM      "time_rem"     // long
@@ -51,12 +50,7 @@
 #define BG_PLAYER_STATE_TIME_ABS      "time_abs"      // long
 #define BG_PLAYER_STATE_TIME_PERC     "time_perc"     // float
 
-// #define BG_PLAYER_STATE_CURRENT_URI   "uri"           // string
-
 /* Some read-only variables */
-
-// #define BG_PLAYER_STATE_PROTOCOLS     "protocols"
-//#define BG_PLAYER_STATE_MIMETYPES     "mimetypes"
 
 #define BG_PLAYER_STATE_MODE          "mode"          // int
 #define BG_PLAYER_STATE_MUTE          "mute"          // int
@@ -74,6 +68,8 @@
 #define BG_PLAYER_STATE_QUEUE_LEN "QueueLen"
 
 #define BG_PLAYER_STATE_CHAPTER          "chapter"         // int
+#define BG_PLAYER_STATE_OA_URI           "oa"         // string
+#define BG_PLAYER_STATE_OV_URI           "ov"         // string
 
 /* Statuses */
 
@@ -314,6 +310,9 @@ void bg_player_next_chapter_m(gavl_msg_t * msg);
 
 void bg_player_prev_m(gavl_msg_t * msg);
 void bg_player_next_m(gavl_msg_t * msg);
+
+void bg_player_set_audio_sink_m(gavl_msg_t * msg, const char * uri);
+void bg_player_set_video_sink_m(gavl_msg_t * msg, const char * uri);
 
 void bg_player_set_visualization(bg_msg_sink_t * sink, const char * arg);
 

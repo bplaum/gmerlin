@@ -51,6 +51,10 @@ struct bg_gtk_backend_menu_s
   gavl_array_t devs;
 
   int have_local;
+  int set;
+
+  char * selected;
+  
   };
 
 typedef struct
@@ -121,6 +125,9 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
   
   bg_gtk_backend_menu_t * m = data;
 
+  if(!gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(w)))
+    return;
+  
   if((id = g_object_get_data(G_OBJECT(w), GAVL_META_ID)) &&
      (dev = dev_by_id(&m->devs, id)))
     {
@@ -132,8 +139,9 @@ static void backend_menu_callback(GtkWidget * w, gpointer data)
     if(m->evt_sink)
       {
       gavl_msg_t * msg = bg_msg_sink_get(m->evt_sink);
-      gavl_msg_set_id_ns(msg, BG_CMD_SET_BACKEND, BG_MSG_NS_BACKEND);
+      gavl_msg_set_id_ns(msg, GAVL_CMD_SET_RESOURCE, GAVL_MSG_NS_GENERIC);
       gavl_msg_set_arg_dictionary(msg, 0, dev);
+      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_dictionary_get_string(dev, GAVL_META_CLASS));
       bg_msg_sink_put(m->evt_sink);
       }
     
@@ -215,6 +223,14 @@ static void add_item(bg_gtk_backend_menu_t * m, const gavl_dictionary_t * dict)
   
   gtk_menu_shell_insert(GTK_MENU_SHELL(m->menu), item, idx);
 
+  if(m->selected && !strcmp(uri, m->selected))
+    {
+    //    fprintf(stderr, "Restoring selected: %s\n", m->selected);
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), 1);
+    free(m->selected);
+    m->selected = NULL;
+    }
+    
   g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(backend_menu_callback), m);
   
   //  fprintf(stderr, "add_item %s %s %s\n", uri, label, icon);
@@ -268,7 +284,7 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
 bg_gtk_backend_menu_t * bg_gtk_backend_menu_create(const char * klass,
                                                    int have_local,
-                                                   /* Will send BG_MSG_SET_BACKEND events */
+                                                   /* Will send GAVL_CMD_SET_RESOURCE events */
                                                    bg_msg_sink_t * evt_sink)
   {
   bg_gtk_backend_menu_t * ret;
@@ -318,10 +334,49 @@ void bg_gtk_backend_menu_destroy(bg_gtk_backend_menu_t * m)
   gavl_array_free(&m->devs);
   if(m->klass)
     free(m->klass);
+  if(m->selected)
+    free(m->selected);
+  
   free(m);
   }
 
 void bg_gtk_backend_menu_ping(bg_gtk_backend_menu_t * m)
   {
   bg_msg_sink_iteration(m->sink);
+  }
+
+void bg_gtk_backend_menu_set_from_uri(bg_gtk_backend_menu_t * m, const char * uri)
+  {
+  const gavl_dictionary_t * dict;
+  const char * test_uri;
+  const char * id;
+  int i;
+  GtkWidget * w;
+  
+  //  fprintf(stderr, "bg_gtk_backend_menu_set_from_uri %s\n", uri);
+  
+  m->selected = gavl_strrep(m->selected, NULL);
+  
+  for(i = 0; i < m->devs.num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&m->devs.entries[i])) &&
+       (test_uri = gavl_dictionary_get_string(dict, GAVL_META_URI)) &&
+       !strcmp(test_uri, uri))
+      {
+      //      fprintf(stderr, "Blupp 1 %s\n", uri);
+      if((id = gavl_dictionary_get_string(dict, GAVL_META_ID)) &&
+         (w = item_by_id(m, id)))
+        {
+        //        fprintf(stderr, "Blupp 2 %s\n", uri);
+        g_signal_handlers_block_by_func(w, backend_menu_callback, m);
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(w), 1);
+        g_signal_handlers_unblock_by_func(w, backend_menu_callback, m);
+        }
+      return;
+      }
+    }
+  /* Item not found yet, save for later */
+  
+  m->selected = gavl_strrep(m->selected, uri);
+  //  fprintf(stderr, "Saving selected: %s\n", m->selected);
   }

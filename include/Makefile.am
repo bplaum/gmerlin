@@ -22,6 +22,5 @@ mdb_private.h \
 msgconn.h \
 ovl2text.h \
 playerprivate.h \
-recorder_private.h \
 registry_priv.h \
 pluginreg_priv.h

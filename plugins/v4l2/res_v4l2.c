@@ -33,6 +33,8 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/plugin.h>
 
+#include "v4l2_common.h"
+
 
 #include <libudev.h>
 
@@ -55,10 +57,12 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
   return 1;
   }
 
+#if 0
 static char * make_id(const char * host, const char * node)
   {
   return gavl_sprintf("v4l-%s-%s", host, node);
   }
+#endif
 
 static void * create_v4l2()
   {
@@ -97,10 +101,31 @@ static void add_device(v4l2_t * reg, gavl_dictionary_t * dict)
   char * real_uri;
   const char * node;
   gavl_msg_t * msg;
-  char * id;
+  
+  char id[GAVL_MD5_LENGTH];
+
   
   if(!gavl_dictionary_get_int(dict, GAVL_V4L2_TYPE, &type))
     return;
+
+  //  fprintf(stderr, "Add device %d\n", type);
+
+  if(type == GAVL_V4L2_DEVICE_LOOPBACK)
+    {
+    gavl_dictionary_t dict1;
+    gavl_dictionary_init(&dict1);
+    gavl_dictionary_copy(&dict1, dict);
+    gavl_dictionary_set_int(&dict1, GAVL_V4L2_TYPE, GAVL_V4L2_DEVICE_SOURCE);
+    add_device(reg, &dict1);
+    
+    gavl_dictionary_reset(&dict1);
+    gavl_dictionary_copy(&dict1, dict);
+    gavl_dictionary_set_int(&dict1, GAVL_V4L2_TYPE, GAVL_V4L2_DEVICE_SINK);
+    add_device(reg, &dict1);
+
+    gavl_dictionary_free(&dict1);
+    return;
+    }
   
   gavl_dictionary_set(dict, GAVL_V4L2_SRC_FORMATS, NULL);
   gavl_dictionary_set(dict, GAVL_V4L2_SINK_FORMATS, NULL);
@@ -113,13 +138,13 @@ static void add_device(v4l2_t * reg, gavl_dictionary_t * dict)
   switch(type)
     {
     case GAVL_V4L2_DEVICE_SOURCE:
-      real_uri = gavl_sprintf("v4l2-capture://%s%s", reg->hostname, node);
+      real_uri = gavl_sprintf(V4L2_PROTOCOL_CAPTURE"://%s%s", reg->hostname, node);
       gavl_dictionary_set_string(dict, GAVL_META_CLASS,
                                  GAVL_META_CLASS_VIDEO_RECORDER);
 
       break;
     case GAVL_V4L2_DEVICE_SINK:
-      real_uri = gavl_sprintf("v4l2-output://%s%s", reg->hostname, node);
+      real_uri = gavl_sprintf(V4L2_PROTOCOL_OUTPUT"://%s%s", reg->hostname, node);
       gavl_dictionary_set_string(dict, GAVL_META_CLASS,
                                  GAVL_META_CLASS_SINK_VIDEO);
       break;
@@ -127,19 +152,21 @@ static void add_device(v4l2_t * reg, gavl_dictionary_t * dict)
       return;
     }
 
-  id = make_id(reg->hostname, node);
+  // id = make_id(reg->hostname, node);
+
+  gavl_md5_buffer_str(real_uri, strlen(real_uri), id);
   
   gavl_dictionary_set_string_nocopy(dict, GAVL_META_URI, real_uri);
 
   msg = bg_msg_sink_get(reg->ctrl.evt_sink);
   
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
-  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, id);
+  
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
+  
   gavl_msg_set_arg_dictionary(msg, 0, dict);
   
   bg_msg_sink_put(reg->ctrl.evt_sink);
-
-  
   }
 
 static void del_device(v4l2_t * reg, const char *id)
@@ -163,8 +190,9 @@ static int update_v4l2(void * priv)
     int i;
     
     gavl_array_init(&v4l2_devs);
-    gavl_v4l2_devices_scan_by_type(GAVL_V4L2_DEVICE_SOURCE | GAVL_V4L2_DEVICE_SINK, &v4l2_devs);
-  
+    gavl_v4l2_devices_scan_by_type(GAVL_V4L2_DEVICE_SOURCE | GAVL_V4L2_DEVICE_SINK | GAVL_V4L2_DEVICE_LOOPBACK,
+                                   &v4l2_devs);
+    
     for(i = 0; i < v4l2_devs.num_entries; i++)
       add_device(reg, gavl_value_get_dictionary_nc(&v4l2_devs.entries[i]));
     
@@ -195,18 +223,27 @@ static int update_v4l2(void * priv)
         gavl_v4l2_get_device_info(node, &dict);
         
         if(gavl_dictionary_get_int(&dict, GAVL_V4L2_TYPE, &type) &&
-           (type & (GAVL_V4L2_DEVICE_SOURCE|GAVL_V4L2_DEVICE_SINK)))
+           (type & (GAVL_V4L2_DEVICE_SOURCE|GAVL_V4L2_DEVICE_SINK|GAVL_V4L2_DEVICE_LOOPBACK)))
           add_device(reg, &dict);
         
         gavl_dictionary_free(&dict);
         }
       else if(!strcmp(action, "remove"))
         {
-        char * id;
+        char * uri;
+        char md5[GAVL_MD5_LENGTH];
+        
+        uri = gavl_sprintf(V4L2_PROTOCOL_CAPTURE"://%s%s", reg->hostname, node);
+        gavl_md5_buffer_str(uri, strlen(uri), md5);
 
-        id = make_id(reg->hostname, node);
-        del_device(reg, id);
-        free(id);
+        del_device(reg, md5);
+        free(uri);
+
+        uri = gavl_sprintf(V4L2_PROTOCOL_OUTPUT"://%s%s", reg->hostname, node);
+        gavl_md5_buffer_str(uri, strlen(uri), md5);
+
+        del_device(reg, md5);
+        free(uri);
         //        fprintf(stderr, "Removing %s\n", node);
         }
       

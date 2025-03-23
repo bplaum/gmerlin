@@ -197,8 +197,8 @@ icons[] =
 
     /* Sinks */
 
-    //    { GAVL_META_CLASS_SINK_AUDIO, "" }
-    //    { GAVL_META_CLASS_SINK_VIDEO, "" }
+    { GAVL_META_CLASS_SINK_AUDIO, BG_ICON_VOLUME_MAX },
+    { GAVL_META_CLASS_SINK_VIDEO, BG_ICON_TV         },
     
     
     { /* End */ }

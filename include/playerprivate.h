@@ -136,6 +136,8 @@ typedef struct
   bg_parameter_info_t * plugin_params;
   bg_control_t * oa_ctrl;
 
+  char * sink_uri;
+  
   } bg_player_audio_stream_t;
 
 typedef struct
@@ -219,8 +221,6 @@ typedef struct
   
   bg_parameter_info_t * plugin_params;
 
-  char * display_string;
-
   bg_controllable_t * ov_ctrl;
   bg_msg_sink_t * ov_evt_sink;
   
@@ -229,6 +229,9 @@ typedef struct
   gavl_video_frame_t * frame;
   
   int state;
+
+  char * sink_uri;
+  
   } bg_player_video_stream_t;
 
 typedef struct
@@ -543,6 +546,7 @@ int bg_player_source_start(bg_player_t * player, bg_player_source_t * p);
 
 /* player_ov.c */
 
+void bg_player_set_ov_uri(bg_player_t * player, const char * uri);
 void bg_player_ov_create(bg_player_t * player);
 
 void bg_player_ov_reset(bg_player_t * player);
@@ -596,6 +600,8 @@ gavl_time_t bg_player_oa_resync(bg_player_t * p);
 
 void bg_player_oa_cleanup(bg_player_audio_stream_t * ctx);
 void * bg_player_oa_thread(void *);
+
+void bg_player_set_oa_uri(bg_player_t * player, const char * uri);
 
 
 // void bg_player_oa_set_plugin(bg_player_t * player,
@@ -737,7 +743,7 @@ const bg_parameter_info_t * bg_player_get_video_filter_parameters(bg_player_t * 
  *
  *  Returned parameters can be passed to \ref bg_player_set_ov_plugin_parameter
  */
-const bg_parameter_info_t * bg_player_get_ov_plugin_parameters(bg_player_t * p);
+// const bg_parameter_info_t * bg_player_get_ov_plugin_parameters(bg_player_t * p);
 
 /** \brief Get audio output plugin parameters
  *  \param player A player
@@ -745,7 +751,7 @@ const bg_parameter_info_t * bg_player_get_ov_plugin_parameters(bg_player_t * p);
  *
  *  Returned parameters can be passed to \ref bg_player_set_ov_plugin_parameter
  */
-const bg_parameter_info_t * bg_player_get_oa_plugin_parameters(bg_player_t * p);
+// const bg_parameter_info_t * bg_player_get_oa_plugin_parameters(bg_player_t * p);
 
 /** \brief Set a video parameter
  *  \param data Player casted to void*
@@ -771,7 +777,7 @@ void bg_player_handle_video_filter_command(bg_player_t * p, gavl_msg_t * msg);
  *  \param val Value
  */
 
-void bg_player_set_ov_plugin_parameter(void * data, const char * name, const gavl_value_t * val);
+// void bg_player_set_ov_plugin_parameter(void * data, const char * name, const gavl_value_t * val);
 
 /** \brief Set a audio output plugin parameter
  *  \param data Player casted to void*
@@ -779,7 +785,7 @@ void bg_player_set_ov_plugin_parameter(void * data, const char * name, const gav
  *  \param val Value
  */
 
-void bg_player_set_oa_plugin_parameter(void * data, const char * name, const gavl_value_t * val);
+//void bg_player_set_oa_plugin_parameter(void * data, const char * name, const gavl_value_t * val);
 
 /** \brief Get subtitle parameters
  *  \param player A player

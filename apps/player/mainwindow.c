@@ -486,20 +486,136 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
   main_window_t * w = data;
   switch(msg->NS)
     {
-#if 0
-    case GAVL_MSG_NS_SRC:
+    case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
-        case GAVL_MSG_SRC_BUFFERING:
+        case GAVL_CMD_SET_RESOURCE:
           {
-          float perc = -1.0;
-          gavl_msg_get_src_buffering(msg, &perc);
-          fprintf(stderr, "Buffering %f percent\n");
+          const char * klass;
+          const char * uri;
+          gavl_dictionary_t dev;
+          gavl_dictionary_init(&dev);
+          gavl_msg_get_arg_dictionary_c(msg, 0, &dev);
+          
+          //          fprintf(stderr, "Set Resource\n");
+          //          gavl_dictionary_dump(&dev, 2);
+          
+          if((klass = gavl_dictionary_get_string(&dev, GAVL_META_CLASS)) &&
+              (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
+            {
+            if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
+              {
+              pthread_mutex_lock(&w->g->backend_mutex);
+
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing MDB: %s", uri);
+              
+              gmerlin_disconnect_mdb(w->g);
+              w->g->mdb_ctrl = NULL;
+
+              if(w->g->mdb_backend)
+                {
+                bg_plugin_unref(w->g->mdb_backend);
+                w->g->mdb_backend = NULL;
+                }
+                
+              if(!strcmp(uri, "local"))
+                w->g->mdb_ctrl = bg_mdb_get_controllable(w->g->mdb);
+              else
+                {
+                if((w->g->mdb_backend =
+                    bg_backend_handle_create(&dev)))
+                  w->g->mdb_ctrl = bg_backend_handle_get_controllable(w->g->mdb_backend);
+
+                }
+                
+              gmerlin_connect_mdb(w->g);
+
+              pthread_mutex_unlock(&w->g->backend_mutex);
+
+              }
+            else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
+              {
+              pthread_mutex_lock(&w->g->backend_mutex);
+              
+              gmerlin_disconnect_player(w->g);
+              w->g->player_ctrl = NULL;
+                
+              if(w->g->player_backend)
+                {
+                bg_plugin_unref(w->g->player_backend);
+                w->g->player_backend = NULL;
+                }
+
+              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing renderer: %s", uri);
+              
+              if(!strcmp(uri, "local"))
+                w->g->player_ctrl = bg_player_get_controllable(w->g->player);
+              else
+                {
+                if((w->g->player_backend = bg_backend_handle_create(&dev)))
+                  w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
+                else
+                  {
+                  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
+                  break;
+                  }
+                }
+                
+              gmerlin_connect_player(w->g);
+              pthread_mutex_unlock(&w->g->backend_mutex);
+              }  
+            else if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
+              {
+              gavl_value_t val;
+              gavl_msg_t * msg;
+
+              fprintf(stderr, "Set audio sink\n");
+              
+              gavl_value_init(&val);
+              gavl_value_set_string(&val, uri);
+              
+              msg = bg_msg_sink_get(w->player_ctrl.cmd_sink);
+              
+              gavl_msg_set_state(msg,
+                                 BG_CMD_SET_STATE,
+                                 1,
+                                 BG_PLAYER_STATE_CTX,
+                                 BG_PLAYER_STATE_OA_URI,
+                                 &val);
+              
+              bg_msg_sink_put(w->player_ctrl.cmd_sink);
+              gavl_value_free(&val);
+              }
+            else if(!strcmp(klass, GAVL_META_CLASS_SINK_VIDEO))
+              {
+              gavl_value_t val;
+              gavl_msg_t * msg;
+              
+              fprintf(stderr, "Set video sink\n");
+              gavl_value_init(&val);
+              gavl_value_set_string(&val, uri);
+              
+              msg = bg_msg_sink_get(w->player_ctrl.cmd_sink);
+              
+              gavl_msg_set_state(msg,
+                                 BG_CMD_SET_STATE,
+                                 1,
+                                 BG_PLAYER_STATE_CTX,
+                                 BG_PLAYER_STATE_OV_URI,
+                                 &val);
+              
+              bg_msg_sink_put(w->player_ctrl.cmd_sink);
+              gavl_value_free(&val);
+              }
+            }
+          //          gavl_dictionary_dump(&dev, 2);
+          gavl_dictionary_free(&dev);
+          //          fprintf(stderr, "\n");
           }
+          
           break;
         }
       break;
-#endif
     
     case BG_MSG_NS_STATE:
       switch(msg->ID)
@@ -750,20 +866,30 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
                 return 1;
               main_menu_set_subtitle_index(w->g->main_menu, stream);
               }
-            else if(!strcmp(ctx, BG_GTK_LOGWINDOW_STATE_CTX))
+            else if(!strcmp(var, BG_PLAYER_STATE_OV_URI))          // string
               {
-              if(!strcmp(var, BG_GTK_LOGWINDOW_VISIBLE))
-                {
-                int enable = 0;
-                if(!gavl_value_get_int(&val, &enable))
-                  return 1;
-                main_menu_set_log_window_item(w->g->main_menu, enable);
-                }
+              // fprintf(stderr, "Got OV uri: %s\n", gavl_value_get_string(&val));
+              main_menu_set_ov_uri(w->g->main_menu, gavl_value_get_string(&val));
+              }
+            else if(!strcmp(var, BG_PLAYER_STATE_OA_URI))          // string
+              {
+              // fprintf(stderr, "Got OA uri: %s\n", gavl_value_get_string(&val));
+              main_menu_set_oa_uri(w->g->main_menu, gavl_value_get_string(&val));
               }
 #if 0
             else
               fprintf(stderr, "State changed %s\n", var);
 #endif
+            }
+          else if(!strcmp(ctx, BG_GTK_LOGWINDOW_STATE_CTX))
+            {
+            if(!strcmp(var, BG_GTK_LOGWINDOW_VISIBLE))
+              {
+              int enable = 0;
+              if(!gavl_value_get_int(&val, &enable))
+                return 1;
+              main_menu_set_log_window_item(w->g->main_menu, enable);
+              }
             }
           else if(!strcmp(ctx, GAVL_STATE_CTX_SRC))
             {
@@ -780,94 +906,6 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
 
 
 
-    case BG_MSG_NS_BACKEND:
-      switch(msg->ID)
-        {
-        case BG_CMD_SET_BACKEND:
-          {
-          const char * klass;
-          const char * uri;
-          gavl_dictionary_t dev;
-          gavl_dictionary_init(&dev);
-          gavl_msg_get_arg_dictionary_c(msg, 0, &dev);
-          
-          //          fprintf(stderr, "gmerlin_set_backend\n");
-          //          gavl_dictionary_dump(&dev, 2);
-          
-          if((klass = gavl_dictionary_get_string(&dev, GAVL_META_CLASS)) &&
-              (uri = gavl_dictionary_get_string(&dev, GAVL_META_URI)))
-            {
-            if(!strcmp(klass, GAVL_META_CLASS_BACKEND_MDB))
-              {
-              pthread_mutex_lock(&w->g->backend_mutex);
-
-              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing MDB: %s", uri);
-              
-              gmerlin_disconnect_mdb(w->g);
-              w->g->mdb_ctrl = NULL;
-
-              if(w->g->mdb_backend)
-                {
-                bg_plugin_unref(w->g->mdb_backend);
-                w->g->mdb_backend = NULL;
-                }
-                
-              if(!strcmp(uri, "local"))
-                w->g->mdb_ctrl = bg_mdb_get_controllable(w->g->mdb);
-              else
-                {
-                if((w->g->mdb_backend =
-                    bg_backend_handle_create(&dev)))
-                  w->g->mdb_ctrl = bg_backend_handle_get_controllable(w->g->mdb_backend);
-
-                }
-                
-              gmerlin_connect_mdb(w->g);
-
-              pthread_mutex_unlock(&w->g->backend_mutex);
-
-              }
-            else if(!strcmp(klass, GAVL_META_CLASS_BACKEND_RENDERER))
-              {
-              pthread_mutex_lock(&w->g->backend_mutex);
-              
-              gmerlin_disconnect_player(w->g);
-              w->g->player_ctrl = NULL;
-                
-              if(w->g->player_backend)
-                {
-                bg_plugin_unref(w->g->player_backend);
-                w->g->player_backend = NULL;
-                }
-
-              gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Changing renderer: %s", uri);
-              
-              if(!strcmp(uri, "local"))
-                w->g->player_ctrl = bg_player_get_controllable(w->g->player);
-              else
-                {
-                if((w->g->player_backend = bg_backend_handle_create(&dev)))
-                  w->g->player_ctrl = bg_backend_handle_get_controllable(w->g->player_backend);
-                else
-                  {
-                  gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Creating renderer failed");
-                  break;
-                  }
-                }
-                
-              gmerlin_connect_player(w->g);
-              pthread_mutex_unlock(&w->g->backend_mutex);
-              }  
-            }
-          
-          //          gavl_dictionary_dump(&dev, 2);
-          gavl_dictionary_free(&dev);
-          //          fprintf(stderr, "\n");
-          
-          }
-          break;
-        }
-      break;
     case BG_MSG_NS_PLAYER:
       {
       int arg_i_1;

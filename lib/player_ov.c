@@ -144,6 +144,53 @@ void bg_player_ov_standby(bg_player_video_stream_t * ctx)
   bg_ov_show_window(ctx->ov, 0);
   }
 
+void bg_player_set_ov_uri(bg_player_t * player, const char * uri)
+  {
+  bg_plugin_handle_t * handle;
+  bg_player_video_stream_t * ctx = &player->video_stream;
+  
+  ctx->sink_uri = gavl_strrep(ctx->sink_uri, uri);
+
+  if(!ctx->sink_uri)
+    ctx->sink_uri = bg_get_default_sink_uri(BG_PLUGIN_OUTPUT_VIDEO);
+  
+  if(!(handle = bg_output_plugin_load(ctx->sink_uri, BG_PLUGIN_OUTPUT_VIDEO)))
+    return;
+
+  /* Remove urlvars */
+  gavl_url_get_vars(ctx->sink_uri, NULL);
+  
+  bg_player_stream_change_init(player);
+
+  if(ctx->ov)
+    {
+    bg_ov_destroy(ctx->ov);
+    ctx->ov = NULL;
+    ctx->ov_ctrl = NULL;
+    }
+  
+  if(handle)
+    {
+    //    ctx->plugin = (bg_ov_plugin_t*)ctx->plugin_handle->plugin;
+
+    if(handle->plugin && handle->plugin->get_controllable && 
+       (ctx->ov_ctrl = handle->plugin->get_controllable(handle->priv)))
+      bg_msg_hub_connect_sink(ctx->ov_ctrl->evt_hub, ctx->ov_evt_sink);
+    
+    ctx->ov = bg_ov_create(handle);
+    
+    //  bg_ov_set_callbacks(ctx->ov, &ctx->callbacks);
+    
+    /* ov holds a private reference */
+    bg_plugin_unref(handle);
+    
+    }
+
+  bg_player_stream_change_done(player);
+  
+  }
+
+#if 0
 static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   {
   const gavl_dictionary_t * options;
@@ -151,7 +198,7 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   bg_player_video_stream_t * ctx = &player->video_stream;
 
   if(!(options = bg_multi_menu_get_selected(val)) ||
-     !(handle = bg_ov_plugin_load(options, ctx->display_string)))
+     !(handle = bg_ov_plugin_load(options)))
     return 0;
   
   bg_player_stream_change_init(player);
@@ -179,6 +226,7 @@ static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
   //  bg_player_stream_change_done(player);
   return 1;
   }
+#endif
 
 gavl_time_t bg_player_ov_resync(bg_player_t * p)
   {
@@ -199,9 +247,6 @@ void bg_player_ov_destroy(bg_player_t * player)
   
   if(ctx->ov)
     bg_ov_destroy(ctx->ov);
-
-  if(ctx->display_string)
-    free(ctx->display_string);
 
   if(ctx->ov_evt_sink)
     bg_msg_sink_destroy(ctx->ov_evt_sink);
@@ -226,7 +271,7 @@ int bg_player_ov_init(bg_player_video_stream_t * vs)
 
   //  vs->last_time = GAVL_TIME_UNDEFINED;
   
-  result = bg_ov_open(vs->ov, &vs->output_format, 1);
+  result = bg_ov_open(vs->ov, vs->sink_uri, &vs->output_format);
   
   bg_ov_set_window_title(vs->ov, "Video output");
   
@@ -601,30 +646,8 @@ void bg_player_set_osd_parameter(void * data,
   bg_osd_set_parameter(p->video_stream.osd, name, val);
   }
 
-static const bg_parameter_info_t plugin_params[] =
-  {
-    {
-      .name =      BG_PARAMETER_NAME_PLUGIN,
-      .long_name = "Video output plugin",
-      .type =      BG_PARAMETER_MULTI_MENU,
-    },
-    { /* End */ }
-  };
 
-const bg_parameter_info_t * bg_player_get_ov_plugin_parameters(bg_player_t * p)
-  {
-  if(!p->video_stream.plugin_params)
-    {
-    p->video_stream.plugin_params = bg_parameter_info_copy_array(plugin_params);
-
-    bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                          BG_PLUGIN_OUTPUT_VIDEO,
-                                          0,
-                                          &p->video_stream.plugin_params[0]);
-    }
-  return p->video_stream.plugin_params;
-  }
-
+#if 0
 void bg_player_set_ov_plugin_parameter(void * data, const char * name,
                                        const gavl_value_t * val)
   {
@@ -653,8 +676,5 @@ void bg_player_set_ov_plugin_parameter(void * data, const char * name,
       }
     }
   }
+#endif
 
-void bg_player_set_window_config(bg_player_t * p, const char * display_string)
-  {
-  p->video_stream.display_string = gavl_strrep(p->video_stream.display_string, display_string);
-  }

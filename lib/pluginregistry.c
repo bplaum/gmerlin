@@ -888,6 +888,13 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     bg_string_to_string_array(plugin->get_extensions(plugin_priv), new_info->extensions);
     
     }
+
+  if(plugin->get_protocols)
+    {
+    new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
+    bg_string_to_string_array(plugin->get_protocols(plugin_priv), new_info->protocols);
+    }
+
   
   if(plugin->type & (BG_PLUGIN_ENCODER_AUDIO|
                      BG_PLUGIN_ENCODER_VIDEO|
@@ -956,11 +963,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       bg_string_to_string_array(input->get_mimetypes(plugin_priv), new_info->mimetypes);
       }
     
-    if(input->get_protocols)
-      {
-      new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
-      bg_string_to_string_array(input->get_protocols(plugin_priv), new_info->protocols);
-      }
     }
   if(plugin->type & BG_PLUGIN_IMAGE_READER)
     {
@@ -2392,8 +2394,8 @@ bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict)
   
   }
 
-bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options,
-                                       const char * window_id)
+#if 0
+bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options)
   {
   bg_plugin_handle_t * ret;
   const char * name;
@@ -2425,20 +2427,12 @@ bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options,
   
   ret = load_plugin(info);
   
-  if(window_id)
-    {
-    gavl_value_t val;
-    gavl_value_init(&val);
-    gavl_value_set_string(&val, window_id);
-    
-    bg_plugin_handle_set_state(ret, BG_STATE_CTX_OV, BG_STATE_OV_WINDOW_ID, &val);
-    gavl_value_free(&val);
-    }
   
   if(ret)
     apply_parameters(ret, options);
   return ret;
   }
+#endif
 
 void bg_plugin_lock(void * p)
   {
@@ -2486,6 +2480,20 @@ void bg_plugin_registry_free_plugins(char ** plugins)
     }
   free(plugins);
   
+  }
+
+char * bg_get_default_sink_uri(int plugin_type)
+  {
+  const char * protocol;
+  const bg_plugin_info_t * info =
+    bg_plugin_find_by_index(0, plugin_type, 0);
+  if(!info)
+    return NULL;
+  
+  if(info->protocols && (protocol = gavl_string_array_get(info->protocols, 0)))
+    return gavl_sprintf("%s:///", protocol);
+  else
+    return NULL;
   }
 
 static void load_input_plugin(bg_plugin_registry_t * reg,
@@ -5136,11 +5144,6 @@ void bg_plugin_registry_list_input(void * data, int * argc,
   bg_plugin_registry_list_plugins(BG_PLUGIN_INPUT, 0);
   }
 
-void bg_plugin_registry_list_oa(void * data, int * argc,
-                                        char *** _argv, int arg)
-  {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_AUDIO, 0);
-  }
 
 void bg_plugin_registry_list_fe_renderer(void * data, int * argc,
                                          char *** _argv, int arg)
@@ -5154,13 +5157,6 @@ void bg_plugin_registry_list_fe_mdb(void * data, int * argc,
   bg_plugin_registry_list_plugins(BG_PLUGIN_FRONTEND_MDB, 0);
   }
 
-
-void bg_plugin_registry_list_ov(void * data, int * argc,
-                                        char *** _argv, int arg)
-  {
-  bg_plugin_registry_list_plugins(BG_PLUGIN_OUTPUT_VIDEO, 0);
-
-  }
 
 
 void bg_plugin_registry_list_fa(void * data, int * argc,
@@ -5341,8 +5337,6 @@ const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type)
   return ret;
   }
 
-
-
 /* Commandline options */
 
 static void parse_plugin_single(const char * arg, bg_plugin_type_t type)
@@ -5398,24 +5392,34 @@ static void parse_plugin_multi(const char * arg, bg_plugin_type_t type)
 void bg_plugin_registry_opt_oa(void * data, int * argc,
                                char *** _argv, int arg)
   {
+  gavl_value_t val;
   if(arg >= *argc)
     {
     fprintf(stderr, "Option -oa requires an argument\n");
     exit(-1);
     }
-  parse_plugin_single((*_argv)[arg], BG_PLUGIN_OUTPUT_AUDIO);
+  
+  gavl_value_init(&val);
+  gavl_value_set_string(&val, (*_argv)[arg]);
+  bg_plugin_config_set(BG_PLUGIN_OUTPUT_AUDIO, &val);  
+  gavl_value_free(&val);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
 void bg_plugin_registry_opt_ov(void * data, int * argc,
                                char *** _argv, int arg)
   {
+  gavl_value_t val;
   if(arg >= *argc)
     {
     fprintf(stderr, "Option -ov requires an argument\n");
     exit(-1);
     }
-  parse_plugin_single((*_argv)[arg], BG_PLUGIN_OUTPUT_VIDEO);
+  
+  gavl_value_init(&val);
+  gavl_value_set_string(&val, (*_argv)[arg]);
+  bg_plugin_config_set(BG_PLUGIN_OUTPUT_VIDEO, &val);  
+  gavl_value_free(&val);
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
@@ -6003,3 +6007,37 @@ void bg_plugins_cleanup()
 
   }
 
+bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type)
+  {
+  bg_plugin_handle_t * ret;
+  const bg_plugin_info_t * info;
+  gavl_dictionary_t options_s;
+  gavl_dictionary_t options_v;
+
+  gavl_dictionary_init(&options_s);
+  gavl_dictionary_init(&options_v);
+  
+  gavl_url_get_vars_c(sink_uri, &options_s);
+  
+  if(!(info = bg_plugin_find_by_protocol(sink_uri, type)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No plugin found for uri: %s", sink_uri);
+    return NULL;
+    }
+  
+  ret = load_plugin(info);
+  
+  if(ret && ret->plugin->get_parameters)
+    {
+    const bg_parameter_info_t * info = ret->plugin->get_parameters(ret->priv);
+
+    bg_cfg_section_from_strings(&options_s, &options_v, info);
+    apply_parameters(ret, &options_v);
+    }
+
+  gavl_dictionary_free(&options_s);
+  gavl_dictionary_free(&options_v);
+  
+  return ret;
+  
+  }

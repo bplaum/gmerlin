@@ -27,6 +27,7 @@
 
 #define BG_RESOURCE_EXPIRE_TIME  "ExpireTime"
 #define BG_RESOURCE_PRIORITY     "Priority"
+#define BG_RESOURCE_PLUGIN       "Plugin"
 
 #define BG_RESOURCE_PRIORITY_MIN     1
 #define BG_RESOURCE_PRIORITY_DEFAULT 2
@@ -73,6 +74,11 @@ gavl_dictionary_t * bg_resource_get_by_idx(int local, int idx);
 /* List recording devices */
 void bg_opt_list_recording_sources(void * data, int * argc,
                                    char *** _argv, int arg);
+void bg_opt_list_audio_sinks(void * data, int * argc,
+                             char *** _argv, int arg);
+void bg_opt_list_video_sinks(void * data, int * argc,
+                             char *** _argv, int arg);
+
 
 #define BG_OPT_LIST_RECORDERS                  \
   { \
@@ -81,6 +87,18 @@ void bg_opt_list_recording_sources(void * data, int * argc,
   .callback =    bg_opt_list_recording_sources, \
   }
 
+#define BG_OPT_LIST_OA                   \
+  { \
+  .arg =         "-list-oa", \
+  .help_string = TRS("List available audio sinks"), \
+  .callback =    bg_opt_list_audio_sinks, \
+  }
 
+#define BG_OPT_LIST_OV \
+  { \
+  .arg =         "-list-ov", \
+  .help_string = TRS("List available video sinks"), \
+  .callback =    bg_opt_list_video_sinks, \
+  }
 
 #endif // BG_RESOURCEMANAGER_H_INCLUDED

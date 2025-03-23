@@ -33,6 +33,7 @@
 #include <gmerlin/plugin.h>
 
 #include <pulse/pulseaudio.h>
+#include "pulseaudio_common.h"
 
 #define FLAG_READY       (1<<0)
 #define FLAG_ERROR       (1<<1)
@@ -52,10 +53,11 @@ typedef struct
   
   //  int pa_ready;
   //  int pa_got_initial_devs;
-
+  
   int num_ops;
   
   char hostname[HOST_NAME_MAX+1];
+  int defaults_added;
   
   } pulse_t;
 
@@ -96,13 +98,22 @@ static void pa_state_cb(pa_context *c, void *userdata)
 
 static char * make_id(const char * klass, int idx)
   {
-  if(!strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER))
-    return gavl_sprintf("pulseaudio-source-%d", idx);
+  const char * prefix = NULL;
 
-  if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
-    return gavl_sprintf("pulseaudio-sink-%d", idx);
   
-  return NULL;
+  
+  if(!strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER))
+    prefix = "pulseaudio-source";
+  else if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
+    prefix = "pulseaudio-sink";
+
+  if(!prefix)
+    return NULL;
+  
+  if(idx >= 0)
+    return gavl_sprintf("%s-%d", prefix, idx);
+  else
+    return gavl_sprintf("%s-default", prefix);
   }
   
 static void add_device(pulse_t * reg, gavl_dictionary_t * dict, int idx)
@@ -162,13 +173,13 @@ static void pa_source_cb(pa_context *c, const pa_source_info *l, int eol, void *
 
       pos = end_pos + 1;
 
-      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf(PULSE_SOURCE_PROTOCOL"://%s/%s",
                                                                            hostname, pos));
       
       free(hostname);
       }
     else
-      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-source://%s/%s",
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf(PULSE_SOURCE_PROTOCOL"://%s/%s",
                                                                            reg->hostname, l->name));
     
     add_device(reg, &dict, l->index);
@@ -185,11 +196,11 @@ static void pa_sink_cb(pa_context *c, const pa_sink_info *l, int eol, void *user
     gavl_dictionary_t dict;
     gavl_dictionary_init(&dict);
     
-    //    fprintf(stderr, "Got source: %s\n", l->name);
+    //    fprintf(stderr, "Got sink: %s\n", l->name);
     
     gavl_dictionary_set_string(&dict, GAVL_META_LABEL, l->description);
     gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
-    gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("pulseaudio-sink://%s/%s",
+    gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf(PULSE_SINK_PROTOCOL"://%s/%s",
                                                                          reg->hostname,
                                                                          l->name));
     
@@ -240,7 +251,7 @@ static void pa_subscribe_callback(pa_context *c,
 #if 0
     case PA_SUBSCRIPTION_EVENT_CHANGE:
       {
-      char * id = gavl_sprintf("pulseaudio-source-%d", idx);
+      char * id = gavl_sprintf(PULSE_SOURCE_PROTOCOL"-%d", idx);
       del_device(reg, id);
       reg->pa_op = pa_context_get_source_info_by_index(c, idx, pa_source_cb, userdata);
       fprintf(stderr, "%d changed\n", idx);
@@ -346,6 +357,23 @@ static int update_pulse(void * priv)
   
   if(!reg->pa_ml)
     return 0;
+
+  if(!reg->defaults_added)
+    {
+    gavl_dictionary_t dict;
+    gavl_dictionary_init(&dict);
+    gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("%s://%s", PULSE_SOURCE_PROTOCOL, reg->hostname));
+    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, TR("System default recorder"));
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
+    add_device(reg, &dict, -1);
+    
+    gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf("%s://%s", PULSE_SINK_PROTOCOL, reg->hostname));
+    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, TR("System default sink"));
+    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
+    add_device(reg, &dict, -1);
+    
+    reg->defaults_added = 1;
+    }
   
   pa_mainloop_iterate(reg->pa_ml, 0, NULL);
 

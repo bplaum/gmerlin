@@ -1063,12 +1063,11 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
                 return 1;
               chapter_cmd(player, chapter);
               }
-#if 0
-            else if(!strcmp(var, GAVL_META_LABEL) ||
-                    !strcmp(var, BG_PLAYER_STATE_PROTOCOLS) ||
-                    !strcmp(var, BG_PLAYER_STATE_MIMETYPES))
-              break;
-#endif       
+            else if(!strcmp(var, BG_PLAYER_STATE_OA_URI))
+              bg_player_set_oa_uri(player, gavl_value_get_string(&val));
+            else if(!strcmp(var, BG_PLAYER_STATE_OV_URI))
+              bg_player_set_ov_uri(player, gavl_value_get_string(&val));
+            
             bg_player_state_set_local(player, last, ctx, var, &val);
             }
           else if(!strcmp(ctx, BG_STATE_CTX_OV))
@@ -1523,13 +1522,24 @@ static void * player_thread(void * data)
   int do_exit;
   int state;
   int actions;
+  const char * uri = 0;
+  const gavl_value_t * uri_val;
   
   player = data;
 
   bg_player_set_status(player, BG_PLAYER_STATUS_STOPPED);
 
   player->last_seconds = GAVL_TIME_UNDEFINED;
-    
+
+  /* Set sinks */
+
+  if((uri_val = bg_plugin_config_get(BG_PLUGIN_OUTPUT_AUDIO)))
+    uri = gavl_value_get_string(uri_val);
+  bg_player_set_oa_uri(player, uri);
+  
+  if((uri_val = bg_plugin_config_get(BG_PLUGIN_OUTPUT_VIDEO)))
+    uri = gavl_value_get_string(uri_val);
+  bg_player_set_ov_uri(player, uri);
   do_exit = 0;
   while(1)
     {
