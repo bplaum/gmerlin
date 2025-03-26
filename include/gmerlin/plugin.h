@@ -669,7 +669,6 @@ struct bg_encoder_plugin_s
    *  \param priv The handle returned by the create() method
    *  \param filename Name of the file to be opened (without extension!)
    *  \param metadata Metadata to be written to the file
-   *  \param chapter_list Chapter list (optional, can be NULL)
    *
    *  The extension is added automatically by the plugin.
    *  To keep track of the written files, use the \ref bg_encoder_callbacks_t.
@@ -689,7 +688,8 @@ struct bg_encoder_plugin_s
   int (*open_io)(void * data, gavl_io_t * io,
                  const gavl_dictionary_t * metadata);
 
- 
+  
+  
   /* Return per stream parameters */
 
   /** \brief Get audio related parameters

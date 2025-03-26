@@ -165,6 +165,7 @@ const char * bg_plugin_type_to_string(bg_plugin_type_t type);
 bg_plugin_type_t bg_plugin_type_from_string(const char * name);
 
 
+#if 0
 /** \ingroup plugin_registry
  *  \brief Creation options for a plugin registry
  *
@@ -176,6 +177,7 @@ typedef struct
   char ** blacklist; //!< Plugins, which should be ignored
   //  int dont_save;            //!< If 1, don't save the registry after it was created
   } bg_plugin_registry_options_t;
+#endif
 
 /** \ingroup plugin_registry
  *  \brief Opaque handle for a plugin registry
@@ -253,9 +255,9 @@ bg_plugin_registry_create_1(bg_cfg_section_t * section);
  *  by the plugin registry, applications should not touch it.
  */
 
-void
-bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
-                                       const bg_plugin_registry_options_t * opt);
+// void
+// bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
+//                                       const bg_plugin_registry_options_t * opt);
 
 
 /** \ingroup plugin_registry
