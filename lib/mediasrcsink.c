@@ -424,6 +424,9 @@ static bg_plugin_handle_t * load_decoder_plugin(gavl_dictionary_t * s, uint32_t 
     else
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot find decompressor for %s",
                gavl_compression_get_long_name(ci.id));
+
+    gavl_dictionary_dump(s, 2);
+
     goto fail;
     }
   

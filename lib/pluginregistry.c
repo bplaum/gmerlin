@@ -127,6 +127,12 @@ meta_plugins[] =
       bg_ovl2text_get,
       bg_ovl2text_create,
     },
+    {
+      bg_rb_plugin_name,
+      bg_rb_plugin_get_info,
+      bg_rb_plugin_get,
+      bg_rb_plugin_create,
+    },
     { /* End */ }
   };
 
@@ -3427,41 +3433,6 @@ bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
   return ret;
   }
 
-#if 0
-bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
-  {
-  int i;
-  char * redirect_url = NULL;
-  char * location = gavl_strdup(location1);
-  
-  for(i = 0; i < MAX_REDIRECTIONS; i++)
-    {
-    if(!input_plugin_load_full(reg,
-                               location,
-                               ret,
-                               &redirect_url))
-      {
-      free(location);
-      return 0;
-      }
-    
-    if(redirect_url)
-      {
-      free(location);
-      location = redirect_url;
-      redirect_url = NULL;
-      }
-    else
-      {
-      free(location);
-      return 1;
-      }
-    }
-  
-  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections");
-  return 0;
-  }
-#endif
 
 static const bg_parameter_info_t encoder_section_general[] =
   {
@@ -5769,11 +5740,7 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
       gavl_dictionary_t vars;
       char * real_location;
 
-      /* Handle radiobrowser URL */
-      if(bg_rb_check_uri(location))
-        real_location = bg_rb_resolve_uri(location);
-      else
-        real_location = gavl_strdup(location);
+      real_location = gavl_strdup(location);
       
       track_index = 0;
       gavl_dictionary_init(&vars);

@@ -62,6 +62,15 @@ void bg_player_load_uri(bg_msg_sink_t * s,
                         const char * uri,
                         int start_playing)
   {
+#if 1
+  
+  gavl_msg_t * msg;
+  msg = bg_msg_sink_get(s);
+  gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_LOAD_URI, BG_MSG_NS_PLAYER);
+  gavl_msg_set_arg_string(msg, 0, uri);
+  gavl_msg_set_arg_int(msg, 1, start_playing);
+  bg_msg_sink_put(s);
+#else
   char * id;
   gavl_msg_t * msg;
   char hash[GAVL_MD5_LENGTH];
@@ -97,6 +106,7 @@ void bg_player_load_uri(bg_msg_sink_t * s,
     bg_player_play(s);
   
   gavl_dictionary_free(&dict);
+#endif
 
   }
 

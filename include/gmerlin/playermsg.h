@@ -158,6 +158,12 @@
 /* arg0: plugin_name?opt1=val1&opt2=val2 */
 #define BG_PLAYER_CMD_SET_VISUALIZATION     45
 
+/* arg0: uri
+   arg1: start playing (int)
+*/
+
+#define BG_PLAYER_CMD_LOAD_URI              46
+
 /********************************
  * Messages from the player
 ********************************/

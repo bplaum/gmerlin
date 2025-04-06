@@ -1104,6 +1104,13 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
       {
       switch(command->ID)
         {
+        case BG_PLAYER_CMD_LOAD_URI:
+          {
+          const char * uri = gavl_msg_get_arg_string_c(command, 0);
+          int start_playing = gavl_msg_get_arg_int(command, 1);
+          fprintf(stderr, "Load uri %d %s\n", start_playing, uri);
+          }
+          break;
         case BG_PLAYER_CMD_NEXT:
         case BG_PLAYER_CMD_PREV:
           {

@@ -1221,7 +1221,11 @@ const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_ty
 
 char * bg_get_default_sink_uri(int plugin_type);
 
-
+#define bg_rb_plugin_name "i_rb"
+const bg_plugin_common_t * bg_rb_plugin_get();
+bg_plugin_info_t * bg_rb_plugin_get_info();
+void * bg_rb_plugin_create();
+  
 
 #endif // BG_PLUGINREGISTRY_H_INCLUDED
 

@@ -189,6 +189,7 @@ pluginregistry.c \
 pluginreg_xml.c \
 preset.c \
 preset_xml.c \
+radiobrowser.c \
 resourcemanager.c \
 ringbuffer.c \
 backend.c \
