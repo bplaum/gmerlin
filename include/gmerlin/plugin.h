@@ -81,7 +81,6 @@
 #define BG_PLUGIN_PIPE             (1<<8)  //!< Plugin can do I/O from stdin or stdout ("-")
 #define BG_PLUGIN_TUNER            (1<<9)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
 #define BG_PLUGIN_FILTER_1        (1<<10)  //!< Plugin acts as a filter with one input
-#define BG_PLUGIN_EMBED_WINDOW    (1<<11)  //!< Plugin can embed it's window into another application
 
 #define BG_PLUGIN_BROADCAST       (1<<16)  //!< Plugin can broadcasts (e.g. webstreams)
 #define BG_PLUGIN_DEVPARAM        (1<<17)  //!< Plugin has pluggable devices as parameters, which must be updated regurarly
@@ -101,7 +100,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 42
+#define BG_PLUGIN_API_VERSION 43
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -295,6 +294,10 @@ struct bg_input_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
 
+  /* Set preferred hardware context for allocating frames */
+  void (*set_video_hw_context)(void * priv, gavl_hw_context_t * ctx);
+
+  
   /** \brief Get supported mimetypes
    *  \param priv The handle returned by the create() method
    *  \returns A space separated list of mimetypes
@@ -468,27 +471,18 @@ typedef struct bg_ov_plugin_s bg_ov_plugin_t;
 struct bg_ov_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-
-  /** \brief Set window
+  
+  /** \brief Get hw context
    *  \param priv The handle returned by the create() method
-   *  \param window Window identifier
+   *  \returns An inititialized hardware context
    *
-   *  Call this immediately after creation of the plugin to embed 
-   *  video output into a foreign application. 
-   *  For X11, the window identifier has the form
-   *  \<display_name\>:\<normal_id\>:\<fullscreen_id\>. 
+   *  The hardware context can be used by input plugins to allocate
+   *  the frames
+   *   
    */
   
-  //  void (*set_window)(void * priv, const char * window_id);
+  gavl_hw_context_t * (*get_hw_context)(void * priv);
   
-  /** \brief Get window
-   *  \param priv The handle returned by the create() method
-   *  \returns Window identifier
-   */
-  
-  //  const char * (*get_window)(void * priv);
-  
-
   /** \brief Set callbacks
    *  \param priv The handle returned by the create() method
    *  \param callbacks Callback structure initialized by the caller before
@@ -499,14 +493,14 @@ struct bg_ov_plugin_s
   /** \brief Open plugin
    *  \param priv The handle returned by the create() method
    *  \param format Video format
-   *  \param window_title Window title
+   *  \param src_flags The source flags (see gavl_video_source_create())
    *
    *  The format will be changed to the nearest format, which is supported
    *  by the plugin. To convert the source format to the output format,
    *  use a \ref gavl_video_converter_t
    */
   
-  int  (*open)(void * priv, const char * uri, gavl_video_format_t * format);
+  int  (*open)(void * priv, const char * uri, gavl_video_format_t * format, int src_flags);
   
   /** \brief Add a stream for transparent overlays
    *  \param priv The handle returned by the create() method

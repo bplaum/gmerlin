@@ -170,7 +170,9 @@ int bg_frontend_set_option(gavl_array_t * frontends, const char * opt)
   ret = 1;
   
   fail:
-  
+
+  if(str)
+    gavl_strbreak_free(str);
   
   if(real_opt)
     free(real_opt);

@@ -63,7 +63,6 @@ void bg_player_load_uri(bg_msg_sink_t * s,
                         int start_playing)
   {
 #if 1
-  
   gavl_msg_t * msg;
   msg = bg_msg_sink_get(s);
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_LOAD_URI, BG_MSG_NS_PLAYER);
@@ -95,7 +94,7 @@ void bg_player_load_uri(bg_msg_sink_t * s,
   /* Set current track */
   id = gavl_sprintf("%s/%s", BG_PLAYQUEUE_ID, hash);
   msg = bg_msg_sink_get(s);
-
+  
   gavl_msg_set_id_ns(msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
   gavl_msg_set_arg_string(msg, 0, id);  // idx
   bg_msg_sink_put(s);
@@ -328,7 +327,7 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
   bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val);
 
   if((m = gavl_track_get_metadata(dict)) && (vp = gavl_dictionary_get(m, GAVL_STATE_SRC_SEEK_WINDOW)))
-    bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, GAVL_STATE_SRC_SEEK_WINDOW, &val);
+    bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, GAVL_STATE_SRC_SEEK_WINDOW, vp);
   
   /* Set duration range */
   if((duration = gavl_track_get_duration(d)) != GAVL_TIME_UNDEFINED)
@@ -339,7 +338,8 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
     bg_state_set_range_long(&player->state,
                             BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_TIME,
                             0, 0);
-  
+  memset(d, 0, sizeof(*d));
+  gavl_value_free(&val);
   }
 
 void bg_player_set_fullscreen_m(gavl_msg_t * msg, int fs)

@@ -599,6 +599,9 @@ bg_transcoder_track_create(const char * url,
   gavl_array_t * ret = NULL;
   int track = -1;
   const char * var;
+
+  //  fprintf(stderr, "bg_transcoder_track_create\n");
+  //  gavl_dictionary_dump(encoder_section, 2);
   
   /* Load the plugin */
   gavl_dictionary_init(&vars);

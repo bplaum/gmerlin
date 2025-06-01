@@ -79,6 +79,7 @@ char * bg_search_file_read(const char * directory, const char * file)
       fclose(testfile);
       return test_file_name;
       }
+    free(test_file_name);
     free(testpath);
     }
   

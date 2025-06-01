@@ -270,6 +270,12 @@ int read_image_jpeg(void * priv, gavl_video_frame_t * frame)
   if(!frame)
     {
     jpeg_abort_decompress(&jpeg->cinfo);
+    
+    if(jpeg->jerr.filename)
+      {
+      free(jpeg->jerr.filename);
+      jpeg->jerr.filename = NULL;
+      }
     return 1;
     }
   

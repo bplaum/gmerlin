@@ -36,21 +36,80 @@
 #include <X11/extensions/dpms.h>
 #endif
 
+#ifdef HAVE_DRM
+#include <gavl/hw_dmabuf.h>
+#endif
+
 #define SCREENSAVER_MODE_XLIB  0 // MUST be 0 (fallback)
 #define SCREENSAVER_MODE_GNOME 1
 #define SCREENSAVER_MODE_KDE   2
 #define SCREENSAVER_MODE_XTEST 3
 
-#ifdef HAVE_GLX
-#include <GL/glx.h>
-#endif
-
 #ifdef HAVE_EGL
 #include <EGL/egl.h>
+#include <GL/gl.h>
 #endif
+
 
 
 // #include <X11/extensions/XShm.h>
+
+typedef struct
+  {
+  GLuint program;
+  GLuint fragment_shader;
+  GLuint vertex_shader;
+  
+  GLint frame_locations[3];
+  GLint colormatrix_location;
+  GLint coloroffset_location;
+  } shader_program_t;
+
+/* New API: Port */
+
+/* Supported video modes */
+
+/* For overlays, we just support MODE_TEXTURE_TRANSFER (for frames <= max_texture_size)
+   or MODE_DMABUF_TRANSFER (for larger frames) */
+
+typedef enum
+  {
+    MODE_TEXTURE_TRANSFER = 1, // Copy frames from RAM to OpenGL Texture
+    MODE_TEXTURE_DIRECT   = 2, // Use OpenGL textures created somewhere else
+    MODE_DMABUF_IMPORT    = 3, // Use imported DMA-Buffers
+    MODE_DMABUF_GETFRAME  = 4, // Let the client render into a dma buffer
+    MODE_DMABUF_TRANSFER  = 5, // Client supplies RAM buffers and we transfer
+                               // them (with shuffling) to a DMA buffer
+  } video_mode_t;
+
+typedef struct
+  {
+  gavl_video_format_t fmt;
+  gavl_video_sink_t * sink;
+  video_mode_t mode;
+
+  gavl_hw_context_t * dma_context;
+
+  /* Currently displayed frame */
+  gavl_video_frame_t * cur;
+
+  /* DMA frame (can be passed to sink) */
+  gavl_video_frame_t * dma_frame;
+
+  /* Shader with/without colormatrix */
+  
+  shader_program_t shader_cm;
+  shader_program_t shader_nocm;
+
+  bg_x11_window_t * win;
+  
+  } port_t;
+
+int bg_x11_port_init(port_t * port, bg_x11_window_t * win, gavl_video_format_t * fmt, int src_flags);
+int bg_x11_port_set_frame(port_t * port, gavl_video_frame_t * frame);
+void bg_x11_port_put_frame(port_t * port);
+void bg_x11_port_cleanup(port_t * port);
+
 
 
 /* Screensaver module */
@@ -92,13 +151,23 @@ bg_x11_screensaver_cleanup(bg_x11_screensaver_t *);
 
 typedef struct
   {
-  gavl_overlay_t * ovl;
-  gavl_overlay_t * ovl_hw;
-  
   gavl_video_format_t format;
   bg_x11_window_t * win;
   gavl_video_sink_t * sink;
   int active;
+  gavl_overlay_t * ovl; // Hardware frame
+  
+  gavl_overlay_t * dma_frame; // DMA frame
+  gavl_hw_context_t * dma_hwctx;
+
+  int mode;
+  int format_idx;
+
+  gavl_hw_frame_mode_t frame_mode;
+
+  shader_program_t shader_cm;
+  shader_program_t shader_nocm;
+  
   } overlay_stream_t;
 
 typedef struct video_driver_s video_driver_t;
@@ -111,64 +180,47 @@ typedef struct
   {
   int flags;
   const video_driver_t * driver;
-  gavl_pixelformat_t * img_formats;
-  gavl_pixelformat_t * ovl_formats;
   void * priv;
-  int can_scale;
   bg_x11_window_t * win;
+
+  /* Format negotiation stuff (used when querying drivers) */
   
-  
-  /* Selected pixelformat (used by the core only) */
-  gavl_pixelformat_t pixelformat;
+  gavl_video_format_t fmt;
   int penalty;
+  gavl_hw_frame_mode_t frame_mode;
+  int format_idx;
+  
+  /* Hardware context(s) */
+  
+  gavl_hw_context_t * hwctx;
+  gavl_hw_context_t * hwctx_priv;
+  
   } driver_data_t;
 
-#ifdef HAVE_LIBVA
-extern const video_driver_t vaapi_driver;
-#endif
 
-
-extern const video_driver_t ximage_driver;
-
-#ifdef HAVE_LIBXV
-extern const video_driver_t xv_driver;
-#endif
-
-#if defined(HAVE_GLX) || defined(HAVE_EGL)
 extern const video_driver_t gl_driver;
 extern const video_driver_t gles_driver;
-#endif
 
-#ifdef HAVE_MMAL
-extern const video_driver_t mmal_driver;
-#endif
-
-#define MAX_DRIVERS 5
+#define MAX_DRIVERS 2
 
 struct video_driver_s
   {
   const char * name;
   
-  int can_scale;
   int (*init)(driver_data_t* data);
-  int (*open)(driver_data_t* data);
+
+  void (*adjust_video_format)(driver_data_t* data, gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode);
+  
+  int (*open)(driver_data_t* data, int src_flags);
   
   void (*init_overlay_stream)(driver_data_t* data, overlay_stream_t * str);
+
   
   int (*supports_hw)(driver_data_t* data, gavl_hw_context_t * ctx);
   
-  gavl_video_frame_t * (*create_overlay)(driver_data_t* d, overlay_stream_t * str);
-  void (*destroy_overlay)(driver_data_t* data, overlay_stream_t * str,
-                          gavl_video_frame_t*);
+  void (*set_overlay)(driver_data_t* d, overlay_stream_t * str, gavl_video_frame_t * frame);
 
-  void (*set_overlay)(driver_data_t* d, overlay_stream_t * str);
-  void (*unset_overlay)(driver_data_t* d, overlay_stream_t * str);
-  
-  gavl_video_frame_t * (*create_frame)(driver_data_t* data);
-  
-  void (*destroy_frame)(driver_data_t* data, gavl_video_frame_t *);
-  
-  void (*set_frame)(driver_data_t* data, gavl_video_frame_t * frame);
+  int (*set_frame)(driver_data_t* data, gavl_video_frame_t * frame);
   void (*put_frame)(driver_data_t* data);
 
   void (*set_brightness)(driver_data_t* data,float brightness);
@@ -181,8 +233,7 @@ struct video_driver_s
 
 /*
  *  We have 2 windows: One normal window and one
- *  fullscreen window. We optionally talk to both the
- *  children and parents through the XEmbed protocol
+ *  fullscreen window.
  */
 
 typedef struct
@@ -206,12 +257,8 @@ typedef struct
   EGLSurface egl_surface;
 #endif
   
-  int parent_xembed;
-  int child_xembed;
   int mapped;
   int fullscreen;
-  bg_accelerator_map_t * child_accel_map;
-  int modality;
   } window_t;
 
 /* Keyboard accelerators */
@@ -242,10 +289,8 @@ typedef struct
 #define FLAG_NEED_FOCUS                     (1<<11)
 #define FLAG_NEED_FULLSCREEN                (1<<12)
 #define FLAG_OVERLAY_CHANGED                (1<<15)
-#define FLAG_NO_GET_FRAME                   (1<<16)
 #define FLAG_CLEAR_BORDER                   (1<<17)
 #define FLAG_TRACK_RESIZE                   (1<<18)
-#define FLAG_ZEROCOPY                       (1<<19)
 #define FLAG_NEED_REDRAW                    (1<<21)
 
 #define SET_FLAG(w, flag) w->flags |= (flag)
@@ -283,8 +328,6 @@ struct bg_x11_window_s
 
   gavl_dictionary_t state;
   int have_state_ov;
-  int have_state_x11;
-  
   /* Fullscreen stuff */
 
   int fullscreen_mode;
@@ -302,8 +345,6 @@ struct bg_x11_window_s
   Atom WIN_PROTOCOLS;
   Atom WM_PROTOCOLS;
   Atom WIN_LAYER;
-  Atom _XEMBED_INFO;
-  Atom _XEMBED;
   Atom STRING;
   Atom WM_CLASS;
   
@@ -311,13 +352,10 @@ struct bg_x11_window_s
   int idle_counter;
   
   /* Screensaver stuff */
-    
+  
   char * display_string_parent;
-  char * display_string_child;
 
   Colormap colormap;
-  Colormap sub_colormap;
-  
   bg_accelerator_map_t * accel_map;
   
   Visual * visual;
@@ -359,22 +397,11 @@ struct bg_x11_window_s
 
   /* Screensaver */
   bg_x11_screensaver_t scr;
-
-  /* Frame from the sink */
-  gavl_video_frame_t * frame;
   
   bg_controllable_t ctrl;
 
-#if 0  
-  /* Zoom/Squeeze */
-  float zoom;
-  float squeeze;
-  float hue;
-  float brightness;
-  float saturation;
-  float contrast;
-#endif
-
+  gavl_hw_context_t * dma_hwctx;
+  gavl_video_frame_t * dma_frame;
   
   };
 
@@ -399,26 +426,12 @@ void bg_x11_window_make_icon(bg_x11_window_t * win,
                              const gavl_video_format_t * icon_format,
                              Pixmap * icon_ret, Pixmap * mask_ret);
 
-
-int bg_x11_window_check_shm(Display * dpy, int * completion_type);
-
-
 void bg_x11_window_size_changed(bg_x11_window_t * w);
 
 void bg_x11_window_cleanup_video(bg_x11_window_t * w);
 
 Window bg_x11_window_get_toplevel(bg_x11_window_t * w, Window win);
 
-void bg_x11_window_send_xembed_message(bg_x11_window_t * w, Window win, long time,
-                                       int type, int detail, int data1, int data2);
-
-void bg_x11_window_embed_parent(bg_x11_window_t * win,
-                                window_t * w);
-void bg_x11_window_embed_child(bg_x11_window_t * win,
-                               window_t * w);
-
-int bg_x11_window_check_embed_property(bg_x11_window_t * win,
-                                       window_t * w);
 
 void bg_x11_window_set_fullscreen_mapped(bg_x11_window_t * win,
                                          window_t * w);
@@ -426,43 +439,9 @@ void bg_x11_window_set_fullscreen_mapped(bg_x11_window_t * win,
 void
 bg_x11_window_set_netwm_state(Display * dpy, Window win, Window root, int action, Atom state);
 
-
-void bg_x11_window_create_subwins(bg_x11_window_t * w,
-                                  int depth, Visual * v);
-
-void bg_x11_window_destroy_subwins(bg_x11_window_t * w);
 void bg_x11_window_clear_border(bg_x11_window_t * w);
 
 void x11_window_accel_pressed(bg_x11_window_t * win, int id);
-
-/* For OpenGL support */
-
-// int bg_x11_window_init_gl(bg_x11_window_t *);
-
-#define XEMBED_MAPPED                   (1 << 0)
-
-/* XEMBED messages */
-#define XEMBED_EMBEDDED_NOTIFY		0
-#define XEMBED_WINDOW_ACTIVATE  	1
-#define XEMBED_WINDOW_DEACTIVATE  	2
-#define XEMBED_REQUEST_FOCUS	 	3
-#define XEMBED_FOCUS_IN 	 	4
-#define XEMBED_FOCUS_OUT  		5
-#define XEMBED_FOCUS_NEXT 		6
-#define XEMBED_FOCUS_PREV 		7
-/* 8-9 were used for XEMBED_GRAB_KEY/XEMBED_UNGRAB_KEY */
-#define XEMBED_MODALITY_ON 		10
-#define XEMBED_MODALITY_OFF 		11
-#define XEMBED_REGISTER_ACCELERATOR     12
-#define XEMBED_UNREGISTER_ACCELERATOR   13
-#define XEMBED_ACTIVATE_ACCELERATOR     14
-
-/* Modifiers field for XEMBED_REGISTER_ACCELERATOR */
-#define XEMBED_MODIFIER_SHIFT    (1 << 0)
-#define XEMBED_MODIFIER_CONTROL  (1 << 1)
-#define XEMBED_MODIFIER_ALT      (1 << 2)
-#define XEMBED_MODIFIER_SUPER    (1 << 3)
-#define XEMBED_MODIFIER_HYPER    (1 << 4)
 
 
 #endif // BG_X11_WINDOW_PRIVATE_H_INCLUDED

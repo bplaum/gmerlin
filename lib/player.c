@@ -210,8 +210,8 @@ void bg_player_state_init(gavl_dictionary_t * dict)
   
   gavl_value_reset(&val);
   gavl_value_set_string_nocopy(&val, bg_get_default_sink_uri(BG_PLUGIN_OUTPUT_VIDEO));
-  
   bg_state_set(dict, 0, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_OV_URI, &val, NULL, 0);
+  gavl_value_reset(&val);
   
   
   //  fprintf(stderr, "player_state_init %s\n", label);

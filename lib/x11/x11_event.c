@@ -201,17 +201,6 @@ static int x11_keycode_to_bg(int x11_code)
   return GAVL_KEY_NONE;
   }
 
-static KeySym key_code_to_keysym(int bg_code)
-  {
-  int i;
-
-  for(i = 0; i < sizeof(keysyms)/sizeof(keysyms[0]); i++)
-    {
-    if(bg_code == keysyms[i].bg)
-      return keysyms[i].x11;
-    }
-  return XK_VoidSymbol;
-  }
 
 static int x11_to_key_mask(int x11_mask)
   {
@@ -238,41 +227,6 @@ static int x11_to_key_mask(int x11_mask)
   return ret;
   }
 
-#if 1
-static int key_mask_to_xembed(int bg_mask)
-  {
-  int ret = 0;
-
-  if(bg_mask & GAVL_KEY_SHIFT_MASK)
-    ret |= XEMBED_MODIFIER_SHIFT;
-  if(bg_mask & GAVL_KEY_CONTROL_MASK)
-    ret |= XEMBED_MODIFIER_CONTROL;
-  if(bg_mask & GAVL_KEY_ALT_MASK)
-    ret |= XEMBED_MODIFIER_ALT;
-  if(bg_mask & GAVL_KEY_SUPER_MASK)
-    ret |= XEMBED_MODIFIER_SUPER;
-  // XEMBED_MODIFIER_HYPER ??
-  return ret;
-  
-  }
-#endif
-
-static int xembed_to_key_mask(int xembed_mask)
-  {
-  int ret = 0;
-
-  if(xembed_mask & XEMBED_MODIFIER_SHIFT)
-    ret |= GAVL_KEY_SHIFT_MASK;
-  if(xembed_mask & XEMBED_MODIFIER_CONTROL)
-    ret |= GAVL_KEY_CONTROL_MASK;
-  if(xembed_mask & XEMBED_MODIFIER_ALT)
-    ret |= GAVL_KEY_ALT_MASK;
-  if(xembed_mask & XEMBED_MODIFIER_SUPER)
-    ret |= GAVL_KEY_SUPER_MASK;
-  // XEMBED_MODIFIER_HYPER ??
-  return ret;
-  
-  }
 
 static int x11_window_next_event(bg_x11_window_t * w,
                                  XEvent * evt,
@@ -315,17 +269,6 @@ static int x11_window_next_event(bg_x11_window_t * w,
   
   }
 
-static int window_is_mapped(Display * dpy, Window w)
-  {
-  XWindowAttributes attr;
-  if(w == None)
-    return 0;
-
-  XGetWindowAttributes(dpy, w, &attr);
-  if(attr.map_state != IsUnmapped)
-    return 1;
-  return 0;
-  }
 
 static int window_is_viewable(Display * dpy, Window w)
   {
@@ -338,47 +281,6 @@ static int window_is_viewable(Display * dpy, Window w)
   return 0;
   }
 
-static void register_xembed_accelerators(bg_x11_window_t * w,
-                                         window_t * win)
-  {
-  int i;
-  const bg_accelerator_t * accels;
-  
-  if(!w->accel_map)
-    return;
-  accels = bg_accelerator_map_get_accels(w->accel_map);
-  i = 0;
-  while(accels[i].key != GAVL_KEY_NONE)
-    {
-    bg_x11_window_send_xembed_message(w, win->parent,
-                                      CurrentTime,
-                                      XEMBED_REGISTER_ACCELERATOR,
-                                      accels[i].id,
-                                      key_code_to_keysym(accels[i].key),
-                                      key_mask_to_xembed(accels[i].mask));
-    i++;
-    }
-  }
-#if 0
-static void unregister_xembed_accelerators(bg_x11_window_t * w,
-                                           window_t * win)
-  {
-  int i;
-  const bg_accelerator_t * accels;
-  if(!w->callbacks || !w->callbacks->accel_map)
-    return;
-  accels = bg_accelerator_map_get_accels(w->callbacks->accel_map);
-  i = 0;
-  while(accels[i].key != GAVL_KEY_NONE)
-    {
-    bg_x11_window_send_xembed_message(w, win->win,
-                                      CurrentTime,
-                                      XEMBED_UNREGISTER_ACCELERATOR,
-                                      accels[i].id, 0, 0);
-    i++;
-    }
-  }
-#endif
 /* Transform coordinates if we playback video */
 
 static void transform_coords(bg_x11_window_t * w, int x_raw, int y_raw, gavl_value_t * ret)
@@ -460,22 +362,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
     case Expose:
       SET_FLAG(w, FLAG_NEED_REDRAW);
       break;
-    case PropertyNotify:
-      if(evt->xproperty.atom == w->_XEMBED_INFO)
-        {
-        
-        if(evt->xproperty.window == w->normal.child)
-          {
-          bg_x11_window_check_embed_property(w,
-                                             &w->normal);
-          }
-        else if(evt->xproperty.window == w->fullscreen.child)
-          {
-          bg_x11_window_check_embed_property(w,
-                                             &w->fullscreen);
-          }
-        }
-      break;
     case ClientMessage:
       if(evt->xclient.message_type == w->WM_PROTOCOLS)
         {
@@ -496,202 +382,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
             }
           }
         }
-      if(evt->xclient.message_type == w->_XEMBED)
-        {
-
-        if((evt->xclient.window == w->normal.win) ||
-           (evt->xclient.window == w->normal.child))
-          cur = &w->normal;
-        else if((evt->xclient.window == w->fullscreen.win) ||
-                (evt->xclient.window == w->fullscreen.child))
-          cur = &w->fullscreen;
-        else
-          return;
-        
-        switch(evt->xclient.data.l[1])
-          {
-          /* XEMBED messages */
-          case XEMBED_EMBEDDED_NOTIFY:
-            if(evt->xclient.window == cur->win)
-              {
-              cur->parent_xembed = 1;
-              /*
-               *  In gtk this isn't necessary, didn't try other
-               *  toolkits. Strange that this is sometimes called with
-               *  None as parent window, so we're better off ignoring this here
-               */
-              // fprintf(stderr, "XEMBED_EMBEDDED_NOTIFY %08lx %08lx\n",
-              // cur->parent, evt->xclient.data.l[3]);
-              // cur->parent = evt->xclient.data.l[3];
-              
-              if(window_is_mapped(w->dpy, cur->parent))
-                {
-                unsigned long buffer[2];
-                                
-                buffer[0] = 0; // Version
-                buffer[1] = XEMBED_MAPPED; 
-                
-                XChangeProperty(w->dpy,
-                                cur->win,
-                                w->_XEMBED_INFO,
-                                w->_XEMBED_INFO, 32,
-                                PropModeReplace,
-                                (unsigned char *)buffer, 2);
-                XSync(w->dpy, False);
-                }
-
-              /* Register our accelerators */
-              register_xembed_accelerators(w, cur);
-              }
-            break;
-          case XEMBED_WINDOW_ACTIVATE:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                XEMBED_WINDOW_ACTIVATE,
-                                                evt->xclient.data.l[0],
-                                                0, 0, 0);
-              }
-            break;
-          case XEMBED_WINDOW_DEACTIVATE:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                XEMBED_WINDOW_DEACTIVATE,
-                                                evt->xclient.data.l[0],
-                                                0, 0, 0);
-              }
-            break;
-          case XEMBED_REQUEST_FOCUS:
-            break;
-          case XEMBED_FOCUS_IN:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_FOCUS_IN,
-                                                evt->xclient.data.l[2], 0, 0);
-              }
-            break;
-          case XEMBED_FOCUS_OUT:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_FOCUS_OUT,
-                                                0, 0, 0);
-              }
-
-            break;
-          case XEMBED_FOCUS_NEXT:
-            break;
-          case XEMBED_FOCUS_PREV:
-/* 8-9 were used for XEMBED_GRAB_KEY/XEMBED_UNGRAB_KEY */
-            break;
-          case XEMBED_MODALITY_ON:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_MODALITY_ON,
-                                                0, 0, 0);
-              }
-            cur->modality = 1;
-            break;
-          case XEMBED_MODALITY_OFF:
-            if((evt->xclient.window == cur->win) &&
-               (cur->child_xembed))
-              {
-              /* Redirect to child */
-              bg_x11_window_send_xembed_message(w, cur->child,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_MODALITY_OFF,
-                                                0, 0, 0);
-              }
-            cur->modality = 0;
-            break;
-          case XEMBED_REGISTER_ACCELERATOR:
-            /* Don't process our own accelerators */
-            
-            
-            /* Child wants to register an accelerator */
-            /*
-              detail	accelerator_id
-              data1	X key symbol
-              data2	bit field of modifier values
-            */
-            if(!cur->parent_xembed)
-              {
-              int code;
-              if((code = keysym_to_key_code(evt->xclient.data.l[3])) != GAVL_KEY_NONE)
-                /* Add to out accel map */
-                bg_accelerator_map_append(cur->child_accel_map,
-                                          code,
-                                          xembed_to_key_mask(evt->xclient.data.l[4]),
-                                          evt->xclient.data.l[2]);
-              }
-            else
-              {
-              /* Propagate */
-              bg_x11_window_send_xembed_message(w, cur->parent,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_REGISTER_ACCELERATOR,
-                                                evt->xclient.data.l[2],
-                                                evt->xclient.data.l[3],
-                                                evt->xclient.data.l[4]);
-              }
-            //
-            break;
-          case XEMBED_UNREGISTER_ACCELERATOR:
-            /* Child wants to unregister an accelerator */
-            if(!cur->parent_xembed)
-              {
-              /* Remove from our accel map */
-              bg_accelerator_map_remove(cur->child_accel_map,
-                                        evt->xclient.data.l[2]);
-              }
-            else
-              {
-              /* Propagate */
-              bg_x11_window_send_xembed_message(w, cur->parent,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_UNREGISTER_ACCELERATOR,
-                                                evt->xclient.data.l[2], 0, 0);
-              }
-            break;
-          case XEMBED_ACTIVATE_ACCELERATOR:
-            /* Check if we have the accelerator */
-            //  fprintf(stderr, "Activate accelerator\n");
-            if(w->accel_map &&
-               bg_accelerator_map_has_accel_with_id(w->accel_map,
-                                                    evt->xclient.data.l[2]))
-              {
-              x11_window_accel_pressed(w, evt->xclient.data.l[2]);
-              return;
-              }
-            else
-              {
-              /* Propagate to child */
-              bg_x11_window_send_xembed_message(w, cur->parent,
-                                                evt->xclient.data.l[0],
-                                                XEMBED_ACTIVATE_ACCELERATOR,
-                                                evt->xclient.data.l[2],
-                                                evt->xclient.data.l[3], 0);
-              }
-            break;
-          }
-        return;
-        }
       break;
     case CreateNotify:
       if(evt->xcreatewindow.parent == w->normal.win)
@@ -701,15 +391,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
       else
         break;
       
-      if((evt->xcreatewindow.window != cur->focus_child) &&
-         (evt->xcreatewindow.window != cur->subwin))
-        {
-        cur->child = evt->xcreatewindow.window;
-        //        fprintf(stderr, "Embed child %ld\n",
-        //        evt->xcreatewindow.window);
-        bg_x11_window_embed_child(w, cur);
-        //        fprintf(stderr, "Embed child done\n");
-        }
       break;
     case DestroyNotify:
       if(evt->xdestroywindow.event == w->normal.win)
@@ -719,15 +400,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
       else
         break;
 
-      if(evt->xdestroywindow.window == cur->child)
-        {
-        //        fprintf(stderr, "UnEmbed child\n");
-        cur->child = None;
-        cur->child_xembed = 0;
-        if(cur->child_accel_map)
-          bg_accelerator_map_clear(cur->child_accel_map);
-        //        fprintf(stderr, "Unembed child done\n");
-        }
       break;
 #if 1
     case FocusIn:
@@ -877,9 +549,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
       else
         return;
       
-      if(cur->modality)
-        return;
-      
       transform_coords(w, evt->xmotion.x, evt->xmotion.y, &val);
       key_mask = x11_to_key_mask(evt->xmotion.state);
 
@@ -902,42 +571,15 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
         {
         w->normal.mapped = 1;
         /* Kindly ask for keyboard focus */
-        if(w->normal.parent_xembed)
-          bg_x11_window_send_xembed_message(w, w->normal.parent,
-                                            CurrentTime,
-                                            XEMBED_REQUEST_FOCUS,
-                                            0, 0, 0);
 
         XDefineCursor(w->dpy, w->normal.win, None);
         w->idle_counter = 0;
         CLEAR_FLAG(w, FLAG_POINTER_HIDDEN);
 
-#if 0
-        if(TEST_FLAG(w, FLAG_RESIZE_PENDING))
-          {
-          //          XResizeWindow(w->dpy, w->normal.win, w->window_rect.w, w->window_rect.h);
-
-          XWindowChanges xwc;
-          memset(&xwc, 0, sizeof(xwc));
-          xwc.width  = w->window_rect.w;
-          xwc.height = w->window_rect.h;
-          XConfigureWindow(w->dpy, w->normal.win, CWWidth|CWHeight, &xwc);
-          XSync(w->dpy, False);
-          CLEAR_FLAG(w, FLAG_RESIZE_PENDING);
-          fprintf(stderr, "Resized window after map: %d %d\n",
-                  w->window_rect.w, w->window_rect.h);
-          }
-#endif
         }
       else if(evt->xmap.window == w->fullscreen.win)
         {
         w->fullscreen.mapped = 1;
-        /* Kindly ask for keyboard focus */
-        if(w->fullscreen.parent_xembed)
-          bg_x11_window_send_xembed_message(w, w->fullscreen.parent,
-                                            CurrentTime,
-                                            XEMBED_REQUEST_FOCUS,
-                                            0, 0, 0);
 
         XDefineCursor(w->dpy, w->fullscreen.win, None);
         w->idle_counter = 0;
@@ -988,20 +630,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
                                           key_mask, &accel_id))
             {
             x11_window_accel_pressed(w, accel_id);
-            return;
-            }
-          /* Check if the child wants tht shortcut */
-          if(cur->child_accel_map &&
-             cur->child &&
-             cur->child_xembed &&
-             bg_accelerator_map_has_accel(cur->child_accel_map,
-                                          key_code,
-                                          key_mask, &accel_id))
-            {
-            bg_x11_window_send_xembed_message(w, cur->child,
-                                              evt->xkey.time,
-                                              XEMBED_ACTIVATE_ACCELERATOR,
-                                              accel_id, 0, 0);
             return;
             }
           
@@ -1066,8 +694,6 @@ void bg_x11_window_handle_event(bg_x11_window_t * w, XEvent * evt)
       else
         return;
       
-      if(cur->modality)
-        return;
       
       transform_coords(w, evt->xbutton.x, evt->xbutton.y, &val);
       evt->xkey.state &= STATE_IGNORE;

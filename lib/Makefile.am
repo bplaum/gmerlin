@@ -2,13 +2,13 @@ plugindir=$(pkglibdir)/plugins
 pkgbindir=$(pkglibdir)/bin
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
-if HAVE_X11
-x11_subdirs = x11
-x11_libadd = x11/libx11.la
-else
-x11_subdirs =
-x11_libadd =
-endif
+# if HAVE_X11
+# x11_subdirs = x11
+# x11_libadd = x11/libx11.la
+# else
+# x11_subdirs =
+# x11_libadd =
+# endif
 
 if HAVE_GTK
 gtk_subdirs = gtk
@@ -46,16 +46,16 @@ dbus_cflags =
 dbus_libs = 
 endif
 
-if HAVE_PULSEAUDIO
-pulseaudio_cflags  = @PULSEAUDIO_CFLAGS@
-pulseaudio_libs    = @PULSEAUDIO_LIBS@
-else
-pulseaudio_cflags  =
-pulseaudio_libs    =
-endif
+# if HAVE_PULSEAUDIO
+# pulseaudio_cflags  = @PULSEAUDIO_CFLAGS@
+# pulseaudio_libs    = @PULSEAUDIO_LIBS@
+# else
+# pulseaudio_cflags  =
+# pulseaudio_libs    =
+# endif
 
 
-SUBDIRS = $(x11_subdirs) upnp . $(gtk_subdirs)
+SUBDIRS = upnp . $(gtk_subdirs)
 
 AM_CFLAGS = \
 @FONTCONFIG_CFLAGS@ \
@@ -65,6 +65,7 @@ AM_CFLAGS = \
 @PANGO_CFLAGS@ \
 @PANGOCAIRO_CFLAGS@ \
 @UDEV_CFLAGS@ \
+@GL_CFLAGS@ \
 $(dbus_cflags) \
 $(pulseaudio_cflags) \
 $(ncurses_cflags) \
@@ -78,7 +79,6 @@ $(lv_cflags)
 libgmerlin_la_LDFLAGS = -version-info @LTVERSION_CURRENT@:@LTVERSION_REVISION@:@LTVERSION_AGE@ -export-symbols-regex ^bg_ @GMERLIN_LIB_LDFLAGS@
 
 libgmerlin_la_LIBADD = \
-$(x11_libadd) \
 upnp/libupnp.la \
 @SQLITE3_LIBS@ \
 @FONTCONFIG_LIBS@ \
@@ -135,6 +135,10 @@ formats.c \
 frametimer.c \
 frontend.c \
 frontend_gmerlin.c \
+glvideo.c \
+gl_color.c \
+gl_coords.c \
+gl_shader.c \
 http.c \
 httpconnection.c \
 httplpcmhandler.c \

@@ -697,6 +697,8 @@ void bg_multi_menu_set_selected(gavl_value_t * val, const gavl_dictionary_t * sr
     return;
     }
 
+  //  fprintf(stderr, "bg_multi_menu_set_selected: %s\n", src_name);
+  
   for(i = 0; i < arr->num_entries; i++)
     {
     if((child = gavl_value_get_dictionary_nc(&arr->entries[i])) &&
@@ -708,9 +710,15 @@ void bg_multi_menu_set_selected(gavl_value_t * val, const gavl_dictionary_t * sr
       gavl_dictionary_copy(child, src);
 
       bg_multi_menu_set_selected_idx(val, i);
-      break;
+      //      fprintf(stderr, "  Match: %s\n", child_name);
+      return;
+      //      break;
       }
+    //    fprintf(stderr, "  No match: %s\n", child_name);
     }
+
+  //  fprintf(stderr, "  No match: %s\n", child_name);
+  //  gavl_value_dump(val, 2);
   }
 
 void bg_multi_menu_create(gavl_value_t * val,

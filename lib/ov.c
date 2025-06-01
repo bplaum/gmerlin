@@ -59,6 +59,8 @@ struct bg_ov_s
   gavl_video_sink_t * sink_int;
 
   gavl_dictionary_t ov_state;
+
+  gavl_hw_context_t * hwctx;
   
   };
 
@@ -79,6 +81,13 @@ bg_plugin_handle_t * bg_ov_get_plugin(bg_ov_t * ov)
   return ov->h;
   }
 
+gavl_hw_context_t * bg_ov_get_hwctx(bg_ov_t * ov)
+  {
+  if(ov->plugin && ov->plugin->get_hw_context)
+    return ov->plugin->get_hw_context(ov->h->priv);
+  else
+    return NULL;
+  }
 
 void bg_ov_destroy(bg_ov_t * ov)
   {
@@ -94,15 +103,6 @@ void bg_ov_destroy(bg_ov_t * ov)
   free(ov);
   }
 
-void bg_ov_set_window(bg_ov_t * ov, const char * window_id)
-  {
-  gavl_value_t val;
-  gavl_value_init(&val);
-  gavl_value_set_string(&val, window_id);
-  bg_plugin_handle_set_state(ov->h, BG_STATE_CTX_OV, BG_STATE_OV_WINDOW_ID, &val);
-  gavl_value_free(&val);
-  }
-
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   {
@@ -110,14 +110,15 @@ void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   }
 
 
-int bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format)
+int bg_ov_open(bg_ov_t * ov, const char * uri,
+               gavl_video_format_t * format, int src_flags)
   {
   int ret;
 
   //  fprintf(stderr, "open_ov\n");
   
   LOCK(ov);
-  ret = ov->plugin->open(ov->priv, uri, format);
+  ret = ov->plugin->open(ov->priv, uri, format, src_flags);
   if(ret)
     ov->sink_int = ov->plugin->get_sink(ov->priv);
   UNLOCK(ov);
@@ -177,7 +178,7 @@ bg_ov_add_overlay_stream(bg_ov_t * ov, gavl_video_format_t * format)
   if(str->sink_int)
     {
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
-             "Using hardeware overlay for stream %d",
+             "Using hardware overlay for stream %d",
              ov->num_ovl_str-1);
     }
   else
@@ -244,6 +245,11 @@ void bg_ov_set_fullscreen(bg_ov_t * ov, int fullscreen)
   bg_ov_plugin_set_fullscreen(ov->h, fullscreen);
   }
 
+void bg_ov_set_paused(bg_ov_t * ov, int paused)
+  {
+  bg_ov_plugin_set_paused(ov->h, paused);
+  }
+
 const bg_state_var_desc_t bg_ov_state_vars[] =
   {
     { BG_STATE_OV_BRIGHTNESS,       GAVL_TYPE_FLOAT,      GAVL_VALUE_INIT_FLOAT(0.0),
@@ -253,11 +259,13 @@ const bg_state_var_desc_t bg_ov_state_vars[] =
     { BG_STATE_OV_CONTRAST,         GAVL_TYPE_FLOAT,      GAVL_VALUE_INIT_FLOAT(0.0),
       GAVL_VALUE_INIT_FLOAT(BG_CONTRAST_MIN), GAVL_VALUE_INIT_FLOAT(BG_CONTRAST_MAX)   },
     { BG_STATE_OV_ZOOM,             GAVL_TYPE_FLOAT,      GAVL_VALUE_INIT_FLOAT(100.0),
-      GAVL_VALUE_INIT_FLOAT(BG_OV_ZOOM_MIN), GAVL_VALUE_INIT_FLOAT(BG_OV_ZOOM_MAX) },
+      GAVL_VALUE_INIT_FLOAT(BG_ZOOM_MIN), GAVL_VALUE_INIT_FLOAT(BG_ZOOM_MAX) },
     { BG_STATE_OV_SQUEEZE,          GAVL_TYPE_FLOAT,      GAVL_VALUE_INIT_FLOAT(0.0),
-      GAVL_VALUE_INIT_FLOAT(BG_OV_SQUEEZE_MIN), GAVL_VALUE_INIT_FLOAT(BG_OV_SQUEEZE_MAX)    },
+      GAVL_VALUE_INIT_FLOAT(BG_SQUEEZE_MIN), GAVL_VALUE_INIT_FLOAT(BG_SQUEEZE_MAX)    },
     { BG_STATE_OV_FULLSCREEN,       GAVL_TYPE_INT,        GAVL_VALUE_INIT_INT(0)     },
     { BG_STATE_OV_VISIBLE,          GAVL_TYPE_INT,        GAVL_VALUE_INIT_INT(0)     },
     { BG_STATE_OV_TITLE,            GAVL_TYPE_STRING,     GAVL_VALUE_INIT_STRING("Video output") },
+    { BG_STATE_OV_ORIENTATION,      GAVL_TYPE_INT,        GAVL_VALUE_INIT_INT(GAVL_IMAGE_ORIENT_NORMAL) },
+    { BG_STATE_OV_PAUSED,           GAVL_TYPE_INT,        GAVL_VALUE_INIT_INT(0)     },
     { /* End */ },
   };

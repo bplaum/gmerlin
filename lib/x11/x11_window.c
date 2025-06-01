@@ -269,9 +269,6 @@ static int check_disable_screensaver(bg_x11_window_t * w)
   {
   if(!w->current)
     return 0;
-  /* Never change global settings if we are embedded */
-  if(w->current->parent != w->root)
-    return 0;
   
   if(!TEST_FLAG(w, FLAG_IS_FULLSCREEN))
     return !!TEST_FLAG(w, FLAG_DISABLE_SCREENSAVER_NORMAL);
@@ -391,8 +388,6 @@ static void init_atoms(bg_x11_window_t * w)
   INIT_ATOM(_NET_WM_STATE_ABOVE);
   INIT_ATOM(_NET_WM_STATE_STAYS_ON_TOP);
   INIT_ATOM(_NET_MOVERESIZE_WINDOW);
-  INIT_ATOM(_XEMBED_INFO);
-  INIT_ATOM(_XEMBED);
   INIT_ATOM(WM_CLASS);
   INIT_ATOM(STRING);
   }
@@ -426,8 +421,6 @@ void bg_x11_window_set_fullscreen_mapped(bg_x11_window_t * win,
 
 static void show_window(bg_x11_window_t * win, window_t * w, int show)
   {
-  unsigned long buffer[2];
-  
   if(!w)
     return;
 
@@ -445,39 +438,12 @@ static void show_window(bg_x11_window_t * win, window_t * w, int show)
       XWithdrawWindow(win->dpy, w->win,
                       DefaultScreen(win->dpy));
       }
-    else if(w->parent_xembed)
-      {
-      buffer[0] = 0; // Version
-      buffer[1] = 0; 
-      
-      XChangeProperty(win->dpy,
-                      w->win,
-                      win->_XEMBED_INFO,
-                      win->_XEMBED_INFO, 32,
-                      PropModeReplace,
-                      (unsigned char *)buffer, 2);
-      return;
-      }
     else
       XUnmapWindow(win->dpy, w->win);
     XSync(win->dpy, False);
     return;
     }
   
-  /* Do it the XEMBED way */
-  if(w->parent_xembed)
-    {
-    buffer[0] = 0; // Version
-    buffer[1] = XEMBED_MAPPED; 
-    
-    XChangeProperty(win->dpy,
-                    w->win,
-                    win->_XEMBED_INFO,
-                    win->_XEMBED_INFO, 32,
-                    PropModeReplace,
-                    (unsigned char *)buffer, 2);
-    return;
-    }
 
   CLEAR_FLAG(win, FLAG_TRACK_RESIZE);
   
@@ -740,6 +706,7 @@ void bg_x11_window_get_coords(Display * dpy,
     }
   }
 #else
+
 void bg_x11_window_get_coords(Display * dpy,
                               Window win,
                               int * x, int * y, int * width,
@@ -890,111 +857,6 @@ void bg_x11_window_init(bg_x11_window_t * w)
   
   }
 
-void bg_x11_window_embed_parent(bg_x11_window_t * win,
-                                window_t * w)
-  {
-  unsigned long buffer[2];
-
-  
-  buffer[0] = 0; // Version
-  buffer[1] = 0; 
-  
-  
-  //   XMapWindow(dpy, child);
-  XChangeProperty(win->dpy,
-                  w->win,
-                  win->_XEMBED_INFO,
-                  win->_XEMBED_INFO, 32,
-                  PropModeReplace,
-                  (unsigned char *)buffer, 2);
-  w->toplevel = bg_x11_window_get_toplevel(win, w->parent);
-
-  /* We need StructureNotify of both the toplevel and the
-     parent */
-
-  XSelectInput(win->dpy, w->parent, StructureNotifyMask);
-
-  if(w->parent != w->toplevel)
-    XSelectInput(win->dpy, w->toplevel, StructureNotifyMask);
-  
-  XSync(win->dpy, False);
-  }
-
-void bg_x11_window_embed_child(bg_x11_window_t * win,
-                               window_t * w)
-  {
-  XSelectInput(win->dpy, w->child, FocusChangeMask | ExposureMask |
-               PropertyChangeMask);
-  
-  /* Define back the cursor */
-  XDefineCursor(win->dpy, w->win, None);
-  CLEAR_FLAG(win, FLAG_POINTER_HIDDEN);
-  
-  bg_x11_window_check_embed_property(win, w);
-  }
-
-static void create_subwin(bg_x11_window_t * w,
-                          window_t * win,
-                          int depth, Visual * v, unsigned long attr_mask,
-                          XSetWindowAttributes * attr)
-  {
-  int width, height;
-  
-  bg_x11_window_get_coords(w->dpy, win->win,
-                           NULL, NULL, &width, &height);
-  win->subwin = XCreateWindow(w->dpy,
-                              win->win, 0, 0, width, height, 0,
-                              depth, InputOutput, v, attr_mask, attr);
-  XMapWindow(w->dpy, win->subwin);
-  }
-
-void bg_x11_window_create_subwins(bg_x11_window_t * w,
-                                  int depth, Visual * v)
-  {
-  unsigned long attr_mask;
-  XSetWindowAttributes attr;
-  
-  w->sub_colormap = XCreateColormap(w->dpy, RootWindow(w->dpy, w->screen),
-                                    v, AllocNone);
-
-  memset(&attr, 0, sizeof(attr));
-
-  attr_mask = CWEventMask | CWColormap;
-  
-  attr.event_mask =
-    ExposureMask |
-    ButtonPressMask |
-    ButtonReleaseMask |
-    KeyPressMask |
-    PointerMotionMask |
-    KeyReleaseMask;
-  
-  attr.colormap = w->sub_colormap;
-  
-  create_subwin(w, &w->normal, depth, v, attr_mask, &attr);
-  create_subwin(w, &w->fullscreen, depth, v, attr_mask, &attr);
-
-  XSync(w->dpy, False);
-  }
-
-static void destroy_subwin(bg_x11_window_t * w,
-                           window_t * win)
-  {
-  if(win->subwin != None)
-    {
-    XDestroyWindow(w->dpy, win->subwin);
-    win->subwin = None;
-    }
-  }
-                          
-
-void bg_x11_window_destroy_subwins(bg_x11_window_t * w)
-  {
-  destroy_subwin(w, &w->normal);
-  destroy_subwin(w, &w->fullscreen);
-  
-  }
-
 static int create_window(bg_x11_window_t * w,
                          int width, int height)
   {
@@ -1129,12 +991,8 @@ static int create_window(bg_x11_window_t * w,
     
     XSetWMHints(w->dpy, w->normal.win, wmhints);
     XMapWindow(w->dpy, w->normal.focus_child);
-    w->normal.child_accel_map = bg_accelerator_map_create();
-
     
     }
-  else
-    bg_x11_window_embed_parent(w, &w->normal);
   
   /* The fullscreen window will be created with the same size for now */
   
@@ -1165,11 +1023,6 @@ static int create_window(bg_x11_window_t * w,
     
     XSetWMHints(w->dpy, w->fullscreen.win, wmhints);
     XMapWindow(w->dpy, w->fullscreen.focus_child);
-    w->fullscreen.child_accel_map = bg_accelerator_map_create();
-    }
-  else
-    {
-    bg_x11_window_embed_parent(w, &w->fullscreen);
     }
 
   /* Set the final event masks now. We blocked SubstructureNotifyMask
@@ -1571,22 +1424,10 @@ bg_controllable_t * bg_x11_window_get_controllable(bg_x11_window_t * w)
   return &w->ctrl;
   }
 
-const char * bg_x11_window_get_display_string(bg_x11_window_t * w)
-  {
-  if(w->normal.win == None)
-    create_window(w, w->window_rect.w, w->window_rect.h);
-  
-  if(!w->display_string_child)
-    w->display_string_child = gavl_sprintf("%s:%08lx:%08lx",
-                                         XDisplayName(DisplayString(w->dpy)),
-                                         w->normal.win, w->fullscreen.win);
-  return w->display_string_child;
-  }
 
 void bg_x11_window_destroy(bg_x11_window_t * w)
   {
   bg_x11_window_cleanup_video(w);
-  bg_x11_window_destroy_subwins(w);
   
   if(w->colormap != None)
     XFreeColormap(w->dpy, w->colormap);
@@ -1606,8 +1447,6 @@ void bg_x11_window_destroy(bg_x11_window_t * w)
   if(w->gc != None)
     XFreeGC(w->dpy, w->gc);
 
-  if(w->normal.child_accel_map)     bg_accelerator_map_destroy(w->normal.child_accel_map);
-  if(w->fullscreen.child_accel_map) bg_accelerator_map_destroy(w->fullscreen.child_accel_map);
   
 #ifdef HAVE_LIBXINERAMA
   if(w->xinerama)
@@ -1628,8 +1467,6 @@ void bg_x11_window_destroy(bg_x11_window_t * w)
     }
   if(w->display_string_parent)
     free(w->display_string_parent);
-  if(w->display_string_child)
-    free(w->display_string_child);
 
   bg_controllable_cleanup(&w->ctrl);
 
@@ -1923,78 +1760,6 @@ Window bg_x11_window_get_toplevel(bg_x11_window_t * w, Window win)
   return win;
   }
 
-void 
-bg_x11_window_send_xembed_message(bg_x11_window_t * w, Window win, 
-                                  long time, int message, int detail, 
-                                  int data1, int data2)
-  {
-  XClientMessageEvent xclient;
-
-  xclient.window = win;
-  xclient.type = ClientMessage;
-  xclient.message_type = w->_XEMBED;
-  xclient.format = 32;
-  xclient.data.l[0] = time;
-  xclient.data.l[1] = message;
-  xclient.data.l[2] = detail;
-  xclient.data.l[3] = data1;
-  xclient.data.l[4] = data2;
-  
-  XSendEvent(w->dpy, win,
-             False, NoEventMask, (XEvent *)&xclient);
-  XSync(w->dpy, False);
-  }
-
-int bg_x11_window_check_embed_property(bg_x11_window_t * win,
-                                       window_t * w)
-  {
-  Atom type;
-  int format;
-  unsigned long nitems, bytes_after;
-  unsigned char *data;
-  unsigned long *data_long;
-  int flags;
-  if(XGetWindowProperty(win->dpy, w->child,
-                        win->_XEMBED_INFO,
-                        0, 2, False,
-                        win->_XEMBED_INFO, &type, &format,
-                        &nitems, &bytes_after, &data) != Success)
-    return 0;
-  
-  if (type == None)             /* No info property */
-    return 0;
-  if (type != win->_XEMBED_INFO)
-    return 0;
-  
-  data_long = (unsigned long *)data;
-  flags = data_long[1];
-  XFree(data);
-  
-  if(flags & XEMBED_MAPPED)
-    {
-    XMapWindow(win->dpy, w->child);
-    XRaiseWindow(win->dpy, w->focus_child);
-    }
-  else
-    {
-    /* Window should not be mapped right now */
-    //    XUnmapWindow(win->dpy, w->child);
-    }
-  
-  if(!w->child_xembed)
-    {
-    w->child_xembed = 1;
-    bg_x11_window_send_xembed_message(win,
-                                      w->child,
-                                      CurrentTime,
-                                      XEMBED_EMBEDDED_NOTIFY,
-                                      0,
-                                      w->win, 0);
-    XFlush(win->dpy);
-    }
-  return 1;
-  }
-
 gavl_pixelformat_t 
 bg_x11_window_get_pixelformat(Display * dpy, Visual * visual, int depth)
   {
@@ -2056,7 +1821,6 @@ void bg_x11_window_set_drawing_coords(bg_x11_window_t * win)
   const gavl_value_t * val;
   float zoom_factor;
   float squeeze_factor;
-  // 
   
   gavl_rectangle_f_t src_rect_f;
   gavl_rectangle_i_t dst_rect;
@@ -2075,9 +1839,10 @@ void bg_x11_window_set_drawing_coords(bg_x11_window_t * win)
     squeeze_factor = f_tmp;
   else
     squeeze_factor = 0.0;
-  
+
   win->window_format.image_width = win->window_rect.w;
   win->window_format.image_height = win->window_rect.h;
+  gavl_video_format_set_frame_size(&win->window_format, 0, 0);
   
   gavl_rectangle_f_set_all(&src_rect_f, &win->video_format_n);
 

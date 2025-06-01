@@ -289,6 +289,7 @@ void bg_state_init_ctx(gavl_dictionary_t * state,
                    ctx,
                    desc[i].name,
                    &val, NULL, 0);
+      gavl_value_free(&val);
       }
     i++;
     }

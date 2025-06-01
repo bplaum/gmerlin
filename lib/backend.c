@@ -166,10 +166,7 @@ bg_controllable_t * bg_backend_gmerlin_get_controllable(void * priv)
 int bg_backend_gmerlin_update(void * priv)
   {
   gmerlin_backend_t * g = priv;
-  if(!bg_websocket_connection_iteration(g->conn))
-    return -1;
-  else
-    return 0;
+  return bg_websocket_connection_iteration(g->conn);
   }
 
 /* Obtain label and icons */

@@ -76,4 +76,17 @@ const char * bg_play_mode_to_icon(int play_mode)
     }
   return NULL;
   }
-                               
+
+#if 0 // Keeps valgrind happy but causes weird crashes
+
+#if defined(__GNUC__) && defined(__ELF__)
+static void __cleanup() __attribute__ ((destructor));
+ 
+static void __cleanup()
+  {
+  FcFini();
+  }
+
+#endif
+
+#endif

@@ -35,14 +35,12 @@ bg_plugin_handle_t * bg_ov_get_plugin(bg_ov_t *);
 
 void bg_ov_destroy(bg_ov_t * ov);
 
-void bg_ov_set_window(bg_ov_t * ov, const char * window_id);
-  
-// const char * bg_ov_get_window(bg_ov_t * ov);
-
+gavl_hw_context_t * bg_ov_get_hwctx(bg_ov_t * ov);
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title);
 
-int  bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format);
+int bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format,
+               int src_flags);
 
 gavl_video_sink_t * bg_ov_get_sink(bg_ov_t * ov);
 
@@ -59,18 +57,11 @@ void bg_ov_close(bg_ov_t * ov);
 
 void bg_ov_show_window(bg_ov_t * ov, int show);
 void bg_ov_set_fullscreen(bg_ov_t * ov, int fullscreen);
+void bg_ov_set_paused(bg_ov_t * ov, int paused);
 
 bg_controllable_t * bg_ov_get_controllable(bg_ov_t * ov);
 
 extern const bg_state_var_desc_t bg_ov_state_vars[];
-
-#define BG_OV_SQUEEZE_MIN -1.0
-#define BG_OV_SQUEEZE_MAX 1.0
-#define BG_OV_SQUEEZE_DELTA 0.04
-
-#define BG_OV_ZOOM_MIN 20.0
-#define BG_OV_ZOOM_MAX 180.0
-#define BG_OV_ZOOM_DELTA 2.0
 
 
 #endif // BG_OV_H_INCLUDED

@@ -8,12 +8,12 @@ AM_CFLAGS = \
 -DPLUGIN_DIR=\"$(plugindir)\" \
 -DDOC_DIR=\"$(docdir)\" \
 -DDATA_DIR=\"$(pkgdatadir)\" \
-@GLX_CFLAGS@
+@GL_CFLAGS@
 
 
 plugin_LTLIBRARIES = \
   vis_glscope.la
 
-vis_glscope_la_LIBADD = @MODULE_LIBADD@ @GL_LIBS@ @GLX_LIBS@ -lm
+vis_glscope_la_LIBADD = @MODULE_LIBADD@ @GL_LIBS@ @EGL_LIBS@ -lm
 vis_glscope_la_SOURCES  = vis_glscope.c 
 

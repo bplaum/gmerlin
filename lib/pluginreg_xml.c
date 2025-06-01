@@ -88,12 +88,11 @@ flag_names[] =
     { "Pipe",           BG_PLUGIN_PIPE            }, /* Plugin reads from stdin */
     { "Tuner",          BG_PLUGIN_TUNER           }, /* Plugin has tuner */
     { "Filter1",        BG_PLUGIN_FILTER_1        }, /* Filter with one input port */
-    { "EmbedWindow",    BG_PLUGIN_EMBED_WINDOW    },
     { "Broadcast",      BG_PLUGIN_BROADCAST       },
     { "Devparam",       BG_PLUGIN_DEVPARAM        },
     { "OVStill",        BG_PLUGIN_OV_STILL        },
     { "Overlays",       BG_PLUGIN_HANDLES_OVERLAYS },
-    { "GAVFIO",                  BG_PLUGIN_GAVF_IO            },
+    { "GAVFIO",                  BG_PLUGIN_GAVF_IO },
     { "Unsupported",    BG_PLUGIN_UNSUPPORTED     },
     { "NeedsHTTP",      BG_PLUGIN_NEEDS_HTTP_SERVER     },
     { "NeedsTerminal",  BG_PLUGIN_NEEDS_TERMINAL  },

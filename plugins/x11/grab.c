@@ -29,8 +29,10 @@
 #include <gmerlin/parameter.h>
 #include <gmerlin/bgmsg.h>
 
-#include <x11/x11.h>
-#include <x11/x11_window_private.h>
+// #include <x11/x11.h>
+// #include <x11/x11_window_private.h>
+
+#include "grab.h"
 
 #include <X11/extensions/shape.h>
 #include <X11/extensions/XShm.h>
@@ -194,7 +196,7 @@ struct bg_x11_grab_window_s
   
   gavl_overlay_blend_context_t * blend;
 
-  bg_x11_screensaver_t scr;
+  //  bg_x11_screensaver_t scr;
 
   float fps;
 
@@ -473,6 +475,137 @@ static void create_window(bg_x11_grab_window_t * ret)
     }
   }
 
+static gavl_pixelformat_t 
+bg_x11_window_get_pixelformat(Display * dpy, Visual * visual, int depth)
+  {
+  int bpp;
+  XPixmapFormatValues * pf;
+  int i;
+  int num_pf;
+  gavl_pixelformat_t ret = GAVL_PIXELFORMAT_NONE;
+  
+  bpp = 0;
+  pf = XListPixmapFormats(dpy, &num_pf);
+  for(i = 0; i < num_pf; i++)
+    {
+    if(pf[i].depth == depth)
+      bpp = pf[i].bits_per_pixel;
+    }
+  XFree(pf);
+  
+  ret = GAVL_PIXELFORMAT_NONE;
+  switch(bpp)
+    {
+    case 16:
+      if((visual->red_mask == 63488) &&
+         (visual->green_mask == 2016) &&
+         (visual->blue_mask == 31))
+        ret = GAVL_RGB_16;
+      else if((visual->blue_mask == 63488) &&
+              (visual->green_mask == 2016) &&
+              (visual->red_mask == 31))
+        ret = GAVL_BGR_16;
+      break;
+    case 24:
+      if((visual->red_mask == 0xff) && 
+         (visual->green_mask == 0xff00) &&
+         (visual->blue_mask == 0xff0000))
+        ret = GAVL_RGB_24;
+      else if((visual->red_mask == 0xff0000) && 
+         (visual->green_mask == 0xff00) &&
+         (visual->blue_mask == 0xff))
+        ret = GAVL_BGR_24;
+      break;
+    case 32:
+      if((visual->red_mask == 0xff) && 
+         (visual->green_mask == 0xff00) &&
+         (visual->blue_mask == 0xff0000))
+        ret = GAVL_RGB_32;
+      else if((visual->red_mask == 0xff0000) && 
+         (visual->green_mask == 0xff00) &&
+         (visual->blue_mask == 0xff))
+        ret = GAVL_BGR_32;
+      break;
+    }
+  return ret;
+  }
+
+
+static void bg_x11_window_get_coords(Display * dpy,
+                                     Window win,
+                                     int * x, int * y, int * width,
+                                     int * height)
+  {
+  Window root_return;
+  Window child_return;
+  int x_return, y_return;
+  unsigned int width_return, height_return;
+  unsigned int border_width_return;
+  unsigned int depth_return;
+  long * frame;
+
+  Atom actual_type;
+  int actual_format;
+  unsigned long nitems, bytes_after;
+  unsigned char *data = NULL;
+  int result;
+    
+  XGetGeometry(dpy, win, &root_return, &x_return, &y_return,
+               &width_return, &height_return,
+               &border_width_return, &depth_return);
+
+  XTranslateCoordinates(dpy, win, root_return, x_return, y_return,
+                        &x_return, &y_return, &child_return);
+  
+  //  fprintf(stderr, "x: %d y: %d w: %d h: %d\n",
+  //          x_return, y_return,
+  //          width_return, height_return);
+
+  if(x)
+    *x = x_return;
+
+  if(y)
+    *y = y_return;
+
+  if(width)
+    *width = width_return;
+
+  if(height)
+    *height = height_return;
+  
+  result = XGetWindowProperty(dpy, win, XInternAtom(dpy, "_NET_FRAME_EXTENTS", False),
+                              0, 4, False, AnyPropertyType, 
+                              &actual_type, &actual_format, 
+                              &nitems, &bytes_after, &data);
+  
+  if(result == Success)
+    {
+    if ((nitems == 4) && (bytes_after == 0))
+      {
+      frame = (long*)data;
+      //      fprintf(stderr, "Frame: %ld %ld %ld %ld\n",
+      //              frame[0], frame[1], frame[2], frame[3]);
+      
+      x_return -= frame[0];
+      y_return -= frame[2];
+      }
+    
+    XFree(data);
+    }
+
+  if(x)
+    *x = x_return;
+
+  if(y)
+    *y = y_return;
+ 
+  //  fprintf(stderr, "return: x: %d y: %d w: %d h: %d\n",
+  //          *x, *y, *width, *height);
+
+  }
+
+
+
 static int realize_window(bg_x11_grab_window_t * ret)
   {
 #ifdef HAVE_XFIXES
@@ -485,8 +618,6 @@ static int realize_window(bg_x11_grab_window_t * ret)
   if(!ret->dpy)
     return 0;
 
-  bg_x11_screensaver_init(&ret->scr, ret->dpy);
-  
   /* Get X11 stuff */
   ret->screen = DefaultScreen(ret->dpy);
   ret->visual = DefaultVisual(ret->dpy, ret->screen);
@@ -554,8 +685,6 @@ void bg_x11_grab_window_destroy(bg_x11_grab_window_t * win)
   if(win->colormap != None)
     XFreeColormap(win->dpy, win->colormap);
   
-  bg_x11_screensaver_cleanup(&win->scr);
-  
   if(win->dpy)
     XCloseDisplay(win->dpy);
 
@@ -570,8 +699,6 @@ static void handle_events(bg_x11_grab_window_t * win)
   {
   XEvent evt;
 
-  bg_x11_screensaver_ping(&win->scr);
-  
   while(XPending(win->dpy))
     {
     XNextEvent(win->dpy, &evt);
@@ -723,9 +850,6 @@ int bg_x11_grab_window_init(bg_x11_grab_window_t * win,
   create_window(win);
   handle_events(win);
   
-  if(win->flags & DISABLE_SCREENSAVER)
-    bg_x11_screensaver_disable(&win->scr);
-  
   return 1;
   }
 
@@ -736,8 +860,6 @@ void bg_x11_grab_window_close(bg_x11_grab_window_t * win)
     bg_frame_timer_destroy(win->ft);
     win->ft = NULL;
     }
-  
-  bg_x11_screensaver_enable(&win->scr);
   
   if(win->use_shm)
     {

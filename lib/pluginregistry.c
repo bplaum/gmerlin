@@ -1878,12 +1878,13 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
       free(tmp_string);
       }
     }
-
+#if 0  
   if(mimetype)
     fprintf(stderr, "load cover %s %s\n", uri, mimetype);
   else
     fprintf(stderr, "load cover %s\n", uri);
-    
+#endif
+  
   if(!mimetype)
     goto fail;
      
@@ -1955,7 +1956,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
     gavl_video_options_t * opt = gavl_video_converter_get_options(cnv);
     
     gavl_rectangle_f_set_all(&in_rect, &in_fmt);
-
+    
     gavl_rectangle_fit_aspect(&out_rect,   // gavl_rectangle_t * r,
                               &in_fmt,  // gavl_video_format_t * src_format,
                               &in_rect,    // gavl_rectangle_t * src_rect,
@@ -3093,6 +3094,7 @@ static int input_plugin_finalize_track(bg_plugin_handle_t * h, const char * loca
           }
         
         }
+      free(path);
       }
 
     if((var = gavl_dictionary_get_string(m, GAVL_META_TITLE)))
@@ -3578,6 +3580,8 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
   {
   int num_plugins, start_entries, i;
   const bg_plugin_info_t * info;
+
+  //  fprintf(stderr, "set_parameter_info: %d %d\n", type_mask, flag_mask);
   
   num_plugins =
     bg_get_num_plugins(type_mask, flag_mask);
@@ -3609,6 +3613,8 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
                                    type_mask, flag_mask);
     ret->multi_names_nc[start_entries+i] = gavl_strdup(info->name);
 
+    //    fprintf(stderr, "  Got %s\n", info->name);
+    
     /* First plugin is the default one */
 
     if((ret->type != BG_PARAMETER_MULTI_CHAIN) && !ret->val_default.v.str)
@@ -4365,6 +4371,14 @@ int bg_input_plugin_get_track(bg_plugin_handle_t * h)
   return gavl_get_current_track(mi);
   }
 
+void bg_input_plugin_set_video_hw_context(bg_plugin_handle_t * h,
+                                          gavl_hw_context_t * ctx)
+  {
+  bg_input_plugin_t * p = (bg_input_plugin_t *)h->plugin;
+
+  if(p->set_video_hw_context)
+    p->set_video_hw_context(h->priv, ctx);
+  }
 
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   {
@@ -4515,6 +4529,14 @@ void bg_ov_plugin_set_fullscreen(bg_plugin_handle_t * h, int fs)
   gavl_value_set_int(&val, fs);
   bg_plugin_handle_set_state(h, BG_STATE_CTX_OV, BG_STATE_OV_FULLSCREEN, &val);
   
+  }
+
+void bg_ov_plugin_set_paused(bg_plugin_handle_t * h, int paused)
+  {
+  gavl_value_t val;
+  gavl_value_init(&val);
+  gavl_value_set_int(&val, paused);
+  bg_plugin_handle_set_state(h, BG_STATE_CTX_OV, BG_STATE_OV_PAUSED, &val);
   }
 
 void bg_ov_plugin_set_visible(bg_plugin_handle_t * h, int visible)
@@ -5657,6 +5679,7 @@ void bg_track_find_subtitles(gavl_dictionary_t * track)
       }
     }
   globfree(&g);
+  free(pattern);
   }
 
 bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,

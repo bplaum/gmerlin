@@ -308,17 +308,12 @@ const bg_cmdline_app_data_t app_data =
 int main(int argc, char ** argv)
   {
   bg_cfg_section_t * cfg_section;
-  gavl_timer_t * timer;
-
   
   gavl_array_init(&fe_arr);
   bg_frontend_set_option(&fe_arr, "console");
   
   bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"), "renderer");
   
-
-  timer = gavl_timer_create();
-  gavl_timer_start(timer);
   
   bg_iconfont_init();
 
@@ -407,10 +402,9 @@ int main(int argc, char ** argv)
   
   //  bg_cfg_registry_save();
   
-  bg_plugins_cleanup();
-  bg_cfg_registry_cleanup();
-  
   fprintf(stderr, "gmerlin_play finished\n");
+
+  bg_global_cleanup();
   
   return 0;
   }

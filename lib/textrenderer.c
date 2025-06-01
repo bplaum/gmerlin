@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <math.h>
 
 /* Fontconfig */
 
@@ -113,7 +114,7 @@ static const bg_parameter_info_t parameters[] =
       .val_default = GAVL_VALUE_INIT_STRING("center"),
       .multi_names =  (char const *[]){ "center", "left", "right", NULL },
       .multi_labels = (char const *[]){ TRS("Center"), TRS("Left"), TRS("Right"), NULL  },
-            
+      .help_string = TRS("Horizontal justification of the text in the box"),
     },
     {
       .name =       "justify_v",
@@ -122,6 +123,15 @@ static const bg_parameter_info_t parameters[] =
       .val_default = GAVL_VALUE_INIT_STRING("bottom"),
       .multi_names =  (char const *[]){ "center", "top", "bottom",NULL  },
       .multi_labels = (char const *[]){ TRS("Center"), TRS("Top"), TRS("Bottom"), NULL },
+    },
+    {
+      .name =       "justify_box_h",
+      .long_name =  TRS("Horizontal box justify"),
+      .type =       BG_PARAMETER_STRINGLIST,
+      .val_default = GAVL_VALUE_INIT_STRING("center"),
+      .multi_names =  (char const *[]){ "center", "left", "right", NULL },
+      .multi_labels = (char const *[]){ TRS("Center"), TRS("Left"), TRS("Right"), NULL  },
+      .help_string = TRS("Horizontal justification of the text box on the screen"),
     },
     {
       .name =        "border_left",
@@ -252,6 +262,7 @@ struct bg_text_renderer_s
   gavl_video_format_t frame_format;
 
   int justify_h;
+  int justify_box_h;
   int justify_v;
   int border_left, border_right, border_top, border_bottom;
   int ignore_linebreaks;
@@ -374,11 +385,13 @@ void bg_text_renderer_set_parameter(void * data, const char * name,
   /* */
   else if(!strcmp(name, "color"))
     {
-    //    fprintf(stderr, "Setting color: %f %f %f %f\n",
-    //            val->v.color[0], 
-    //            val->v.color[1], 
-    //            val->v.color[2], 
-    //            val->v.color[3]); 
+#if 0
+    fprintf(stderr, "Setting color: %f %f %f %f\n",
+            val->v.color[0], 
+            val->v.color[1], 
+            val->v.color[2], 
+            val->v.color[3]); 
+#endif
     r->color[0] = val->v.color[0];
     r->color[1] = val->v.color[1];
     r->color[2] = val->v.color[2];
@@ -397,6 +410,13 @@ void bg_text_renderer_set_parameter(void * data, const char * name,
     }
   else if(!strcmp(name, "box_color"))
     {
+#if 0
+    fprintf(stderr, "Setting box color: %f %f %f %f\n",
+            val->v.color[0], 
+            val->v.color[1], 
+            val->v.color[2], 
+            val->v.color[3]); 
+#endif
     r->box_color[0] = val->v.color[0];
     r->box_color[1] = val->v.color[1];
     r->box_color[2] = val->v.color[2];
@@ -418,6 +438,15 @@ void bg_text_renderer_set_parameter(void * data, const char * name,
       r->justify_h = JUSTIFY_RIGHT;
     else if(!strcmp(val->v.str, "center"))
       r->justify_h = JUSTIFY_CENTER;
+    }
+  else if(!strcmp(name, "justify_box_h"))
+    {
+    if(!strcmp(val->v.str, "left"))
+      r->justify_box_h = JUSTIFY_LEFT;
+    else if(!strcmp(val->v.str, "right"))
+      r->justify_box_h = JUSTIFY_RIGHT;
+    else if(!strcmp(val->v.str, "center"))
+      r->justify_box_h = JUSTIFY_CENTER;
     }
   else if(!strcmp(name, "justify_v"))
     {
@@ -470,6 +499,7 @@ void init_nolock(bg_text_renderer_t * r)
   double size;
   int size_is_absolute;
   PangoFontDescription * desc;
+  double img_w, img_h;
   
   cleanup(r);
 
@@ -487,6 +517,8 @@ void init_nolock(bg_text_renderer_t * r)
     r->overlay_format.pixel_height = r->frame_format.pixel_height;
     }
   r->overlay_format.pixelformat = GAVL_RGBA_32;
+
+  r->overlay_format.orientation = r->frame_format.orientation;
   
   if(!r->overlay_format.timescale)
     {
@@ -506,6 +538,7 @@ void init_nolock(bg_text_renderer_t * r)
     r->sub_v = 1;
   
   /* */
+
   
   r->frame = bg_cairo_frame_create(&r->overlay_format);
   
@@ -522,6 +555,17 @@ void init_nolock(bg_text_renderer_t * r)
   cairo_set_line_width(r->cr, r->border_width);
   cairo_set_line_join(r->cr, CAIRO_LINE_JOIN_ROUND);
 
+  if(gavl_image_orientation_is_transposed(r->fmt.orientation))
+    {
+    img_w = r->fmt.image_height;
+    img_h = r->fmt.image_width;
+    }
+  else
+    {
+    img_h = r->fmt.image_height;
+    img_w = r->fmt.image_width;
+    }
+  
   //  fprintf(stderr, "Scale factor: %f\n", r->scale_x);
   
   /* Create textrenderer */
@@ -544,15 +588,15 @@ void init_nolock(bg_text_renderer_t * r)
     }
 
   pango_layout_set_width(r->layout, PANGO_SCALE *
-                         (r->fmt.image_width - r->border_left - r->border_right - 2 * r->box_padding));
+                         (img_w - r->border_left - r->border_right - 2 * r->box_padding));
   
   desc = pango_font_description_from_string(r->font);
 
   size_is_absolute = pango_font_description_get_size_is_absolute(desc);
   size = pango_font_description_get_size(desc);
   
-  size *= (double)r->fmt.image_height / 480.0;
-
+  size *= img_h / 480.0;
+  
   r->tab_array = pango_tab_array_new_with_positions(1, (size_is_absolute ? TRUE : FALSE),
                                                     PANGO_TAB_LEFT, (size * 2));
   
@@ -577,22 +621,71 @@ void bg_text_renderer_get_frame_format(bg_text_renderer_t * r,
 
 gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char * string)
   {
-  double x = 0.0, y = 0.0;
   PangoRectangle rect;
   gavl_rectangle_f_t box;
-  gavl_rectangle_f_t box_scaled;
   gavl_rectangle_f_t pango_rect;
   gavl_overlay_t * ovl;
   float transp[4] = { 0.0, 0.0, 0.0, 0.0 };
+  //  float transp[4] = { 1.0, 0.0, 0.0, 1.0 };
+  double matrix[2][3];
+  cairo_matrix_t cairo_matrix;
 
+  double coords1[2];
+  double coords2[2];
+  /* Transposed */
+  int image_w;
+  int image_h;
+  int transposed;
+
+  //  pango_matrix_t pm;
+  
+  /* Create orientation matrix */
+  gavl_set_orient_matrix(r->fmt.orientation, matrix);
+      
+  
+  /* Flip y axis */
+  //  cairo_scale(r->cr, 1.0, -1.0);
+  
   
   //  fprintf(stderr, "bg_text_renderer_render\n");
+
+  transposed = gavl_image_orientation_is_transposed(r->fmt.orientation);
+  
+  if(transposed)
+    {
+    image_h = r->fmt.image_width;
+    image_w = r->fmt.image_height;
+    }
+  else
+    {
+    image_w = r->fmt.image_width;
+    image_h = r->fmt.image_height;
+    }
+
+  // cairo_translate(r->cr, -image_w/2, -image_h/2);
+
   
   pthread_mutex_lock(&r->config_mutex);
   
   if(r->config_changed)
     init_nolock(r);
 
+  cairo_save(r->cr);
+  cairo_translate(r->cr, r->fmt.image_width/2, r->fmt.image_height/2);
+
+  cairo_scale(r->cr, 1.0, -1.0);
+  
+  /* Apply orientation */
+  cairo_matrix_init(&cairo_matrix,
+                    matrix[0][0], matrix[1][0],
+                    matrix[0][1], matrix[1][1],
+                    matrix[0][2], matrix[1][2]);
+  cairo_transform(r->cr, &cairo_matrix);
+
+  cairo_scale(r->cr, 1.0, -1.0);
+
+  /* */
+  
   ovl = r->frame; // Maybe changed by init_nolock()
   
   /* Render stuff */
@@ -601,65 +694,51 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   pango_layout_set_markup(r->layout, string, -1);
   pango_cairo_update_layout(r->cr, r->layout);
 
-#if 0
-  pango_layout_get_pixel_extents(r->layout, NULL, &rect);
-  pango_rect.w = (float)(rect.width);
-  pango_rect.h = (float)(rect.height);
-  pango_rect.x = (float)(rect.x);
-  pango_rect.y = (float)(rect.y);
-#else
   pango_layout_get_extents(r->layout, NULL, &rect);
   pango_rect.w = (float)(rect.width) / PANGO_SCALE;
   pango_rect.h = (float)(rect.height) / PANGO_SCALE;
   pango_rect.x = (float)(rect.x) / PANGO_SCALE;
   pango_rect.y = (float)(rect.y) / PANGO_SCALE;
-#endif
   
   //  fprintf(stderr, "Pango rect: %dx%d+%d+%d\n", rect.width, rect.height, rect.x, rect.y);
   //  fprintf(stderr, "Pango rect: %.2fx%.2f+%.2f+%.2f\n",
   //          pango_rect.w, pango_rect.h, pango_rect.x, pango_rect.y);
-  
+
+  box.x = 0.0;
+  box.y = 0.0;
   box.h = pango_rect.h + 2 * r->box_padding;
   box.w = pango_rect.w  + 2 * r->box_padding;
   
-  switch(r->justify_h)
+#if 1 
+  switch(r->justify_box_h)
     {
     case JUSTIFY_LEFT:
-      x = r->border_left + r->box_padding;
-      box.x = r->border_left;
+      box.x = - image_w * 0.5 + r->border_left;
       break;
     case JUSTIFY_CENTER:
-      x = r->border_left + r->box_padding;
-      box.x = (r->fmt.image_width - box.w) / 2.0;
+      box.x = - box.w / 2.0;
       break;
     case JUSTIFY_RIGHT:
-      x = r->border_right + r->box_padding;
-      box.x = (float)r->fmt.image_width - r->border_right - box.w;
+      box.x = image_w * 0.5 - r->border_left - box.w;
       break;
     }
   
   switch(r->justify_v)
     {
     case JUSTIFY_TOP:
-      y = r->border_top + r->box_padding;
+      box.y = - image_h / 2.0 + r->border_top;
       break;
     case JUSTIFY_CENTER:
-      y = ((double)(r->fmt.image_height) - box.h) / 2;
+      box.y = - box.h / 2.0;
       break;
     case JUSTIFY_BOTTOM:
-      y = (float)r->fmt.image_height - r->border_bottom - r->box_padding - box.h;
+      box.y = image_h / 2.0 - box.h - r->border_bottom;
       break;
     }
-  box.y = y - r->box_padding;
-  
-  /* Scale stuff */
-
-  gavl_rectangle_f_copy(&box_scaled, &box);
-  box_scaled.x /= r->scale_x;
-  box_scaled.w /= r->scale_x;
+#endif
   
   /* Draw box */
-
+  
   if(r->mode == MODE_BOX)
     {
     bg_cairo_make_rounded_box(r->cr, &box, r->box_radius);
@@ -674,7 +753,7 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   /* Draw text */
   
   // fprintf(stderr, "moveto: %f %f\n", x, y);
-  cairo_move_to(r->cr, x, y);
+  cairo_move_to(r->cr, box.x + r->box_padding - pango_rect.x, box.y + r->box_padding);
   
   cairo_set_source_rgba(r->cr,
                         r->color[0],
@@ -694,32 +773,71 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
                           r->border_color[3]);
     cairo_stroke(r->cr);
     }
-  
-  ovl->src_rect.x = (int)(box.x * r->scale_x);
-  ovl->src_rect.y = (int)box.y;
-  
-  ovl->src_rect.w = (int)((box.w + box.x)*r->scale_x + 0.999) - ovl->src_rect.x;
-  ovl->src_rect.h = (int)(box.h + box.y + 0.999) - ovl->src_rect.y;
-  
-  if(ovl->src_rect.x + ovl->src_rect.w > r->overlay_format.image_width)
-    ovl->src_rect.w = r->overlay_format.image_width - ovl->src_rect.x;
 
-  if(ovl->src_rect.y + ovl->src_rect.h > r->overlay_format.image_height)
-    ovl->src_rect.h = r->overlay_format.image_height - ovl->src_rect.y;
+  /* */
 
-  //  fprintf(stderr, "gavl rect ");
-  //  gavl_rectangle_i_dump(&ovl->src_rect);
-  //  fprintf(stderr, "\n");
+    /* Get source rectangle */
+  //  fprintf(stderr, "Box: %fx%f+%f+%f\n", box.w, box.h, box.x, box.y);
+
+  coords1[0] = box.x;
+  coords1[1] = box.y;
+
+  coords2[0] = box.x + box.w;
+  coords2[1] = box.y + box.h;
+  
+  cairo_user_to_device(r->cr, &coords1[0], &coords1[1]);
+  cairo_user_to_device(r->cr, &coords2[0], &coords2[1]);
+
+  if(coords1[0] > coords2[0])
+    {
+    double swp = coords1[0];
+    coords1[0] = coords2[0];
+    coords2[0] = swp;
+    }
+
+  if(coords1[1] > coords2[1])
+    {
+    double swp = coords1[1];
+    coords1[1] = coords2[1];
+    coords2[1] = swp;
+    }
+  
+  //  fprintf(stderr, "Box (src): %f,%f -> %f,%f\n",
+  //          coords1[0], coords1[1], coords2[0], coords2[1]);
+
+  coords1[0] = floor(coords1[0]);
+  coords1[1] = floor(coords1[1]);
+
+  coords2[0] = ceil(coords2[0]);
+  coords2[1] = ceil(coords2[1]);
+
+  
+  ovl->src_rect.x = (int)coords1[0];
+  ovl->src_rect.y = (int)coords1[1];
+  
+  ovl->src_rect.w = (int)(coords2[0] - coords1[0]);
+  ovl->src_rect.h = (int)(coords2[1] - coords1[1]);
   
   ovl->dst_x = ovl->src_rect.x;
   ovl->dst_y = ovl->src_rect.y;
   
-  ovl->dst_x -= (ovl->dst_x % r->sub_h);
-  ovl->dst_y -= (ovl->dst_y % r->sub_v);
-
   bg_cairo_frame_done(&r->overlay_format, ovl);
+#if 0
+  fprintf(stderr, "Got Overlay: dst: %d,%d\n", ovl->dst_x, ovl->dst_y);
+  gavl_rectangle_i_dump(&ovl->src_rect);
+  fprintf(stderr, "\n");
+  if(0)
+    {
+    float color[4] = { 1.0, 1.0, 1.0, 0.5};
+    gavl_video_frame_fill(ovl, &r->overlay_format, color);
+    }
+#endif
+  
+  cairo_restore(r->cr);
   
   pthread_mutex_unlock(&r->config_mutex);
+
+
   return r->frame;
   }
 

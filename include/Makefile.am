@@ -15,6 +15,7 @@ bgncurses.h \
 bgsqlite.h \
 frei0r.h \
 gavfenc.h \
+glvideo_private.h \
 httpserver_priv.h \
 ladspa.h \
 language_table.h \

@@ -78,9 +78,10 @@ static gavl_array_t fe_arr;
 
 static void flush_command()
   {
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 1");
+  //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 1");
   while(bg_backend_handle_ping(backend) > 0)
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 2");
+    ;
+  //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Flush 2");
   }
 
 static void cmd_scan(void * data, int * argc, char *** _argv, int arg)
@@ -532,7 +533,7 @@ int main(int argc, char ** argv)
   bg_cmdline_parse(global_options, &argc, &argv, NULL);
   
   if(!remote_addr)
-    remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://localhost:10101/ws/"GAVL_META_CLASS_BACKEND_RENDERER;
+    remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://127.0.0.1:10101/ws/"GAVL_META_CLASS_BACKEND_RENDERER;
 
   srv = create_server();
 

@@ -38,8 +38,6 @@ bg_x11_window_t * bg_x11_window_create(const char * display_string,
 /* For attribute artgument see BG_GL_ATTRIBUTE_ above */
 //void bg_x11_window_set_gl_attribute(bg_x11_window_t * win, int attribute, int value);
 
-const char * bg_x11_window_get_display_string(bg_x11_window_t * w);
-
 void bg_x11_window_destroy(bg_x11_window_t *);
 
 const bg_parameter_info_t * bg_x11_window_get_parameters(bg_x11_window_t *);
@@ -99,12 +97,12 @@ void bg_x11_window_get_size(bg_x11_window_t * win, int * width, int * height);
 
 /* For Video output */
 
-int bg_x11_window_open_video(bg_x11_window_t*, gavl_video_format_t * format);
+int bg_x11_window_open_video(bg_x11_window_t*,
+                             gavl_video_format_t * format, int src_flags);
 
 gavl_video_sink_t *
 bg_x11_window_add_overlay_stream(bg_x11_window_t*,
                                  gavl_video_format_t * format);
-
 
 gavl_video_sink_t * bg_x11_window_get_sink(bg_x11_window_t*);
 

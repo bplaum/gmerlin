@@ -13,14 +13,13 @@ AM_LDFLAGS = @GMERLIN_PLUGIN_LDFLAGS@ -avoid-version -module
 
 plugin_LTLIBRARIES = \
 i_x11.la \
-ov_x11.la 
+ov_x11.la
 
+ov_x11_la_SOURCES = ov_x11_new.c
+ov_x11_la_LIBADD =  @X_LIBS@ @MODULE_LIBADD@
 
-ov_x11_la_SOURCES = ov_x11.c
-ov_x11_la_LIBADD =  @X_LIBS@ @XINERAMA_LIBS@ @MODULE_LIBADD@
-
-i_x11_la_SOURCES = i_x11.c
-i_x11_la_LIBADD =  @X_LIBS@ @XINERAMA_LIBS@ @MODULE_LIBADD@
+i_x11_la_SOURCES = i_x11.c grab.c
+i_x11_la_LIBADD =  @X_LIBS@ @XFIXES_LIBS@ @MODULE_LIBADD@
 
 noinst_HEADERS = 
 

@@ -946,6 +946,9 @@ void bg_input_plugin_start(bg_plugin_handle_t * h);
 void bg_input_plugin_pause(bg_plugin_handle_t * h);
 void bg_input_plugin_resume(bg_plugin_handle_t * h);
 
+void bg_input_plugin_set_video_hw_context(bg_plugin_handle_t * h,
+                                          gavl_hw_context_t * ctx);
+
 
 gavl_audio_source_t * bg_input_plugin_get_audio_source(bg_plugin_handle_t * h, int stream);
 gavl_video_source_t * bg_input_plugin_get_video_source(bg_plugin_handle_t * h, int stream);
@@ -1008,6 +1011,7 @@ int bg_file_is_blacklisted(const char * url);
 void bg_ov_plugin_set_fullscreen(bg_plugin_handle_t * h, int fs);
 void bg_ov_plugin_set_visible(bg_plugin_handle_t * h, int visible);
 void bg_ov_plugin_set_window_title(bg_plugin_handle_t * h, const char * window_title);
+void bg_ov_plugin_set_paused(bg_plugin_handle_t * h, int paused);
 
 
 const gavl_array_t * bg_plugin_registry_get_input_mimetypes(void);

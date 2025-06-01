@@ -24,7 +24,7 @@
 #include <gmerlin/translation.h>
 #include <gmerlin/plugin.h>
 
-#include <x11/x11.h>
+#include "grab.h"
 
 typedef struct
   {

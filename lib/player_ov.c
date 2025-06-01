@@ -43,6 +43,50 @@
 #define STATE_STILL 3 // Show still image
 #define STATE_SHOW  4 // Show frame
 
+/* Accellerators */
+
+#define ACCEL_RESET_ZOOMSQUEEZE  3<<8
+#define ACCEL_INC_ZOOM           4<<8
+#define ACCEL_DEC_ZOOM           5<<8
+#define ACCEL_INC_SQUEEZE        6<<8
+#define ACCEL_DEC_SQUEEZE        7<<8
+#define ACCEL_INC_BRIGHTNESS     8<<8
+#define ACCEL_DEC_BRIGHTNESS     9<<8
+#define ACCEL_INC_SATURATION    10<<8
+#define ACCEL_DEC_SATURATION    11<<8
+#define ACCEL_INC_CONTRAST      12<<8
+#define ACCEL_DEC_CONTRAST      13<<8
+#define ACCEL_FIT_WINDOW        16<<8
+#define ACCEL_SHRINK_WINDOW     17<<8
+#define ACCEL_ROT_PLUS          18<<8
+#define ACCEL_ROT_MINUS         19<<8
+
+
+static const bg_accelerator_t ov_accels[] =
+  {
+    { GAVL_KEY_HOME,   GAVL_KEY_CONTROL_MASK, ACCEL_RESET_ZOOMSQUEEZE },
+    { GAVL_KEY_HOME,                     0, ACCEL_FIT_WINDOW        },
+    { GAVL_KEY_HOME,     GAVL_KEY_SHIFT_MASK, ACCEL_SHRINK_WINDOW     },
+    { GAVL_KEY_PLUS,   GAVL_KEY_CONTROL_MASK, ACCEL_INC_SQUEEZE       },
+    { GAVL_KEY_MINUS,  GAVL_KEY_CONTROL_MASK, ACCEL_DEC_SQUEEZE       },
+    { GAVL_KEY_PLUS,       GAVL_KEY_ALT_MASK, ACCEL_INC_ZOOM          },
+    { GAVL_KEY_MINUS,      GAVL_KEY_ALT_MASK, ACCEL_DEC_ZOOM          },
+
+    { GAVL_KEY_b,        GAVL_KEY_CONTROL_MASK,                     ACCEL_DEC_BRIGHTNESS    },
+    { GAVL_KEY_b,        GAVL_KEY_CONTROL_MASK|GAVL_KEY_SHIFT_MASK, ACCEL_INC_BRIGHTNESS    },
+    { GAVL_KEY_s,        GAVL_KEY_CONTROL_MASK,                     ACCEL_DEC_SATURATION    },
+    { GAVL_KEY_s,        GAVL_KEY_CONTROL_MASK|GAVL_KEY_SHIFT_MASK, ACCEL_INC_SATURATION    },
+    { GAVL_KEY_c,        GAVL_KEY_CONTROL_MASK,                     ACCEL_DEC_CONTRAST      },
+    { GAVL_KEY_c,        GAVL_KEY_CONTROL_MASK|GAVL_KEY_SHIFT_MASK, ACCEL_INC_CONTRAST      },
+
+    { GAVL_KEY_r,        GAVL_KEY_CONTROL_MASK|GAVL_KEY_SHIFT_MASK, ACCEL_ROT_PLUS    },
+    { GAVL_KEY_r,        GAVL_KEY_CONTROL_MASK,                     ACCEL_ROT_MINUS   },
+
+    { GAVL_KEY_NONE,                     0,  0                      },
+  };
+
+
+
 static int handle_message(void * data, gavl_msg_t * msg)
   {
   bg_player_t * p = data;
@@ -64,8 +108,205 @@ static int handle_message(void * data, gavl_msg_t * msg)
           int x;
           int y;
           double pos[2];
+          int id;
+          
           gavl_msg_get_gui_key(msg, &key, &mask, &x, &y, pos);
-          bg_player_key_pressed(p, key, mask);
+          
+          fprintf(stderr, "Key pressed\n");
+
+          if(bg_accelerator_map_has_accel(p->video_stream.accel_map_ov,
+                                          key, mask, &id))
+            {
+            gavl_msg_t * msg;
+            gavl_value_t val;
+            gavl_value_init(&val);
+            switch(id)
+              {
+              case ACCEL_RESET_ZOOMSQUEEZE:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, 100.0);
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_ZOOM,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, 0.0);
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_SQUEEZE,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                
+                break;
+              case ACCEL_INC_ZOOM:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, BG_ZOOM_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_ZOOM,
+                                   &val);
+                
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                
+                break;
+              case ACCEL_DEC_ZOOM:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, -BG_ZOOM_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_ZOOM,
+                                   &val);
+                
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_INC_SQUEEZE:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, BG_SQUEEZE_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_SQUEEZE,
+                                   &val);
+                
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                
+                break;
+              case ACCEL_DEC_SQUEEZE:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, -BG_SQUEEZE_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_SQUEEZE,
+                                   &val);
+                
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_INC_BRIGHTNESS:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, BG_BRIGHTNESS_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_BRIGHTNESS,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                
+                break;
+              case ACCEL_DEC_BRIGHTNESS:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, -BG_BRIGHTNESS_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_BRIGHTNESS,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_INC_SATURATION:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, BG_SATURATION_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_SATURATION,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_DEC_SATURATION:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, -BG_SATURATION_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_SATURATION,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_INC_CONTRAST:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, BG_CONTRAST_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_CONTRAST,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_DEC_CONTRAST:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_float(&val, -BG_CONTRAST_DELTA);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_CONTRAST,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+
+              case ACCEL_ROT_PLUS:
+                
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_int(&val, 1);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_ORIENTATION,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_ROT_MINUS:
+                msg = bg_msg_sink_get(p->ctrl.cmd_sink);
+                gavl_value_set_int(&val, -1);
+                
+                gavl_msg_set_state(msg, 
+                                   GAVL_CMD_SET_STATE_REL,
+                                   1,
+                                   BG_STATE_CTX_OV,
+                                   BG_STATE_OV_ORIENTATION,
+                                   &val);
+                bg_msg_sink_put(p->ctrl.cmd_sink);
+                break;
+              case ACCEL_FIT_WINDOW:
+                break;
+              case ACCEL_SHRINK_WINDOW:
+                break;
+              }
+            gavl_value_free(&val);
+            return 1;
+            }
+          else
+            bg_player_key_pressed(p, key, mask);
           }
           break;
         case GAVL_MSG_GUI_KEY_RELEASE:
@@ -127,7 +368,7 @@ void bg_player_ov_create(bg_player_t * player)
   s->ov_evt_sink = bg_msg_sink_create(handle_message, player, 1);
   s->timer = gavl_timer_create();
   gavl_timer_start(s->timer);
-  
+  bg_accelerator_map_append_array(s->accel_map_ov, ov_accels);
   }
 
 void bg_player_add_accelerators(bg_player_t * player,
@@ -171,8 +412,11 @@ void bg_player_set_ov_uri(bg_player_t * player, const char * uri)
   
   if(handle)
     {
-    //    ctx->plugin = (bg_ov_plugin_t*)ctx->plugin_handle->plugin;
+    bg_ov_plugin_t * plugin = (bg_ov_plugin_t*)handle->plugin;
 
+    if(plugin->get_hw_context)
+      ctx->hwctx = plugin->get_hw_context(handle->priv);
+    
     if(handle->plugin && handle->plugin->get_controllable && 
        (ctx->ov_ctrl = handle->plugin->get_controllable(handle->priv)))
       bg_msg_hub_connect_sink(ctx->ov_ctrl->evt_hub, ctx->ov_evt_sink);
@@ -190,48 +434,10 @@ void bg_player_set_ov_uri(bg_player_t * player, const char * uri)
   
   }
 
-#if 0
-static int ov_set_plugin(bg_player_t * player, const gavl_value_t * val)
-  {
-  const gavl_dictionary_t * options;
-  bg_plugin_handle_t * handle;
-  bg_player_video_stream_t * ctx = &player->video_stream;
-
-  if(!(options = bg_multi_menu_get_selected(val)) ||
-     !(handle = bg_ov_plugin_load(options)))
-    return 0;
-  
-  bg_player_stream_change_init(player);
-  
-  if(ctx->ov)
-    {
-    bg_ov_destroy(ctx->ov);
-    ctx->ov = NULL;
-    ctx->ov_ctrl = NULL;
-    }
-  
-  if(handle)
-    {
-    if(handle->plugin && handle->plugin->get_controllable && 
-       (ctx->ov_ctrl = handle->plugin->get_controllable(handle->priv)))
-      bg_msg_hub_connect_sink(ctx->ov_ctrl->evt_hub, ctx->ov_evt_sink);
-    
-    ctx->ov = bg_ov_create(handle);
-    
-    //  bg_ov_set_callbacks(ctx->ov, &ctx->callbacks);
-    
-    /* ov holds a private reference */
-    bg_plugin_unref(handle);
-    }
-  //  bg_player_stream_change_done(player);
-  return 1;
-  }
-#endif
-
 gavl_time_t bg_player_ov_resync(bg_player_t * p)
   {
   bg_player_video_stream_t * s = &p->video_stream;
-
+  
   if(gavl_video_source_read_frame(s->src, &s->frame) != GAVL_SOURCE_OK)
     return GAVL_TIME_UNDEFINED;
   else
@@ -254,24 +460,23 @@ void bg_player_ov_destroy(bg_player_t * player)
   if(ctx->timer)
     gavl_timer_destroy(ctx->timer);
   
-  if(ctx->plugin_params)
-    bg_parameter_info_destroy_array(ctx->plugin_params);
-
   }
 
 int bg_player_ov_init(bg_player_video_stream_t * vs)
   {
   gavl_video_sink_t * osd_sink;
-  
+  gavl_video_source_t * src;
   int result;
-
+  gavl_video_format_t osd_fmt;
+  
   gavl_video_source_support_hw(vs->src);
   
   gavl_video_format_copy(&vs->output_format, gavl_video_source_get_src_format(vs->src));
 
   //  vs->last_time = GAVL_TIME_UNDEFINED;
   
-  result = bg_ov_open(vs->ov, vs->sink_uri, &vs->output_format);
+  result = bg_ov_open(vs->ov, vs->sink_uri, &vs->output_format,
+                      gavl_video_source_get_src_flags(vs->src));
   
   bg_ov_set_window_title(vs->ov, "Video output");
   
@@ -281,14 +486,11 @@ int bg_player_ov_init(bg_player_video_stream_t * vs)
   bg_osd_clear(vs->osd);
   bg_ov_show_window(vs->ov, 1);
   
-  memset(&vs->osd_format, 0, sizeof(vs->osd_format));
-  
-  osd_sink = bg_ov_add_overlay_stream(vs->ov, &vs->osd_format);
-  bg_osd_init(vs->osd, osd_sink, &vs->output_format);
-  
-  /* Fixme: Lets just hope, that the OSD format doesn't get changed
-     by this call. Otherwise, we would need a gavl_video_converter */
-  
+  src = bg_osd_init(vs->osd, &vs->output_format);
+
+  gavl_video_format_copy(&osd_fmt, gavl_video_source_get_src_format(src));
+  osd_sink = bg_ov_add_overlay_stream(vs->ov, &osd_fmt);
+  bg_osd_set_sink(vs->osd, osd_sink);
   //  vs->last_time = GAVL_TIME_UNDEFINED;
   return result;
   }
@@ -301,7 +503,7 @@ void bg_player_ov_update_still(bg_player_t * p)
 
   sink = bg_ov_get_sink(s->ov);
   
-  //  frame = gavl_video_sink_get_frame(sink);
+  frame = gavl_video_sink_get_frame(sink);
   
   if(gavl_video_source_read_frame(s->src, &frame) != GAVL_SOURCE_OK)
     return;
@@ -351,7 +553,7 @@ void bg_player_ov_set_subtitle_format(bg_player_video_stream_t * s)
   
   s->subtitle_sink =
     bg_ov_add_overlay_stream(s->ov, &s->ss->output_format);
-
+  
   bg_subtitle_handler_init(s->sh,
                            &s->output_format,
                            s->ss->vsrc,
@@ -377,6 +579,8 @@ static gavl_source_status_t read_frame(bg_player_t * p)
   //    fprintf(stderr, "do read\n");
 
   time_before = gavl_timer_get(s->timer);
+
+  s->frame = gavl_video_sink_get_frame(bg_ov_get_sink(s->ov));
   
   if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
     {
@@ -567,6 +771,9 @@ void * bg_player_ov_thread(void * data)
       
       if(!s->frame)
         {
+        sink = bg_ov_get_sink(s->ov);
+        s->frame = gavl_video_sink_get_frame(sink);
+        
         if((st = gavl_video_source_read_frame(s->src, &s->frame)) != GAVL_SOURCE_OK)
           s->frame = NULL;
         }
@@ -615,6 +822,8 @@ void * bg_player_ov_thread(void * data)
 
       s->render_duration = gavl_timer_get(s->timer) - time_before;
       s->skip = 0;
+
+      bg_ov_handle_events(s->ov);
       
       s->frame = NULL;
 

@@ -244,7 +244,6 @@ struct bg_osd_s
   osd_type_t current_osd;
   
   gavl_time_t duration;
-  float font_size;
   gavl_timer_t * timer;
   gavl_video_sink_t * sink;  
 
@@ -407,22 +406,6 @@ static const bg_parameter_info_t parameters[] =
       .num_digits =  2,
     },
     {
-      .name =       "justify_h",
-      .long_name =  TRS("Horizontal justify"),
-      .type =       BG_PARAMETER_STRINGLIST,
-      .val_default = GAVL_VALUE_INIT_STRING("center"),
-      .multi_names =  (char const *[]){ "center", "left", "right", NULL },
-      .multi_labels = (char const *[]){ TRS("Center"), TRS("Left"), TRS("Right"), NULL  },
-    },
-    {
-      .name =       "justify_v",
-      .long_name =  TRS("Vertical justify"),
-      .type =       BG_PARAMETER_STRINGLIST,
-      .val_default = GAVL_VALUE_INIT_STRING("center"),
-      .multi_names =  (char const *[]){ "center", "top", "bottom", NULL  },
-      .multi_labels = (char const *[]){ TRS("Center"), TRS("Top"), TRS("Bottom"), NULL },
-    },
-    {
       .name =        "border_left",
       .long_name =   TRS("Left border"),
       .type =        BG_PARAMETER_INT,
@@ -513,12 +496,10 @@ void bg_osd_set_parameter(void * data, const char * name,
     bg_text_renderer_set_parameter(osd->renderer, name, val);
   }
 
-void bg_osd_init(bg_osd_t * osd, gavl_video_sink_t * sink, 
-                 const gavl_video_format_t * frame_format)
+gavl_video_source_t * bg_osd_init(bg_osd_t * osd,
+                                  const gavl_video_format_t * frame_format)
   {
   gavl_video_format_t fmt;
-  osd->sink = sink;
-  gavl_video_format_copy(&osd->fmt, gavl_video_sink_get_format(osd->sink));
   osd->fmt.timescale = GAVL_TIME_SCALE;
 
   gavl_video_format_copy(&fmt, &osd->fmt);
@@ -527,13 +508,18 @@ void bg_osd_init(bg_osd_t * osd, gavl_video_sink_t * sink,
                                        osd->psrc,
                                        frame_format,
                                        &fmt);
+  return osd->vsrc;
+  }
 
+void bg_osd_set_sink(bg_osd_t * osd, gavl_video_sink_t * sink)
+  {
+  osd->sink = sink;
+  gavl_video_format_copy(&osd->fmt, gavl_video_sink_get_format(osd->sink));
   gavl_video_source_set_dst(osd->vsrc, 0, &osd->fmt);
-  
   gavl_timer_stop(osd->timer);
   gavl_timer_start(osd->timer);
   }
-
+  
 static void print_bar(char * buf, float val, int num)
   {
   int i, val_i;
@@ -649,7 +635,7 @@ void bg_osd_update(bg_osd_t * osd)
 
 
 static void osd_set_nolock(bg_osd_t * osd, char * str,
-                           const char * align_h, const char * align_v, int type, int flags, int dur_mult)
+                           const char * align_h, const char * align_box_h, const char * align_v, int type, int flags, int dur_mult)
   {
   gavl_value_t val;
   if(!osd || !osd->enable)
@@ -670,6 +656,8 @@ static void osd_set_nolock(bg_osd_t * osd, char * str,
   gavl_value_init(&val);
   gavl_value_set_string(&val, align_h);
   bg_text_renderer_set_parameter(osd->renderer, "justify_h", &val);
+  gavl_value_set_string(&val, align_box_h);
+  bg_text_renderer_set_parameter(osd->renderer, "justify_box_h", &val);
   gavl_value_set_string(&val, align_v);
   bg_text_renderer_set_parameter(osd->renderer, "justify_v", &val);
   gavl_value_free(&val);
@@ -678,12 +666,12 @@ static void osd_set_nolock(bg_osd_t * osd, char * str,
   }
 
 static void osd_set(bg_osd_t * osd, char * str,
-                    const char * align_h, const char * align_v, int type, int flags, int dur_mult)
+                    const char * align_h, const char * align_box_h, const char * align_v, int type, int flags, int dur_mult)
   {
   if(!osd)
     return;
   pthread_mutex_lock(&osd->mutex);
-  osd_set_nolock(osd, str, align_h, align_v, type, flags, dur_mult);
+  osd_set_nolock(osd, str, align_h, align_box_h, align_v, type, flags, dur_mult);
   pthread_mutex_unlock(&osd->mutex);
   }
 
@@ -693,7 +681,7 @@ static void show_icon(bg_osd_t * osd, const char * icon, int type)
   char * ret = 
     gavl_sprintf("<markup><span font_family=\"%s\" weight=\"normal\" size=\"larger\">%s</span></markup>",
                BG_ICON_FONT_FAMILY, icon);
-  osd_set(osd, ret, "center", "center", type, 0, 1);
+  osd_set(osd, ret, "center", "center", "center", type, 0, 1);
   }
 
 static void show_error(bg_osd_t * osd)
@@ -735,7 +723,7 @@ static void print_float(bg_osd_t * osd, float val, char * c, int type)
   str = gavl_sprintf("<markup><span size=\"larger\" font_family=\"%s\" weight=\"normal\">%s</span></markup>",
                    BG_ICON_FONT_FAMILY, buf1);
 
-  osd_set(osd, str, "center", "center", type, 0, 1);
+  osd_set(osd, str, "center", "center", "center", type, 0, 1);
   
   //  fprintf(stderr, "print_float 2: %s\n", str);
 
@@ -921,14 +909,13 @@ void bg_osd_show_info(bg_osd_t * osd)
   
   str = gavl_strcat(str, "</markup>");
 
-  /* align */
-  osd_set(osd, str, "left", "center", OSD_INFO, 0, 2);
+  osd_set(osd, str, "left", "center", "center", OSD_INFO, 0, 2);
   }
 
 void bg_osd_show_time(bg_osd_t * osd)
   {
   char * str = make_time_string(osd);
-  osd_set(osd, str, "center", "bottom", OSD_TIME, 0, 2);
+  osd_set(osd, str, "center", "center", "bottom", OSD_TIME, 0, 2);
   }
 
 static int handle_message(void * priv, gavl_msg_t * msg)
@@ -961,32 +948,26 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                            &ctx,
                            &var,
                            &val, NULL);
-
+          
           if(!strcmp(ctx, BG_STATE_CTX_OV))
             {
             if(!strcmp(var, BG_STATE_OV_CONTRAST))     // float
               {
               double v;
-              if(!gavl_value_get_float(&val, &v))
-                return 1;
-            
-              bg_osd_set_contrast_changed(osd, v);
+              if(gavl_value_get_float(&val, &v))
+                bg_osd_set_contrast_changed(osd, v);
               }
             else if(!strcmp(var, BG_STATE_OV_SATURATION))     // float
               {
               double v;
-              if(!gavl_value_get_float(&val, &v))
-                return 1;
-            
-              bg_osd_set_saturation_changed(osd, v);
+              if(gavl_value_get_float(&val, &v))
+                bg_osd_set_saturation_changed(osd, v);
               }
             else if(!strcmp(var, BG_STATE_OV_BRIGHTNESS))     // float
               {
               double v;
-              if(!gavl_value_get_float(&val, &v))
-                return 1;
-            
-              bg_osd_set_brightness_changed(osd, v);
+              if(gavl_value_get_float(&val, &v))
+                bg_osd_set_brightness_changed(osd, v);
               }
             }
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
@@ -994,31 +975,31 @@ static int handle_message(void * priv, gavl_msg_t * msg)
             if(!strcmp(var, BG_PLAYER_STATE_VOLUME))     // float
               {
               double vol;
-              if(!gavl_value_get_float(&val, &vol))
-                return 1;
-
-              bg_osd_set_volume_changed(osd, vol);
-              osd->player_volume = vol;
+              if(gavl_value_get_float(&val, &vol))
+                {
+                bg_osd_set_volume_changed(osd, vol);
+                osd->player_volume = vol;
+                }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_STATUS))       // int
               {
               int new_state;
-              if(!gavl_value_get_int(&val, &new_state))
-                return 1;
-
-              switch(new_state)
+              if(gavl_value_get_int(&val, &new_state))
                 {
-                case BG_PLAYER_STATUS_STOPPED:
-                case BG_PLAYER_STATUS_CHANGING:
-                  clear_info(osd);
-                  break;
-                case BG_PLAYER_STATUS_PAUSED:
-                  show_icon(osd, BG_ICON_PAUSE, OSD_PAUSE);
-                  break;
-                case BG_PLAYER_STATUS_PLAYING:
-                  if(osd->current_osd == OSD_PAUSE)
-                    bg_osd_clear(osd);
-                  break;
+                switch(new_state)
+                  {
+                  case BG_PLAYER_STATUS_STOPPED:
+                  case BG_PLAYER_STATUS_CHANGING:
+                    clear_info(osd);
+                    break;
+                  case BG_PLAYER_STATUS_PAUSED:
+                    show_icon(osd, BG_ICON_PAUSE, OSD_PAUSE);
+                    break;
+                  case BG_PLAYER_STATUS_PLAYING:
+                    if(osd->current_osd == OSD_PAUSE)
+                      bg_osd_clear(osd);
+                    break;
+                  }
                 }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_CURRENT_TRACK))         // dictionary
@@ -1032,8 +1013,10 @@ static int handle_message(void * priv, gavl_msg_t * msg)
               
               if(!(dict = gavl_value_get_dictionary(&val)) ||
                  !(m = gavl_track_get_metadata(dict)))
+                {
+                gavl_value_free(&val);
                 return 1;
-              
+                }
               gavl_dictionary_reset(&osd->track);
               gavl_dictionary_copy(&osd->track, dict);
 
@@ -1058,8 +1041,10 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                   chapter = gavl_chapter_list_get(dict, i);
 
                   if(!(gavl_dictionary_get_long(chapter, GAVL_CHAPTERLIST_TIME, &chapter_time)))
+                    {
+                    gavl_value_free(&val);
                     return 1;
-            
+                    }
                   label = bg_get_chapter_label(i, chapter_time, timescale,
                                                gavl_dictionary_get_string(chapter, GAVL_META_LABEL));
 
@@ -1096,23 +1081,21 @@ static int handle_message(void * priv, gavl_msg_t * msg)
               }
             else if(!strcmp(var, BG_PLAYER_STATE_TIME))          // long
               {
-              if(!gavl_value_get_long(&val, &osd->track_time))
-                return 1;
-              
-              if(osd->current_osd == OSD_TIME)
+              if(gavl_value_get_long(&val, &osd->track_time) && (osd->current_osd == OSD_TIME))
                 {
                 char * str = make_time_string(osd);
-                osd_set(osd, str, "left", "bottom", OSD_TIME, PACKET_FLAG_UPDATE, 2);
+                osd_set(osd, str, "center", "center", "bottom", OSD_TIME, PACKET_FLAG_UPDATE, 2);
                 }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_TIME_PERC))          // float
               {
-              gavl_value_get_float(&val, &osd->percentage);
 
               if(osd->current_osd == OSD_TIME)
                 {
-                char * str = make_time_string(osd);
-                osd_set(osd, str, "left", "bottom", OSD_TIME, PACKET_FLAG_UPDATE, 2);
+                char * str;
+                gavl_value_get_float(&val, &osd->percentage);
+                str = make_time_string(osd);
+                osd_set(osd, str, "center", "center", "bottom", OSD_TIME, PACKET_FLAG_UPDATE, 2);
                 }
               }
             else if(!strcmp(var, BG_PLAYER_STATE_MODE))          // int
@@ -1125,7 +1108,6 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                 show_icon(osd, BG_ICON_VOLUME_MUTE, OSD_MUTE);
               else
                 bg_osd_set_volume_changed(osd, osd->player_volume);
-              break;
               }
             else if(!strcmp(var, BG_PLAYER_STATE_AUDIO_STREAM_CURRENT))          // int
               {
@@ -1140,7 +1122,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                   {
                   char * str;
                   str = menu_markup(&osd->audio_menu);
-                  osd_set_nolock(osd, str, "left", "center", osd->current_osd, 0, 2);
+                  osd_set_nolock(osd, str, "left", "center", "center", osd->current_osd, 0, 2);
                   }
                 }
               }
@@ -1161,7 +1143,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                   {
                   char * str;
                   str = menu_markup(&osd->subtitle_menu);
-                  osd_set_nolock(osd, str, "left", "center", osd->current_osd, 0, 2);
+                  osd_set_nolock(osd, str, "left", "center", "center", osd->current_osd, 0, 2);
                   }
                 }
               }
@@ -1175,7 +1157,7 @@ static int handle_message(void * priv, gavl_msg_t * msg)
                 {
                 char * str;
                 str = menu_markup(&osd->chapter_menu);
-                osd_set(osd, str, "left", "center", OSD_CHAPTER_MENU, PACKET_FLAG_UPDATE, 2);
+                osd_set(osd, str, "left", "center", "center", OSD_CHAPTER_MENU, PACKET_FLAG_UPDATE, 2);
                 }
               }
             }
@@ -1252,7 +1234,7 @@ int bg_osd_key_pressed(bg_osd_t * osd, int key, int mask)
     char * str; 
     menu_adjust(m);
     str = menu_markup(m);
-    osd_set_nolock(osd, str, "left", "center", osd->current_osd, 0, 2);
+    osd_set_nolock(osd, str, "left", "center", "center", osd->current_osd, 0, 2);
     }
   
   pthread_mutex_unlock(&osd->mutex);
@@ -1270,11 +1252,11 @@ static void show_menu(bg_osd_t * osd, osd_type_t type)
     show_error(osd);
     return;
     }
-
+  
   osd->cur_menu->sel = osd->cur_menu->cur;
   menu_adjust(osd->cur_menu);
   str = menu_markup(osd->cur_menu);
-  osd_set(osd, str, "left", "center", type, 0, 2);
+  osd_set(osd, str, "left", "center", "center", type, 0, 2);
   // osd_set(osd, str, "right", "center", type, 0, 2);
   }
 

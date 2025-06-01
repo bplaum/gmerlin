@@ -25,6 +25,8 @@
 #include <x11/x11.h>
 #include <x11/x11_window_private.h>
 
+// #include <gavl/hw.h>
+
 #include <gmerlin/plugin.h>
 #include <gmerlin/state.h>
 #include <gmerlin/log.h>
@@ -38,37 +40,9 @@ static video_driver_t const * const drivers[] =
     &gles_driver,
     &gl_driver,
 #endif
-
-#ifdef HAVE_LIBVA
-   &vaapi_driver,
-#endif    
-
+    
   };
 
-
-
-static gavl_video_frame_t * create_frame(bg_x11_window_t * w)
-  {
-  gavl_video_frame_t * ret;
-  if(w->current_driver->driver->create_frame)
-    {
-    ret = w->current_driver->driver->create_frame(w->current_driver);
-    }
-  else
-    {
-    ret = gavl_video_frame_create(&w->video_format);
-    gavl_video_frame_clear(ret, &w->video_format);
-    }
-  return ret;
-  }
-
-static void destroy_frame(bg_x11_window_t * w, gavl_video_frame_t * f)
-  {
-  if(w->current_driver->driver->destroy_frame)
-    w->current_driver->driver->destroy_frame(w->current_driver, f);
-  else
-    gavl_video_frame_destroy(f);
-  }
 
 void bg_x11_window_set_brightness(bg_x11_window_t * w)
   {
@@ -119,7 +93,11 @@ static void init(bg_x11_window_t * w)
   {
   int num_drivers, i;
   num_drivers = sizeof(drivers) / sizeof(drivers[0]);
-  
+
+#ifdef HAVE_DRM
+  w->dma_hwctx = gavl_hw_ctx_create_dma();
+#endif
+    
   for(i = 0; i < num_drivers; i++)
     {
     w->drivers[i].driver = drivers[i];
@@ -151,11 +129,13 @@ void bg_x11_window_cleanup_video(bg_x11_window_t * w)
     {
     if(w->drivers[i].driver->cleanup)
       w->drivers[i].driver->cleanup(&w->drivers[i]);
-    if(w->drivers[i].img_formats)
-      free(w->drivers[i].img_formats);
-    if(w->drivers[i].ovl_formats)
-      free(w->drivers[i].ovl_formats);
+    if(w->drivers[i].hwctx_priv)
+      gavl_hw_ctx_destroy(w->drivers[i].hwctx_priv);
     }
+#ifdef HAVE_DRM
+  if(w->dma_hwctx)
+    gavl_hw_ctx_destroy(w->dma_hwctx);
+#endif
   }
 
 
@@ -165,15 +145,18 @@ void bg_x11_window_cleanup_video(bg_x11_window_t * w)
 static gavl_video_frame_t * get_frame(void * priv)
   {
   bg_x11_window_t * w = priv;
-  if(!w->frame)
-    w->frame = create_frame(w);
-  return w->frame;
+  gavl_hw_video_frame_map(w->dma_frame, 1);
+  return w->dma_frame;
   }
 
 static gavl_sink_status_t put_frame(void * priv, gavl_video_frame_t * f)
   {
   bg_x11_window_t * w = priv;
 
+  if(w->dma_frame)
+    gavl_hw_video_frame_unmap(w->dma_frame);
+  
+  
   if(TEST_FLAG(w, FLAG_CLEAR_BORDER))
     {
     bg_x11_window_clear_border(w);
@@ -190,15 +173,14 @@ static gavl_sink_status_t put_frame(void * priv, gavl_video_frame_t * f)
 #define PAD(sz) (((sz+PAD_SIZE-1) / PAD_SIZE) * PAD_SIZE)
 
 int bg_x11_window_open_video(bg_x11_window_t * w,
-                             gavl_video_format_t * format)
+                             gavl_video_format_t * format, int src_flags)
   {
   int num_drivers;
   int i;
-  int force_hw_scale;
   int min_penalty, min_index;
+  gavl_hw_frame_mode_t mode;
   gavl_video_frame_t * (*get_func)(void * priv) = NULL;
   
-  CLEAR_FLAG(w, (FLAG_NO_GET_FRAME));
   w->current_driver = NULL;  
   if(!TEST_FLAG(w, FLAG_DRIVERS_INITIALIZED))
     {
@@ -232,16 +214,14 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
       if(w->drivers[i].driver->supports_hw &&
          w->drivers[i].driver->supports_hw(&w->drivers[i], w->video_format.hwctx)) // Zero copy
         {
-        SET_FLAG(w, FLAG_ZEROCOPY);
         gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Using %s in zerocopy mode",
                w->drivers[i].driver->name);
         
         w->current_driver = &w->drivers[i];
-        w->current_driver->pixelformat = format->pixelformat;
-
+        
         /* Try to open this */
 
-        if(!w->current_driver->driver->open(w->current_driver))
+        if(!w->current_driver->driver->open(w->current_driver, src_flags))
           {
           gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Opening %s driver failed",
                  w->current_driver->driver->name);
@@ -249,6 +229,8 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
           /* Request software support */
           w->video_format.hwctx = NULL;
           }
+        else
+          gavl_video_format_copy(&w->current_driver->fmt, &w->video_format);
         
         goto got_driver;
         }
@@ -258,17 +240,24 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
     w->video_format.hwctx = NULL;
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Using hardware to RAM transfer");
     }
+
+  /* Transfer source supplied frames to HW */
+  if(src_flags & GAVL_SOURCE_SRC_ALLOC)
+    mode = GAVL_HW_FRAME_MODE_TRANSFER;
+  else
+    mode = GAVL_HW_FRAME_MODE_MAP;
   
   /* Query the best pixelformats for each driver */
-
   for(i = 0; i < num_drivers; i++)
     {
-    w->drivers[i].pixelformat =
-      gavl_pixelformat_get_best(format->pixelformat, w->drivers[i].img_formats,
-                                &w->drivers[i].penalty);
+    gavl_video_format_copy(&w->drivers[i].fmt, format);
+
+    if(w->drivers[i].driver->adjust_video_format)
+      w->drivers[i].driver->adjust_video_format(&w->drivers[i], &w->drivers[i].fmt, mode);
+    else
+      gavl_hw_video_format_adjust(w->drivers[i].hwctx_priv, &w->drivers[i].fmt, mode);
     }
-
-
+  
   /*
    *  Now, get the driver with the lowest penalty.
    *  Scaling would be nice as well
@@ -282,28 +271,19 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
        have the pixelformat unset */
     for(i = 0; i < num_drivers; i++)
       {
-      if(w->drivers[i].pixelformat != GAVL_PIXELFORMAT_NONE)
+      if(w->drivers[i].fmt.pixelformat == GAVL_PIXELFORMAT_NONE)
+        continue;
+
+      if((min_penalty < 0) || w->drivers[i].penalty < min_penalty)
         {
-        if((min_penalty < 0) || w->drivers[i].penalty < min_penalty)
-          {
-          min_penalty = w->drivers[i].penalty;
-          min_index = i;
-          }
+        min_penalty = w->drivers[i].penalty;
+        min_index = i;
         }
       }
-
+    
     /* If we have found no driver, playing video is doomed to failure */
     if(min_penalty < 0)
-      {
-      if(force_hw_scale)
-        {
-        force_hw_scale = 0;
-        continue;
-        }
-      else
-        break;
-      }
-
+      break;
     
     if(!w->drivers[min_index].driver->open)
       {
@@ -312,13 +292,15 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
       }
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Trying %s driver",
            w->drivers[min_index].driver->name);
-    if(!w->drivers[min_index].driver->open(&w->drivers[min_index]))
+
+    w->drivers[min_index].frame_mode = mode;
+    if(!w->drivers[min_index].driver->open(&w->drivers[min_index], src_flags))
       {
       gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Opening %s driver failed",
              w->drivers[min_index].driver->name);
       
       /* Flag as unusable */
-      w->drivers[min_index].pixelformat = GAVL_PIXELFORMAT_NONE;
+      w->drivers[min_index].fmt.pixelformat = GAVL_PIXELFORMAT_NONE;
       }
     else
       {
@@ -333,12 +315,12 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
 
   got_driver:
   
-  w->video_format.pixelformat = w->current_driver->pixelformat;
+  gavl_video_format_copy(&w->video_format, &w->current_driver->fmt);
   
   gavl_video_format_copy(format, &w->video_format);
   
   /* All other values are already set or will be set by set_rectangles */
-  w->window_format.pixelformat = format->pixelformat;
+  //  w->window_format.pixelformat = format->pixelformat;
   
   bg_x11_window_set_contrast(w);
   bg_x11_window_set_saturation(w);
@@ -347,10 +329,9 @@ int bg_x11_window_open_video(bg_x11_window_t * w,
   XSync(w->dpy, False);
   bg_x11_window_handle_events(w, 0);
 
-  if(TEST_FLAG(w, FLAG_NO_GET_FRAME) ||
-     !w->current_driver->driver->create_frame)
-    get_func = NULL;
-  else
+  get_func = NULL;
+
+  if(w->dma_frame)
     get_func = get_frame;
   
   w->sink =
@@ -422,25 +403,22 @@ void bg_x11_window_put_frame_internal(bg_x11_window_t * w,
 void bg_x11_window_close_video(bg_x11_window_t * w)
   {
   int i;
-  
+
+#if 0  
   if(w->frame)
     {
     destroy_frame(w, w->frame);
     w->frame = NULL;
     }
-
+#endif
+  
   for(i = 0; i < w->num_overlay_streams; i++)
     {
     overlay_stream_t * str = w->overlay_streams[i];
     if(str->ovl)
       {
-      if(w->current_driver->driver->destroy_overlay)
-        w->current_driver->driver->destroy_overlay(w->current_driver, str, str->ovl);
-      else
+      if(str->ovl)
         gavl_video_frame_destroy(str->ovl);
-
-      if(str->ovl_hw)
-        gavl_video_frame_destroy(str->ovl_hw);
       }
     if(str->sink)
       gavl_video_sink_destroy(str->sink);
@@ -461,6 +439,11 @@ void bg_x11_window_close_video(bg_x11_window_t * w)
     w->num_overlay_streams = 0;
     w->overlay_streams = NULL;
     }
+
+#ifdef HAVE_DRM  
+  if(w->dma_hwctx)
+    gavl_hw_ctx_reset(w->dma_hwctx);
+#endif
   
   CLEAR_FLAG(w, FLAG_VIDEO_OPEN);
   

@@ -245,7 +245,7 @@ static void cleanup_v4l(ov_v4l2_t * v4l)
   }
 
 static int open_v4l2(void * priv, const char * uri,
-                     gavl_video_format_t * format)
+                     gavl_video_format_t * format, int src_flags)
   {
   ov_v4l2_t * v4l = priv;
   gavl_dictionary_t dev;

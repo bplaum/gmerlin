@@ -133,7 +133,6 @@ typedef struct
 
   gavl_audio_sink_t * sink;
 
-  bg_parameter_info_t * plugin_params;
   bg_control_t * oa_ctrl;
 
   char * sink_uri;
@@ -156,9 +155,6 @@ typedef struct
   
   int64_t time_offset_user;
 
-  //  bg_overlay_info_t * oi;
-  //  bg_text_info_t * ti;
-
   } bg_player_subtitle_stream_t;
 
 typedef struct
@@ -177,23 +173,18 @@ typedef struct
   gavl_time_t decode_duration;
   gavl_time_t render_duration;
   
-  int lock_fullscreen;
-  
   bg_ov_t * ov;
   gavl_time_t frame_time;
 
   /* Stream id for subtitles in the output plugin */
   gavl_video_sink_t * subtitle_sink; 
 
-  gavl_video_format_t osd_format;
-  
   bg_osd_t * osd;
-  
-  bg_msg_sink_t * evt_sink;
   
   int64_t frames_read;
   
   bg_accelerator_map_t * accel_map;
+  bg_accelerator_map_t * accel_map_ov;
   
   bg_player_subtitle_stream_t * ss;
   bg_subtitle_handler_t * sh;
@@ -205,21 +196,14 @@ typedef struct
 
   bg_thread_t * th;
 
-  /* 1 if we are currently displaying a subtitle */
-  int subtitle_active;
-  
   int64_t skip;
   int64_t last_frame_time;
 
   int do_skip;
   
   gavl_video_source_t * in_src_int;
-  //  gavl_video_source_t * in_src;
-
   gavl_video_source_t * src;
-  //  bg_video_info_t * vi;
   
-  bg_parameter_info_t * plugin_params;
 
   bg_controllable_t * ov_ctrl;
   bg_msg_sink_t * ov_evt_sink;
@@ -231,6 +215,8 @@ typedef struct
   int state;
 
   char * sink_uri;
+
+  gavl_hw_context_t * hwctx;
   
   } bg_player_video_stream_t;
 

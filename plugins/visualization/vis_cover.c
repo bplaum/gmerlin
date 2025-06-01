@@ -106,6 +106,7 @@ static int open_cover(void * priv, gavl_audio_format_t * audio_format,
 
 static int load_frame(cover_t * s, const gavl_dictionary_t * track)
   {
+#if 0
   fprintf(stderr, "*** Load frame\n");
   //  gavl_dictionary_dump(track, 2);
 
@@ -113,6 +114,7 @@ static int load_frame(cover_t * s, const gavl_dictionary_t * track)
   gavl_video_format_dump(&s->vfmt);
   fprintf(stderr, "default_format\n");
   gavl_video_format_dump(&s->default_vfmt);
+#endif
   
   if(s->frame)
     gavl_video_frame_destroy(s->frame);

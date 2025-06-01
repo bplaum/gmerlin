@@ -65,8 +65,14 @@ dnl
 dnl Linux dma-buf
 dnl 
 
-AC_CHECK_HEADERS([drm/drm_fourcc.h])
-AC_CHECK_HEADERS([libdrm/drm_fourcc.h])
+AH_TEMPLATE([HAVE_DRM], [Is DRM available?])
+
+
+AC_CHECK_HEADERS([drm/drm_fourcc.h libdrm/drm_fourcc.h], have_drm="true")
+
+if test "x$have_drm" = "xtrue"; then
+AC_DEFINE([HAVE_DRM])
+fi
 
 dnl
 dnl Gettext

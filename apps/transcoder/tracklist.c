@@ -787,7 +787,7 @@ static void configure_encoders(track_list_t * l)
   
   bg_transcoder_track_get_encoders(first_selected, s);
 
-  // bg_cfg_section_dump(s, "encoders_1.xml");
+  bg_cfg_section_dump(s, "encoders_1.xml");
   
   dlg = bg_dialog_create(s,
                          set_encoder_parameter,

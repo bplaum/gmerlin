@@ -46,9 +46,9 @@ void bg_player_video_create(bg_player_t * p)
   pthread_mutex_init(&s->config_mutex,NULL);
   pthread_mutex_init(&s->eof_mutex,NULL);
   s->ss = &p->subtitle_stream;
-  // s->evt_sink = bg_msg_sink_create();
   
   s->accel_map = bg_accelerator_map_create();
+  s->accel_map_ov = bg_accelerator_map_create();
   s->osd = bg_osd_create(&p->ctrl);
   s->sh = bg_subtitle_handler_create();
   }
@@ -61,10 +61,10 @@ void bg_player_video_destroy(bg_player_t * p)
   bg_gavl_video_options_free(&s->options);
   bg_video_filter_chain_destroy(s->fc);
   bg_thread_destroy(s->th);
-  //  bg_msg_sink_destroy(s->evt_sink);
-
+  
   bg_osd_destroy(s->osd);
   bg_accelerator_map_destroy(s->accel_map);
+  bg_accelerator_map_destroy(s->accel_map_ov);
   bg_subtitle_handler_destroy(s->sh);
 
   if(s->sink_uri)
@@ -178,13 +178,6 @@ static const bg_parameter_info_t parameters[] =
       .help_string = TRS("Skip frames to keep A/V sync"),
     },
     BG_GAVL_PARAM_THREADS,
-    {
-      .name = "lock_fullscreen",
-      .long_name = TRS("Lock Fullscreen"),
-      .type =      BG_PARAMETER_CHECKBUTTON,
-      .flags = BG_PARAMETER_HIDE_DIALOG,
-      .val_default = GAVL_VALUE_INIT_INT(0),
-    },
     { /* End of parameters */ }
   };
 
@@ -211,8 +204,6 @@ void bg_player_set_video_parameter(void * data, const char * name,
     {
     if(!strcmp(name, "skip"))
       p->video_stream.do_skip = val->v.i;
-    else if(!strcmp(name, "lock_fullscreen"))
-      p->video_stream.lock_fullscreen = val->v.i;
     }
   
   if(!do_init && !is_interrupted)

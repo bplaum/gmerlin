@@ -25,6 +25,7 @@
 #define BG_STATE_H_INCLUDED
 
 #include <gavl/state.h>
+#include <gmerlin/bgmsg.h>
 
 typedef struct
   {
@@ -111,7 +112,8 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
 #define BG_STATE_OV_FULLSCREEN "$fullscreen"
 #define BG_STATE_OV_TITLE      "$title"    // Window title
 #define BG_STATE_OV_VISIBLE    "$visible"  // 
-#define BG_STATE_OV_WINDOW_ID  "$winid"    // Window ID
+#define BG_STATE_OV_ORIENTATION "$orientation"  // 
+#define BG_STATE_OV_PAUSED     "$paused"  // 
 
 /* Min- Max values for Hue, Saturation, Brightness and Contrast */
 
@@ -126,6 +128,14 @@ const gavl_value_t * bg_state_get(const gavl_dictionary_t * state,
 #define BG_CONTRAST_MIN      -10.0
 #define BG_CONTRAST_MAX       10.0
 #define BG_CONTRAST_DELTA      0.5
+
+#define BG_SQUEEZE_MIN -1.0
+#define BG_SQUEEZE_MAX 1.0
+#define BG_SQUEEZE_DELTA 0.04
+
+#define BG_ZOOM_MIN 20.0
+#define BG_ZOOM_MAX 180.0
+#define BG_ZOOM_DELTA 2.0
 
 #endif // BG_STATE_H_INCLUDED
 

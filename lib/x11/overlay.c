@@ -25,6 +25,7 @@
 #include <x11/x11.h>
 #include <x11/x11_window_private.h>
 
+#if 0
 static gavl_video_frame_t * get_frame(void * priv)
   {
   overlay_stream_t * str = priv;
@@ -34,11 +35,9 @@ static gavl_video_frame_t * get_frame(void * priv)
       str->win->current_driver->driver->create_overlay(str->win->current_driver, str);
     }
 
-  if(str->win->current_driver->driver->unset_overlay)
-    str->win->current_driver->driver->unset_overlay(str->win->current_driver, str);
-
   return str->ovl;
   }
+#endif
 
 static gavl_sink_status_t put_frame(void * priv, gavl_video_frame_t * frame)
   {
@@ -48,12 +47,13 @@ static gavl_sink_status_t put_frame(void * priv, gavl_video_frame_t * frame)
   w = str->win;
 
   if(frame && frame->src_rect.w && frame->src_rect.h)
+    {
     str->active = 1;
+    if(str->win->current_driver->driver->set_overlay)
+      str->win->current_driver->driver->set_overlay(str->win->current_driver, str, frame);
+    }
   else
     str->active = 0;
-
-  if(str->win->current_driver->driver->set_overlay)
-    str->win->current_driver->driver->set_overlay(str->win->current_driver, str);
   
   SET_FLAG(w, FLAG_OVERLAY_CHANGED);
   return GAVL_SINK_OK;
@@ -90,19 +90,13 @@ bg_x11_window_add_overlay_stream(bg_x11_window_t * w,
     gavl_video_format_set_frame_size(&str->format, 0, 0);
     }
   
-  str->format.pixelformat = gavl_pixelformat_get_best(str->format.pixelformat, 
-                                                      w->current_driver->ovl_formats, 0);
-  
   w->current_driver->driver->init_overlay_stream(w->current_driver, str);
-  
   gavl_video_format_copy(format, &str->format); 
   str->win = w;
   
   w->num_overlay_streams++;
 
-  str->sink = gavl_video_sink_create(w->current_driver->driver->create_overlay ?
-                                     get_frame : NULL,
-                                     put_frame, str, &str->format);
+  str->sink = gavl_video_sink_create(NULL, put_frame, str, &str->format);
   
   return str->sink;
   }

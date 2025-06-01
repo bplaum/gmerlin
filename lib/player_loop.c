@@ -130,6 +130,8 @@ static void pause_cmd(bg_player_t * p)
     {
     play_source(p, BG_PLAYER_STATUS_PAUSED); 
     bg_input_plugin_pause(p->src->input_handle);
+    bg_ov_set_paused(p->video_stream.ov, 1);
+    
     }
   else if(state == BG_PLAYER_STATUS_PLAYING)
     {
@@ -141,11 +143,12 @@ static void pause_cmd(bg_player_t * p)
       bg_visualizer_pause(p->visualizer);
 
     bg_input_plugin_pause(p->src->input_handle);
+    bg_ov_set_paused(p->video_stream.ov, 1);
     }
   else if(state == BG_PLAYER_STATUS_PAUSED)
     {
     bg_input_plugin_resume(p->src->input_handle);
-    
+    bg_ov_set_paused(p->video_stream.ov, 0);
     start_playback(p);
     }
   }
@@ -381,8 +384,8 @@ int bg_player_source_open(bg_player_t * p, bg_player_source_t * src, int primary
     //    fprintf(stderr, "Using Uri vars\n");
     //    gavl_dictionary_dump(&p->uri_vars, 2);
     }
-  else
-    fprintf(stderr, "Got no URI vars\n");
+  //  else
+  //    fprintf(stderr, "Got no URI vars\n");
   
   h = bg_load_track(&src->track, p->variant, &src->num_variants);
 
@@ -432,6 +435,15 @@ static int set_source_from_track(bg_player_t * p,
   bg_player_source_cleanup(src);
   if(track)
     gavl_dictionary_copy(&src->track, track);
+  return 1;
+  }
+
+static int set_source_from_uri(bg_player_t * p,
+                               bg_player_source_t * src,
+                               const char * uri)
+  {
+  bg_player_source_cleanup(src);
+  gavl_track_from_location(&src->track, uri);
   return 1;
   }
 
@@ -524,6 +536,7 @@ static void stop_cmd(bg_player_t * player, int new_state)
     dict = gavl_value_set_dictionary(&val);
     gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
     bg_player_state_set_local(player, 1, BG_PLAYER_STATE_CTX, BG_PLAYER_STATE_CURRENT_TRACK, &val);
+    gavl_value_free(&val);
     }
   }
 
@@ -808,7 +821,40 @@ static void play_cmd(bg_player_t * player)
 
 /* Process command, return FALSE if thread should be ended */
 
+static void set_tracklist_from_uri(bg_player_t * player, gavl_dictionary_t * mi)
+  {
+  const char *hash;
+  const gavl_dictionary_t * dict;
+  gavl_msg_t msg;
 
+  int track_idx = gavl_get_current_track(mi);
+  
+  gavl_msg_init(&msg);
+
+  gavl_msg_set_id_ns(&msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
+  gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, BG_PLAYQUEUE_ID);
+
+  gavl_msg_set_arg_int(&msg, 0, 0);  // idx
+  gavl_msg_set_arg_int(&msg, 1, -1); // del
+  gavl_msg_set_arg_array(&msg, 2, gavl_get_tracks(mi));
+  bg_player_tracklist_handle_message(&player->tl, &msg);
+  gavl_msg_free(&msg);
+
+  if((dict = gavl_get_track(mi, track_idx)) &&
+     (dict = gavl_track_get_metadata(dict)) &&
+     (hash = gavl_dictionary_get_string(dict, GAVL_META_HASH)))
+    {
+    char * id;
+    gavl_msg_init(&msg);
+    id = gavl_sprintf("%s/%s", BG_PLAYQUEUE_ID, hash);
+    gavl_msg_set_id_ns(&msg, BG_PLAYER_CMD_SET_CURRENT_TRACK, BG_MSG_NS_PLAYER);
+    gavl_msg_set_arg_string(&msg, 0, id);
+    bg_player_tracklist_handle_message(&player->tl, &msg);
+    gavl_msg_free(&msg);
+    free(id);
+    }
+  }
+  
 int bg_player_handle_command(void * priv, gavl_msg_t * command)
   {
   //  int arg_i1;
@@ -1072,9 +1118,6 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             }
           else if(!strcmp(ctx, BG_STATE_CTX_OV))
             {
-            //  fprintf(stderr, "set_state OV %s %p %d\n", var, player->video_stream.ov_ctrl, val.type);
-            //  gavl_value_dump(&val, 2);
-            
             if(player->video_stream.ov_ctrl)
               {
               bg_plugin_handle_t * h = bg_ov_get_plugin(player->video_stream.ov);
@@ -1099,16 +1142,77 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
           break;
         }
       break; 
-
+      
     case BG_MSG_NS_PLAYER:
       {
       switch(command->ID)
         {
         case BG_PLAYER_CMD_LOAD_URI:
           {
+          gavl_dictionary_t * mi;
+          const char * hash = NULL;
           const char * uri = gavl_msg_get_arg_string_c(command, 0);
           int start_playing = gavl_msg_get_arg_int(command, 1);
+          
           fprintf(stderr, "Load uri %d %s\n", start_playing, uri);
+          
+          if(start_playing)
+            {
+            stop_cmd(player, BG_PLAYER_STATUS_CHANGING);
+
+            /* Open plugin, send track to the track list and start
+               playing (-> avoid double open) */
+
+            if(!set_source_from_uri(player, player->src, uri) ||
+               !bg_player_source_open(player, player->src, 1))
+              {
+              bg_player_set_status(player, BG_PLAYER_STATUS_ERROR);
+              bg_player_ov_standby(&player->video_stream);
+              break;
+              }
+
+            hash = gavl_dictionary_get_string(player->src->metadata, GAVL_META_HASH);
+
+            if(hash)
+              gavl_dictionary_set_string_nocopy(gavl_track_get_metadata_nc(player->src->track_info), GAVL_META_ID,
+                                                gavl_sprintf(BG_PLAYQUEUE_ID"/%s", hash));
+            
+            //            fprintf(stderr, "Load URI 1: %s\n", uri);
+            //            gavl_dictionary_dump(player->src->track_info, 2);
+            
+            /* TODO: Add to Tracklist */
+            
+            if(!(mi = bg_input_plugin_get_media_info(player->src->input_handle)))
+              break;
+
+            set_tracklist_from_uri(player, mi);
+            
+            play_source(player, BG_PLAYER_STATUS_PLAYING);
+            }
+          else
+            {
+            int track_idx = 0;
+            gavl_dictionary_t vars;
+
+            gavl_dictionary_init(&vars);
+            stop_cmd(player, BG_PLAYER_STATUS_STOPPED);
+            /* Load media info and add to tracklist */
+
+            if(!(mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0)))
+              break;
+
+            gavl_url_get_vars_c(uri, &vars);
+
+            if(gavl_dictionary_get_int(&vars, GAVL_URL_VAR_TRACK, &track_idx))
+              track_idx--;
+
+            gavl_set_current_track(mi, track_idx);
+            set_tracklist_from_uri(player, mi);
+
+            gavl_dictionary_destroy(mi);
+            gavl_dictionary_free(&vars);
+            }
+          
           }
           break;
         case BG_PLAYER_CMD_NEXT:

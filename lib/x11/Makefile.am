@@ -1,20 +1,7 @@
 plugindir=$(pkglibdir)/plugins
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
-
-if HAVE_LIBVA
-vaapi_sources = vaapi.c
-vaapi_libs = @LIBVA_LIBS@
-vaapi_cflags = @LIBVA_CFLAGS@
-else
-vaapi_sources =
-vaapi_libs =
-vaapi_cflags = 
-endif
-
 if HAVE_EGL
-
-
 egl_sources = glvideo.c
 egl_libs = @EGL_LIBS@
 
@@ -38,8 +25,7 @@ AM_CFLAGS = \
 -DLOCALE_DIR=\"$(localedir)\" \
 -DPLUGIN_DIR=\"$(plugindir)\" \
 -DDOC_DIR=\"$(docdir)\" \
--DDATA_DIR=\"$(pkgdatadir)\" \
-$(vaapi_cflags)
+-DDATA_DIR=\"$(pkgdatadir)\"
 
 noinst_LTLIBRARIES = \
 libx11.la
@@ -51,8 +37,8 @@ x11_event.c \
 x11_video.c \
 x11_window.c \
 overlay.c \
+port.c \
 screensaver.c \
-$(egl_sources) \
-$(vaapi_sources)
+$(egl_sources)
 
-libx11_la_LIBADD =  @XINERAMA_LIBS@ @XFIXES_LIBS@ @XDPMS_LIBS@ $(glx_libs) $(egl_libs) $(xtest_libs) $(vaapi_libs) @X_LIBS@
+libx11_la_LIBADD =  @XINERAMA_LIBS@ @XFIXES_LIBS@ @XDPMS_LIBS@ $(egl_libs) $(xtest_libs) @X_LIBS@

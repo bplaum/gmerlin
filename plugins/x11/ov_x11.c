@@ -158,13 +158,14 @@ static void set_accel_map_x11(void * data, const bg_accelerator_map_t * accel_ma
   bg_accelerator_map_append_array(priv->accel_map, bg_accelerator_map_get_accels(accel_map));
   }
 
-static int open_x11(void * data, const char * uri, gavl_video_format_t * format)
+static int open_x11(void * data, const char * uri,
+                    gavl_video_format_t * format, int src_flags)
   {
   x11_t * priv = data;
   int result;
   ensure_window_realized(priv);
   
-  result = bg_x11_window_open_video(priv->win, format);
+  result = bg_x11_window_open_video(priv->win, format, src_flags);
   gavl_video_format_copy(&priv->video_format, format);
   gavl_video_format_copy(&priv->window_format, format);
 
@@ -233,9 +234,9 @@ const bg_ov_plugin_t the_plugin =
       BG_LOCALE,
       .name =          "ov_x11",
       .long_name =     TRS("X11"),
-      .description =   TRS("X11 display driver with support for XVideo, XImage and OpenGL. Shared memory (XShm) is used where available."),
+      .description =   TRS("X11 display driver supporting OpenGL and direct rendering to DMA buffers"),
       .type =          BG_PLUGIN_OUTPUT_VIDEO,
-      .flags =         BG_PLUGIN_EMBED_WINDOW | BG_PLUGIN_OV_STILL,
+      .flags =         BG_PLUGIN_OV_STILL,
       .priority =      BG_PLUGIN_PRIORITY_MAX,
       .create =        create_x11,
       .destroy =       destroy_x11,

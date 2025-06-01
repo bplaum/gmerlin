@@ -18,9 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
-
 #include <config.h>
 
 #include <string.h>
@@ -43,38 +40,21 @@
 
 #include <gmerlin/state.h>
 
-#ifdef HAVE_V4L2
-// #include <gavl/hw_v4l2.h>
-#endif
-
-#ifdef HAVE_DRM_DRM_FOURCC_H 
-#define HAVE_DRM
-
-#else // !HAVE_DRM_DRM_FOURCC_H 
-#ifdef HAVE_LIBDRM_DRM_FOURCC_H 
-#define HAVE_DRM
-#endif
-#endif // !HAVE_DRM_DRM_FOURCC_H 
-
 #ifdef HAVE_DRM
 #include <gavl/hw_dmabuf.h>
 #endif
+   
+typedef struct
+  {
+  gavl_pixelformat_t pfmt;
+  gavl_hw_type_t type;
+  gavl_hw_frame_mode_t mode; /* Transfer or map */
 
-#ifndef GL_TEXTURE_EXTERNAL_OES
-#define GL_TEXTURE_EXTERNAL_OES 0x8D65
-#endif
-
-/* Copy frames from RAM */
-#define MODE_TEXTURE_COPY    1
-
-/* Use textures created somewhere else */
-#define MODE_TEXTURE_DIRECT  2
-
-/* Use textures imported from DMA-Buffers */
-#define MODE_TEXTURE_DMABUF  3
-
-// #define DEFAULT_GL_MODE GAVL_HW_EGL_GLES_X11
-// #define DEFAULT_GL_MODE GAVL_HW_EGL_GL_X11
+  uint32_t dma_fourcc;
+  int      dma_flags;
+  int max_w;
+  int max_h;
+  } image_format_t;
 
 typedef struct
   {
@@ -82,31 +62,27 @@ typedef struct
   float  tex[2];
   } vertex;
 
-typedef struct
-  {
-  GLuint program;
-  GLuint fragment_shader;
-  GLuint vertex_shader;
-  
-  GLint frame_locations[3];
-  GLint colormatrix_location;
-  GLint coloroffset_location;
-  } shader_program_t;
 
 typedef struct
   {
-  gavl_hw_context_t * hwctx_gl;
-  gavl_hw_context_t * hwctx_priv;
-
-#ifdef HAVE_DRM
-  gavl_hw_context_t * hwctx_dmabuf;
-#endif
-  
   gavl_video_frame_t * texture;
 
   /* Shader program for the texture and for the Overlays */
-  shader_program_t progs_cm[2];
-  shader_program_t progs_nocm[2];
+  //  shader_program_t progs_cm[2];
+  //  shader_program_t progs_nocm[2];
+
+  shader_program_t shader_cm;
+  shader_program_t shader_nocm;
+  
+#if 0
+  shader_program_t prog_planar_cm;
+  shader_program_t prog_noplanar_cm;
+  shader_program_t prog_dma_cm;
+  
+  shader_program_t prog_planar_nocm;
+  shader_program_t prog_noplanar_nocm;
+  shader_program_t prog_dma_nocm;
+#endif
   
   GLuint vbo; /* Vertex buffer */
   
@@ -125,10 +101,27 @@ typedef struct
   int use_cmat;
   int use_cmat_ovl;
   
-  gavl_gl_frame_info_t * cur_frame;
-  gavl_hw_type_t hwtype;
   
+  gavl_video_frame_t * cur_frame;
+  gavl_hw_type_t hwtype;
+
+  image_format_t * formats;
+  int num_formats;
   } gl_priv_t;
+
+static int use_dma(int mode)
+  {
+  return (mode == MODE_DMABUF_IMPORT) ||
+    (mode == MODE_DMABUF_GETFRAME) ||
+    (mode == MODE_DMABUF_TRANSFER);
+  }
+
+static void
+adjust_video_format_internal(driver_data_t* d, gavl_video_format_t * fmt, const image_format_t * imgfmt,
+                              gavl_hw_frame_mode_t * mode);
+
+
+static int find_format(driver_data_t* d, gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode, int * penalty_ret, int ovl);
 
 static int supports_hw_gl(driver_data_t* d,
                           gavl_hw_context_t * ctx)
@@ -138,19 +131,13 @@ static int supports_hw_gl(driver_data_t* d,
   
   if(type == p->hwtype)
     return 1;
+
+  if(gavl_hw_ctx_can_import(d->hwctx_priv, ctx))
+    return 1;
   
-#if 0 // No hardware context supports these yet
-  if(gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GL_X11) ||
-     gavl_hw_ctx_exports_type(ctx, GAVL_HW_EGL_GLES_X11))
-    return 1;
-
-  if(gavl_hw_ctx_imports_type(priv->hwctx_priv, gavl_hw_ctx_get_type(ctx)))
-    return 1;
-#endif
-
 #ifdef HAVE_DRM  
-  if(gavl_hw_ctx_imports_type(p->hwctx_priv, GAVL_HW_DMABUFFER) &&
-     gavl_hw_ctx_exports_type(ctx, GAVL_HW_DMABUFFER))
+  if(gavl_hw_ctx_can_import(d->hwctx_priv, d->win->dma_hwctx) &&
+     gavl_hw_ctx_can_export(ctx, d->win->dma_hwctx))
     return 1;
 #endif
   
@@ -234,16 +221,14 @@ static void update_colormatrix(driver_data_t* d);
 
 static void set_gl(driver_data_t * d)
   {
-  gl_priv_t * priv = d->priv;
   //  fprintf(stderr, "set GL... %p", priv->hwctx_gl);
-  gavl_hw_egl_set_current(priv->hwctx_gl, d->win->current->egl_surface);
+  gavl_hw_egl_set_current(d->hwctx, d->win->current->egl_surface);
   //  fprintf(stderr, "set GL done\n");
   }
 
 static void unset_gl(driver_data_t * d)
   {
-  gl_priv_t * priv = d->priv;
-  gavl_hw_egl_unset_current(priv->hwctx_gl);
+  gavl_hw_egl_unset_current(d->hwctx);
   //  fprintf(stderr, "unset GL %p\n", priv->hwctx_gl);
   }
 
@@ -345,21 +330,6 @@ static const char * fragment_shader_planar_gles_cm =
   "  FragColor = colormatrix * color + coloroffset;\n"
   "  }";
 
-#if 0
-static const char * fragment_shader_planar_gles_nocm =
-  "#version 300 es\n"
-  "precision mediump float;\n"
-  "in vec2 TexCoord;\n" 
-  "out vec4 FragColor;\n"
-  "uniform sampler2D frame;\n"
-  "uniform sampler2D frame_u;\n"
-  "uniform sampler2D frame_v;\n"
-  "void main()\n"
-  "  {\n"
-  "  FragColor = vec4( texture2D(frame, TexCoord).r, texture2D(frame_u, TexCoord).r, texture2D(frame_v, TexCoord).r, 1.0 );\n"
-  "  }";
-#endif
-
 static const char * fragment_shader_gles_ext_cm =
   "#version 300 es\n"
   "#extension GL_OES_EGL_image_external : require\n"
@@ -372,7 +342,6 @@ static const char * fragment_shader_gles_ext_cm =
   "void main()\n"
   "  {\n"
   "  FragColor = colormatrix * texture2D(frame, TexCoord) + coloroffset;\n"
-  /*  "  FragColor = texture2D(frame, TexCoord);\n" */
   "  }";
 
 static const char * fragment_shader_gles_ext_nocm =
@@ -385,14 +354,7 @@ static const char * fragment_shader_gles_ext_nocm =
   "void main()\n"
   "  {\n"
   "  FragColor = texture2D(frame, TexCoord);\n"
-  /*  "  FragColor = texture2D(frame, TexCoord);\n" */
   "  }";
-
-/*
-void gavl_video_format_get_chroma_offset(const gavl_video_format_t * format,
-                                         int field, int plane,
-                                         float * off_x, float * off_y)
-*/
 
 static void check_shader(GLuint shader, const char * name)
   {
@@ -430,26 +392,28 @@ static void check_shader(GLuint shader, const char * name)
 #endif
   }
 
-static void create_shader_program(driver_data_t * d, shader_program_t * p, int background, int cm)
+static void create_shader_program(driver_data_t * d, shader_program_t * p, int planar, int cm, int use_dma)
   {
   const char * shader[2];
   int num = 0;
-  gl_priv_t * priv = d->priv;
+  //  gl_priv_t * priv = d->priv;
   //  bg_x11_window_t * w;
 
   //  priv = d->priv;
   //  w = d->win;
-  int num_planes = gavl_pixelformat_num_planes(d->pixelformat);
-    
+  //  int num_planes = gavl_pixelformat_num_planes(d->win->video_format.pixelformat);
+
+  
   p->program = glCreateProgram();
   
   /* Vertex shader */
   
-  switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
+  switch(gavl_hw_ctx_get_type(d->hwctx))
     {
     case GAVL_HW_EGL_GL_X11:
       shader[0] = vertex_shader_gl;
       num = 1;
+      
       break;
     case GAVL_HW_EGL_GLES_X11:
       shader[0] = vertex_shader_gles;
@@ -476,14 +440,11 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   p->fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   //  fprintf(stderr, "Created fragment shader (ID: %d) %08x\n", p->fragment_shader, glGetError());
   
-  switch(gavl_hw_ctx_get_type(priv->hwctx_gl))
+  switch(gavl_hw_ctx_get_type(d->hwctx))
     {
     case GAVL_HW_EGL_GL_X11:
-
-      if(background && (num_planes > 1))
-        {
+      if(planar)
         shader[0] = fragment_shader_planar_gl;
-        }
       else
         {
         if(cm)
@@ -494,14 +455,14 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
       num = 1;
       break;
     case GAVL_HW_EGL_GLES_X11:
-      if((priv->mode == MODE_TEXTURE_DMABUF) && background)
+      if(use_dma)
         {
         if(cm)
           shader[0] = fragment_shader_gles_ext_cm;
         else
           shader[0] = fragment_shader_gles_ext_nocm;
         }
-      else if(background && (num_planes > 1))
+      else if(planar)
         {
         shader[0] = fragment_shader_planar_gles_cm;
         }
@@ -541,7 +502,7 @@ static void create_shader_program(driver_data_t * d, shader_program_t * p, int b
   
   p->frame_locations[0] = glGetUniformLocation(p->program, "frame");
 
-  if(background && (num_planes == 3))
+  if(planar)
     {
     p->frame_locations[1] = glGetUniformLocation(p->program, "frame_u");
     p->frame_locations[2] = glGetUniformLocation(p->program, "frame_v");
@@ -670,17 +631,176 @@ static void set_pixelformat_matrix(double ret[4][5], gavl_pixelformat_t pfmt)
     matrix_init(ret);
   }
 
-#if 0
-static void dump_image_formats(gavl_pixelformat_t * fmts)
+#if 1
+static void dump_image_formats(image_format_t * fmts, int num)
   {
-  int idx = 0;
-  while(fmts[idx])
+  int i;
+  fprintf(stderr, "Got image formats\n");
+  
+  for(i = 0; i < num; i++)
     {
-    fprintf(stderr, "  %s\n", gavl_pixelformat_to_string(fmts[idx]));
-    idx++;
+    fprintf(stderr, "  gavl: %s type: %s, mode: %s",
+            gavl_pixelformat_to_string(fmts[i].pfmt),
+            gavl_hw_type_to_string(fmts[i].type),
+            (fmts[i].mode == GAVL_HW_FRAME_MODE_MAP) ? "map" : "transfer"
+            );
+    if(fmts[i].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
+      fprintf(stderr, " shuffle");
+    if(fmts[i].dma_fourcc)
+      fprintf(stderr, " drm_fourcc: %c%c%c%c",
+              (fmts[i].dma_fourcc) & 0xff,
+              (fmts[i].dma_fourcc >> 8) & 0xff,
+              (fmts[i].dma_fourcc >> 16) & 0xff,
+              (fmts[i].dma_fourcc >> 24) & 0xff
+              );
+    if(fmts[i].max_w || fmts[i].max_h)
+      fprintf(stderr, " max_size: %dx%d", fmts[i].max_w, fmts[i].max_h);
+    
+    fprintf(stderr, "\n");
     }
   }
 #endif
+
+static void init_image_formats(driver_data_t* d)
+  {
+  int num_dma_formats = 0;
+  int num_gl_formats = 0;
+  int i, idx = 0;
+  gavl_pixelformat_t * gl_formats = NULL;
+  EGLint *dma_formats;
+  gavl_pixelformat_t pfmt;
+  gl_priv_t * priv = d->priv;
+
+  int max_texture_size = gavl_hw_egl_get_max_texture_size(d->hwctx_priv);
+  
+  gl_formats = gavl_gl_get_image_formats(d->hwctx_priv, &num_gl_formats);
+  dma_formats = gavl_hw_ctx_egl_get_dma_import_formats(d->hwctx_priv, &num_dma_formats);
+  
+  priv->num_formats = num_gl_formats + num_dma_formats;
+  
+#ifdef HAVE_DRM
+
+  /* Planar YUV formats can be video- or jpeg-scaled. They don't have
+     explicit fourccs set but when imported as EGL image, we can
+     use EGL_SAMPLE_RANGE_HINT_EXT and EGL_YUV_FULL_RANGE_EXT */
+
+  for(i = 0; i < num_dma_formats; i++)
+    {
+    pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i], NULL, NULL);
+    switch(pfmt)
+      {
+      case GAVL_YUV_420_P:
+      case GAVL_YUV_422_P:
+      case GAVL_YUV_444_P:
+        priv->num_formats++;
+        break;
+      default:
+        break;
+      }
+    }
+#endif
+
+  priv->formats = calloc(priv->num_formats, sizeof(*priv->formats));
+  
+#ifdef HAVE_DRM
+  
+  /* Best option: Zero copy DMA frames */
+  for(i = 0; i < num_dma_formats; i++)
+    {
+    /* Formats are stored from highest to smallest speed */
+    if(((pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i],
+                                                 &priv->formats[idx].dma_flags, NULL)) !=
+        GAVL_PIXELFORMAT_NONE) &&
+       !(priv->formats[idx].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE))
+      {
+      priv->formats[idx].pfmt = pfmt;
+      priv->formats[idx].dma_fourcc = dma_formats[i];
+      priv->formats[idx].mode = GAVL_HW_FRAME_MODE_MAP;
+      priv->formats[idx].type = GAVL_HW_DMABUFFER;
+      idx++;
+
+      switch(pfmt)
+        {
+        case GAVL_YUV_420_P:
+          priv->formats[idx].pfmt = GAVL_YUVJ_420_P;
+          priv->formats[idx].dma_fourcc = dma_formats[i];
+          priv->formats[idx].mode = GAVL_HW_FRAME_MODE_MAP;
+          priv->formats[idx].type = GAVL_HW_DMABUFFER;
+          idx++;
+          break;
+        case GAVL_YUV_422_P:
+          priv->formats[idx].pfmt = GAVL_YUVJ_422_P;
+          priv->formats[idx].dma_fourcc = dma_formats[i];
+          priv->formats[idx].mode = GAVL_HW_FRAME_MODE_MAP;
+          priv->formats[idx].type = GAVL_HW_DMABUFFER;
+          idx++;
+          break;
+        case GAVL_YUV_444_P:
+          priv->formats[idx].pfmt = GAVL_YUVJ_444_P;
+          priv->formats[idx].dma_fourcc = dma_formats[i];
+          priv->formats[idx].mode = GAVL_HW_FRAME_MODE_MAP;
+          priv->formats[idx].type = GAVL_HW_DMABUFFER;
+          idx++;
+          break;
+        default:
+          break;
+        }
+      
+      if(idx >= priv->num_formats)
+        goto done;
+      }
+    }
+#endif
+  /* 2nd best option: glTexSubImage2D */
+  
+  for(i = 0; i < num_gl_formats; i++)
+    {
+    priv->formats[idx].pfmt = gl_formats[i];
+    priv->formats[idx].mode = GAVL_HW_FRAME_MODE_TRANSFER;
+    priv->formats[idx].type = gavl_hw_ctx_get_type(d->hwctx_priv);
+    priv->formats[idx].max_w = max_texture_size;
+    priv->formats[idx].max_h = max_texture_size;
+    idx++;
+    
+    if(idx >= priv->num_formats)
+      goto done;
+    
+    }
+  /* 3nd best option: Shuffle unsupported pixelformat into DMA bufs */
+#ifdef HAVE_DRM
+  for(i = 0; i < num_dma_formats; i++)
+    {
+    /* Formats are stored from highest smallest speed */
+
+    fprintf(stderr, "Testing fourcc %c%c%c%c\n",
+            (dma_formats[i]) & 0xff,
+            (dma_formats[i] >> 8) & 0xff,
+            (dma_formats[i] >> 16) & 0xff,
+            (dma_formats[i] >> 24) & 0xff);
+
+    if(((pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i],
+                                                 &priv->formats[idx].dma_flags, NULL)) !=
+        GAVL_PIXELFORMAT_NONE) &&
+       (priv->formats[idx].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE))
+      {
+      priv->formats[idx].pfmt = pfmt;
+      priv->formats[idx].mode = GAVL_HW_FRAME_MODE_TRANSFER;
+      priv->formats[idx].type = GAVL_HW_DMABUFFER;
+      priv->formats[idx].dma_fourcc = dma_formats[i];
+      
+      idx++;
+
+      if(idx >= priv->num_formats)
+        goto done;
+      }
+    }
+#endif
+
+  done:
+  dump_image_formats(priv->formats, priv->num_formats);
+  
+  }
+
 
 static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   {
@@ -689,7 +809,8 @@ static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   priv->hwtype = type;
   
   /* Create initial context to check if that works */
-  if(!(priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes(priv->hwtype), priv->hwtype, d->win->dpy)))
+  if(!(d->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes(priv->hwtype),
+                                              priv->hwtype, d->win->dpy)))
     {
     free(priv);
     return 0;
@@ -697,9 +818,7 @@ static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   
   d->priv = priv;
   
-  d->img_formats = gavl_hw_ctx_get_image_formats(priv->hwctx_priv);
-  d->ovl_formats = gavl_hw_ctx_get_overlay_formats(priv->hwctx_priv);
-
+  
 #if 0  
   fprintf(stderr, "Type: %s\n", gavl_hw_type_to_string(type));
   fprintf(stderr, "Image formats:\n");
@@ -707,6 +826,8 @@ static int init_gl_internal(driver_data_t * d, gavl_hw_type_t type)
   fprintf(stderr, "Overlay formats:\n");
   dump_image_formats(d->ovl_formats);
 #endif
+
+  init_image_formats(d);
   
   d->flags |= (DRIVER_FLAG_BRIGHTNESS | DRIVER_FLAG_SATURATION | DRIVER_FLAG_CONTRAST);
   
@@ -723,10 +844,6 @@ static int init_gles(driver_data_t * d)
   return init_gl_internal(d, GAVL_HW_EGL_GLES_X11);
   }
 
-static void set_overlay_gl(driver_data_t* d, overlay_stream_t * str)
-  {
-  gavl_video_frame_ram_to_hw(&str->format, str->ovl_hw, str->ovl);
-  }
 
 static void create_vertex_buffer(driver_data_t * d)
   {
@@ -738,7 +855,7 @@ static void create_vertex_buffer(driver_data_t * d)
   memset(v, 0, sizeof(v));
   
   glGenBuffers(1, &priv->vbo);
-
+  
   glBindBuffer(GL_ARRAY_BUFFER, priv->vbo);  
   
   glBufferData(GL_ARRAY_BUFFER, sizeof(v), v, GL_DYNAMIC_DRAW);
@@ -858,83 +975,69 @@ static void update_vertex_buffer(driver_data_t * d,
   }
 
 
-static int open_gl(driver_data_t * d)
+static int open_gl(driver_data_t * d, int src_flags)
   {
   bg_x11_window_t * w;
   gl_priv_t * priv;
   gavl_hw_type_t src_type;
+  int dma;
+  int planar = 0;
   
+  d->format_idx = -1;
   priv = d->priv;
   w = d->win;
   priv->mode = 0;
-  
-  //  priv->texture_target = GL_TEXTURE_2D;
 
-  //  fprintf(stderr, "Open GL\n");
-  //  gavl_video_format_dump(&w->video_format);
-  
   if(w->video_format.hwctx)
     {
     /* Frames are in hardware already: Take these */
-    SET_FLAG(w, FLAG_NO_GET_FRAME);
 
     src_type = gavl_hw_ctx_get_type(w->video_format.hwctx);
 
     if((src_type == GAVL_HW_EGL_GL_X11) || 
        (src_type == GAVL_HW_EGL_GLES_X11))
       {
-      priv->hwctx_gl = w->video_format.hwctx;
+      d->hwctx = w->video_format.hwctx;
       priv->mode = MODE_TEXTURE_DIRECT;
+
+      planar = gavl_pixelformat_num_planes(w->video_format.pixelformat) > 1 ? 1 : 0;
+
+      goto found;
       }
 #ifdef HAVE_DRM  
-    else if(gavl_hw_ctx_imports_type(priv->hwctx_priv, GAVL_HW_DMABUFFER) &&
-            gavl_hw_ctx_exports_type(w->video_format.hwctx, GAVL_HW_DMABUFFER))
+    else if(gavl_hw_ctx_can_import(d->hwctx_priv, w->dma_hwctx) &&
+            gavl_hw_ctx_can_export(w->video_format.hwctx, w->dma_hwctx))
       {
-      priv->mode = MODE_TEXTURE_DMABUF;
-      priv->hwctx_gl = priv->hwctx_priv;
-      priv->hwctx_dmabuf = gavl_hw_ctx_create_dma();
+      priv->mode = MODE_DMABUF_IMPORT;
+      d->hwctx = d->hwctx_priv;
+      gavl_hw_ctx_set_video(d->hwctx, &w->video_format, GAVL_HW_FRAME_MODE_IMPORT);
+      gavl_hw_ctx_set_video(w->dma_hwctx, &w->video_format, GAVL_HW_FRAME_MODE_IMPORT);
+      goto found;
       }
 #endif
     }
-  else
-    {
-    double shrink_factor;
-    GLint max_size;
-    priv->hwctx_gl = priv->hwctx_priv;
-    priv->mode = MODE_TEXTURE_COPY;
-
-    /* Check image size against MAX_TEXTURE_SIZE */
-    gavl_hw_egl_set_current(priv->hwctx_gl, NULL);
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
-    gavl_hw_egl_unset_current(priv->hwctx_gl);
-
-    if((w->video_format.image_width > max_size) ||
-       (w->video_format.image_height > max_size))
-      {
-      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Image size exceeds maximum texture size, forcing downscaling");
-
-      if(w->video_format.image_height > w->video_format.image_width)
-        {
-        shrink_factor = (double)max_size / (double)w->video_format.image_height;
-
-        w->video_format.image_width = (int)(shrink_factor * w->video_format.image_width + 0.5);
-        w->video_format.image_height = max_size;
-        
-        }
-      else
-        {
-        shrink_factor = (double)max_size / (double)w->video_format.image_width;
-        
-        w->video_format.image_height = (int)(shrink_factor * w->video_format.image_height + 0.5);
-        if(w->video_format.image_height > max_size)
-          w->video_format.image_height = max_size;
-
-        w->video_format.image_width = max_size;
-        }
-      gavl_video_format_set_frame_size(&w->video_format, 0, 0);
-      }
+  
+  d->format_idx = find_format(d, &w->video_format, d->frame_mode, NULL, 0);
+  adjust_video_format_internal(d, &w->video_format, &priv->formats[d->format_idx], &d->frame_mode);
     
+  switch(d->frame_mode)
+    {
+    case GAVL_HW_FRAME_MODE_MAP:
+      priv->mode = MODE_DMABUF_GETFRAME;
+      break;
+    case GAVL_HW_FRAME_MODE_TRANSFER:
+      if(priv->formats[d->format_idx].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
+        priv->mode = MODE_DMABUF_TRANSFER;
+      else
+        priv->mode = MODE_TEXTURE_TRANSFER;
+      break;
+    default:
+      break;
     }
+  
+  d->hwctx = d->hwctx_priv;
+  
+  found:
   
   switch(priv->mode)
     {
@@ -942,34 +1045,46 @@ static int open_gl(driver_data_t * d)
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL%s via EGL (direct)",
                (src_type == GAVL_HW_EGL_GL_X11) ? "" : " ES");
       break;
-    case MODE_TEXTURE_COPY:
+    case MODE_TEXTURE_TRANSFER:
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using OpenGL%s via EGL (indirect)",
                (priv->hwtype == GAVL_HW_EGL_GL_X11) ? "" : " ES");
+      gavl_hw_ctx_set_video(d->hwctx, &w->video_format, d->frame_mode);
       break;
-    case MODE_TEXTURE_DMABUF:
+    case MODE_DMABUF_IMPORT:
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Showing DMA buffers with OpenGL ES via EGL");
+      break;
+    case MODE_DMABUF_GETFRAME:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Rendering into DMA buffers");
+      gavl_hw_ctx_set_video(w->dma_hwctx, &w->video_format, d->frame_mode);
+      w->dma_frame = gavl_hw_video_frame_get(w->dma_hwctx);
+      break;
+    case MODE_DMABUF_TRANSFER:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Transferring into DMA buffers");
+      gavl_hw_ctx_set_video(w->dma_hwctx, &w->video_format, d->frame_mode);
+      w->dma_frame = gavl_hw_video_frame_get(w->dma_hwctx);
       break;
     default:
       break;
     }
   
-  w->normal.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->normal.win);
-  w->fullscreen.egl_surface = gavl_hw_ctx_egl_create_window_surface(priv->hwctx_gl, &w->fullscreen.win);
+  w->normal.egl_surface = gavl_hw_ctx_egl_create_window_surface(d->hwctx, &w->normal.win);
+  w->fullscreen.egl_surface = gavl_hw_ctx_egl_create_window_surface(d->hwctx, &w->fullscreen.win);
   
   //  bg_x11_window_start_gl(w);
   /* Get the format */
 
   set_gl(d);
+
+  dma = use_dma(priv->mode);
+
+  // static void create_shader_program(driver_data_t * d, shader_program_t * p, int planar, int cm, int use_dma)
   
-  create_shader_program(d, &priv->progs_cm[0], 1, 1);
-  create_shader_program(d, &priv->progs_cm[1], 0, 1);
-
-  create_shader_program(d, &priv->progs_nocm[0], 1, 0);
-  create_shader_program(d, &priv->progs_nocm[1], 0, 0);
-
-  if(priv->mode != MODE_TEXTURE_DMABUF)
+  create_shader_program(d, &priv->shader_cm,   planar, 1, dma);
+  create_shader_program(d, &priv->shader_nocm, planar, 0, dma);
+  
+  if((priv->mode != MODE_DMABUF_IMPORT) && (priv->mode != MODE_DMABUF_GETFRAME))
     //    set_pixelformat_matrix(priv->cmat, w->video_format.pixelformat);
-    set_pixelformat_matrix(priv->cmat, d->pixelformat);
+    set_pixelformat_matrix(priv->cmat, d->fmt.pixelformat);
   update_colormatrix(d);
   create_vertex_buffer(d);
   
@@ -978,16 +1093,6 @@ static int open_gl(driver_data_t * d)
   return 1;
   }
 
-static gavl_video_frame_t * create_frame_gl(driver_data_t * d)
-  {
-  gavl_video_frame_t * ret;
-  gl_priv_t * priv = d->priv;
-  bg_x11_window_t * w = d->win;
-  /* Used only for transferring to HW */
-  ret = gavl_hw_video_frame_create_ram(priv->hwctx_gl, &w->video_format);
-  gavl_video_frame_clear(ret, &w->video_format);
-  return ret;
-  }
 
 static int is_unity(double cmat[4][5])
   {
@@ -1012,7 +1117,7 @@ static int is_unity(double cmat[4][5])
   return 1;
   }
 
-static void set_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
+static int set_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
   {
   bg_x11_window_t * w;
   gl_priv_t * priv;
@@ -1022,39 +1127,51 @@ static void set_frame_gl(driver_data_t * d, gavl_video_frame_t * f)
     
   w = d->win;
   
-  if(!TEST_FLAG(w, FLAG_NO_GET_FRAME))
+  if(priv->mode == MODE_TEXTURE_TRANSFER)
     {
     if(!priv->texture)
-      priv->texture = gavl_hw_video_frame_create_hw(priv->hwctx_gl, &w->video_format);
+      priv->texture = gavl_hw_video_frame_create(d->hwctx, 1);
 
     //    gavl_video_frame_clear(f, &w->video_format);
     
-    gavl_video_frame_ram_to_hw(&w->video_format, priv->texture, f);
+    gavl_video_frame_ram_to_hw(priv->texture, f);
     f = priv->texture;
 
-    priv->cur_frame = f->storage;
+    priv->cur_frame = f;
     }
 
 #ifdef HAVE_DRM
-  else if(priv->mode == MODE_TEXTURE_DMABUF)
+  else if(priv->mode == MODE_DMABUF_IMPORT)
     {
     gavl_video_frame_t * dma_frame = NULL;
+    gavl_video_frame_t * gl_frame = NULL;
 
-    if(!gavl_hw_ctx_transfer_video_frame(f, priv->hwctx_dmabuf, &dma_frame, &w->video_format))
-      {
-      
-      }
+    if(!gavl_hw_ctx_transfer_video_frame(f, w->dma_hwctx, &dma_frame, &w->video_format))
+      return 0;
     
-    if(!gavl_hw_ctx_transfer_video_frame(dma_frame, priv->hwctx_gl, &f, &w->video_format))
-      {
-      
-      }
-    priv->cur_frame = f->storage;
+    if(!gavl_hw_ctx_transfer_video_frame(dma_frame, d->hwctx, &gl_frame, &w->video_format))
+      return 0;
+
+    //    fprintf(stderr, "Imported frame %d %d %d\n", f->buf_idx, dma_frame->buf_idx, gl_frame->buf_idx);
+    
+    priv->cur_frame = gl_frame;
     }
+  else if(priv->mode == MODE_DMABUF_GETFRAME)
+    {
+    gavl_video_frame_t * tex = NULL;
+    if(!gavl_hw_ctx_transfer_video_frame(f, d->hwctx, &tex, &w->video_format))
+      {
+      }
+    priv->cur_frame = tex;
+    }
+
 #endif
   else
-    priv->cur_frame = f->storage;
+    priv->cur_frame = f;
+
+  return 1;
   }
+
 
 static void put_frame_gl(driver_data_t * d)
   {
@@ -1063,19 +1180,22 @@ static void put_frame_gl(driver_data_t * d)
   float v_x1, v_x2, v_y1, v_y2;
   gavl_video_frame_t * ovl;
   gl_priv_t * priv;
-
   double cmat[4][5];
-
+  
   shader_program_t * p = NULL;
   bg_x11_window_t * w  = d->win;
+
+  gavl_gl_frame_info_t * info;
   
   priv = d->priv;
   
   set_gl(d);
 
+  info = priv->cur_frame->storage;
+  
   if(priv->colormatrix_changed)
     {
-    if(priv->mode == MODE_TEXTURE_DMABUF)
+    if((priv->mode == MODE_DMABUF_IMPORT) || (priv->mode == MODE_DMABUF_GETFRAME))
       matrix_copy(cmat, priv->bsc);
     else
       matrixmult(priv->bsc, priv->cmat, cmat);
@@ -1090,12 +1210,12 @@ static void put_frame_gl(driver_data_t * d)
   
   if(priv->use_cmat)
     {
-    glUseProgram(priv->progs_cm[0].program);
-    p = &priv->progs_cm[0];
+    glUseProgram(priv->shader_cm.program);
+    p = &priv->shader_cm;
     
     if(priv->colormatrix_changed)
       {
-      upload_colormatrix(d, &priv->progs_cm[0], cmat);
+      upload_colormatrix(d, p, cmat);
       priv->colormatrix_changed = 0;
       }
     
@@ -1103,17 +1223,18 @@ static void put_frame_gl(driver_data_t * d)
   else
     {
     priv->colormatrix_changed = 0;
-    glUseProgram(priv->progs_nocm[0].program);
-    p = &priv->progs_nocm[0];
+    glUseProgram(priv->shader_nocm.program);
+    p = &priv->shader_nocm;
     }
-  
-  /* Put image into texture */
-  //  glEnable(GL_TEXTURE_2D);
 
-  for(i = 0; i < priv->cur_frame->num_textures; i++)
+  
+  for(i = 0; i < info->num_textures; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(priv->cur_frame->texture_target, priv->cur_frame->textures[i]);
+    glBindTexture(info->texture_target, info->textures[i]);
+
+    fprintf(stderr, "Texture %d %d: %d\n", info->texture_target - GL_TEXTURE_2D, i, info->textures[i]);
+
     glUniform1i(p->frame_locations[i], i);
 #if 0
     fprintf(stderr, "Bind texture %d %d %d\n",
@@ -1158,6 +1279,9 @@ static void put_frame_gl(driver_data_t * d)
   glDisableVertexAttribArray(1);
   
   //  glUseProgram(0);
+
+  //  if(w->overlay_streams[0]->active)
+  //    fprintf(stderr, "Put frame %d\n", w->overlay_streams[0]->active);
   
   /* Draw overlays */
   if(w->num_overlay_streams)
@@ -1196,12 +1320,10 @@ static void put_frame_gl(driver_data_t * d)
     
     for(i = 0; i < w->num_overlay_streams; i++)
       {
-      gavl_gl_frame_info_t * info;
-      
       if(!w->overlay_streams[i]->active)
         continue;
 
-      ovl = w->overlay_streams[i]->ovl_hw;
+      ovl = w->overlay_streams[i]->ovl;
 
       info = ovl->storage;
       
@@ -1258,7 +1380,8 @@ static void put_frame_gl(driver_data_t * d)
 
   //  glDisable(GL_TEXTURE_2D);
 
-  gavl_hw_egl_swap_buffers(priv->hwctx_gl);
+  //  fprintf(stderr, "Swap buffers\n");
+  gavl_hw_egl_swap_buffers(d->hwctx);
   
   glUseProgram(0);
   
@@ -1267,22 +1390,65 @@ static void put_frame_gl(driver_data_t * d)
 
 /* Overlay support */
 
-static gavl_video_frame_t *
-create_overlay_gl(driver_data_t* d, overlay_stream_t * str)
+static void set_overlay_gl(driver_data_t* d, overlay_stream_t * str,
+                           gavl_video_frame_t * frame)
   {
-  gl_priv_t * priv;
-  gavl_video_frame_t * ret;
-  priv = d->priv;
-  ret = gavl_hw_video_frame_create_ovl(priv->hwctx_gl, &str->format);
-  return ret;
+  switch(str->mode)
+    {
+    case MODE_DMABUF_TRANSFER:
+      gavl_video_frame_ram_to_hw(str->dma_frame, frame);
+      break;
+    case MODE_TEXTURE_TRANSFER:
+      set_gl(d);
+      gavl_gl_frame_to_hw(&str->format, str->ovl, frame);
+      unset_gl(d);
+      break;
+    }
+  gavl_video_frame_copy_metadata(str->ovl, frame);
   }
 
 
 static void init_overlay_stream_gl(driver_data_t* d, overlay_stream_t * str)
   {
+  int format_idx;
   gl_priv_t * priv;
   priv = d->priv;
-  str->ovl_hw = gavl_hw_video_frame_create_hw(priv->hwctx_gl, &str->format);
+  
+  if(str->format.pixelformat == GAVL_PIXELFORMAT_NONE)
+    str->format.pixelformat = GAVL_RGBA_32;
+  
+  if((format_idx = find_format(d, &str->format, d->frame_mode, NULL, 1)) >= 0)
+    {
+    fprintf(stderr, "Blupp: %s\n", gavl_pixelformat_to_string(priv->formats[format_idx].pfmt));
+    }
+  
+  adjust_video_format_internal(d, &str->format, &priv->formats[format_idx], &str->frame_mode);
+
+  if(priv->formats[format_idx].dma_fourcc)
+    {
+    fprintf(stderr, "Loading overlays into DMA Buffers\n");
+    str->mode = MODE_DMABUF_TRANSFER;
+    str->dma_hwctx = gavl_hw_ctx_create_dma();
+    gavl_hw_ctx_set_video(str->dma_hwctx, &str->format, GAVL_HW_FRAME_MODE_TRANSFER);
+    str->dma_frame = gavl_hw_video_frame_create(str->dma_hwctx, 1);
+
+    str->ovl = gavl_hw_video_frame_create(d->hwctx, 0);
+
+    if(!gavl_hw_ctx_transfer_video_frame(str->dma_frame,
+                                         d->hwctx, &str->ovl,
+                                         &str->format))
+      return;
+    }
+  else
+    {
+    fprintf(stderr, "Loading overlays into OpenGL Textures\n");
+    str->mode = MODE_TEXTURE_TRANSFER;
+
+    gavl_hw_egl_set_current(d->hwctx, EGL_NO_SURFACE);
+    str->ovl = gavl_gl_create_frame(&str->format);
+    gavl_hw_egl_unset_current(d->hwctx);
+
+    }
   }
 
 static void delete_program(shader_program_t * p)
@@ -1332,38 +1498,23 @@ static void close_gl(driver_data_t * d)
 
   if(w->normal.egl_surface != EGL_NO_SURFACE)
     {
-    gavl_hw_ctx_egl_destroy_surface(priv->hwctx_gl, w->normal.egl_surface);
+    gavl_hw_ctx_egl_destroy_surface(d->hwctx, w->normal.egl_surface);
     w->normal.egl_surface = EGL_NO_SURFACE;
     }
   if(w->fullscreen.egl_surface != EGL_NO_SURFACE)
     {
-    gavl_hw_ctx_egl_destroy_surface(priv->hwctx_gl, w->fullscreen.egl_surface);
+    gavl_hw_ctx_egl_destroy_surface(d->hwctx, w->fullscreen.egl_surface);
     w->fullscreen.egl_surface = EGL_NO_SURFACE;
     }
 
-#ifdef HAVE_DRM  
-  if(priv->hwctx_dmabuf)
-    {
-    gavl_hw_ctx_destroy(priv->hwctx_dmabuf);
-    priv->hwctx_dmabuf = NULL;
-    }
-#endif
-  if(priv->hwctx_priv)
-    {
-    /* Re-create the hw context */
-    gavl_hw_ctx_destroy(priv->hwctx_priv);
-    priv->hwctx_priv = gavl_hw_ctx_create_egl(default_attributes(priv->hwtype), priv->hwtype, d->win->dpy);
-    }
+  if(d->hwctx_priv)
+    gavl_hw_ctx_reset(d->hwctx_priv);
   }
 
 static void cleanup_gl(driver_data_t * d)
   {
   gl_priv_t * priv;
   priv = d->priv;
-
-  
-  if(priv->hwctx_priv)
-    gavl_hw_ctx_destroy(priv->hwctx_priv);
   
   free(priv);
   }
@@ -1388,7 +1539,7 @@ static void update_colormatrix(driver_data_t* d)
 
   /* Scale 0.0 .. 1.0 */
   b = (priv->brightness - BG_BRIGHTNESS_MIN) / (BG_BRIGHTNESS_MAX - BG_BRIGHTNESS_MIN);
-  c = (priv->contrast - BG_CONTRAST_MIN) / (BG_CONTRAST_MAX - BG_CONTRAST_MIN);
+  c = (priv->contrast   - BG_CONTRAST_MIN  ) / (BG_CONTRAST_MAX   - BG_CONTRAST_MIN  );
   s = (priv->saturation - BG_SATURATION_MIN) / (BG_SATURATION_MAX - BG_SATURATION_MIN);
 
   //  fprintf(stderr, "update_colormatrix_1 %f %f %f\n",
@@ -1472,42 +1623,152 @@ static void set_contrast_gl(driver_data_t* d,float val)
   update_colormatrix(d);
   }
 
+static int find_format(driver_data_t* d, gavl_video_format_t * fmt,
+                       gavl_hw_frame_mode_t mode, int * penalty_ret, int ovl)
+  {
+  int i;
+  int pass;
+  int min_index = -1;
+  int min_penalty = -1;
+  int penalty;
+  gl_priv_t * priv;
+
+  fprintf(stderr, "find_format\n");
+
+  priv = d->priv;
+  
+  for(pass = 0; pass < 3; pass++)
+    {
+    for(i = 0; i < priv->num_formats; i++)
+      {
+      if(ovl && !gavl_pixelformat_has_alpha(priv->formats[i].pfmt))
+        continue;
+      
+      penalty = gavl_pixelformat_conversion_penalty(fmt->pixelformat,
+                                                    priv->formats[i].pfmt);
+      
+      if(priv->formats[i].mode != mode)
+        {
+        if(pass < 1)
+          continue;
+        penalty += (1<<24);
+        }
+      /* Check max size */
+      if((priv->formats[i].max_w && (fmt->image_width  > priv->formats[i].max_w)) ||
+         (priv->formats[i].max_h && (fmt->image_height > priv->formats[i].max_h)))
+        {
+        if(pass < 2)
+          continue;
+        penalty += (1<<26);
+        }
+      
+      if(priv->formats[i].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
+        penalty += (1<<25);
+      
+      fprintf(stderr, "Pass: %d, Format: %d, penalty: %d, fmt: %s\n", pass, i, penalty,
+              gavl_pixelformat_to_string(priv->formats[i].pfmt) );
+      
+      if((min_penalty < 0) || (penalty < min_penalty))
+        {
+        min_penalty = penalty;
+        min_index = i;
+        }
+      }
+    if(min_index >= 0)
+      break;
+    }
+
+  if(penalty_ret)
+    *penalty_ret = min_penalty;
+  
+  return min_index;
+  }
+
+static void adjust_video_format_internal(driver_data_t* d, gavl_video_format_t * fmt,
+                                         const image_format_t * imgfmt, gavl_hw_frame_mode_t * mode)
+  {
+  double shrink_x = 1.0, shrink_y = 1.0;
+
+  fmt->pixelformat = imgfmt->pfmt;
+
+  if(mode)
+    *mode = imgfmt->mode;
+  
+  if((imgfmt->max_w > 0) && (fmt->image_width > imgfmt->max_w))
+    shrink_x = (double)imgfmt->max_w / (double)fmt->image_width;
+    
+  if((imgfmt->max_h > 0) && (fmt->image_height > imgfmt->max_h))
+    shrink_y = (double)imgfmt->max_h / (double)fmt->image_height;
+
+  if((shrink_x < 1.0) || (shrink_y < 1.0))
+    {
+    /* To preserve the aspect ratio we shrink both dimensions by the
+       smaller of both factors */
+    if(shrink_y < shrink_x)
+      {
+      fmt->image_width = (int)((double)fmt->image_width * shrink_y + 0.5);
+      fmt->image_height = imgfmt->max_h;
+      }
+    else
+      {
+      fmt->image_height = (int)((double)fmt->image_height * shrink_x + 0.5);
+      fmt->image_width = imgfmt->max_w;
+      }
+    
+    fmt->frame_width = 0;
+    fmt->frame_height = 0;
+    gavl_video_format_set_frame_size(fmt, 8, 1);
+    }
+  
+  }
+
+
+static void adjust_video_format_gl(driver_data_t* d, gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
+  {
+  int idx;
+  gl_priv_t * priv;
+  
+  priv = d->priv;
+  
+  idx = find_format(d, fmt, mode, &d->penalty, 0);
+  if(idx >= 0)
+    adjust_video_format_internal(d, fmt, &priv->formats[idx], &d->frame_mode);
+  else
+    fmt->pixelformat = GAVL_PIXELFORMAT_NONE;
+  }
+
 const video_driver_t gl_driver =
   {
-    .name               = "OpenGL",
-    .can_scale          = 1,
-    .supports_hw        = supports_hw_gl,
-    .init               = init_gl,
-    .open               = open_gl,
-    .create_frame       = create_frame_gl,
-    .set_brightness     = set_brightness_gl,
-    .set_saturation     = set_saturation_gl,
-    .set_contrast       = set_contrast_gl,
-    .set_frame          = set_frame_gl,
-    .put_frame          = put_frame_gl,
-    .close              = close_gl,
-    .cleanup            = cleanup_gl,
+    .name                = "OpenGL",
+    .supports_hw         = supports_hw_gl,
+    .adjust_video_format = adjust_video_format_gl,
+    .init                = init_gl,
+    .open                = open_gl,
+    .set_brightness      = set_brightness_gl,
+    .set_saturation      = set_saturation_gl,
+    .set_contrast        = set_contrast_gl,
+    .set_frame           = set_frame_gl,
+    .put_frame           = put_frame_gl,
+    .close               = close_gl,
+    .cleanup             = cleanup_gl,
     .init_overlay_stream = init_overlay_stream_gl,
-    .create_overlay     = create_overlay_gl,
-    .set_overlay        = set_overlay_gl,
+    .set_overlay         = set_overlay_gl,
   };
 
 const video_driver_t gles_driver =
   {
-    .name               = "OpenGL ES",
-    .can_scale          = 1,
-    .supports_hw        = supports_hw_gl,
-    .init               = init_gles,
-    .open               = open_gl,
-    .create_frame       = create_frame_gl,
-    .set_brightness     = set_brightness_gl,
-    .set_saturation     = set_saturation_gl,
-    .set_contrast       = set_contrast_gl,
-    .set_frame          = set_frame_gl,
-    .put_frame          = put_frame_gl,
-    .close              = close_gl,
-    .cleanup            = cleanup_gl,
+    .name                = "OpenGL ES",
+    .supports_hw         = supports_hw_gl,
+    .adjust_video_format = adjust_video_format_gl,
+    .init                = init_gles,
+    .open                = open_gl,
+    .set_brightness      = set_brightness_gl,
+    .set_saturation      = set_saturation_gl,
+    .set_contrast        = set_contrast_gl,
+    .set_frame           = set_frame_gl,
+    .put_frame           = put_frame_gl,
+    .close               = close_gl,
+    .cleanup             = cleanup_gl,
     .init_overlay_stream = init_overlay_stream_gl,
-    .create_overlay     = create_overlay_gl,
-    .set_overlay        = set_overlay_gl,
+    .set_overlay         = set_overlay_gl,
   };

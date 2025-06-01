@@ -9,14 +9,7 @@ AM_CFLAGS = \
 -DDOC_DIR=\"$(docdir)\" \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
-if HAVE_GLX
-glx_subdirs = glscope
-else
-glx_subdirs =
-endif
-
-
-SUBDIRS = $(glx_subdirs)
+SUBDIRS = glscope
 
 plugin_LTLIBRARIES = \
 vis_cover.la

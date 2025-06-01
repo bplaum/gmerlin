@@ -524,7 +524,7 @@ static void * visualize_thread(void * priv)
         }
     
       gavl_video_sink_put_frame(v->vsink, vframe);
-
+      bg_ov_handle_events(v->ov);
       
       }
     
@@ -582,9 +582,9 @@ void bg_visualizer_stop(bg_visualizer_t * vis)
     gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
     bg_msg_sink_put(vis->msink);
 
-    fprintf(stderr, "pthread_join...");
+    //    fprintf(stderr, "pthread_join...");
     pthread_join(vis->th, NULL);
-    fprintf(stderr, "done\n");
+    //    fprintf(stderr, "done\n");
     }
   
   bg_ov_close(vis->ov);
@@ -661,6 +661,8 @@ static void init_visualization(bg_visualizer_t * v)
     //    fprintf(stderr, "Opening plugin failed\n");
     }
 
+  v->vsrc = v->plugin->get_source(v->h->priv);
+  
   //  fprintf(stderr, "init_visualization 2\n");
   //  gavl_audio_format_dump(&v->afmt_int);
 
@@ -669,7 +671,8 @@ static void init_visualization(bg_visualizer_t * v)
 
   gavl_video_format_copy(&v->vfmt_ov, &v->vfmt_vis);
     
-  if(bg_ov_open(v->ov, NULL, &v->vfmt_ov))
+  if(bg_ov_open(v->ov, NULL, &v->vfmt_ov,
+                gavl_video_source_get_src_flags(v->vsrc)))
     {
 #if 0
     fprintf(stderr, "Opened OV for visualization\n");
@@ -685,16 +688,20 @@ static void init_visualization(bg_visualizer_t * v)
   if(v->osd)
     {
     gavl_video_sink_t * osd_sink; 
-    gavl_video_format_t osd_format;
-      
-    memset(&osd_format, 0, sizeof(osd_format));
+    gavl_video_format_t osd_fmt;
+    gavl_video_source_t * osd_src;
+    
+    memset(&osd_fmt, 0, sizeof(osd_fmt));
       
     //    fprintf(stderr, "Opened OSD for visualization\n");
 
     bg_osd_clear(v->osd);
 
-    osd_sink = bg_ov_add_overlay_stream(v->ov, &osd_format);
-    bg_osd_init(v->osd, osd_sink, &v->vfmt_ov);
+    osd_src = bg_osd_init(v->osd, &v->vfmt_ov);
+    
+    gavl_video_format_copy(&osd_fmt, gavl_video_source_get_src_format(osd_src));
+    osd_sink = bg_ov_add_overlay_stream(v->ov, &osd_fmt);
+    bg_osd_set_sink(v->osd, osd_sink);
     }
 
   if(v->plugin_ctrl)
@@ -718,7 +725,6 @@ static void init_visualization(bg_visualizer_t * v)
       }
     }
 
-  v->vsrc = v->plugin->get_source(v->h->priv);
 
   gavl_video_source_set_dst(v->vsrc, 0, &v->vfmt_ov);
     
