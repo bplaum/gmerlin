@@ -133,7 +133,7 @@ set_parameter_pixelformat(void * priv, const char * name,
 
     if(f == GAVL_PIXELFORMAT_NONE)
       {
-      gavl_log(GAVL_LOG_ERROR, "Unkown pixelformat: %s", val->v.str);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unkown pixelformat: %s", val->v.str);
       return;
       }
     
