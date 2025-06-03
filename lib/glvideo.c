@@ -831,7 +831,8 @@ static void draw(bg_glvideo_t * g)
 /* Redraw in response to an expose event */
 void bg_glvideo_redraw(bg_glvideo_t * g)
   {
-  if(g->flags & (FLAG_STILL | FLAG_PAUSED))
+  if((g->flags & FLAG_OPEN) &&
+     (g->flags & (FLAG_STILL | FLAG_PAUSED)))
     draw(g);
   }
 
@@ -1242,7 +1243,7 @@ bg_glvideo_open(bg_glvideo_t * g,
     {
     return NULL;
     }
-  g->flags |= (FLAG_COORDS_CHANGED | FLAG_COLORMATRIX_CHANGED);
+  g->flags |= (FLAG_COORDS_CHANGED | FLAG_COLORMATRIX_CHANGED | FLAG_OPEN);
 
   
   return port->sink;
@@ -1299,6 +1300,9 @@ void bg_glvideo_close(bg_glvideo_t * g)
     gavl_hw_ctx_reset(g->hwctx_gles);
   if(g->hwctx_dma)
     gavl_hw_ctx_reset(g->hwctx_dma);
+
+  g->flags &= ~FLAG_OPEN;
+
   }
 
 /* Handle client message */

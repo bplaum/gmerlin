@@ -44,6 +44,7 @@ typedef enum
 #define FLAG_COORDS_CHANGED      (1<<1)
 #define FLAG_STILL               (1<<2)
 #define FLAG_PAUSED              (1<<3)
+#define FLAG_OPEN                (1<<4)
 
 /* Port status flags */
 
