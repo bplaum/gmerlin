@@ -283,39 +283,48 @@ static void get_image_formats(bg_glvideo_t * g)
     i++;
     }
   free(pixelformats);
-  
-  dma_formats = gavl_hw_ctx_egl_get_dma_import_formats(g->hwctx_gles);
-  i = 0;
-  while(dma_formats[i])
+
+  if(gavl_hw_ctx_get_support_flags(g->hwctx_dma) & GAVL_HW_SUPPORTS_VIDEO_POOL)
     {
-    gavl_pixelformat_t pfmt;
-    int dma_flags;
-    
-    pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i], &dma_flags, NULL);
-    switch(pfmt)
+    dma_formats = gavl_hw_ctx_egl_get_dma_import_formats(g->hwctx_gles);
+    i = 0;
+    while(dma_formats[i])
       {
-      case GAVL_YUV_420_P:
-        append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-        append_dma_format(g, GAVL_YUVJ_420_P, dma_formats[i], dma_flags, &formats_alloc);
-        break;
-      case GAVL_YUV_422_P:
-        append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-        append_dma_format(g, GAVL_YUVJ_422_P, dma_formats[i], dma_flags, &formats_alloc);
-        break;
-      case GAVL_YUV_444_P:
-        append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-        append_dma_format(g, GAVL_YUVJ_444_P, dma_formats[i], dma_flags, &formats_alloc);
-        break;
+      gavl_pixelformat_t pfmt;
+      int dma_flags;
+    
+      pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i], &dma_flags, NULL);
+      switch(pfmt)
+        {
+        case GAVL_YUV_420_P:
+          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
+          append_dma_format(g, GAVL_YUVJ_420_P, dma_formats[i], dma_flags, &formats_alloc);
+          break;
+        case GAVL_YUV_422_P:
+          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
+          append_dma_format(g, GAVL_YUVJ_422_P, dma_formats[i], dma_flags, &formats_alloc);
+          break;
+        case GAVL_YUV_444_P:
+          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
+          append_dma_format(g, GAVL_YUVJ_444_P, dma_formats[i], dma_flags, &formats_alloc);
+          break;
       
-      case GAVL_PIXELFORMAT_NONE:
-        break;
-      default:
-        append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-        break;
+        case GAVL_PIXELFORMAT_NONE:
+          break;
+        default:
+          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
+          break;
+        }
+      i++;
       }
-    i++;
+    free(dma_formats);
     }
-  free(dma_formats);
+  else
+    {
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+             "Allocating DMA frames not possible, consider recompiling with libdrm support");
+    }
+  
 #ifdef DUMP_IMAGE_FORMATS
   dump_image_formats(g->image_formats, g->num_image_formats);
 #endif
