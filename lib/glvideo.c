@@ -47,7 +47,10 @@
 
 #ifdef BG_GL_DEBUG
 void enable_debug();
+
 #endif
+
+static void init_gl(bg_glvideo_t * g);
 
 
 static image_format_t * add_image_format(bg_glvideo_t * g, int * formats_alloc)
@@ -432,178 +435,6 @@ void bg_glvideo_window_coords_to_position(bg_glvideo_t * g, int x, int y, double
 
 
 
-
-/*
- *  We need to do things in the proper order so we don't screw up things
- *
- *  1. Video size + video SAR = display_aspect_ratio (origial)
- *  2. 
- */
-
-
-#if 0
-static void update_vertex_buffer(port_t * port)
-  {
-  gavl_rectangle_f_t sr_crop, dr_crop;
-  float mat[2][2];
-  gavl_video_format_t window_format;
-  
-  int transposed = 0;
-  /*
-   *  Update the vertex buffer: *all* scaling and positioning
-   *  is done here
-   */
-  
-  memset(&window_format, 0, sizeof(window_format));
-  window_format.image_width = port->g->window_width;
-  window_format.image_height = port->g->window_height;
-  window_format.pixel_width = 1;
-  window_format.pixel_height = 1;
-  gavl_video_format_set_frame_size(&window_format, 1, 1);
-
-  
-  if(!port->idx)
-    {
-    gavl_video_format_t video_format;
-
-    double src_aspect =
-      (double)(port->fmt.image_width * port->fmt.pixel_width) /
-      (double)(port->fmt.image_height * port->fmt.pixel_height);
-
-    gavl_video_format_copy(&video_format, &port->fmt);
-    video_format.orientation = (port->g->orientation + port->fmt.orientation) % 8;
-
-    transposed = gavl_image_orientation_is_transposed(video_format.orientation);
-
-    if(transposed)
-      src_aspect = 1.0 / src_aspect;
-
-    
-    
-    /* TODO: Handle orientation */
-    set_orient_matrix(video_format.orientation, mat);
-    
-    
-    /*    
-    fprintf(stderr, "Window format\n");
-    gavl_video_format_dump(&window_format);
-    
-    fprintf(stderr, "Video format\n");
-    gavl_video_format_dump(&port->fmt);
-    */
-    //  gavl_video_format_t video_format_n;
-    
-    gavl_rectangle_f_set_all(&port->g->src_rect, &port->fmt);
-    
-    gavl_rectangle_fit_aspect_f(&port->g->dst_rect,
-                                &port->fmt,
-                                &port->g->src_rect,
-                                &window_format,
-                                port->g->zoom_factor,
-                                port->g->squeeze_factor, 1);
-    
-    
-    gavl_rectangle_f_copy(&dr_crop, &port->g->dst_rect);
-    gavl_rectangle_f_copy(&sr_crop, &port->g->src_rect);
-
-    gavl_rectangle_crop_to_format_scale_f(&sr_crop, &dr_crop,
-                                          &port->fmt,
-                                          &window_format);
-    /*
-    fprintf(stderr, "src_rect:\n");
-    gavl_rectangle_f_dump(&sr_crop);
-    fprintf(stderr, "\ndst_rect:\n");
-    gavl_rectangle_f_dump(&dr_crop);
-    fprintf(stderr, "\n");
-    */
-    
-    
-    /* vertex_coord = src_coord * src_to_vertex_scale + src_to_vertex_off */
-
-    /* window_coord = dst_rect.x + (video_coord / src_rect.w) * dst_rect.w; */
-    
-    /* vertex_coord = 2.0 * window_coord / window_format.image_size - 1.0 */
-
-    /* vertex_coord = 2.0 * (dst_rect.x + (video_coord / src_rect.w) * dst_rect.w) / window_format.image_size - 1.0 */
-
-    // coords_video_to_vertex(port->g, double x, double y, float * ret);
-    //    fprintf(stderr, "Blupp %d\n", port->vbo);
-    
-    }
-  else
-    {
-    gavl_rectangle_f_t dst_rect_src;
-
-    set_orient_matrix(GAVL_IMAGE_ORIENT_NORMAL, mat);
-    
-    gavl_rectangle_i_to_f(&sr_crop, &port->cur->src_rect);
-
-    /* Destination rectangle in source coordinates */
-    gavl_rectangle_i_to_f(&dst_rect_src, &port->cur->src_rect);
-    dst_rect_src.x = port->cur->dst_x;
-    dst_rect_src.y = port->cur->dst_y;
-    
-    coords_video_to_window(port->g, dst_rect_src.x,                dst_rect_src.y,                &dr_crop.x, &dr_crop.y);
-    coords_video_to_window(port->g, dst_rect_src.x+dst_rect_src.w, dst_rect_src.y+dst_rect_src.h, &dr_crop.w, &dr_crop.h);
-    dr_crop.w -= dr_crop.x;
-    dr_crop.h -= dr_crop.y;
-
-    gavl_rectangle_crop_to_format_scale_f(&sr_crop,
-                                          &dr_crop,
-                                          &port->fmt,
-                                          &window_format);
-    
-    }
-  
-  coords_window_to_vertex(port->g, dr_crop.x,             dr_crop.y + dr_crop.h, port->vertices[POS_LL].pos);
-  coords_window_to_vertex(port->g, dr_crop.x + dr_crop.w, dr_crop.y + dr_crop.h, port->vertices[POS_LR].pos);
-  coords_window_to_vertex(port->g, dr_crop.x,             dr_crop.y,             port->vertices[POS_UL].pos);
-  coords_window_to_vertex(port->g, dr_crop.x + dr_crop.w, dr_crop.y,             port->vertices[POS_UR].pos);
-  
-  coords_video_to_texture(port, sr_crop.x,             sr_crop.y + sr_crop.h, port->vertices[POS_LL].tex);
-  coords_video_to_texture(port, sr_crop.x + sr_crop.w, sr_crop.y + sr_crop.h, port->vertices[POS_LR].tex);
-  coords_video_to_texture(port, sr_crop.x,             sr_crop.y, port->vertices[POS_UL].tex);
-  coords_video_to_texture(port, sr_crop.x + sr_crop.w, sr_crop.y, port->vertices[POS_UR].tex);
-    
-
-#if 0
-  if(port->idx > 0)
-    {
-    fprintf(stderr, "LL: %f,%f %f,%f\n",
-            port->vertices[POS_LL].pos[0],
-            port->vertices[POS_LL].pos[1],
-            port->vertices[POS_LL].tex[0],
-            port->vertices[POS_LL].tex[1]);
-    fprintf(stderr, "LR: %f,%f %f,%f\n",
-            port->vertices[POS_LR].pos[0],
-            port->vertices[POS_LR].pos[1],
-            port->vertices[POS_LR].tex[0],
-            port->vertices[POS_LR].tex[1]);
-    fprintf(stderr, "UL: %f,%f %f,%f\n",
-            port->vertices[POS_UL].pos[0],
-            port->vertices[POS_UL].pos[1],
-            port->vertices[POS_UL].tex[0],
-            port->vertices[POS_UL].tex[1]);
-    fprintf(stderr, "UR: %f,%f %f,%f\n",
-            port->vertices[POS_UR].pos[0],
-            port->vertices[POS_UR].pos[1],
-            port->vertices[POS_UR].tex[0],
-            port->vertices[POS_UR].tex[1]);
-    }
-#endif
-  
-  //  glBindVertexArray(port->vao);
-  glBindBuffer(GL_ARRAY_BUFFER, port->vbo);  
-  //  gavl_gl_log_error("glBindBuffer");  
-  //  fprintf(stderr, "Bind buffer (upload) %d %d %d (cur: %p)\n", port->idx, port->vbo, port->vao, eglGetCurrentContext());
-  
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(port->vertices), port->vertices);
-  //  gavl_gl_log_error("glBufferSubData");  
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  
-  }
-#endif
-
 static void draw_port(port_t * port)
   {
   int i;
@@ -941,6 +772,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       
       //      planar = gavl_pixelformat_num_planes(fmt->pixelformat) > 1 ? 1 : 0;
       bg_glvideo_init_colormatrix(port, fmt->pixelformat);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Got GL textures from source", port->idx);
       
       goto found;
       }
@@ -951,6 +783,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       port->mode = MODE_IMPORT;
       port->set_frame = func_import;
 
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Importing hardware surfaces", port->idx);
 
       if(!port->idx)
         {
@@ -969,6 +802,8 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       {
       port->mode = MODE_IMPORT_DMABUF;
       port->set_frame = func_import_dmabuf;
+
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Importing hardware surfaces via DMA", port->idx);
       
       if(!port->idx)
         port->g->hwctx = port->g->hwctx_gles;
@@ -1026,6 +861,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       gavl_hw_ctx_set_video(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_MAP);
       
       port->dma_frame = gavl_hw_video_frame_get(port->hwctx_dma);
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Rendering into DMA buffers", port->idx);
       
       goto found;
       
@@ -1036,7 +872,8 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       if(port->g->image_formats[format_idx].type & port->g->hw_mask)
         {
         /* GL Texture (indirect) */
-
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into textures", port->idx);
+        
         /* TODO: Prefer GL or GL ES (if both are supported) depending on platform */
 #if 0
         if(port->g->image_formats[format_idx].type & GAVL_HW_GLES_MASK)
@@ -1074,7 +911,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
         port->mode = MODE_DMABUF_TRANSFER;
         port->set_frame = func_dmabuf_transfer;
 
-        
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into DMA buffers", port->idx);
         
         //        bg_glvideo_init_colormatrix(port, fmt->pixelformat);
         }
@@ -1148,6 +985,8 @@ bg_glvideo_t * bg_glvideo_create(int type_mask, void * native_display, void * na
   g->zoom_factor = 1.0;
   g->squeeze_factor = 0.0;
   g->hwctx_dma = gavl_hw_ctx_create_dma();
+
+  init_gl(g);
   
   return g;
   }
@@ -1202,7 +1041,6 @@ static const int default_attributes_gl[] =
     EGL_NONE
   };
 
-
 static void init_gl(bg_glvideo_t * g)
   {
   uint32_t * fourccs;
@@ -1235,8 +1073,6 @@ bg_glvideo_open(bg_glvideo_t * g,
                 int src_flags)
   {
   port_t * port;
-  init_gl(g);
-
   
   port = append_port(g);
   if(!port_init(port, fmt, src_flags))
@@ -1304,6 +1140,12 @@ void bg_glvideo_close(bg_glvideo_t * g)
   g->flags &= ~FLAG_OPEN;
 
   }
+
+gavl_hw_context_t * bg_glvideo_get_hwctx(bg_glvideo_t * g)
+  {
+  return g->hwctx_dma;
+  }
+
 
 /* Handle client message */
 
