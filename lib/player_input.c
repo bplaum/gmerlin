@@ -702,6 +702,14 @@ int bg_player_source_start(bg_player_t * player, bg_player_source_t * src)
   num_video_streams   = gavl_track_get_num_video_streams(src->track_info);
   num_text_streams    = gavl_track_get_num_text_streams(src->track_info);
   num_overlay_streams = gavl_track_get_num_overlay_streams(src->track_info);
+
+  
+  if((src->video_stream >= 0) && (src->video_stream < num_video_streams))
+    {
+    gavl_hw_context_t * ctx = bg_ov_get_hwctx(player->video_stream.ov);
+    /* Set hardware context */
+    bg_input_plugin_set_video_hw_context(src->input_handle, ctx);
+    }
   
   bg_input_plugin_start(src->input_handle);
   

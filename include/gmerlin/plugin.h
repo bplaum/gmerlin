@@ -296,7 +296,6 @@ struct bg_input_plugin_s
 
   /* Set preferred hardware context for allocating frames */
   void (*set_video_hw_context)(void * priv, gavl_hw_context_t * ctx);
-
   
   /** \brief Get supported mimetypes
    *  \param priv The handle returned by the create() method

@@ -236,9 +236,7 @@ static gavl_hw_context_t * get_hw_context_x11(void * priv)
   x11_t * x11 = priv;
   if(!ensure_window(x11))
     return NULL;
-
-  /* TODO */
-  return NULL;
+  return bg_glvideo_get_hwctx(x11->g);
   }
 
 
