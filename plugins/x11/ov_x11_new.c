@@ -40,7 +40,8 @@
 #include <gavl/msg.h>
 
 
-#define FLAG_MAPPED (1<<0)
+#define FLAG_MAPPED        (1<<0)
+#define FLAG_CURSOR_HIDDEN (1<<1)
 
 typedef struct
   {
@@ -52,10 +53,64 @@ typedef struct
 
   bg_controllable_t ctrl;
   gavl_dictionary_t state;
+
+  Cursor cur_invisible;
+
+  gavl_time_t last_active_time;
+  gavl_timer_t * timer;
   
   } x11_t;
 
 static void handle_events_x11(void * priv);
+
+static Cursor create_invisible_cursor(Display *display, Window window)
+  {
+  Pixmap pixmap;
+  XColor black;
+  Cursor invisible_cursor;
+  static char nodata[] = { 0,0,0,0,0,0,0,0 };
+    
+  // Schwarze Farbe definieren
+  black.red = black.green = black.blue = 0;
+    
+  // 1x1 Pixmap erstellen
+  pixmap = XCreateBitmapFromData(display, window, nodata, 8, 8);
+    
+  // Unsichtbaren Cursor erstellen
+  invisible_cursor = XCreatePixmapCursor(display, pixmap, pixmap, 
+                                                &black, &black, 0, 0);
+    
+  // Pixmap freigeben
+  XFreePixmap(display, pixmap);
+    
+  return invisible_cursor;
+  }
+
+static void show_cursor(x11_t * x11)
+  {
+  
+  if(!(x11->flags & FLAG_CURSOR_HIDDEN))
+    return;
+
+  x11->flags &= ~FLAG_CURSOR_HIDDEN;
+  
+  XUndefineCursor(x11->dpy, x11->win);
+  }
+
+static void hide_cursor(x11_t * x11)
+  {
+  if(x11->flags & FLAG_CURSOR_HIDDEN)
+    return;
+
+  x11->flags |= FLAG_CURSOR_HIDDEN;
+
+  if(x11->cur_invisible == None)
+    {
+    x11->cur_invisible = create_invisible_cursor(x11->dpy, x11->win);
+    }
+
+  XDefineCursor(x11->dpy, x11->win, x11->cur_invisible);
+  }
 
 
 static int ensure_window(void * priv)
@@ -81,7 +136,7 @@ static int ensure_window(void * priv)
   //  XStoreName(display, window, "Xlib Vollbild-Demo");
   
   // Select events
-  XSelectInput(x11->dpy, x11->win, KeyPressMask | ExposureMask | StructureNotifyMask);
+  XSelectInput(x11->dpy, x11->win, KeyPressMask | ExposureMask | StructureNotifyMask | PointerMotionMask);
   
   x11->g = bg_glvideo_create(GAVL_HW_EGL_GL_X11 | GAVL_HW_EGL_GLES_X11,
                               x11->dpy, &x11->win);
@@ -205,9 +260,14 @@ static void * create_x11()
   {
   x11_t * x11 = calloc(1, sizeof(*x11));
 
+  x11->cur_invisible = None; // Unneccesary but well..
+  
   bg_controllable_init(&x11->ctrl,
                        bg_msg_sink_create(handle_cmd, x11, 1),
                        bg_msg_hub_create(1));
+
+  x11->timer = gavl_timer_create();
+  gavl_timer_start(x11->timer);
   
   return x11;
   }
@@ -216,11 +276,15 @@ static void destroy_x11(void * priv)
   {
   x11_t * x11 = priv;
 
+  
   if(x11->g)
     bg_glvideo_destroy(x11->g);
   
   if(x11->dpy)
     {
+    if(x11->cur_invisible != None)
+      XFreeCursor(x11->dpy, x11->cur_invisible);
+    
     XDestroyWindow(x11->dpy, x11->win);
     XCloseDisplay(x11->dpy);
     }
@@ -445,9 +509,11 @@ static void handle_events_x11(void * priv)
   {
   XEvent evt;
   x11_t * x11 = priv;
-
-  //  fprintf(stderr, "handle_events_x11\n");
+  gavl_time_t current_time;
   
+  /* Check whether to hide the cursor */
+  current_time = gavl_timer_get(x11->timer);
+
   while(XPending(x11->dpy))
     {
     XNextEvent(x11->dpy, &evt);
@@ -482,6 +548,8 @@ static void handle_events_x11(void * priv)
           bg_msg_sink_put(x11->ctrl.evt_sink);
           }
         
+        show_cursor(x11);
+        x11->last_active_time = current_time;
         }
         break;
       case ConfigureNotify:
@@ -498,9 +566,16 @@ static void handle_events_x11(void * priv)
         if(x11->g)
           bg_glvideo_redraw(x11->g);
         break;
+      case MotionNotify:
+        show_cursor(x11);
+        x11->last_active_time = current_time;
+        break;
       }
     
     }
+
+  if(current_time - x11->last_active_time > 3 * GAVL_TIME_SCALE)
+    hide_cursor(x11);
   
   }
 
@@ -517,6 +592,9 @@ static int open_x11(void * priv, const char * uri,
   
   x11->sink = 
     bg_glvideo_open(x11->g, format, src_flags);
+
+  show_cursor(x11);
+  x11->last_active_time = gavl_timer_get(x11->timer);
   
   return 1;
   }
