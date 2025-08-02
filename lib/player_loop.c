@@ -230,10 +230,10 @@ static void cleanup_streams(bg_player_t * player)
 
 static void player_cleanup(bg_player_t * player)
   {
-  cleanup_streams(player);
-
-  // Input must be cleaned up at the end because it may contain hardware handles also used by the output.
+  // Input must be cleaned up at the beginning it may reference hardware handles owned and freed by the output.
   bg_player_input_cleanup(player);
+
+  cleanup_streams(player);
   
   player->dpy_time_offset = 0;
   
