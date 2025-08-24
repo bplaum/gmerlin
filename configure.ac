@@ -65,10 +65,11 @@ dnl
 dnl Linux dma-buf
 dnl 
 
-AH_TEMPLATE([HAVE_DRM], [Is DRM available?])
+AH_TEMPLATE([HAVE_DRM], [Is libdrm available?])
 
+have_drm="false"
 
-AC_CHECK_HEADERS([drm/drm_fourcc.h libdrm/drm_fourcc.h], have_drm="true")
+PKG_CHECK_MODULES(DRM, libdrm, have_drm="true")
 
 if test "x$have_drm" = "xtrue"; then
 AC_DEFINE([HAVE_DRM])
@@ -850,6 +851,7 @@ plugins/image/Makefile \
 plugins/mpris/Makefile \
 plugins/tiff/Makefile \
 plugins/v4l2/Makefile \
+plugins/test/Makefile \
 plugins/upnp/Makefile \
 plugins/videofilters/Makefile \
 plugins/visualization/Makefile \
