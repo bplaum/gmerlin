@@ -42,6 +42,10 @@ void bg_ov_set_window_title(bg_ov_t * ov, const char * title);
 int bg_ov_open(bg_ov_t * ov, const char * uri, gavl_video_format_t * format,
                int src_flags);
 
+/* Re-synchronize after seeking. This clears are re-imports Hardware surfaces
+   as they might gotten re-initialized by the hardware decoder */
+void bg_ov_resync(bg_ov_t * ov);
+
 gavl_video_sink_t * bg_ov_get_sink(bg_ov_t * ov);
 
   

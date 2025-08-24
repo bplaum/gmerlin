@@ -106,7 +106,8 @@ void bg_ov_destroy(bg_ov_t * ov)
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title)
   {
-  bg_ov_plugin_set_window_title(ov->h, title);
+  if(ov->h)
+    bg_ov_plugin_set_window_title(ov->h, title);
   }
 
 
@@ -138,6 +139,20 @@ int bg_ov_open(bg_ov_t * ov, const char * uri,
 
   return ret;
   }
+
+void bg_ov_resync(bg_ov_t * ov)
+  {
+  bg_controllable_t * ctrl;
+  
+  if(ov->h && ov->h->plugin->get_controllable &&
+     (ctrl = ov->h->plugin->get_controllable(ov->h->priv)))
+    {
+    gavl_msg_t * msg = bg_msg_sink_get(ctrl->cmd_sink);
+    gavl_msg_set_id_ns(msg, GAVL_MSG_SINK_RESYNC, GAVL_MSG_NS_SINK);
+    bg_msg_sink_put(ctrl->cmd_sink);
+    }
+  }
+
 
 gavl_video_sink_t * bg_ov_get_sink(bg_ov_t * ov)
   {
