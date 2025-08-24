@@ -158,6 +158,8 @@ GtkWidget * bg_gtk_window_new(GtkWindowType type)
 
 void bg_gtk_init(int * argc, char *** argv)
   {
+  GdkDisplay *display;
+  
   gtk_init(argc, argv);
 
   /* No, we don't like commas as decimal separators */
@@ -165,7 +167,12 @@ void bg_gtk_init(int * argc, char *** argv)
 
   /* Set the default window icon */
   set_default_window_icon();
-  
+
+  display = gdk_display_get_default();
+  if(display)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using backend: %s", G_OBJECT_TYPE_NAME(display));
+  else
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Unkown backend");
   }
 
 cairo_surface_t * bg_gdk_pixbuf_render_pixmap_and_mask(GdkPixbuf *pixbuf)
