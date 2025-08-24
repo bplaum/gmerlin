@@ -1453,6 +1453,8 @@ static gavl_source_status_t render_frame(void * priv, gavl_video_frame_t ** fram
   
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+  glFinish();
+  
   gavl_hw_egl_unset_current(s->hwctx);
   
   *frame = s->vframe_cur;
@@ -1767,7 +1769,7 @@ static int open_glscope(void * priv, gavl_audio_format_t * audio_format,
   //  fprintf(stderr, "open_glscope\n");
   //  gavl_video_format_dump(&s->vfmt);
 
-  s->hwctx = gavl_hw_ctx_create_egl(default_attributes, GAVL_HW_EGL_GL_X11, NULL);
+  s->hwctx = gavl_hw_ctx_create_egl(0, default_attributes, GAVL_HW_EGL_GL, NULL);
   
   /* Adjust audio format */
   s->afmt.sample_format = GAVL_SAMPLE_FLOAT;
