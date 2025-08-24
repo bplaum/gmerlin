@@ -671,6 +671,9 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
       gavl_value_reset(&val);
       }
     }
+
+  if(player->video_stream.ov)
+    bg_ov_resync(player->video_stream.ov);
   
   if(old_state == BG_PLAYER_STATUS_PAUSED)
     {
@@ -683,6 +686,7 @@ static void seek_cmd(bg_player_t * player, gavl_time_t t, int scale, double perc
       bg_player_ov_update_still(player);
     
     bg_input_plugin_pause(player->src->input_handle);
+    
     }
   else
     start_playback(player);
