@@ -18,9 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
-
 typedef struct
   {
   float  pos[2];
@@ -30,34 +27,34 @@ typedef struct
 typedef enum
   {
     MODE_TEXTURE_TRANSFER = 1, // Copy frames from RAM to OpenGL Texture
-    MODE_TEXTURE_DIRECT   = 2, // Use OpenGL textures created somewhere else
-    MODE_IMPORT           = 3, // Import directly
-    MODE_IMPORT_DMABUF    = 4, // Import via DMA-Buffers
-    MODE_DMABUF_GETFRAME  = 5, // Let the client render into a dma buffer
-    MODE_DMABUF_TRANSFER  = 6, // Client supplies RAM buffers and we transfer
+    MODE_IMPORT           = 2, // Import directly
+    MODE_IMPORT_DMABUF    = 3, // Import via DMA-Buffers
+    MODE_DMABUF_GETFRAME  = 4, // Let the client render into a dma buffer
+    MODE_DMABUF_TRANSFER  = 5, // Client supplies RAM buffers and we transfer
                                // them (with shuffling) to a DMA buffer
   } video_mode_t;
 
 /* Global status flags */
 
-#define FLAG_COLORMATRIX_CHANGED (1<<0)
-#define FLAG_COORDS_CHANGED      (1<<1)
-#define FLAG_STILL               (1<<2)
-#define FLAG_PAUSED              (1<<3)
-#define FLAG_OPEN                (1<<4)
+#define FLAG_COORDS_CHANGED      (1<<0)
+#define FLAG_STILL               (1<<1)
+#define FLAG_PAUSED              (1<<2)
+#define FLAG_OPEN                (1<<3)
+#define FLAG_STARTED             (1<<4)
 
 /* Port status flags */
 
-#define PORT_COLORSPACE_CNV      (1<<0)
+#define PORT_COLORMATRIX_CHANGED (1<<0)
 #define PORT_USE_COLORMATRIX     (1<<1)
 #define PORT_OVERLAY_CHANGED     (1<<2)
+#define PORT_COLORMATRIX_INIT    (1<<3)
 
 /* Image format */
 
 typedef struct
   {
   gavl_pixelformat_t pfmt;
-  gavl_hw_type_t type;
+  gavl_hw_type_t type_mask;
   gavl_hw_frame_mode_t mode; /* Transfer or map */
 
   uint32_t dma_fourcc;
@@ -102,6 +99,8 @@ typedef struct port_s
   /* DMA frame (can be passed to sink) */
   gavl_video_frame_t * dma_frame;
 
+  int fmt_idx;
+  
   /* Texture (for uploading) */
   gavl_video_frame_t * texture;
   
@@ -146,12 +145,8 @@ struct bg_glvideo_s
   gavl_hw_context_t * hwctx_gles;
   gavl_hw_context_t * hwctx_dma;
   
-  /* External or hwctx_gl or hwctx_gles */
+  /* hwctx_gl or hwctx_gles */
   gavl_hw_context_t * hwctx;
-
-  /* Masks of hardware types (one for GL, one for GL ES)
-     depeding on the surrouding window system */
-  int hw_mask;
 
   int flags;
 
@@ -175,15 +170,29 @@ struct bg_glvideo_s
   gavl_rectangle_f_t dst_rect;
 
   int orientation;
+  /* Supported DMA import formats */
+  uint32_t * dma_fourccs;
 
+  EGLenum platform;
+    
   };
+
+int bg_glvideo_port_has_dma(port_t * port);
+
 
 int bg_glvideo_create_shader(port_t * port, int cm);
 void bg_glvideo_set_gl(bg_glvideo_t * g);
 void bg_glvideo_unset_gl(bg_glvideo_t * g);
 
 void bg_glvideo_update_colormatrix(port_t * port);
-void bg_glvideo_init_colormatrix(port_t * port, gavl_pixelformat_t fmt);
+
+// void bg_glvideo_init_colormatrix(port_t * port, uint32_t fourcc);
+
+void bg_glvideo_init_colormatrix_gl(port_t * port);
+void bg_glvideo_init_colormatrix_dmabuf(port_t * port, const gavl_video_frame_t * dma_frame);
+
+/* Unit matrix */
+void bg_glvideo_init_colormatrix_unity(port_t * port);
 
 void bg_glvideo_update_vertex_buffer(port_t * port);
 

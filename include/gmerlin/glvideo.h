@@ -32,7 +32,7 @@
 
 typedef struct bg_glvideo_s bg_glvideo_t;
 
-bg_glvideo_t * bg_glvideo_create(int type_mask, void * native_display, EGLSurface window_surface);
+bg_glvideo_t * bg_glvideo_create(EGLenum platform, void * native_display, EGLSurface window_surface);
 void bg_glvideo_destroy(bg_glvideo_t *);
 
 gavl_video_sink_t * bg_glvideo_open(bg_glvideo_t *, gavl_video_format_t * fmt, int src_flags);
@@ -51,6 +51,9 @@ int bg_glvideo_handle_message(bg_glvideo_t * g, gavl_msg_t * msg);
 void bg_glvideo_redraw(bg_glvideo_t * g);
 
 void bg_glvideo_close(bg_glvideo_t * g);
+
+void bg_glvideo_resync(bg_glvideo_t * g);
+
 
 gavl_hw_context_t * bg_glvideo_get_hwctx(bg_glvideo_t * g);
 
