@@ -181,7 +181,7 @@ int bg_glvideo_create_shader(port_t * port, int cm)
   shader_program_t * p;
   int planar = 0;
   
-  if(gavl_hw_ctx_get_type(port->g->hwctx) & GAVL_HW_GLES_MASK)
+  if(gavl_hw_ctx_get_type(port->g->hwctx) == GAVL_HW_EGL_GLES)
     use_gles = 1;
 
   if(cm)
@@ -212,7 +212,6 @@ int bg_glvideo_create_shader(port_t * port, int cm)
   switch(port->mode)
     {
     case MODE_TEXTURE_TRANSFER:  // Copy frames from RAM to OpenGL Texture
-    case MODE_TEXTURE_DIRECT:    // Use OpenGL textures created somewhere else
       if(gavl_pixelformat_num_planes(port->fmt.pixelformat) > 1)
         {
         shader[1] = cm ? fragment_shader_planar : fragment_shader_planar_nocm;

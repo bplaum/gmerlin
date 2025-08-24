@@ -42,6 +42,10 @@
 #include <gmerlin/state.h>
 #include <glvideo_private.h>
 
+#ifdef HAVE_DRM
+#include <libdrm/drm_fourcc.h>
+#endif
+
 static void matrixmult(const double coeffs1[4][5],
                        const double coeffs2[4][5],
                        double result[4][5])
@@ -172,41 +176,6 @@ static const double yuv_rgb_matrix[4][5] =
     { 0.0,  0.000000,  0.000000, 1.0, 0.0 },
   };
 
-/*
- *  RGB_out = [SBC] * RGB_in
- *  RGB_out = [SBC] * [YUVRGB] * YUV_in
- *  RGB_out = [SBC] * [YUVRGB] * [YUVunscale] * YUV_scaled
- *  RGB_out = [SBC] * [YUVRGB] * [YUVuscale] * [YUVshift] * YUV_unshifted
- *  RGB_out = [SBC] * [CMAT] * YUV_unshifted
- *  CMAT = [YUVRGB] * [YUVscale] * [YUVshift]
- */
-
-static void set_pixelformat_matrix(double ret[4][5], gavl_pixelformat_t pfmt)
-  {
-  double tmp[4][5];
-
-  if(pfmt & GAVL_PIXFMT_YUV)
-    {
-    matrix_copy(ret, yuv_rgb_matrix);
-    
-    if(pfmt & GAVL_PIXFMT_YUVJ)
-      {
-      matrixmult(ret, yuvj_unscale_matrix, tmp);
-      matrix_copy(ret, tmp);
-      }
-    else
-      {
-      matrixmult(ret, yuv_unscale_matrix, tmp);
-      matrix_copy(ret, tmp);
-      
-      matrixmult(ret, yuv_shift_matrix, tmp);
-      matrix_copy(ret, tmp);
-      }
-    }
-  else // RGB
-    matrix_init(ret);
-  }
-
 static int is_unity(double cmat[4][5])
   {
   int i, j;
@@ -293,10 +262,172 @@ static void set_bsc_matrix(double bsc[4][5], double brightness, double saturatio
   
   }
 
-void bg_glvideo_init_colormatrix(port_t * port, gavl_pixelformat_t fmt)
+/*
+ *  RGB_out = [SBC] * RGB_in
+ *  RGB_out = [SBC] * [YUVRGB] * YUV_in
+ *  RGB_out = [SBC] * [YUVRGB] * [YUVunscale] * YUV_scaled
+ *  RGB_out = [SBC] * [YUVRGB] * [YUVuscale] * [YUVshift] * YUV_unshifted
+ *  RGB_out = [SBC] * [CMAT] * YUV_unshifted
+ *  CMAT = [YUVRGB] * [YUVscale] * [YUVshift]
+ */
+
+void bg_glvideo_init_colormatrix_dmabuf(port_t * port, const gavl_video_frame_t * dma_frame)
   {
-  set_pixelformat_matrix(port->cmat, fmt);
+  const gavl_dmabuf_video_frame_t * f = dma_frame->storage;
+  
+  if(port->flags & PORT_COLORMATRIX_INIT)
+    return;
+  port->flags |= PORT_COLORMATRIX_INIT;
+
+  //  fprintf(stderr, "bg_glvideo_init_colormatrix_dmabuf %d\n", port->idx);
+
+  /* Grey and grey + alpha need special handling because
+     we (ab)use the "R" and "RG" formats for this */
+  switch(f->fourcc)
+    {
+    case DRM_FORMAT_R8:     // GAVL_GRAY_8
+    case DRM_FORMAT_R16:    // GAVL_GRAY_16
+      memset(port->cmat, 0, sizeof(port->cmat));
+          
+      port->cmat[0][0] = 1.0;
+      port->cmat[1][0] = 1.0;
+      port->cmat[2][0] = 1.0;
+      port->cmat[3][3] = 1.0;
+      return;
+      break;
+    case DRM_FORMAT_GR88:   // GAVL_GRAYA_16
+    case DRM_FORMAT_GR1616: // GAVL_GRAYA_32
+      memset(port->cmat, 0, sizeof(port->cmat));
+          
+      port->cmat[0][0] = 1.0;
+      port->cmat[1][0] = 1.0;
+      port->cmat[2][0] = 1.0;
+      port->cmat[3][1] = 1.0;
+      return;
+      break;
+    case DRM_FORMAT_RG88:   // GAVL_GRAYA_16
+    case DRM_FORMAT_RG1616: // GAVL_GRAYA_32
+      memset(port->cmat, 0, sizeof(port->cmat));
+          
+      port->cmat[0][1] = 1.0;
+      port->cmat[1][1] = 1.0;
+      port->cmat[2][1] = 1.0;
+      port->cmat[3][0] = 1.0;
+      return;
+      break;
+    default:
+    }
+
+  /* RGB(A) with shuffled components */
+  if(port->fmt.pixelformat & GAVL_PIXFMT_RGB)
+    {
+    int flags;
+    int drm_indices[4];
+    if((gavl_drm_pixelformat_from_fourcc(f->fourcc, &flags, drm_indices) != GAVL_PIXELFORMAT_NONE) &&
+       (flags & GAVL_DMABUF_FLAG_SHUFFLE))
+      {
+      int i;
+      memset(port->cmat, 0, sizeof(port->cmat));
+      for(i = 0; i < 4; i++)
+        port->cmat[i][drm_indices[i]] = 1.0;
+      return;
+      }
+    }
+  
+  /* Unit matrix */
+  matrix_init(port->cmat);
   }
+
+void bg_glvideo_init_colormatrix_unity(port_t * port)
+  {
+  if(port->flags & PORT_COLORMATRIX_INIT)
+    return;
+  port->flags |= PORT_COLORMATRIX_INIT;
+
+  //  fprintf(stderr, "bg_glvideo_init_colormatrix_unity %d\n", port->idx);
+
+  matrix_init(port->cmat);
+  }
+
+void bg_glvideo_init_colormatrix_gl(port_t * port)
+  {
+  double tmp[4][5];
+  
+  if(port->flags & PORT_COLORMATRIX_INIT)
+    return;
+  port->flags |= PORT_COLORMATRIX_INIT;
+
+  //  fprintf(stderr, "bg_glvideo_init_colormatrix_gl %d\n", port->idx);
+
+  if(port->fmt.pixelformat & GAVL_PIXFMT_YUV)
+    {
+    matrix_copy(port->cmat, yuv_rgb_matrix);
+    
+    if(port->fmt.pixelformat & GAVL_PIXFMT_YUVJ)
+      {
+      matrixmult(port->cmat, yuvj_unscale_matrix, tmp);
+      matrix_copy(port->cmat, tmp);
+      }
+    else
+      {
+      matrixmult(port->cmat, yuv_unscale_matrix, tmp);
+      matrix_copy(port->cmat, tmp);
+      
+      matrixmult(port->cmat, yuv_shift_matrix, tmp);
+      matrix_copy(port->cmat, tmp);
+      }
+    }
+  else // RGB
+    matrix_init(port->cmat);
+  
+  
+  }
+
+#if 0
+void bg_glvideo_init_colormatrix(port_t * port, uint32_t fourcc)
+  {
+  double tmp[4][5];
+
+  if(port->flags & PORT_COLORMATRIX_INIT)
+    return;
+  
+  port->flags |= PORT_COLORMATRIX_INIT;
+  
+#ifdef HAVE_DRM
+
+  if(bg_glvideo_port_has_dma(port))
+    {
+    matrix_init(port->cmat);
+    
+    /* Direct import: We don't need YUV2RGB in the colormatrix because
+       the GPU will do this for us. On the other hand, some fourccs need a special
+       treatment */
+
+    if(port->fmt_idx >= 0)
+      {
+      /* Do color shuffling: For DMA formats, which have a different chanel order,
+         we can re-shuffle the colors. This is, however, only possible for RGB formats */
+      
+      if((port->g->image_formats[port->fmt_idx].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE) &&
+         (port->mode != MODE_DMABUF_TRANSFER))
+        {
+        int i;
+        int indices[4];
+        gavl_drm_pixelformat_from_fourcc(port->g->image_formats[port->fmt_idx].dma_fourcc, NULL, indices);
+
+        memset(port->cmat, 0, sizeof(port->cmat));
+      
+        for(i = 0; i < 4; i++)
+          port->cmat[i][indices[i]] = 1.0;
+        }
+        
+      }
+    }
+  #endif
+  
+  }
+#endif
+
 
 void bg_glvideo_update_colormatrix(port_t * port)
   {
