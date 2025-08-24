@@ -67,6 +67,7 @@ backends \
 frontends \
 edl \
 resources \
+test \
 videofilters \
 visualization \
 $(alsa_subdirs) \
