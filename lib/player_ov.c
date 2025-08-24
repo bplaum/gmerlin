@@ -112,7 +112,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
           
           gavl_msg_get_gui_key(msg, &key, &mask, &x, &y, pos);
           
-          fprintf(stderr, "Key pressed\n");
+          //          fprintf(stderr, "Key pressed\n");
 
           if(bg_accelerator_map_has_accel(p->video_stream.accel_map_ov,
                                           key, mask, &id))
