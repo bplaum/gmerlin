@@ -29,6 +29,11 @@
 #include <GL/gl.h>
 
 #include <config.h>
+
+#ifdef HAVE_DRM
+#include <libdrm/drm_fourcc.h>
+#endif
+
 #include <gavl/gavl.h>
 #include <gavl/connectors.h>
 #include <gavl/hw.h>
@@ -42,9 +47,6 @@
 #include <gmerlin/state.h>
 #include <glvideo_private.h>
 
-#ifdef HAVE_DRM
-#include <libdrm/drm_fourcc.h>
-#endif
 
 static void matrixmult(const double coeffs1[4][5],
                        const double coeffs2[4][5],
