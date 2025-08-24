@@ -609,7 +609,6 @@ static int set_track_input(void * priv)
   /* Reset image reader */
   inp->idx_pos = 0;
   
-
   bg_media_source_cleanup(&inp->ms);
   bg_media_source_init(&inp->ms);
 
@@ -626,18 +625,6 @@ static void seek_input(void * priv, int64_t * time, int scale)
   inp->idx_pos = gavl_packet_index_seek(&inp->idx, 0, time_scaled);
   time_scaled = inp->idx.entries[inp->idx_pos].pts;
   *time = gavl_time_rescale(inp->fmt->timescale, scale, time_scaled);
-  }
-
-static void stop_input(void * priv)
-  {
-  /*
-  input_t * inp = priv;
-
-  
-
-  if(inp->action != BG_STREAM_ACTION_DECODE)
-    return;
-  */
   }
 
 #define FREE(p) if(p) { free(p); p = NULL; }
@@ -708,7 +695,6 @@ static const bg_input_plugin_t input_plugin =
     .get_src              = get_src_input,
     
     /* Stop playback, close all decoders */
-    .stop = stop_input,
     .close = close_input,
   };
 
@@ -752,8 +738,6 @@ static const bg_input_plugin_t input_plugin_stills =
      *  is > 0
      */
     //    .seek = seek_input,
-    /* Stop playback, close all decoders */
-    .stop = stop_input,
     .close = close_input,
   };
 
