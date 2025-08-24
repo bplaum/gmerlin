@@ -22,6 +22,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <string.h>
+#include <errno.h>
 
 #include <config.h>
 #include <gmerlin/translation.h>
@@ -39,6 +40,8 @@
 #include <gavl/keycodes.h>
 #include <gavl/msg.h>
 
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 #define FLAG_MAPPED        (1<<0)
 #define FLAG_CURSOR_HIDDEN (1<<1)
@@ -123,8 +126,13 @@ static int ensure_window(void * priv)
     return 1;
 
   if(!(x11->dpy = XOpenDisplay(NULL)))
+    {
+    if(errno != 0)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot connect to X-Server: %s", strerror(errno));
+    else
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot connect to X-Server: Unknown error");
     return 0;
-
+    }
   screen = DefaultScreen(x11->dpy);
   root = RootWindow(x11->dpy, screen);
 
@@ -138,8 +146,8 @@ static int ensure_window(void * priv)
   // Select events
   XSelectInput(x11->dpy, x11->win, KeyPressMask | ExposureMask | StructureNotifyMask | PointerMotionMask);
   
-  x11->g = bg_glvideo_create(GAVL_HW_EGL_GL_X11 | GAVL_HW_EGL_GLES_X11,
-                              x11->dpy, &x11->win);
+  x11->g = bg_glvideo_create(EGL_PLATFORM_X11_KHR,
+                             x11->dpy, &x11->win);
   
   return 1;
   }
@@ -165,6 +173,15 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
   
   switch(cmd->NS)
     {
+    case GAVL_MSG_NS_SINK:
+      switch(cmd->ID)
+        {
+        case GAVL_MSG_SINK_RESYNC:
+          if(x11->g)
+            bg_glvideo_resync(x11->g);
+          break;
+        }
+      break;
     case GAVL_MSG_NS_STATE:
       {
       switch(cmd->ID)
