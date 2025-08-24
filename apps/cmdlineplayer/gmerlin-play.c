@@ -252,6 +252,7 @@ static bg_cmdline_arg_t global_options[] =
     BG_OPT_LIST_OV,
     BG_PLUGIN_OPT_LIST_FA,
     BG_PLUGIN_OPT_LIST_FV,
+    BG_PLUGIN_OPT_LIST_VIS,
     BG_PLUGIN_OPT_LIST_OPTIONS,
     {
       .arg =         "-fe",
