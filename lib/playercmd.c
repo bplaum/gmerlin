@@ -704,13 +704,6 @@ void bg_player_set_chapter(bg_msg_sink_t * sink, int chapter)
   bg_msg_sink_put(sink);
   }
 
-void bg_player_underrun(bg_msg_sink_t * sink)
-  {
-  gavl_msg_t * msg;
-  msg = bg_msg_sink_get(sink);
-  gavl_msg_set_id_ns(msg, GAVL_MSG_SINK_UNDERRUN, GAVL_MSG_NS_SINK);
-  bg_msg_sink_put(sink);
-  }
 
 void bg_player_set_visualization(bg_msg_sink_t * sink, const char * arg)
   {

@@ -454,8 +454,6 @@ struct bg_player_s
 
 // void bg_player_set_current(bg_player_t * player);
 
-void bg_player_underrun(bg_msg_sink_t * sink);
-
 void bg_player_set_status(bg_player_t * player, int status);
 
 int bg_player_get_seek_window(bg_player_t * p, gavl_time_t * start, gavl_time_t * end);
