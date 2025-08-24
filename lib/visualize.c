@@ -147,7 +147,7 @@ static const bg_parameter_info_t parameters[] =
       .type =        BG_PARAMETER_INT,
       .val_min =     GAVL_VALUE_INIT_INT(16),
       .val_max =     GAVL_VALUE_INIT_INT(32768),
-      .val_default = GAVL_VALUE_INIT_INT(320),
+      .val_default = GAVL_VALUE_INIT_INT(1280),
       .help_string = TRS("Desired image with. The visualization plugin might override this."),
     },
     {
@@ -156,7 +156,7 @@ static const bg_parameter_info_t parameters[] =
       .type =       BG_PARAMETER_INT,
       .val_min =    GAVL_VALUE_INIT_INT(16),
       .val_max =    GAVL_VALUE_INIT_INT(32768),
-      .val_default = GAVL_VALUE_INIT_INT(240),
+      .val_default = GAVL_VALUE_INIT_INT(720),
       .help_string = TRS("Desired image height. The visualization plugin might override this."),
     },
     {
