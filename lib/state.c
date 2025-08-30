@@ -366,6 +366,8 @@ int bg_state_clamp_value(gavl_dictionary_t * state,
                          const char * ctx, const char * var,
                          gavl_value_t * val)
   {
+  int min_i, max_i, val_i;
+  
   gavl_value_t val_min;
   gavl_value_t val_max;
 
@@ -377,6 +379,16 @@ int bg_state_clamp_value(gavl_dictionary_t * state,
                          &val_max))
     return 1;
 
+  /* Toggle */
+  if(gavl_value_get_int(val, &val_i) &&
+     gavl_value_get_int(&val_min, &min_i) &&
+     gavl_value_get_int(&val_max, &max_i) &&
+     (min_i == 0) && (max_i == 1) && (val_i == 2))
+    {
+    gavl_value_set_int(val, 0);
+    return 1;
+    }
+  
   /* min must have the same type and be smaller than max */
   if(gavl_value_compare(&val_min, &val_max) >= 0)
     return 0;
