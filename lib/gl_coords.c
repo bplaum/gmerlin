@@ -77,7 +77,7 @@ void bg_glvideo_update_vertex_buffer(port_t * port)
     {
     gavl_rectangle_i_to_f(&src_rect, &port->cur->src_rect);
     dst_x = port->cur->dst_x;
-    dst_y = port->cur->dst_y;
+    dst_y = (port->fmt.image_height - port->cur->dst_y - port->cur->src_rect.h);
     }
   
   /* Set initial coordinates */
@@ -93,12 +93,6 @@ void bg_glvideo_update_vertex_buffer(port_t * port)
   port->vertices[POS_UL].tex[0] = port->vertices[POS_LL].tex[0];
   port->vertices[POS_UL].tex[1] = port->vertices[POS_UR].tex[1];
   
-#if 0
-  port->vertices[POS_LL].pos[0] = -src_aspect;
-  port->vertices[POS_LL].pos[1] = -1.0;
-  port->vertices[POS_UR].pos[0] =  src_aspect;
-  port->vertices[POS_UR].pos[1] =  1.0;
-#else
 
   /* 0 .. 1 */
   port->vertices[POS_LL].pos[0] = ( dst_x             / (double)port->fmt.image_width);
@@ -108,17 +102,15 @@ void bg_glvideo_update_vertex_buffer(port_t * port)
   port->vertices[POS_LL].pos[0] = src_aspect * (2.0 * port->vertices[POS_LL].pos[0] - 1.0);
   port->vertices[POS_UR].pos[0] = src_aspect * (2.0 * port->vertices[POS_UR].pos[0] - 1.0);
 
-  /* 0 .. 1 */
-  port->vertices[POS_LL].pos[1] =   dst_y               / (double)port->fmt.image_height;
-  port->vertices[POS_UR].pos[1] = ( dst_y + src_rect.h ) / (double)port->fmt.image_height;
+  /* 0 (bottom) .. 1 (top) */
+  port->vertices[POS_LL].pos[1] = (dst_y) / (double)port->fmt.image_height;
+  port->vertices[POS_UR].pos[1] = (dst_y + src_rect.h ) / (double)port->fmt.image_height;
   
   /* -1 .. 1 */
   port->vertices[POS_LL].pos[1] = 2.0 * port->vertices[POS_LL].pos[1] - 1.0;
   port->vertices[POS_UR].pos[1] = 2.0 * port->vertices[POS_UR].pos[1] - 1.0;
 
   
-#endif
-    
   port->vertices[POS_LR].pos[0] = port->vertices[POS_UR].pos[0];
   port->vertices[POS_LR].pos[1] = port->vertices[POS_LL].pos[1];
 
