@@ -95,7 +95,7 @@ static int handle_message(void * data, gavl_msg_t * msg)
     {
     case BG_MSG_NS_STATE:
       /* Propagate state changes to player */
-      bg_msg_sink_put_copy(p->ctrl.evt_sink, msg);
+      // bg_msg_sink_put_copy(p->ctrl.cmd_sink, msg);
       break;
     case GAVL_MSG_NS_GUI:
       {
