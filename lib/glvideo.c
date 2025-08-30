@@ -624,18 +624,27 @@ static gavl_sink_status_t func_dmabuf_transfer(port_t * port, gavl_video_frame_t
 static gavl_sink_status_t func_dmabuf_getframe(port_t * port, gavl_video_frame_t * f)
   {
   bg_glvideo_init_colormatrix_dmabuf(port, f);
+
+  //  if(port->idx)
+  //    fprintf(stderr, "func_dmabuf_getframe %d %d %p %p %p\n", port->idx, f->buf_idx, f, port->dma_frame, port->cur);
   
   if(port->idx > 0)
     {
     if(!port->texture)
+      {
       port->texture = gavl_hw_video_frame_create(port->g->hwctx, 0);
-    port->cur = port->texture;
-    
-    if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
-                                        &port->fmt))
-      return GAVL_SINK_OK;
+      port->cur = port->texture;
+      if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
+                                          &port->fmt))
+        return GAVL_SINK_OK;
+      else
+        return GAVL_SINK_ERROR;
+      }
     else
-      return GAVL_SINK_ERROR;
+      {
+      gavl_video_frame_copy_metadata(port->cur, f);
+      return GAVL_SINK_OK;
+      }
     }
   else
     {
