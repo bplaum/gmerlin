@@ -396,34 +396,66 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-static void add_x11_resources()
+static void add_windowsystem_resources()
   {
   gavl_dictionary_t dict;
-  if(bg_plugin_find_by_name("i_x11"))
-    {
-    gavl_dictionary_init(&dict);
 
-    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 grabber");
-    gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-src:///");
-    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_RECORDER);
+  int have_x11 = 0;
+  int have_wayland = 0;
+
+  if(getenv("DISPLAY"))
+    have_x11 = 1;
+
+  if(getenv("WAYLAND_DISPLAY"))
+    have_wayland = 1;
+
+  if(have_wayland)
+    {
+    if(bg_plugin_find_by_name("ov_wayland"))
+      {
+      gavl_dictionary_init(&dict);
+
+      gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "Wayland output");
+      gavl_dictionary_set_string(&dict, GAVL_META_URI, "wayland-sink:///");
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_VIDEO);
     
-    add(0, &dict, "x11-src");
+      add(0, &dict, "wayland-sink");
     
-    gavl_dictionary_free(&dict);
+      gavl_dictionary_free(&dict);
+      }
+    
     }
 
-  if(bg_plugin_find_by_name("ov_x11"))
+  if(have_x11)
     {
-    gavl_dictionary_init(&dict);
+    if(bg_plugin_find_by_name("i_x11"))
+      {
+      gavl_dictionary_init(&dict);
 
-    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 output");
-    gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-sink:///");
-    gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_VIDEO);
+      gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 grabber");
+      gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-src:///");
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_RECORDER);
     
-    add(0, &dict, "x11-sink");
+      add(0, &dict, "x11-src");
     
-    gavl_dictionary_free(&dict);
+      gavl_dictionary_free(&dict);
+      }
+
+    if(bg_plugin_find_by_name("ov_x11"))
+      {
+      gavl_dictionary_init(&dict);
+
+      gavl_dictionary_set_string(&dict, GAVL_META_LABEL, "X11 output");
+      gavl_dictionary_set_string(&dict, GAVL_META_URI, "x11-sink:///");
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_VIDEO);
+    
+      add(0, &dict, "x11-sink");
+    
+      gavl_dictionary_free(&dict);
+      }
+    
     }
+  
   
   
   }
@@ -440,7 +472,7 @@ static void * thread_func(void * data)
      message sinks */
   gavl_time_delay(&delay_time);
 
-  add_x11_resources();
+  add_windowsystem_resources();
   
   
   delay_time = GAVL_TIME_SCALE / 20; // 50 ms
