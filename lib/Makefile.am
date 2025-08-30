@@ -2,13 +2,6 @@ plugindir=$(pkglibdir)/plugins
 pkgbindir=$(pkglibdir)/bin
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
-# if HAVE_X11
-# x11_subdirs = x11
-# x11_libadd = x11/libx11.la
-# else
-# x11_subdirs =
-# x11_libadd =
-# endif
 
 if HAVE_GTK
 gtk_subdirs = gtk
@@ -91,7 +84,6 @@ $(ncurses_libs) \
 $(pulseaudio_libs) \
 @FREETYPE_LIBS@ \
 @XML2_LIBS@ \
-@MQ_LIBS@ \
 @LIBINTL@ \
 @JSON_LIBS@ \
 @GL_LIBS@ \
