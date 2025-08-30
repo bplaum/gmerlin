@@ -642,7 +642,8 @@ static gavl_sink_status_t func_dmabuf_getframe(port_t * port, gavl_video_frame_t
       }
     else
       {
-      gavl_video_frame_copy_metadata(port->cur, f);
+      if(f && port->cur)
+        gavl_video_frame_copy_metadata(port->cur, f);
       return GAVL_SINK_OK;
       }
     }
