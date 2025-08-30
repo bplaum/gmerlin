@@ -169,20 +169,11 @@ AC_SUBST(SQLITE3_LIBS)
 
 PKG_CHECK_MODULES(UUID, uuid, , AC_MSG_ERROR("libuuid not found"))
 
-MQ_LIBS=""
-AC_CHECK_LIB(rt, mq_open, MQ_LIBS="-lrt")
-AC_SUBST(MQ_LIBS)
 
 JSON_REQUIRED="0.11.0"
 PKG_CHECK_MODULES(JSON, json-c >= $JSON_REQUIRED, , AC_MSG_ERROR("json not found"))
 AC_SUBST(JSON_REQUIRED)
 
-AH_TEMPLATE([HAVE_MQ], [POSIX message queues])
-
-AM_CONDITIONAL(HAVE_MQ, test "x$MQ_LIBS" != "x")
-if test "x$MQ_LIBS" != "x"; then
-  AC_DEFINE(HAVE_MQ)
-fi
 
 dnl
 dnl Cairo & Pango
@@ -211,6 +202,20 @@ AC_SUBST(GTK_REQUIRED)
 dnl Always be in sync with the newest gtk
 GTK_CFLAGS="$GTK_CFLAGS -DGTK_DISABLE_DEPRECATED -DGDK_DISABLE_DEPRECATED"
 
+dnl
+dnl Wayland: we need wayland-client, wayland-egl and libxkb-common
+dnl
+
+have_wayland=false
+have_wayland_egl=false
+have_xkb=false
+
+PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=true, have_wayland=false)
+PKG_CHECK_MODULES(WAYLAND_EGL, wayland-egl, have_wayland_egl=true, have_wayland=false)
+
+PKG_CHECK_MODULES(XKB, xkbcommon, have_xkb=true, have_wayland=false)
+
+AM_CONDITIONAL(HAVE_WAYLAND, test x$have_wayland = xtrue)
 
 dnl
 dnl X11
@@ -241,139 +246,6 @@ dnl pipewire
 dnl
 
 dnl GMERLIN_CHECK_PIPEWIRE
-
-
-dnl
-dnl Xinerama
-dnl
-
-AH_TEMPLATE([HAVE_LIBXINERAMA],
-            [Do we have xinerama installed?])
-
-have_xinerama="false"
-XINERAMA_LIBS=""
-
-if test x$have_x = xtrue; then
-
-OLD_CFLAGS=$CFLAGS
-OLD_LIBS=$LIBS
-
-CFLAGS=$X_FLAGS
-LIBS="$X_LIBS -lXinerama"
-
-AC_MSG_CHECKING(for xinerama)
-AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
-		#include <X11/extensions/Xinerama.h>
-		int main()
-		{
-                int i = 0;
-                /* We ensure the function is here but never call it */
-                if(i)
-                  XineramaQueryExtension(NULL, NULL, NULL);
-                return 0;
-		}
-		]])],
-            [XINERAMA_LIBS="-lXinerama";have_xinerama=true;AC_MSG_RESULT(Yes)],
-	    AC_MSG_RESULT(No))
-
-if test x$have_xinerama = "xtrue"; then
-AC_DEFINE(HAVE_LIBXINERAMA)
-fi
-
-AC_SUBST(XINERAMA_LIBS)
-
-CFLAGS=$OLD_CFLAGS
-LIBS=$OLD_LIBS
-
-fi
-
-dnl
-dnl XTest
-dnl
-
-AH_TEMPLATE([HAVE_XTEST],
-            [Do we have xtest installed?])
-
-have_xtest="false"
-XTEST_LIBS=""
-
-if test x$have_x = xtrue; then
-
-OLD_CFLAGS=$CFLAGS
-OLD_LIBS=$LIBS
-                                                                               
-CFLAGS=$X_FLAGS
-LIBS="$X_LIBS -lXtst"
-
-AC_MSG_CHECKING(for xtest)
-AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
-		#include <X11/extensions/XTest.h>
-		int main()
-		{
-		int i = 0;
-		 /* We ensure the function is here but never call it */
-		 if(i)
-		   XTestQueryExtension(NULL, NULL, NULL, NULL, NULL);
-		 return 0;
-		 }]])],
-		[XTEST_LIBS="-lXtst";have_xtest=true;AC_MSG_RESULT(Yes)],
-		AC_MSG_RESULT(No))
-
-if test x$have_xtest = "xtrue"; then
-AC_DEFINE(HAVE_XTEST)
-fi
-
-AC_SUBST(XTEST_LIBS)
-
-CFLAGS=$OLD_CFLAGS
-LIBS=$OLD_LIBS
-
-fi
-
-AM_CONDITIONAL(HAVE_XTEST, test x$have_xtest = xtrue)
-
-dnl
-dnl X11 DPMS extension
-dnl
-
-AH_TEMPLATE([HAVE_XDPMS],
-            [Do we have X11 dpms extension installed?])
-
-have_xdpms="false"
-XDPMS_LIBS=""
-
-if test x$have_x = xtrue; then
-
-OLD_CFLAGS=$CFLAGS
-OLD_LIBS=$LIBS
-CFLAGS=$X_FLAGS
-LIBS="$X_LIBS -lXext"
-
-AC_MSG_CHECKING(for x11 dpms)
-AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <X11/Xlib.h>
-		#include <X11/extensions/dpms.h>
-		int main()
-		{
-		int i = 0;
-		/* We ensure the function is here but never call it */
-		if(i)
-		  DPMSQueryExtension(NULL, NULL, NULL);
-		return 0;
-		} 
-		]])],
-		[XDPMS_LIBS="-lXext";have_xdpms=true;AC_MSG_RESULT(Yes)],
-		AC_MSG_RESULT("No"))
-	       
-if test x$have_xdpms = "xtrue"; then
-AC_DEFINE(HAVE_XDPMS)
-fi
-
-AC_SUBST(XDPMS_LIBS)
-
-CFLAGS=$OLD_CFLAGS
-LIBS=$OLD_LIBS
-
-fi
 
 dnl
 dnl XFixes
@@ -829,11 +701,9 @@ include/gmerlin/Makefile \
 include/gmerlin/bg_version.h \
 include/gmerlin/upnp/Makefile
 include/gui_gtk/Makefile \
-include/x11/Makefile \
 lib/Makefile \
 lib/gtk/Makefile \
 lib/upnp/Makefile \
-lib/x11/Makefile \
 plugins/Makefile \
 plugins/resources/Makefile \
 plugins/backends/Makefile \
@@ -856,7 +726,8 @@ plugins/upnp/Makefile \
 plugins/videofilters/Makefile \
 plugins/visualization/Makefile \
 plugins/visualization/glscope/Makefile \
-plugins/wavwrite/Makefile ])
+plugins/wavwrite/Makefile \
+plugins/wayland/Makefile ])
 
 AC_OUTPUT
 
@@ -956,6 +827,13 @@ else
 echo "Missing"
 fi
 
+echo -n "wayland:             "
+if test "x$have_wayland" = "xtrue"; then
+echo "Yes"
+else
+echo "Missing"
+fi
+
 echo -n "OpenGL:              "
 if test "x$have_GL" = "xtrue"; then
 echo "Yes (CFLAGS=$GL_CFLAGS, LIBS=$GL_LIBS)"
@@ -963,28 +841,6 @@ else
 echo "Missing"
 fi
 
-echo -n "Xinerama:            "
-if test "x$have_xinerama" = "xtrue"; then
-echo "Yes"
-else
-echo "Missing"
-fi
-
-echo -n "Xtest:               "
-if test "x$have_xtest" = "xtrue"; then
-echo "Yes"
-else
-echo "Missing"
-fi
-
-
-
-echo -n "X11 dpms extension:  "
-if test "x$have_xdpms" = "xtrue"; then
-echo "Yes"
-else
-echo "Missing"
-fi
 
 echo -n "XFixes extension:    "
 if test "x$have_xfixes" = "xtrue"; then

@@ -4,6 +4,12 @@ else
 x11_subdirs =
 endif
 
+if HAVE_WAYLAND
+wayland_subdirs = wayland
+else
+wayland_subdirs =
+endif
+
 
 if HAVE_LIBPNG
 png_subdirs = png
@@ -77,6 +83,7 @@ $(v4l2_subdirs) \
 $(png_subdirs) \
 $(tiff_subdirs) \
 $(x11_subdirs) \
+$(wayland_subdirs) \
 $(cdio_subdirs) \
 $(pipewire_subdirs) \
 $(pulseaudio_subdirs) \
