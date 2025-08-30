@@ -43,8 +43,8 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#define FLAG_MAPPED        (1<<0)
-#define FLAG_CURSOR_HIDDEN (1<<1)
+#define FLAG_MAPPED             (1<<0)
+#define FLAG_CURSOR_HIDDEN      (1<<1)
 
 typedef struct
   {
@@ -212,9 +212,10 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
                  !x11->dpy)
                 return 1;
 
+              fprintf(stderr, "Set fullscreen: %d %d\n", fs, !!fs);
+              
               wm_state = XInternAtom(x11->dpy, "_NET_WM_STATE", False);
               fullscreen = XInternAtom(x11->dpy, "_NET_WM_STATE_FULLSCREEN", False);
-              
               
               memset(&event, 0, sizeof(event));
               
@@ -222,7 +223,7 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
               event.xclient.window = x11->win;
               event.xclient.message_type = wm_state;
               event.xclient.format = 32;
-              event.xclient.data.l[0] = 2;    // _NET_WM_STATE_TOGGLE
+              event.xclient.data.l[0] = !!fs;    // 2 would be _NET_WM_STATE_TOGGLE
               event.xclient.data.l[1] = fullscreen;
               event.xclient.data.l[2] = 0;
               
@@ -264,6 +265,8 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
 #endif
               }
             }
+
+
           gavl_value_free(&val);
           }
           break;
