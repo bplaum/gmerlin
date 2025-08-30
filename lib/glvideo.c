@@ -551,13 +551,18 @@ static gavl_sink_status_t func_import(port_t * port, gavl_video_frame_t * f)
 
   /* For now we don't import anything but DMA buffers.
      If this changes, we probably need to adapt the following */
-  bg_glvideo_init_colormatrix_dmabuf(port, f);
+  if(f)
+    {
+    bg_glvideo_init_colormatrix_dmabuf(port, f);
   
-  if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
-                                      &port->fmt))
-    return GAVL_SINK_OK;
+    if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
+                                        &port->fmt))
+      return GAVL_SINK_OK;
+    else
+      return GAVL_SINK_ERROR;
+    }
   else
-    return GAVL_SINK_ERROR;
+    return GAVL_SINK_OK;
   }
 
 static gavl_sink_status_t func_import_dmabuf(port_t * port, gavl_video_frame_t * f)
