@@ -913,8 +913,11 @@ static void do_play(bg_gtk_mdb_tree_t * t, const gavl_dictionary_t * track)
      (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)))
     queue_id = bg_player_tracklist_make_id(hash);
   else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Track has no hash");
+    gavl_dictionary_dump(m, 2);
     return;
-  
+    }
   /* Set current track */
 
   msg = bg_msg_sink_get(t->player_ctrl.cmd_sink);
@@ -935,7 +938,6 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
   gavl_msg_t * msg;
   const char * id;
   const gavl_dictionary_t * play_track = NULL;
-  
 
   if(!t->player_ctrl.cmd_sink)
     return;
