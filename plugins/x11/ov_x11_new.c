@@ -650,7 +650,7 @@ const bg_ov_plugin_t the_plugin =
       .description =   TRS("X11 display driver supporting OpenGL and direct rendering to DMA buffers"),
       .type =          BG_PLUGIN_OUTPUT_VIDEO,
       .flags =         BG_PLUGIN_OV_STILL,
-      .priority =      BG_PLUGIN_PRIORITY_MAX,
+      .priority =      BG_PLUGIN_PRIORITY_MAX-1, // MAX is wayland
       .create =        create_x11,
       .destroy =       destroy_x11,
 

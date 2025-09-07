@@ -2469,16 +2469,28 @@ void bg_plugin_registry_free_plugins(char ** plugins)
 
 char * bg_get_default_sink_uri(int plugin_type)
   {
-  const char * protocol;
-  const bg_plugin_info_t * info =
-    bg_plugin_find_by_index(0, plugin_type, 0);
-  if(!info)
-    return NULL;
+  int i, num_plugins;
   
-  if(info->protocols && (protocol = gavl_string_array_get(info->protocols, 0)))
-    return gavl_sprintf("%s:///", protocol);
-  else
-    return NULL;
+  const char * protocol;
+  const bg_plugin_info_t * info;
+
+  num_plugins = bg_get_num_plugins(plugin_type, 0);
+  for(i = 0; i < num_plugins; i++)
+    {
+    info = bg_plugin_find_by_index(i, plugin_type, 0);
+
+    /* A bit uglyish, but does what it should and every other
+       window system detection would be much more complicated */
+    
+    if(!strcmp(info->name, "ov_x11") && !getenv("DISPLAY"))
+      continue;
+    else if(!strcmp(info->name, "ov_wayland") && !getenv("WAYLAND_DISPLAY"))
+      continue;
+    
+    if(info->protocols && (protocol = gavl_string_array_get(info->protocols, 0)))
+      return gavl_sprintf("%s:///", protocol);
+    }
+  return NULL;
   }
 
 static void load_input_plugin(bg_plugin_registry_t * reg,
@@ -4744,6 +4756,7 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
   if(ret && (edl = gavl_dictionary_get_dictionary_nc(ret, GAVL_META_EDL)))
     {
     gavl_dictionary_t * tmp = calloc(1, sizeof(*tmp));
+    gavl_edl_finalize(edl);
     gavl_dictionary_move(tmp, edl);
     gavl_dictionary_destroy(ret);
     ret = tmp;
