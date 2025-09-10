@@ -463,8 +463,6 @@ static void list_copy(album_t * a)
   GtkClipboard *clipboard;
   GdkAtom clipboard_atom;
 
-  fprintf(stderr, "List copy\n");
-
   //  if(tree->list_clipboard)
   //    gavl_dictionary_destroy(tree->list_clipboard);
     
@@ -1589,7 +1587,11 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
     tl = gtk_target_list_new(list_src_entries, num_list_src_entries);
 
     // ctx = 
-    gtk_drag_begin_with_coordinates(w, tl, GDK_ACTION_COPY, 1, (GdkEvent*)evt, -1, -1);
+    fprintf(stderr, "gtk_drag_begin_with_coordinates %p %p %p %p %d\n", 
+            w, tl, evt->window, gtk_widget_get_window(w), bg_gtk_widget_is_realized(w));
+    
+    
+    gtk_drag_begin_with_coordinates(w, tl, GDK_ACTION_COPY, 1, (GdkEvent*)evt, evt->x, evt->y);
     gtk_target_list_unref(tl);
     a->list->select_on_release = 0;
     }

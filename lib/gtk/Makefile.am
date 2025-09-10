@@ -48,8 +48,7 @@ message.c \
 multiinfo.c \
 textview.c \
 trackinfo.c \
-urlselect.c \
-vumeter.c
+urlselect.c
 
 libgmerlin_gtk_la_LIBADD = @GTK_LIBS@ $(top_builddir)/lib/libgmerlin.la @XML2_LIBS@ @LIBM@
 

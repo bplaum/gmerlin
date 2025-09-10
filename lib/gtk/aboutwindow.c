@@ -28,6 +28,7 @@
 
 #include <gtk/gtk.h>
 #include <gui_gtk/aboutwindow.h>
+#include <gui_gtk/gtkutils.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/application.h>
@@ -60,7 +61,7 @@ GtkWidget * bg_gtk_about_window_create()
   /* TODO: Enter new website once it is available */
   gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(ret), "http://github.com/bplaum");
 
-  g_signal_connect(G_OBJECT(ret), "delete_event",
+  g_signal_connect(G_OBJECT(ret), DELETE_EVENT,
                    G_CALLBACK(delete_callback), NULL);
   g_signal_connect(G_OBJECT(ret), "response",
                    G_CALLBACK(response_callback), NULL);

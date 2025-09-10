@@ -492,7 +492,7 @@ static void button_callback(GtkWidget * wid, gpointer data)
                      data);
     
     g_signal_connect(chooser,
-                     "delete_event", G_CALLBACK(delete_callback),
+                     DELETE_EVENT, G_CALLBACK(delete_callback),
                      data);
 
     gtk_widget_show(chooser);

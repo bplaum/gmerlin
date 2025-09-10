@@ -516,7 +516,7 @@ static void button_callback(GtkWidget * w, gpointer data)
     {
     tmp_string = bg_gtk_get_filename_write(TR("Save task list"),
                                            &win->task_path, 1,
-                                           win->save_button, NULL);
+                                           win->save_button);
     if(tmp_string)
       {
       track_list_save(win->tracklist, tmp_string);
@@ -537,7 +537,7 @@ static void button_callback(GtkWidget * w, gpointer data)
     {
     tmp_string = bg_gtk_get_filename_write(TR("Save profile"),
                                            &win->profile_path, 1,
-                                           win->win, NULL);
+                                           win->win);
     if(tmp_string)
       {
       transcoder_window_save_profile(win, tmp_string);
@@ -755,7 +755,7 @@ transcoder_window_t * transcoder_window_create()
   gtk_window_set_position(GTK_WINDOW(ret->win), GTK_WIN_POS_CENTER);
   gtk_window_set_title(GTK_WINDOW(ret->win),
                        "Gmerlin transcoder "VERSION);
-  g_signal_connect(G_OBJECT(ret->win), "delete_event",
+  g_signal_connect(G_OBJECT(ret->win), DELETE_EVENT,
                    G_CALLBACK(delete_callback),
                    ret);
   

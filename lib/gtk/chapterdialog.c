@@ -373,7 +373,7 @@ static bg_gtk_chapter_dialog_t * create_dialog(gavl_chapter_list_t * list,
   
   gtk_window_set_modal(GTK_WINDOW(ret->window), 1);
   gtk_window_set_title(GTK_WINDOW(ret->window), TR("Edit chapters"));
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
+  g_signal_connect(G_OBJECT(ret->window), DELETE_EVENT,
                    G_CALLBACK(delete_callback),
                    ret);
   

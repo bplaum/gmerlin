@@ -27,6 +27,12 @@
 #include <gavl/gavl.h>
 #include <gavl/value.h>
 
+#if GTK_MAJOR_VERSION >= 4
+#define DELETE_EVENT "close-request"
+#else
+#define DELETE_EVENT "delete_event"
+#endif
+
 extern GdkPixbuf * bg_gtk_window_icon_pixbuf;
 
 cairo_surface_t * bg_gtk_pixbuf_scale_alpha(cairo_surface_t * src,

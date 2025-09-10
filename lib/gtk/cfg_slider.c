@@ -160,6 +160,7 @@ static void create_common(bg_gtk_widget_t * w,
     w->callback_widget = s->slider;
     }
   gtk_scale_set_value_pos(GTK_SCALE(s->slider), GTK_POS_LEFT);
+  
   gtk_widget_set_events(s->slider, GDK_BUTTON_PRESS_MASK);
 
   g_signal_connect(G_OBJECT(s->slider), "button-press-event",

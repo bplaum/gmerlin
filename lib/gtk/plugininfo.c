@@ -72,7 +72,7 @@ pluginwindow_create(const char * title, const char * properties, const char * de
                            GDK_WINDOW_TYPE_HINT_DIALOG);
   
   gtk_window_set_position(GTK_WINDOW(ret->window), GTK_WIN_POS_CENTER_ON_PARENT);
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
+  g_signal_connect(G_OBJECT(ret->window), DELETE_EVENT,
                    G_CALLBACK(delete_callback), (gpointer)ret);
 
   gtk_window_set_title(GTK_WINDOW(ret->window), title);

@@ -59,7 +59,6 @@ filesel_callback(GtkWidget *chooser,
     g_free(tmp_string);
     }
   gtk_widget_hide(priv->fileselect);
-  gtk_main_quit();
   }
                              
 static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
@@ -112,7 +111,7 @@ static void button_callback(GtkWidget * w, gpointer data)
                        (gpointer)priv);
       
       g_signal_connect(G_OBJECT(priv->fileselect),
-                       "delete_event", G_CALLBACK(delete_callback),
+                       DELETE_EVENT, G_CALLBACK(delete_callback),
                        (gpointer)priv);
       }
     
@@ -124,7 +123,6 @@ static void button_callback(GtkWidget * w, gpointer data)
                                       gtk_entry_get_text(GTK_ENTRY(priv->entry)));
     
     gtk_widget_show(priv->fileselect);
-    gtk_main();
     }
   else if(w == priv->entry)
     {

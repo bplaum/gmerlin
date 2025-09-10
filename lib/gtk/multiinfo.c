@@ -70,7 +70,7 @@ multiwindow_create(const char * title, const char * properties, const char * des
   ret->window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
   
   gtk_window_set_position(GTK_WINDOW(ret->window), GTK_WIN_POS_CENTER_ON_PARENT);
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
+  g_signal_connect(G_OBJECT(ret->window), DELETE_EVENT,
                    G_CALLBACK(delete_callback), (gpointer)ret);
 
   gtk_window_set_title(GTK_WINDOW(ret->window), title);

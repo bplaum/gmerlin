@@ -3255,12 +3255,19 @@ static int input_plugin_load(const char * location,
     if(info == first_plugin)
       continue;
 
-    if(protocol && info->protocols)
+    if(info->protocols)
       {
-      if(gavl_string_array_indexof(info->protocols, protocol) < 0)
-        continue;
+      if(protocol)
+        {
+        if(gavl_string_array_indexof(info->protocols, protocol) < 0)
+          continue;
+        }
+      else
+        {
+        if(gavl_string_array_indexof(info->protocols, "file") < 0)
+          continue;
+        }
       }
-    
     load_input_plugin(bg_plugin_reg, info, NULL, ret);
 
     if(!*ret)

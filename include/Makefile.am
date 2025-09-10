@@ -1,10 +1,4 @@
-if HAVE_X11
-x11_subdirs = x11
-else
-x11_subdirs =
-endif
-
-SUBDIRS=gmerlin gui_gtk $(x11_subdirs)
+SUBDIRS=gmerlin gui_gtk
 
 noinst_HEADERS = \
 backend_priv.h \

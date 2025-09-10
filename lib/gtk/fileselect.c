@@ -47,7 +47,6 @@ struct bg_gtk_filesel_s
   const char * ctx;
   
   char * cwd;
-  int is_modal;
   
   int unsensitive;
   };
@@ -110,8 +109,6 @@ fileselect_callback(GtkWidget *chooser,
     {
     gavl_msg_t * msg;
     gtk_widget_hide(f->filesel);
-    if(f->is_modal)
-      gtk_main_quit();
 
     msg = bg_msg_sink_get(f->sink);
     gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
@@ -178,9 +175,6 @@ void bg_gtk_filesel_run(bg_gtk_filesel_t * filesel, int modal)
   gtk_window_set_modal(GTK_WINDOW(filesel->filesel), modal);
   
   gtk_widget_show(filesel->filesel);
-  filesel->is_modal = modal;
-  if(modal)
-    gtk_main();
   
   }
 
@@ -233,8 +227,7 @@ write_callback(GtkWidget *chooser,
 
 char * bg_gtk_get_filename_write(const char * title,
                                  char ** directory,
-                                 int ask_overwrite, GtkWidget * parent,
-                                 GtkWidget * extra)
+                                 int ask_overwrite, GtkWidget * parent)
   {
   char * ret;
   char * tmp_string;
@@ -253,8 +246,6 @@ char * bg_gtk_get_filename_write(const char * title,
                                 TR("_OK"),
                                 GTK_RESPONSE_OK,
                                 NULL);
-  if(extra)
-    gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(f.w), extra);
   
   if(ask_overwrite)
     gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(f.w),

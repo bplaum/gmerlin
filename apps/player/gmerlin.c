@@ -498,7 +498,7 @@ static int firstrun(gmerlin_t * g, const char * db_path)
   win.label = gtk_label_new(TR("Create initial media database? This might take some minutes."));
   win.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-  g_signal_connect(G_OBJECT(win.window), "delete_event", G_CALLBACK(firstrun_delete_callback), &win);
+  g_signal_connect(G_OBJECT(win.window), DELETE_EVENT, G_CALLBACK(firstrun_delete_callback), &win);
 
   
   gtk_window_set_position(GTK_WINDOW(win.window), GTK_WIN_POS_CENTER);
@@ -655,7 +655,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
                        (void*)ret->log_window);
 
   g_signal_connect(G_OBJECT(bg_gtk_log_window_get_widget(ret->log_window)),
-                   "delete_event",
+                   DELETE_EVENT,
                    G_CALLBACK(delete_callback), ret);
   
   bg_mdb_set_root_name(ret->mdb, bg_app_get_label());
@@ -674,7 +674,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   
   ret->mdb_window = bg_gtk_window_new(GTK_WINDOW_TOPLEVEL);
   g_signal_connect(ret->mdb_window,
-                   "delete_event",
+                   DELETE_EVENT,
                    G_CALLBACK(delete_callback), ret);
   gtk_window_set_title(GTK_WINDOW(ret->mdb_window), TR("Gmerlin Media DB"));
 

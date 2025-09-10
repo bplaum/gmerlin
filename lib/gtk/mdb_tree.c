@@ -1869,7 +1869,7 @@ static GtkNotebook * create_window_callback(GtkNotebook *notebook,
   gtk_window_set_position(GTK_WINDOW(lst->window), GTK_WIN_POS_MOUSE);
   
   g_signal_connect(G_OBJECT(ret), "remove", G_CALLBACK(container_remove_func), user_data);
-  g_signal_connect(G_OBJECT(lst->window), "delete_event", G_CALLBACK(window_delete_callback), user_data);
+  g_signal_connect(G_OBJECT(lst->window), DELETE_EVENT, G_CALLBACK(window_delete_callback), user_data);
   
   gtk_container_add(GTK_CONTAINER(lst->window), ret);
   

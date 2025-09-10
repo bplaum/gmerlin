@@ -385,7 +385,7 @@ static bg_dialog_t * create_dialog(const char * title)
                      G_CALLBACK(button_callback), (gpointer)ret);
   g_signal_connect(G_OBJECT(ret->apply_button), "clicked",
                      G_CALLBACK(button_callback), (gpointer)ret);
-  g_signal_connect(G_OBJECT(ret->window), "delete_event",
+  g_signal_connect(G_OBJECT(ret->window), DELETE_EVENT,
                      G_CALLBACK(delete_callback), (gpointer)ret);
 
   bg_gtk_widget_set_can_default(ret->close_button, TRUE);

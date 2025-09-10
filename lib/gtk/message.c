@@ -98,7 +98,7 @@ void bg_gtk_message(const char * message, int type, GtkWidget * parent)
                    (gpointer)q);
 
 
-  g_signal_connect(G_OBJECT(q->window), "delete_event",
+  g_signal_connect(G_OBJECT(q->window), DELETE_EVENT,
                    G_CALLBACK(delete_callback),
                    (gpointer)q);
 
