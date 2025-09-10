@@ -496,6 +496,32 @@ static const struct wl_keyboard_listener keyboard_listener =
     .repeat_info = keyboard_repeat_info,
   };
 
+/* Decoration listener */
+
+static void toplevel_decoration_configure(void *data, 
+                                          struct zxdg_toplevel_decoration_v1 *decoration,
+                                          uint32_t mode)
+  {
+  switch (mode)
+    {
+    case ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE:
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "No server side decorations supported");
+      //      current_decoration_mode = DECORATION_MODE_CLIENT_SIDE;
+      break;
+    case ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE:
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Server side decorations supported");
+      //      current_decoration_mode = DECORATION_MODE_SERVER_SIDE;
+      break;
+    }
+  }
+
+static const struct zxdg_toplevel_decoration_v1_listener decoration_listener =
+  {
+    .configure = toplevel_decoration_configure,
+  };
+
+
+
 static int map_window(wayland_t * wayland)
   {
   if(wayland->xdg_surface)
@@ -525,6 +551,8 @@ static int map_window(wayland_t * wayland)
     {
     wayland->decoration =
       zxdg_decoration_manager_v1_get_toplevel_decoration(wayland->decoration_manager, wayland->xdg_toplevel);
+
+    zxdg_toplevel_decoration_v1_add_listener(wayland->decoration, &decoration_listener, NULL);
     
     }
 
@@ -612,7 +640,7 @@ static int ensure_window(void * priv)
     handle_events_internal(wayland, 100);
   
   if(!(wayland->egl_window = wl_egl_window_create(wayland->surface,
-                                                  320, 240)))
+                                                  800, 600)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EGL window creation failed");
     return 0;
@@ -640,7 +668,7 @@ static int ensure_window(void * priv)
 
 
 
-
+#if 0
 static void map_sync(wayland_t * wayland)
   {
   fprintf(stderr, "map_sync...\n");
@@ -654,6 +682,7 @@ static void map_sync(wayland_t * wayland)
 #endif
   fprintf(stderr, "map_sync done\n");
   }
+#endif
 
 static int handle_cmd(void * priv, gavl_msg_t * cmd)
   {
