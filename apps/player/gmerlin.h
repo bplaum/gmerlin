@@ -205,13 +205,13 @@ struct gmerlin_s
 
   /* Configuration stuff */
   
-  bg_cfg_section_t * display_section;
-  bg_cfg_section_t * tree_section;
-  bg_cfg_section_t * general_section;
-  bg_cfg_section_t * lcdproc_section;
-  bg_cfg_section_t * remote_section;
-  bg_cfg_section_t * logwindow_section;
-  bg_cfg_section_t * infowindow_section;
+  gavl_dictionary_t * display_section;
+  gavl_dictionary_t * tree_section;
+  gavl_dictionary_t * general_section;
+  gavl_dictionary_t * lcdproc_section;
+  gavl_dictionary_t * remote_section;
+  gavl_dictionary_t * logwindow_section;
+  gavl_dictionary_t * infowindow_section;
 
   bg_parameter_info_t * input_plugin_parameters;
   bg_parameter_info_t * image_reader_parameters;
@@ -302,10 +302,6 @@ const bg_parameter_info_t * gmerlin_get_parameters(gmerlin_t * g);
 
 void gmerlin_set_parameter(void * data, const char * name,
                            const gavl_value_t * val);
-
-int gmerlin_get_parameter(void * data, const char * name,
-                          gavl_value_t * val);
-
 
 /* Handle remote command */
 

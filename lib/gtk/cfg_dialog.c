@@ -211,7 +211,7 @@ static void reset_section(dialog_section_t * s)
   }
 
 static void restore_section(dialog_section_t * s,
-                            bg_cfg_section_t * cfg_section)
+                            gavl_dictionary_t * cfg_section)
   {
   int i;
   int set_param = 0;
@@ -304,7 +304,6 @@ static void button_callback(GtkWidget * w, gpointer * data)
     reset_values(d);
     d->visible = 0;
     gtk_widget_hide(d->window);
-    gtk_main_quit();
     }
   else if(w == d->apply_button)
     {
@@ -315,7 +314,6 @@ static void button_callback(GtkWidget * w, gpointer * data)
     {
     d->visible = 0;
     gtk_widget_hide(d->window);
-    gtk_main_quit();
     apply_values(d);
     d->result = 1;
     }
@@ -480,7 +478,7 @@ static bg_dialog_t * create_dialog(const char * title)
 static void restore_button_callback(GtkWidget * w, gpointer data)
   {
   dialog_section_t * section = data;
-  bg_cfg_section_t * tmp_section;
+  gavl_dictionary_t * tmp_section;
 
   //  fprintf(stderr, "Restore factory defaults %p\n", section);
 
@@ -524,7 +522,7 @@ static GtkWidget * create_restore_button(dialog_section_t * section)
 
 static GtkWidget * create_section(dialog_section_t * section,
                                   const bg_parameter_info_t * info,
-                                  bg_cfg_section_t * s,
+                                  gavl_dictionary_t * s,
                                   bg_set_parameter_func_t set_param,
                                   void * data,
                                   const char * translation_domain,
@@ -796,7 +794,7 @@ static int count_sections(const bg_parameter_info_t * info)
   return 0;
   }
 
-bg_dialog_t * bg_dialog_create(bg_cfg_section_t * section,
+bg_dialog_t * bg_dialog_create(gavl_dictionary_t * section,
                                bg_set_parameter_func_t set_param,
                                void * callback_data,
                                const bg_parameter_info_t * info,
@@ -891,7 +889,7 @@ bg_dialog_t * bg_dialog_create_multi(const char * title)
 
 static void dialog_add_child_internal(bg_dialog_t *d, void * _parent,
                                       const char * name,
-                                      bg_cfg_section_t * section,
+                                      gavl_dictionary_t * section,
                                       bg_set_parameter_func_t set_param,
                                       void * callback_data,
                                       const bg_parameter_info_t * info, const char * ctx)
@@ -1021,7 +1019,7 @@ static void dialog_add_child_internal(bg_dialog_t *d, void * _parent,
 
 void bg_dialog_add_child(bg_dialog_t *d, void * _parent,
                          const char * name,
-                         bg_cfg_section_t * section,
+                         gavl_dictionary_t * section,
                          bg_set_parameter_func_t set_param,
                          void * callback_data,
                          const bg_parameter_info_t * info)
@@ -1036,7 +1034,7 @@ void bg_dialog_add_child(bg_dialog_t *d, void * _parent,
 
 void bg_dialog_add(bg_dialog_t *d,
                    const char * name,
-                   bg_cfg_section_t * section,
+                   gavl_dictionary_t * section,
                    bg_set_parameter_func_t set_param,
                    void * callback_data,
                    const bg_parameter_info_t * info)
@@ -1111,7 +1109,6 @@ int bg_dialog_show(bg_dialog_t * d, void * parent)
   gtk_widget_show(d->window);
   gtk_widget_grab_default(d->ok_button);
   gtk_widget_grab_focus(d->ok_button);
-  gtk_main();
   return d->result;
   }
 

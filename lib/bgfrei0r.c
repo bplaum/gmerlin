@@ -236,7 +236,7 @@ typedef struct
   f0r_instance_t instance;
   f0r_plugin_info_t plugin_info;
   /* Parameter values are cached here */
-  bg_cfg_section_t * section;
+  gavl_dictionary_t * section;
 
   gavl_video_frame_t * in_frame;
   gavl_video_frame_t * out_frame;

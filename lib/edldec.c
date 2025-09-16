@@ -1199,8 +1199,6 @@ static const bg_input_plugin_t edl_plugin =
       .destroy =        destroy_edl,
 
       .get_controllable = get_controllable_edl,
-      //      .get_parameters = get_parameters_edl,
-      //      .set_parameter =  set_parameter_edl
     },
     .get_media_info = get_media_info_edl,
     

@@ -34,13 +34,13 @@
 #include <gmerlin/xmlutils.h>
 void bg_cfg_xml_2_section(xmlDocPtr xml_doc,
                           xmlNodePtr xml_section,
-                          bg_cfg_section_t * cfg_section)
+                          gavl_dictionary_t * cfg_section)
   {
   bg_xml_2_dictionary(xml_section, cfg_section);
   }
 
 
-void bg_cfg_section_2_xml(const bg_cfg_section_t * section, xmlNodePtr xml_section)
+void bg_cfg_section_2_xml(const gavl_dictionary_t * section, xmlNodePtr xml_section)
   {
   /* Save items */
   bg_dictionary_2_xml(xml_section, section, 0);
@@ -69,7 +69,7 @@ void bg_cfg_registry_save()
   
   }
 
-void bg_cfg_section_dump(bg_cfg_section_t * section, const char * filename)
+void bg_cfg_section_dump(gavl_dictionary_t * section, const char * filename)
   {
   bg_dictionary_save_xml(section, filename, "SECTION");
   }

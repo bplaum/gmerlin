@@ -98,7 +98,6 @@ gavl_type_t bg_parameter_type_to_gavl(bg_parameter_type_t type);
 #define BG_PARAMETER_HIDE_DIALOG    (1<<1) //!< Don't make a configuration widget (for objects, which change values themselves)
 #define BG_PARAMETER_PLUGIN         (1<<3) //!< Parameter refers to a plugin
 #define BG_PARAMETER_OWN_SECTION    (1<<4) //!< For parameters of the type BG_PARAMETER_SECTION: Following parameters should be stored in an own section
-#define BG_PARAMETER_GLOBAL_PRESET  (1<<5) //!< For parameters of the type BG_PARAMETER_SECTION: There should be one preset for all following sections
 
 /** \brief Typedef for parmeter description
  */
@@ -147,8 +146,6 @@ struct bg_parameter_info_s
   int num_digits; //!< Number of digits for floating point parameters
   
   char * help_string; //!< Help strings for tooltips or --help option 
-
-  char * preset_path; //!< Path for storing configuration presets
 
   char ** multi_names_nc; //!< When allocating dynamically, use this instead of multi_names and call \ref bg_parameter_info_set_const_ptrs at the end
 
@@ -208,17 +205,6 @@ typedef int (*bg_get_parameter_func_t)(void * data, const char * name,
 void bg_parameter_info_copy(bg_parameter_info_t * dst,
                             const bg_parameter_info_t * src);
 
-/** \brief Copy a single parameter info
- *  \param dst Destination 
- *  \param src Source
- *  \param pfx Prefix
- *
- *  Like \ref bg_parameter_info_copy but prepends a prefix to the parameter name
- */
-
-void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
-                                const bg_parameter_info_t * src, const char * pfx);
-
 
 /** \brief Copy a NULL terminated parameter array
  *  \param src Source array
@@ -230,18 +216,6 @@ void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
 
 bg_parameter_info_t *
 bg_parameter_info_copy_array(const bg_parameter_info_t * src);
-
-/** \brief Copy a NULL terminated parameter array
- *  \param src Source array
- *  \param pfx Prefix
- *  \returns A newly allocated parameter array, whose contents are copied from src.
- *
- *  Like \ref bg_parameter_info_copy_array but prepends a prefix to the name
- *  Use \ref bg_parameter_info_destroy_array to free the returned array.
- */
-
-bg_parameter_info_t *
-bg_parameter_info_copy_array_pfx(const bg_parameter_info_t * src, const char * pfx);
 
 /** \brief Set the const pointers of a dynamically allocated parameter info
  *  \param info A parameter info

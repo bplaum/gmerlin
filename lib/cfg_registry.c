@@ -66,7 +66,7 @@ void bg_cfg_registry_cleanup()
 
 // static void 
 
-bg_cfg_section_t * bg_cfg_registry_find_section(bg_cfg_registry_t * r,
+gavl_dictionary_t * bg_cfg_registry_find_section(bg_cfg_registry_t * r,
                                                 const char * path)
   {
   int i;

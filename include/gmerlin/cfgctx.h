@@ -31,8 +31,8 @@
 typedef struct
   {
   bg_parameter_info_t * p;
-  bg_cfg_section_t * s;
-  bg_cfg_section_t * s_priv; // Privately owned, will be free()d by bg_cfg_ctx_free
+  gavl_dictionary_t * s;
+  gavl_dictionary_t * s_priv; // Privately owned, will be free()d by bg_cfg_ctx_free
 
   bg_set_parameter_func_t set_param;
   void * cb_data;
@@ -81,7 +81,7 @@ void bg_cfg_ctx_set_sink_array(bg_cfg_ctx_t * ctx,
                                bg_msg_sink_t * sink);
 
 void bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx,
-                                      bg_cfg_section_t * parent);
+                                      gavl_dictionary_t * parent);
 
 void bg_cfg_ctx_array_clear_sections(bg_cfg_ctx_t * ctx);
 

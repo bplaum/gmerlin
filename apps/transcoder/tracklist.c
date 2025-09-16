@@ -43,7 +43,6 @@
 #include <gui_gtk/fileselect.h>
 #include <gui_gtk/urlselect.h>
 #include <gui_gtk/driveselect.h>
-#include <gui_gtk/display.h>
 #include <gui_gtk/chapterdialog.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/mdb.h>
@@ -172,8 +171,8 @@ struct track_list_s
 
   gulong select_handler_id;
 
-  bg_cfg_section_t * track_defaults_section;
-  bg_cfg_section_t * encoder_section;
+  gavl_dictionary_t * track_defaults_section;
+  gavl_dictionary_t * encoder_section;
   const bg_parameter_info_t * encoder_parameters;
   
   GtkWidget * time_total;
@@ -192,6 +191,8 @@ struct track_list_s
   GtkAccelGroup * accel_group;
 
   bg_msg_sink_t * dlg_sink;
+
+  track_dialog_t * track_dialog;
   
   };
 
@@ -764,7 +765,7 @@ static const gavl_dictionary_t * get_first_selected(track_list_t * l)
 
 static void configure_encoders(track_list_t * l)
   {
-  bg_cfg_section_t * s;
+  gavl_dictionary_t * s;
   bg_dialog_t * dlg;
   
   const gavl_dictionary_t * first_selected = NULL;
@@ -823,7 +824,7 @@ static void mass_tag(track_list_t * l)
   bg_transcoder_track_t * track;
 
   bg_parameter_info_t * params;
-  bg_cfg_section_t * s;
+  gavl_dictionary_t * s;
   encoder_parameter_data d;
   int i, j;
   d.changed = 0;
@@ -1061,7 +1062,6 @@ static void button_callback(GtkWidget * w, gpointer data)
   {
   
   
-  track_dialog_t * track_dialog;
 
   gavl_time_t track_duration;
   gavl_time_t track_duration_total;
@@ -1120,10 +1120,13 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if((w == t->config_button) || (w == t->menu.selected_menu.configure_item))
     {
-    track_dialog = track_dialog_create(t->selected_track, update_track,
+    if(t->track_dialog)
+      track_dialog_destroy(t->track_dialog);
+
+
+    t->track_dialog = track_dialog_create(t->selected_track, update_track,
                                        t, t->show_tooltips);
-    track_dialog_run(track_dialog, t->treeview);
-    track_dialog_destroy(track_dialog);
+    track_dialog_run(t->track_dialog, t->treeview);
 
     }
   else if((w == t->menu.edit_menu.cut_item) || (w == t->cut_button))
@@ -1458,9 +1461,9 @@ static GtkWidget * create_icon_button(track_list_t * l,
   }
 
 
-track_list_t * track_list_create(bg_cfg_section_t * track_defaults_section,
+track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
                                  const bg_parameter_info_t * encoder_parameters,
-                                 bg_cfg_section_t * encoder_section)
+                                 gavl_dictionary_t * encoder_section)
   {
   GtkWidget * scrolled;
   GtkWidget * box;

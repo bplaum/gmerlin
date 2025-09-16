@@ -202,42 +202,83 @@ const char * bg_gtk_filesel_get_directory(bg_gtk_filesel_t * filesel)
  *  Return value should be freed with free();
  */
 
+#if 0
 typedef struct
   {
   GtkWidget * w;
   int answer;
   } filesel_write_struct;
+#endif
+
+static void send_response(GtkWidget *chooser, bg_msg_sink_t * sink, int id)
+  {
+  gavl_msg_t * msg;
+  char * str;
+    
+  msg = bg_msg_sink_get(sink);
+  
+  gavl_msg_set_id_ns(msg, id, GAVL_MSG_NS_GUI);
+
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, g_object_get_data(G_OBJECT(chooser), GAVL_MSG_CONTEXT_ID));
+
+  str = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
+  gavl_msg_set_arg_string(msg, 0, str);
+  g_free(str);
+    
+  bg_msg_sink_put(sink);
+    
+  }
+
+static gboolean destroy_widget(gpointer data)
+  {
+  gtk_widget_destroy(data);
+  return G_SOURCE_REMOVE;
+  }
 
 static void
 write_callback(GtkWidget *chooser,
                gint       response_id,
                gpointer data)
   {
-  filesel_write_struct * ws;
-  
-  ws = (filesel_write_struct*)data;
-  
   if(response_id == GTK_RESPONSE_OK)
-    ws->answer = 1;
+    send_response(chooser, data, GAVL_MSG_GUI_FILE_SAVE);
   
-  gtk_widget_hide(ws->w);
-  gtk_main_quit();
+  g_idle_add ((GSourceFunc) destroy_widget, chooser);
   }
 
-
-char * bg_gtk_get_filename_write(const char * title,
-                                 char ** directory,
-                                 int ask_overwrite, GtkWidget * parent)
+static void
+read_callback(GtkWidget *chooser,
+               gint       response_id,
+               gpointer data)
   {
-  char * ret;
-  char * tmp_string;
-  filesel_write_struct f;
+  if(response_id == GTK_RESPONSE_OK)
+    send_response(chooser, data, GAVL_MSG_GUI_FILE_LOAD);
+  
+  g_idle_add ((GSourceFunc) destroy_widget, chooser);
+  }
 
-  ret = NULL;
+static void
+directory_callback(GtkWidget *chooser,
+               gint       response_id,
+               gpointer data)
+  {
+  if(response_id == GTK_RESPONSE_OK)
+    send_response(chooser, data, GAVL_MSG_GUI_DIRECTORY);
+  
+  g_idle_add ((GSourceFunc) destroy_widget, chooser);
+  }
+
+void bg_gtk_get_filename_write(const char * title, const char * context_id,
+                               char ** directory,
+                               int ask_overwrite, GtkWidget * parent, bg_msg_sink_t * sink)
+  {
+  //  char * ret;
+  //  char * tmp_string;
+  GtkWidget * w;
   
   parent = bg_gtk_get_toplevel(parent);
   
-  f.w =     
+  w =     
     gtk_file_chooser_dialog_new(title,
                                 GTK_WINDOW(parent),
                                 GTK_FILE_CHOOSER_ACTION_SAVE,
@@ -246,72 +287,40 @@ char * bg_gtk_get_filename_write(const char * title,
                                 TR("_OK"),
                                 GTK_RESPONSE_OK,
                                 NULL);
+
+  if(context_id)
+    g_object_set_data_full(G_OBJECT(w), GAVL_MSG_CONTEXT_ID, 
+                           g_strdup(context_id), g_free);
   
   if(ask_overwrite)
-    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(f.w),
+    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(w),
                                                    TRUE);
   /* Set attributes */
   
-  gtk_window_set_modal(GTK_WINDOW(f.w), 1);
-  f.answer = 0;
+  gtk_window_set_modal(GTK_WINDOW(w), 1);
   
   /* Set callbacks */
-
   
-  g_signal_connect(G_OBJECT(f.w), "response",
-                   G_CALLBACK(write_callback),
-                   (gpointer)(&f));
-
+  g_signal_connect(G_OBJECT(w), "response", G_CALLBACK(write_callback), sink);
   
   /* Set the current directory */
   
   if(directory && *directory)
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(f.w),
-                                        *directory);
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(w), *directory);
   
   /* Run the widget */
   
-  gtk_widget_show(f.w);
-  gtk_main();
-  
-  /* Fetch the answer */
-  
-  if(!f.answer)
-    {
-    gtk_widget_destroy(f.w);
-    return NULL;
-    }
-  
-  tmp_string = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f.w));
-  ret = gavl_strdup(tmp_string);
-  g_free(tmp_string);
-  
-  /* Update current directory */
-    
-  if(directory)
-    {
-    tmp_string = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(f.w));
-    *directory = gavl_strrep(*directory, tmp_string);
-    g_free(tmp_string);
-    }
-
-  g_object_unref(f.w);
-  
-  return ret;
+  gtk_widget_show(w);
   }
 
-char * bg_gtk_get_filename_read(const char * title,
-                                char ** directory, GtkWidget * parent)
+void bg_gtk_get_filename_read(const char * title, const char * context_id,
+                              char ** directory, GtkWidget * parent, bg_msg_sink_t * sink)
   {
-  char * ret;
-  char * tmp_string;
-  filesel_write_struct f;
-
-  ret = NULL;
-
+  GtkWidget * w;
+  
   parent = bg_gtk_get_toplevel(parent);
   
-  f.w =     
+  w =     
     gtk_file_chooser_dialog_new(title,
                                 GTK_WINDOW(parent),
                                 GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -319,65 +328,39 @@ char * bg_gtk_get_filename_read(const char * title,
                                 GTK_RESPONSE_CANCEL,
                                 TR("_OK"), GTK_RESPONSE_OK,
                                 NULL);
+
+  if(context_id)
+    g_object_set_data_full(G_OBJECT(w), GAVL_MSG_CONTEXT_ID, 
+                           g_strdup(context_id), g_free);
   
   /* Set attributes */
   
-  gtk_window_set_modal(GTK_WINDOW(f.w), 1);
-  f.answer = 0;
+  gtk_window_set_modal(GTK_WINDOW(w), 1);
   
   /* Set callbacks */
   
-  g_signal_connect(G_OBJECT(f.w), "response",
-                   G_CALLBACK(write_callback),
-                   (gpointer)(&f));
+  g_signal_connect(G_OBJECT(w), "response",
+                   G_CALLBACK(read_callback),
+                   sink);
 
   /* Set the current directory */
   
   if(directory && *directory)
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(f.w),
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(w),
                                         *directory);
   
   /* Run the widget */
   
-  gtk_widget_show(f.w);
-  gtk_main();
-  
-  /* Fetch the answer */
-  
-  if(!f.answer)
-    {
-    gtk_widget_destroy(f.w);
-    return NULL;
-    }
-  
-  tmp_string = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f.w));
-  ret = gavl_strdup(tmp_string);
-  g_free(tmp_string);
-  
-  /* Update current directory */
-    
-  if(directory)
-    {
-    tmp_string = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(f.w));
-    *directory = gavl_strrep(*directory, tmp_string);
-    g_free(tmp_string);
-    }
-  
-  return ret;
+  gtk_widget_show(w);
   }
 
-char * bg_gtk_get_directory(const char * title,
-                            GtkWidget * parent)
+void bg_gtk_get_directory(const char * title, const char * context_id,
+                          GtkWidget * parent, bg_msg_sink_t * sink)
   {
-  char * ret;
-  char * tmp_string;
-  filesel_write_struct f;
-
-  ret = NULL;
-
+  GtkWidget * w;
   parent = bg_gtk_get_toplevel(parent);
   
-  f.w =     
+  w =     
     gtk_file_chooser_dialog_new(title,
                                 GTK_WINDOW(parent),
                                 GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
@@ -385,34 +368,23 @@ char * bg_gtk_get_directory(const char * title,
                                 GTK_RESPONSE_CANCEL,
                                 TR("_OK"), GTK_RESPONSE_OK,
                                 NULL);
+
+  if(context_id)
+    g_object_set_data_full(G_OBJECT(w), GAVL_MSG_CONTEXT_ID, 
+                           g_strdup(context_id), g_free);
   
   /* Set attributes */
   
-  gtk_window_set_modal(GTK_WINDOW(f.w), 1);
-  f.answer = 0;
+  gtk_window_set_modal(GTK_WINDOW(w), 1);
   
   /* Set callbacks */
   
-  g_signal_connect(G_OBJECT(f.w), "response",
-                   G_CALLBACK(write_callback),
-                   (gpointer)(&f));
+  g_signal_connect(G_OBJECT(w), "response",
+                   G_CALLBACK(directory_callback),
+                   sink);
   
   /* Run the widget */
   
-  gtk_widget_show(f.w);
-  gtk_main();
+  gtk_widget_show(w);
   
-  /* Fetch the answer */
-  
-  if(!f.answer)
-    {
-    gtk_widget_destroy(f.w);
-    return NULL;
-    }
-  
-  tmp_string = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(f.w));
-  ret = gavl_strdup(tmp_string);
-  g_free(tmp_string);
-  
-  return ret;
   }

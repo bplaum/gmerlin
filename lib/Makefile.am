@@ -106,7 +106,7 @@ bgladspa.c \
 bgfrei0r.c \
 bgxml.c \
 cairo.c \
-cfg_ctx.c \
+cfgctx.c \
 cfg_registry.c \
 cfg_section.c \
 cfg_xml.c \
@@ -183,8 +183,6 @@ playercmd.c \
 pluginfuncs.c \
 pluginregistry.c \
 pluginreg_xml.c \
-preset.c \
-preset_xml.c \
 radiobrowser.c \
 resourcemanager.c \
 ringbuffer.c \

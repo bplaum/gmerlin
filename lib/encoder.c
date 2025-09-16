@@ -44,8 +44,8 @@ typedef struct
   
   gavl_packet_sink_t * psink;
 
-  const bg_cfg_section_t * section;
-  bg_cfg_section_t * section_priv; // If copied
+  const gavl_dictionary_t * section;
+  gavl_dictionary_t * section_priv; // If copied
   
   const bg_parameter_info_t * parameters;
 
@@ -89,12 +89,12 @@ typedef struct
 typedef struct
   {
   const bg_plugin_info_t * info;
-  const bg_cfg_section_t * section;
+  const gavl_dictionary_t * section;
   } plugin_config_t;
 
 typedef struct
   {
-  const bg_cfg_section_t * section;
+  const gavl_dictionary_t * section;
   } stream_config_t;
 
 struct bg_encoder_s
@@ -128,7 +128,7 @@ struct bg_encoder_s
   int is_stdout;
   
   /* Config stuff */
-  const bg_cfg_section_t * es;
+  const gavl_dictionary_t * es;
   bg_transcoder_track_t * tt;
 
   int stream_mask;
@@ -259,7 +259,7 @@ static void init_from_tt(bg_encoder_t * e)
   }
 #endif
 
-bg_encoder_t * bg_encoder_create(bg_cfg_section_t * es,
+bg_encoder_t * bg_encoder_create(gavl_dictionary_t * es,
                                  bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask)
   {
@@ -368,7 +368,7 @@ int bg_encoder_open(bg_encoder_t * enc, const char * filename_base,
 
 static bg_plugin_handle_t * load_encoder(bg_encoder_t * enc,
                                          const bg_plugin_info_t * info,
-                                         const bg_cfg_section_t * section,
+                                         const gavl_dictionary_t * section,
                                          const char * filename_base)
   {
   bg_plugin_handle_t * ret;
@@ -525,7 +525,7 @@ static bg_plugin_handle_t * get_stream_handle(bg_encoder_t * enc,
   {
   bg_plugin_handle_t * ret;
   const bg_plugin_info_t * info = NULL;
-  const bg_cfg_section_t * section = NULL;
+  const gavl_dictionary_t * section = NULL;
   char * filename_base;
   const char * type_string = NULL;
   
@@ -981,7 +981,7 @@ int bg_encoder_write_overlay(bg_encoder_t * enc,
 
 /* Obtain sections */
 
-const bg_cfg_section_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
+const gavl_dictionary_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
                                                        gavl_stream_type_t type)
   {
   switch(type)
@@ -1043,7 +1043,7 @@ const bg_parameter_info_t * bg_encoder_get_stream_parameters(bg_encoder_t * enc,
 int bg_encoder_add_audio_stream(bg_encoder_t * enc,
                                 const gavl_dictionary_t * m,
                                 const gavl_audio_format_t * format,
-                                int source_index, const bg_cfg_section_t * sec)
+                                int source_index, const gavl_dictionary_t * sec)
   {
   int ret;
   audio_stream_t * s;
@@ -1076,7 +1076,7 @@ int bg_encoder_add_audio_stream(bg_encoder_t * enc,
 int bg_encoder_add_video_stream(bg_encoder_t * enc,
                                 const gavl_dictionary_t * m,
                                 const gavl_video_format_t * format,
-                                int source_index, const bg_cfg_section_t * sec)
+                                int source_index, const gavl_dictionary_t * sec)
   {
   int ret;
   video_stream_t * s;
@@ -1177,7 +1177,7 @@ int bg_encoder_add_overlay_stream_compressed(bg_encoder_t * enc,
 int bg_encoder_add_text_stream(bg_encoder_t * enc,
                                const gavl_dictionary_t * m,
                                int timescale,
-                               int source_index, const bg_cfg_section_t * sec)
+                               int source_index, const gavl_dictionary_t * sec)
   {
   int ret;
   text_stream_t * s;
@@ -1214,7 +1214,7 @@ int bg_encoder_add_overlay_stream(bg_encoder_t * enc,
                                   const gavl_video_format_t * format,
                                   int source_index,
                                   gavl_stream_type_t source_format,
-                                  const bg_cfg_section_t * sec)
+                                  const gavl_dictionary_t * sec)
   {
   int ret;
   overlay_stream_t * s;
@@ -1299,7 +1299,7 @@ void bg_encoder_get_text_timescale(bg_encoder_t * enc,
 static bg_plugin_handle_t *
 open_dummy_encoder(bg_encoder_t * enc,
                    const bg_plugin_info_t * plugin_info,
-                   const bg_cfg_section_t * plugin_section)
+                   const gavl_dictionary_t * plugin_section)
   {
   bg_encoder_plugin_t * plugin;
   bg_plugin_handle_t * ret;
@@ -1324,7 +1324,7 @@ int bg_encoder_writes_compressed_audio(bg_encoder_t * enc,
   bg_encoder_plugin_t * plugin;
   const bg_plugin_info_t * plugin_info;
   bg_plugin_handle_t * h;
-  const bg_cfg_section_t * plugin_section;
+  const gavl_dictionary_t * plugin_section;
   
   if(enc->audio_plugin.info)
     {
@@ -1359,7 +1359,7 @@ int bg_encoder_writes_compressed_overlay(bg_encoder_t * enc,
   bg_encoder_plugin_t * plugin;
   const bg_plugin_info_t * plugin_info;
   bg_plugin_handle_t * h;
-  const bg_cfg_section_t * plugin_section;
+  const gavl_dictionary_t * plugin_section;
 
   if(enc->overlay_plugin.info)
     {
@@ -1395,7 +1395,7 @@ int bg_encoder_writes_compressed_video(bg_encoder_t * enc,
   bg_encoder_plugin_t * plugin;
   const bg_plugin_info_t * plugin_info;
   bg_plugin_handle_t * h;
-  const bg_cfg_section_t * plugin_section;
+  const gavl_dictionary_t * plugin_section;
 
   if(enc->video_plugin.info)
     {

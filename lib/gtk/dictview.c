@@ -265,21 +265,15 @@ static void menu_callback(GtkWidget * wid, gpointer data)
     copy_selected(w);
   }
 
-
-static gboolean button_press_callback(GtkWidget * wid, GdkEventButton * evt,
-                                      gpointer data)
+static void pressed_callback(GtkGestureMultiPress *gesture,
+                             int                   n_press,
+                             double                x,
+                             double                y,
+                             gpointer              data)
   {
   bg_gtk_dict_view_t * w = data;
-  
-  if(evt->button == 3)
-    {
-    gtk_menu_popup_at_pointer(GTK_MENU(w->menu.menu), (GdkEvent*)evt);
-    return  FALSE;
-    }
-  return FALSE;
+  gtk_menu_popup_at_pointer(GTK_MENU(w->menu.menu), NULL);
   }
-
-
 
 static GtkWidget *
 create_item(bg_gtk_dict_view_t * w, GtkWidget * parent,
@@ -312,9 +306,10 @@ bg_gtk_dict_view_t * bg_gtk_dict_view_create()
   GtkCellRenderer * text_renderer;
   GtkTreeViewColumn *column;
   GtkTreeSelection  *selection;
-  
-  bg_gtk_dict_view_t * ret = calloc(1, sizeof(*ret));
+  GtkGesture *gesture;
 
+  bg_gtk_dict_view_t * ret = calloc(1, sizeof(*ret));
+  
   store = gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING,
                              G_TYPE_STRING);
 
@@ -322,13 +317,12 @@ bg_gtk_dict_view_t * bg_gtk_dict_view_create()
   
   ret->w = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
   gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(ret->w), 0);
-  
-  gtk_widget_set_events(ret->w, GDK_BUTTON_PRESS_MASK);
-  
-  g_signal_connect(G_OBJECT(ret->w), "button-press-event",
-                   G_CALLBACK(button_press_callback), (gpointer)ret);
 
-
+  gesture = gtk_gesture_multi_press_new(ret->w);
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture), GDK_BUTTON_SECONDARY);
+  g_signal_connect(G_OBJECT(gesture), "pressed", G_CALLBACK(pressed_callback), ret);
+  
+  
   /* Column 1 */
   text_renderer = gtk_cell_renderer_text_new();
   column = gtk_tree_view_column_new();

@@ -44,7 +44,7 @@
 #include <gavl/metatags.h>
 
 void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
-                                      const bg_cfg_section_t * encoder_section)
+                                      const gavl_dictionary_t * encoder_section)
   {
   int i;
   int num;
@@ -163,7 +163,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
   }
 
 void bg_transcoder_track_get_encoders(const bg_transcoder_track_t * t,
-                                      bg_cfg_section_t * encoder_section)
+                                      gavl_dictionary_t * encoder_section)
   {
   gavl_value_t * val;
   const gavl_dictionary_t * dict;
@@ -459,8 +459,8 @@ static void set_language(gavl_dictionary_t * general_section_dst,
 static void set_track(bg_transcoder_track_t * track,
                       const gavl_dictionary_t * media_info,
                       int track_index,
-                      bg_cfg_section_t * track_defaults_section,
-                      bg_cfg_section_t * encoder_section)
+                      gavl_dictionary_t * track_defaults_section,
+                      gavl_dictionary_t * encoder_section)
   {
   int i;
   const char * disk_name;
@@ -471,10 +471,10 @@ static void set_track(bg_transcoder_track_t * track,
   const gavl_dictionary_t * global_metadata;
 
   /* Create sections */
-  bg_cfg_section_t * general_section_cfg;
-  bg_cfg_section_t * general_section_dst;
-  bg_cfg_section_t * filter_section;
-  bg_cfg_section_t * textrenderer_section;
+  gavl_dictionary_t * general_section_cfg;
+  gavl_dictionary_t * general_section_dst;
+  gavl_dictionary_t * filter_section;
+  gavl_dictionary_t * textrenderer_section;
   gavl_dictionary_t * sec;
   
   const gavl_dictionary_t * track_info = gavl_get_track(media_info, track_index);
@@ -586,8 +586,8 @@ static void set_track(bg_transcoder_track_t * track,
 
 gavl_array_t *
 bg_transcoder_track_create(const char * url,
-                           bg_cfg_section_t * track_defaults_section,
-                           bg_cfg_section_t * encoder_section)
+                           gavl_dictionary_t * track_defaults_section,
+                           gavl_dictionary_t * encoder_section)
   {
   int i;
   
@@ -662,8 +662,8 @@ bg_transcoder_track_create(const char * url,
 gavl_array_t *
 bg_transcoder_track_create_from_urilist(const char * list,
                                         int len,
-                                        bg_cfg_section_t * track_defaults_section,
-                                        bg_cfg_section_t * encoder_section)
+                                        gavl_dictionary_t * track_defaults_section,
+                                        gavl_dictionary_t * encoder_section)
   {
   int i;
   char ** uri_list;

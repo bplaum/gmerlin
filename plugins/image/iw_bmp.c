@@ -123,15 +123,15 @@ static int write_header_bmp(void * priv, const char * filename,
   
   /* open file */
   bmp->bmp_file = fopen(real_filename,"wb");
-  free(real_filename);
   
   if(!bmp->bmp_file)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s: %s",
            real_filename, strerror(errno));
+    free(real_filename);
     return 0;
     }
-
+  free(real_filename);
   
   /* set header */
   bmp->type = 19778;                    /* 19228 = BM */

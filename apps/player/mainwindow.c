@@ -97,7 +97,7 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if(w == win->close_button)
     {
-    gtk_main_quit();
+    bg_gtk_quit();
     }
   else if(w == win->menu_button)
     {
@@ -321,33 +321,6 @@ static gboolean button_press_event(GtkWidget* self, GdkEventButton * evt,
     }
   else if(self == w->volume_slider)
     w->volume_active = 1;
-  else if(self == w->mode_box)
-    {
-    gavl_value_t val;
-    gavl_msg_t * msg;
-
-    gavl_value_init(&val);
-    gavl_value_set_int(&val, 1); // Toggle
-    
-    msg = bg_msg_sink_get(w->player_ctrl.cmd_sink);
-
-    gavl_msg_set_state(msg,
-                       BG_CMD_SET_STATE_REL,
-                     1,
-                     BG_PLAYER_STATE_CTX,
-                     BG_PLAYER_STATE_MODE,
-                     &val);
-    
-    bg_msg_sink_put(w->player_ctrl.cmd_sink);
-    return TRUE;
-    }
-  else if(self == w->time_box)
-    {
-    w->display_mode++;
-    if(w->display_mode >= NUM_DISPLAY_MODES)
-      w->display_mode = DISPLAY_MODE_NORMAL;
-    set_display_mode(w);
-    }
   return FALSE;
   }
 
@@ -933,7 +906,7 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
               break;
               }
             case ACCEL_QUIT:
-              gtk_main_quit();
+              bg_gtk_quit();
               return 0;
               break;
             case ACCEL_CURRENT_TO_FAVOURITES:
@@ -968,15 +941,59 @@ static gboolean idle_callback(gpointer data)
   return TRUE;
   }
 
+static void mode_pressed(GtkGestureMultiPress *gesture,
+                         int                   n_press,
+                         double                x,
+                         double                y,
+                         gpointer              user_data)
+  {
+  main_window_t * w = user_data;
+
+  gavl_value_t val;
+  gavl_msg_t * msg;
+  
+  gavl_value_init(&val);
+  gavl_value_set_int(&val, 1); // Toggle
+    
+  msg = bg_msg_sink_get(w->player_ctrl.cmd_sink);
+
+  gavl_msg_set_state(msg,
+                     BG_CMD_SET_STATE_REL,
+                     1,
+                     BG_PLAYER_STATE_CTX,
+                     BG_PLAYER_STATE_MODE,
+                     &val);
+    
+  bg_msg_sink_put(w->player_ctrl.cmd_sink);
+  }
+
+static void time_pressed(GtkGestureMultiPress *gesture,
+                         int                   n_press,
+                         double                x,
+                         double                y,
+                         gpointer              user_data)
+  {
+  main_window_t * w = user_data;
+
+  w->display_mode++;
+  if(w->display_mode >= NUM_DISPLAY_MODES)
+    w->display_mode = DISPLAY_MODE_NORMAL;
+  set_display_mode(w);
+  
+  }
+
+
+
 void main_window_init(main_window_t * ret, gmerlin_t * g)
   {
   GtkWidget * main_grid;
   GtkWidget * subgrid;
   GtkWidget * subsubgrid;
-
   GtkWidget * headerbar;
   char * path;
 
+  GtkGesture *gesture;
+  
   ret->g = g;
   
   /* Load css stuff */
@@ -1045,12 +1062,17 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
                           "Playback mode\nClick to change",
                           PACKAGE);
 
-  gtk_widget_set_events(ret->mode_box, GDK_BUTTON_PRESS_MASK);
-  g_signal_connect(G_OBJECT(ret->mode_box), "button-press-event", G_CALLBACK(button_press_event), ret);
+  gesture = gtk_gesture_multi_press_new(ret->mode_box);
+  g_signal_connect(G_OBJECT(gesture), "pressed", G_CALLBACK(mode_pressed), ret);
+  
+  
+  //  gtk_widget_add_controller(ret->mode_box, GTK_EVENT_CONTROLLER(gesture));
+  
   gtk_container_add(GTK_CONTAINER(ret->mode_box), ret->mode_label);
   gtk_widget_set_hexpand(ret->mode_box, FALSE);
   gtk_widget_set_vexpand(ret->mode_box, FALSE);
-  gtk_widget_set_halign(ret->mode_box, GTK_ALIGN_START); 
+  gtk_widget_set_halign(ret->mode_label, GTK_ALIGN_START); 
+
   gtk_widget_show(ret->mode_box);
   
   
@@ -1066,8 +1088,11 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   gtk_widget_show(ret->time_label);
   
   ret->time_box = gtk_event_box_new();
-  gtk_widget_set_events(ret->time_box, GDK_BUTTON_PRESS_MASK);
-  g_signal_connect(G_OBJECT(ret->time_box), "button-press-event", G_CALLBACK(button_press_event), ret);
+
+  gesture = gtk_gesture_multi_press_new(ret->time_box);
+  g_signal_connect(G_OBJECT(gesture), "pressed", G_CALLBACK(time_pressed), ret);
+  
+  
   gtk_widget_set_hexpand(ret->time_box, TRUE);
   gtk_widget_set_vexpand(ret->time_box, FALSE);
   gtk_widget_set_halign(ret->time_box, GTK_ALIGN_END); 
@@ -1078,7 +1103,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   gtk_widget_show(ret->time_box);
   gtk_container_add(GTK_CONTAINER(ret->time_box), ret->time_label);
   
-  gtk_grid_attach(GTK_GRID(subsubgrid), ret->time_box, 1, 0, 1, 2);
+  gtk_grid_attach(GTK_GRID(subsubgrid), ret->time_box, 2, 0, 1, 2);
 
   ret->all_label = gtk_label_new("ALL");
   gtk_widget_set_hexpand(ret->all_label, FALSE);
@@ -1087,7 +1112,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
 
   gtk_widget_show(ret->all_label);
   
-  gtk_grid_attach(GTK_GRID(subsubgrid), ret->all_label, 2, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(subsubgrid), ret->all_label, 3, 0, 1, 1);
   
   ret->rem_label = gtk_label_new("REM");
   gtk_widget_set_hexpand(ret->rem_label, FALSE);
@@ -1095,7 +1120,7 @@ void main_window_init(main_window_t * ret, gmerlin_t * g)
   set_css_class(ret->rem_label, ret->skin_provider, NULL, "rem-label");
   gtk_widget_show(ret->rem_label);
   
-  gtk_grid_attach(GTK_GRID(subsubgrid), ret->rem_label, 2, 1, 1, 1);
+  gtk_grid_attach(GTK_GRID(subsubgrid), ret->rem_label, 3, 1, 1, 1);
 
   
   gtk_widget_set_hexpand(subgrid, TRUE);

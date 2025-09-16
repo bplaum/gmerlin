@@ -76,20 +76,20 @@ const bg_parameter_info_t *
 bg_transcoder_track_overlay_get_general_parameters(void);
 
 void bg_transcoder_track_get_encoders(const bg_transcoder_track_t * t,
-                                      bg_cfg_section_t * encoder_section);
+                                      gavl_dictionary_t * encoder_section);
 void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
-                                      const bg_cfg_section_t * encoder_section);
+                                      const gavl_dictionary_t * encoder_section);
 
 gavl_array_t *
 bg_transcoder_track_create(const char * location,
-                           bg_cfg_section_t * section,
-                           bg_cfg_section_t * encoder_section);
+                           gavl_dictionary_t * section,
+                           gavl_dictionary_t * encoder_section);
 
 gavl_array_t *
 bg_transcoder_track_create_from_urilist(const char * list,
                                         int len,
-                                        bg_cfg_section_t * section,
-                                        bg_cfg_section_t * encoder_section);
+                                        gavl_dictionary_t * section,
+                                        gavl_dictionary_t * encoder_section);
 
 
 /* For putting informations into the track list */

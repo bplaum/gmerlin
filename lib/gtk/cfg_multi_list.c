@@ -614,9 +614,7 @@ static void button_callback(GtkWidget * wid, gpointer data)
   bg_dialog_t * dialog;
 
   const char * label;
-  bg_cfg_section_t * subsection;
-  //  bg_cfg_section_t * subsubsection;
-
+  gavl_dictionary_t * subsection;
   w = data;
   priv = w->priv;
   

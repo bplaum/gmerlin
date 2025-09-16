@@ -54,18 +54,20 @@ void bg_gtk_filesel_set_directory(bg_gtk_filesel_t * filesel,
  *  for a file to save something
  *
  *  Return value should be freed with free();
+ *
+ *
+ *  
  */
 
-char * bg_gtk_get_filename_write(const char * title,
-                                 char ** directory,
-                                 int ask_overwrite, GtkWidget * parent);
+void bg_gtk_get_filename_write(const char * title, const char * context,
+                               char ** directory,
+                               int ask_overwrite, GtkWidget * parent, bg_msg_sink_t * sink);
 
-char * bg_gtk_get_filename_read(const char * title,
-                                char ** directory, GtkWidget * parent);
+void  bg_gtk_get_filename_read(const char * title, const char * context,
+                               char ** directory, GtkWidget * parent, bg_msg_sink_t * sink);
 
-char * bg_gtk_get_directory(const char * title,
-                            GtkWidget * parent);
-
+void  bg_gtk_get_directory(const char * title, const char * context,
+                           GtkWidget * parent, bg_msg_sink_t * sink);
 
 #endif // BG_GTK_FILESELECT_H_INCLUDED
 

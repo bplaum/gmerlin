@@ -106,11 +106,6 @@ static void gmerlin_apply_config(gmerlin_t * g)
 
   bg_cfg_section_apply(g->general_section, parameters,
                        gmerlin_set_parameter, (void*)(g));
-#if 0
-  parameters = bg_lcdproc_get_parameters(g->lcdproc);
-  bg_cfg_section_apply(g->lcdproc_section, parameters,
-                       bg_lcdproc_set_parameter, (void*)(g->lcdproc));
-#endif
   parameters = bg_gtk_log_window_get_parameters(g->log_window);
   bg_cfg_section_apply(g->logwindow_section, parameters,
                        bg_gtk_log_window_set_parameter, (void*)(g->log_window));
@@ -121,52 +116,6 @@ static void gmerlin_apply_config(gmerlin_t * g)
 static void gmerlin_apply_state(gmerlin_t * g)
   {
   bg_state_apply(&g->state, g->player_ctrl->cmd_sink, BG_CMD_SET_STATE);
-  }
-
-static void gmerlin_get_config(gmerlin_t * g)
-  {
-  const bg_parameter_info_t * parameters;
-#if 0
-  parameters = display_get_parameters(g->player_window->display);
-
-  bg_cfg_section_apply(g->display_section, parameters,
-                       display_set_parameter, (void*)(g->player_window->display));
-  parameters = bg_media_tree_get_parameters(g->tree);
-  bg_cfg_section_apply(g->tree_section, parameters,
-                       bg_media_tree_set_parameter, (void*)(g->tree));
-
-  parameters = bg_player_get_audio_parameters(g->player);
-  
-  bg_cfg_section_apply(g->audio_section, parameters,
-                       bg_player_set_audio_parameter, (void*)(g->player));
-
-  parameters = bg_player_get_audio_filter_parameters(g->player);
-  
-  bg_cfg_section_apply(g->audio_filter_section, parameters,
-                       bg_player_set_audio_filter_parameter, (void*)(g->player));
-
-  parameters = bg_player_get_video_parameters(g->player);
-  
-  bg_cfg_section_apply(g->video_section, parameters,
-                       bg_player_set_video_parameter, (void*)(g->player));
-
-  parameters = bg_player_get_video_filter_parameters(g->player);
-  
-  bg_cfg_section_apply(g->video_filter_section, parameters,
-                       bg_player_set_video_filter_parameter,
-                       (void*)(g->player));
-  
-  parameters = bg_player_get_subtitle_parameters(g->player);
-  
-  bg_cfg_section_apply(g->subtitle_section, parameters,
-                       bg_player_set_subtitle_parameter, (void*)(g->player));
-#endif
-
-  parameters = gmerlin_get_parameters(g);
-
-  bg_cfg_section_get(g->general_section, parameters,
-                     gmerlin_get_parameter, (void*)(g));
-  
   }
 
 
@@ -556,7 +505,7 @@ static int firstrun(gmerlin_t * g, const char * db_path)
 gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * db_path)
   {
   gmerlin_t * ret;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   char * tmp_string;
   int locked = 0;
   //  gavl_dictionary_t root_metadata;
@@ -573,14 +522,8 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   ret->client_config = bg_server_storage_create(tmp_string, 16, client_config_vars);
   free(tmp_string);
   
-  ret->display_section =
-    bg_cfg_registry_find_section(bg_cfg_registry, "Display");
-  ret->tree_section =
-    bg_cfg_registry_find_section(bg_cfg_registry, "Tree");
   ret->general_section =
     bg_cfg_registry_find_section(bg_cfg_registry, "General");
-  ret->lcdproc_section =
-    bg_cfg_registry_find_section(bg_cfg_registry, "LCDproc");
   ret->remote_section =
     bg_cfg_registry_find_section(bg_cfg_registry, "Remote");
   ret->logwindow_section =
@@ -706,8 +649,6 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
                    "hide",
                    G_CALLBACK(info_hide_callback), ret);
   
-  //  ret->lcdproc = bg_lcdproc_create(ret->player);
-
   bg_http_server_set_generate_client_ids(ret->srv);
   bg_http_server_set_root_file(ret->srv, "/static/app.html");
 
@@ -934,8 +875,6 @@ void gmerlin_run(gmerlin_t * g, const char ** locations,
   
   gtk_main();
   
-  gmerlin_get_config(g);
-
   }
 
 
@@ -996,12 +935,6 @@ void gmerlin_set_parameter(void * data, const char * name,
     }
   }
 
-int gmerlin_get_parameter(void * data, const char * name, gavl_value_t * val)
-  {
-  if(!name)
-    return 0;
-  return 0;
-  }
  
 
 void gmerlin_add_locations(gmerlin_t * g, const char ** locations)

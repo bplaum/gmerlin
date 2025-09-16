@@ -37,7 +37,6 @@ playermsg.h \
 plugin.h \
 pluginfuncs.h \
 pluginregistry.h \
-preset.h \
 recorder.h \
 resourcemanager.h \
 ringbuffer.h \

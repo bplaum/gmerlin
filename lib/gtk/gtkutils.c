@@ -155,6 +155,11 @@ GtkWidget * bg_gtk_window_new(GtkWindowType type)
   return ret;
   }
 
+void bg_gtk_quit()
+  {
+  /* Change this for GtkApplication */
+  gtk_main_quit();
+  }
 
 void bg_gtk_init(int * argc, char *** argv)
   {

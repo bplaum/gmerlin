@@ -322,7 +322,7 @@ void bg_cfg_ctx_set_sink_array(bg_cfg_ctx_t * ctx,
   }
 
 void
-bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx, bg_cfg_section_t * parent)
+bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx, gavl_dictionary_t * parent)
   {
   int i = 0;
   while(ctx[i].p)

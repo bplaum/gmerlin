@@ -32,11 +32,11 @@
 
 typedef struct bg_encoder_s bg_encoder_t;
 
-bg_encoder_t * bg_encoder_create(bg_cfg_section_t * section,
+bg_encoder_t * bg_encoder_create(gavl_dictionary_t * section,
                                  bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask);
 
-const bg_cfg_section_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
+const gavl_dictionary_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
                                                        gavl_stream_type_t type);
 
 const bg_parameter_info_t * bg_encoder_get_stream_parameters(bg_encoder_t * enc,
@@ -72,12 +72,12 @@ int bg_encoder_writes_compressed_overlay(bg_encoder_t * enc,
 /* Add streams */
 int bg_encoder_add_audio_stream(bg_encoder_t *, const gavl_dictionary_t * m,
                                 const gavl_audio_format_t * format,
-                                int index, const bg_cfg_section_t * s);
+                                int index, const gavl_dictionary_t * s);
 
 int bg_encoder_add_video_stream(bg_encoder_t *,
                                 const gavl_dictionary_t * m,
                                 const gavl_video_format_t * format,
-                                int index, const bg_cfg_section_t * s);
+                                int index, const gavl_dictionary_t * s);
 
 int bg_encoder_add_audio_stream_compressed(bg_encoder_t *,
                                            const gavl_dictionary_t * m,
@@ -95,14 +95,14 @@ int bg_encoder_add_video_stream_compressed(bg_encoder_t *,
 int bg_encoder_add_text_stream(bg_encoder_t *,
                                const gavl_dictionary_t * m,
                                int timescale,
-                               int index, const bg_cfg_section_t * s);
+                               int index, const gavl_dictionary_t * s);
 
 int bg_encoder_add_overlay_stream(bg_encoder_t *,
                                   const gavl_dictionary_t * m,
                                   const gavl_video_format_t * format,
                                   int index,
                                   gavl_stream_type_t source_format,
-                                  const bg_cfg_section_t * s);
+                                  const gavl_dictionary_t * s);
 
 int bg_encoder_add_overlay_stream_compressed(bg_encoder_t *,
                                              const gavl_dictionary_t * m,

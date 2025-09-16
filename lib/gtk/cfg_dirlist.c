@@ -202,8 +202,6 @@ filesel_callback(GtkWidget *chooser,
     g_free(tmp_string);
     }
   gtk_widget_hide(chooser);
-  
-  gtk_main_quit();
   }
                              
 static gboolean delete_callback(GtkWidget * w, GdkEventAny * event,
@@ -496,8 +494,6 @@ static void button_callback(GtkWidget * wid, gpointer data)
                      data);
 
     gtk_widget_show(chooser);
-    gtk_main();
-    
     
     }
   else if(wid == priv->remove_button)

@@ -74,25 +74,27 @@ static void set_value_float(bg_gtk_widget_t * w)
   gavl_value_set_float(&w->value, gtk_range_get_value(GTK_RANGE(priv->slider)));
   }
 
-static gboolean button_callback(GtkWidget * wid, GdkEventButton * evt,
-                                gpointer data)
+static void released_callback(GtkGestureMultiPress *gesture,
+                             int                   n_press,
+                             double                x,
+                             double                y,
+                             gpointer              data)
   {
   bg_gtk_widget_t * w;
-    
   w = data;
+
+  //  fprintf(stderr, "released callback %d\n", n_press);
   
-  if(evt->type == GDK_2BUTTON_PRESS)
+  if(n_press == 2)
     {
     gavl_value_copy(&w->value, &w->info->val_default);
-
+    
     if(w->info->type == BG_PARAMETER_SLIDER_FLOAT)
       get_value_float(w);
     else if(w->info->type == BG_PARAMETER_SLIDER_INT)
       get_value_int(w);
-    
-    return TRUE;
     }
-  return FALSE;
+  
   }
 
 static void attach(void * priv, GtkWidget * table, int * row)
@@ -132,6 +134,8 @@ static void create_common(bg_gtk_widget_t * w,
   float step;
   slider_t * s = calloc(1, sizeof(*s));
   int i;
+  GtkGesture *gesture;
+
   s->label = gtk_label_new(TR_DOM(info->long_name));
   step = 1.0;
   for(i = 0; i < info->num_digits; i++)
@@ -160,11 +164,10 @@ static void create_common(bg_gtk_widget_t * w,
     w->callback_widget = s->slider;
     }
   gtk_scale_set_value_pos(GTK_SCALE(s->slider), GTK_POS_LEFT);
-  
-  gtk_widget_set_events(s->slider, GDK_BUTTON_PRESS_MASK);
 
-  g_signal_connect(G_OBJECT(s->slider), "button-press-event",
-                   G_CALLBACK(button_callback), (gpointer)w);
+  gesture = gtk_gesture_multi_press_new(s->slider);
+  g_signal_connect(G_OBJECT(gesture), "released", G_CALLBACK(released_callback), w);
+
   
   gtk_widget_show(s->slider);
   gtk_widget_show(s->label);

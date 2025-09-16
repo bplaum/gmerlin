@@ -23,9 +23,9 @@
 
 typedef struct track_list_s track_list_t;
 
-track_list_t * track_list_create(bg_cfg_section_t * track_defaults_section,
+track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
                                  const bg_parameter_info_t * encoder_parameters,
-                                 bg_cfg_section_t * encoder_section);
+                                 gavl_dictionary_t * encoder_section);
 
 void track_list_destroy(track_list_t *);
 

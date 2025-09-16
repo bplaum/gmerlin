@@ -815,14 +815,6 @@ static int check_plugin_version(void * handle)
   return 1;
   }
 
-static void set_preset_path(bg_parameter_info_t * info, const char * prefix)
-  {
-  //  int i;
-  
-  if(info->type == BG_PARAMETER_SECTION)
-    info->flags |= BG_PARAMETER_GLOBAL_PRESET;
-  info->preset_path = gavl_strrep(info->preset_path, prefix);
-  }
 
 bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin)
   {
@@ -866,7 +858,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
                                              void * plugin_priv,
                                              const char * module_filename)
   {
-  char * prefix;
   bg_plugin_info_t * new_info;
   const bg_parameter_info_t * parameter_info;
   
@@ -880,12 +871,6 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     parameter_info = plugin->get_parameters(plugin_priv);
     if(parameter_info)
       new_info->parameters = bg_parameter_info_copy_array(parameter_info);
-    if(new_info->parameters)
-      {
-      prefix = gavl_sprintf("plugins/%s", new_info->name);
-      set_preset_path(new_info->parameters, prefix);
-      free(prefix);
-      }
     }
 
   if(plugin->get_extensions)
@@ -915,47 +900,23 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
       {
       parameter_info = encoder->get_audio_parameters(plugin_priv);
       new_info->audio_parameters = bg_parameter_info_copy_array(parameter_info);
-      if(new_info->audio_parameters)
-        {
-        prefix = gavl_sprintf("plugins/%s/audio", new_info->name);
-        set_preset_path(new_info->audio_parameters, prefix);
-        free(prefix);
-        }
       }
     
     if(encoder->get_video_parameters)
       {
       parameter_info = encoder->get_video_parameters(plugin_priv);
       new_info->video_parameters = bg_parameter_info_copy_array(parameter_info);
-      if(new_info->video_parameters)
-        {
-        prefix = gavl_sprintf("plugins/%s/video", new_info->name);
-        set_preset_path(new_info->video_parameters, prefix);
-        free(prefix);
-        }
       }
     if(encoder->get_text_parameters)
       {
       parameter_info = encoder->get_text_parameters(plugin_priv);
       new_info->text_parameters = bg_parameter_info_copy_array(parameter_info);
-      if(new_info->text_parameters)
-        {
-        prefix = gavl_sprintf("plugins/%s/text", new_info->name);
-        set_preset_path(new_info->text_parameters, prefix);
-        free(prefix);
-        }
       }
     if(encoder->get_overlay_parameters)
       {
       parameter_info = encoder->get_overlay_parameters(plugin_priv);
       new_info->overlay_parameters =
         bg_parameter_info_copy_array(parameter_info);
-      if(new_info->overlay_parameters)
-        {
-        prefix = gavl_sprintf("plugins/%s/overlay", new_info->name);
-        set_preset_path(new_info->overlay_parameters, prefix);
-        free(prefix);
-        }
       }
     }
   if(plugin->type & BG_PLUGIN_INPUT)
@@ -1073,7 +1034,7 @@ static bg_plugin_info_t * get_info(void * test_module,
 static bg_plugin_info_t *
 scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
                         int * changed,
-                        bg_cfg_section_t * cfg_section, bg_plugin_api_t api)
+                        gavl_dictionary_t * cfg_section, bg_plugin_api_t api)
   {
   bg_plugin_info_t * ret;
   DIR * dir;
@@ -1087,8 +1048,8 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
   bg_plugin_info_t * new_info;
   bg_plugin_info_t * tmp_info;
   
-  bg_cfg_section_t * plugin_section;
-  bg_cfg_section_t * stream_section;
+  gavl_dictionary_t * plugin_section;
+  gavl_dictionary_t * stream_section;
   if(_file_info)
     file_info = *_file_info;
   else
@@ -1251,7 +1212,7 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
 
 static bg_plugin_info_t *
 scan_directory(const char * directory, bg_plugin_info_t ** _file_info,
-               bg_cfg_section_t * cfg_section, bg_plugin_api_t api,
+               gavl_dictionary_t * cfg_section, bg_plugin_api_t api,
                int * reg_changed)
   {
   int changed = 0;
@@ -1299,7 +1260,7 @@ scan_directory(const char * directory, bg_plugin_info_t ** _file_info,
 
 static bg_plugin_info_t * scan_multi(const char * path,
                                      bg_plugin_info_t ** _file_info,
-                                     bg_cfg_section_t * section,
+                                     gavl_dictionary_t * section,
                                      bg_plugin_api_t api,
                                      int * reg_changed)
   {
@@ -1364,7 +1325,7 @@ static bg_plugin_info_t * scan_multi(const char * path,
 
 
 void
-bg_plugin_registry_create_1(bg_cfg_section_t * section)
+bg_plugin_registry_create_1(gavl_dictionary_t * section)
   {
   int i;
   bg_plugin_registry_t * ret;
@@ -1642,11 +1603,11 @@ void bg_plugin_registry_set_priority(bg_plugin_registry_t * reg,
   bg_plugin_registry_save(reg->entries);
   }
 
-bg_cfg_section_t *
+gavl_dictionary_t *
 bg_plugin_registry_get_section(bg_plugin_registry_t * reg,
                                const char * plugin_name)
   {
-  bg_cfg_section_t * section = bg_cfg_registry_find_section(bg_cfg_registry, "plugins");
+  gavl_dictionary_t * section = bg_cfg_registry_find_section(bg_cfg_registry, "plugins");
   return bg_cfg_section_find_subsection(section, plugin_name);
   }
 
@@ -1664,7 +1625,7 @@ void bg_plugin_ref(bg_plugin_handle_t * h)
 
 static void unload_plugin(bg_plugin_handle_t * h)
   {
-  bg_cfg_section_t * section;
+  gavl_dictionary_t * section;
   
   if(h->plugin->get_parameter)
     {
@@ -2317,7 +2278,7 @@ fail:
 static void apply_parameters(bg_plugin_handle_t * ret, const gavl_dictionary_t * user_params)
   {
   const bg_parameter_info_t * parameters;
-  bg_cfg_section_t * section;
+  gavl_dictionary_t * section;
 
   gavl_dictionary_t tmp_section;
 
@@ -3577,14 +3538,6 @@ create_encoder_parameters(const bg_plugin_info_t * info, int stream_params)
   else if(info->parameters)
     ret = bg_parameter_info_copy_array(info->parameters);
 
-  if(ret)
-    {
-    char * tmp_string;
-    ret->flags |= BG_PARAMETER_GLOBAL_PRESET;
-    tmp_string = gavl_sprintf("plugins/%s", info->name);
-    ret->preset_path = gavl_strrep(ret->preset_path, tmp_string);
-    free(tmp_string);
-    }
 
   //  if(!strcmp(info->name, "e_mpeg"))
   //    bg_parameters_dump(ret, "encoder_parameters");
@@ -3824,7 +3777,7 @@ static int find_parameter_input(bg_plugin_registry_t * plugin_reg,
                                 const char * name,
                                 const bg_parameter_info_t ** parameter_info,
                                 bg_plugin_info_t ** plugin_info,
-                                bg_cfg_section_t ** section,
+                                gavl_dictionary_t ** section,
                                 const char ** parameter_name)
   {
   const char * pos1;
@@ -3878,7 +3831,7 @@ void bg_plugin_registry_set_parameter_input(void * data, const char * name,
                                             const gavl_value_t * val)
   {
   bg_plugin_registry_t * plugin_reg = data;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   const bg_parameter_info_t * parameter_info;
   bg_plugin_info_t * plugin_info;
   const char * parameter_name;
@@ -3903,7 +3856,7 @@ int bg_plugin_registry_get_parameter_input(void * data, const char * name,
                                             gavl_value_t * val)
   {
   bg_plugin_registry_t * plugin_reg = data;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   const bg_parameter_info_t * parameter_info;
   bg_plugin_info_t * plugin_info;
   const char * parameter_name;
@@ -4074,14 +4027,10 @@ bg_plugin_registry_create_encoder_parameters(bg_plugin_registry_t * reg,
     i++;
     }
 
-  /* Set preset path */
-  
-  ret[0].preset_path = gavl_strdup("encoders");
-  
   return ret;
   }
 
-static const gavl_value_t * get_encoder_context(const bg_cfg_section_t * s,
+static const gavl_value_t * get_encoder_context(const gavl_dictionary_t * s,
                                                 gavl_stream_type_t stream_type)
   {
   
@@ -4105,7 +4054,7 @@ static const gavl_value_t * get_encoder_context(const bg_cfg_section_t * s,
   }
 
 const char * 
-bg_encoder_section_get_plugin(const bg_cfg_section_t * s,
+bg_encoder_section_get_plugin(const gavl_dictionary_t * s,
                               gavl_stream_type_t stream_type)
   {
   const gavl_value_t * val;
@@ -4125,9 +4074,9 @@ bg_encoder_section_get_plugin(const bg_cfg_section_t * s,
 
 void
 bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
-                                     const bg_cfg_section_t * s,
+                                     const gavl_dictionary_t * s,
                                      gavl_stream_type_t stream_type,
-                                     const bg_cfg_section_t ** section_ret,
+                                     const gavl_dictionary_t ** section_ret,
                                      const bg_parameter_info_t ** params_ret)
   {
   const gavl_value_t * val;
@@ -4164,16 +4113,16 @@ bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
 
 void
 bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
-                                     const bg_cfg_section_t * s,
+                                     const gavl_dictionary_t * s,
                                      gavl_stream_type_t stream_type,
-                                     const bg_cfg_section_t ** section_ret,
+                                     const gavl_dictionary_t ** section_ret,
                                      const bg_parameter_info_t ** params_ret)
   {
   const gavl_value_t * val = NULL;
   
   const char * plugin_name;
   const bg_plugin_info_t * info;
-  const bg_cfg_section_t * subsection = NULL;
+  const gavl_dictionary_t * subsection = NULL;
   
   plugin_name =
     bg_encoder_section_get_plugin(s, stream_type);
@@ -4337,7 +4286,7 @@ bg_plugin_registry_set_compressor_parameter(bg_plugin_registry_t * plugin_reg,
 
 gavl_codec_id_t
 bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
-                                     bg_cfg_section_t * section)
+                                     gavl_dictionary_t * section)
   {
   const bg_plugin_info_t * info;
   const char * codec = NULL;
@@ -5102,7 +5051,7 @@ bg_plugin_registry_t * bg_plugin_reg = NULL;
 
 void bg_plugins_init()
   {
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   
   if(bg_plugin_reg)
     return;

@@ -59,7 +59,7 @@
  *  Opaque container for configuration data and child sections
  */
 
-typedef gavl_dictionary_t bg_cfg_section_t;
+// typedef gavl_dictionary_t bg_cfg_section_t;
 
 /** \ingroup cfg_registry
  *  \brief Configuration registry
@@ -115,7 +115,7 @@ void bg_cfg_registry_save_to(const bg_cfg_registry_t * reg, const char * filenam
  *  See the libxml2 documentation for more infos
  */
 
-void bg_cfg_section_2_xml(const bg_cfg_section_t * section, xmlNodePtr xml_section);
+void bg_cfg_section_2_xml(const gavl_dictionary_t * section, xmlNodePtr xml_section);
 
 /** \ingroup cfg_section
  *  \brief Convert libxml2 node into a configuration section
@@ -127,7 +127,7 @@ void bg_cfg_section_2_xml(const bg_cfg_section_t * section, xmlNodePtr xml_secti
  */
 
 void bg_cfg_xml_2_section(xmlDocPtr xml_doc, xmlNodePtr xml_section,
-                          bg_cfg_section_t * section);
+                          gavl_dictionary_t * section);
 
 /** \ingroup cfg_section
  *  \brief Dump a config section to a file
@@ -137,7 +137,7 @@ void bg_cfg_xml_2_section(xmlDocPtr xml_doc, xmlNodePtr xml_section,
  *  Used for debugging
  */
 
-void bg_cfg_section_dump(bg_cfg_section_t * section, const char * filename);
+void bg_cfg_section_dump(gavl_dictionary_t * section, const char * filename);
 
 /*
  *  Path looks like "section:subsection:subsubsection"
@@ -154,7 +154,7 @@ void bg_cfg_section_dump(bg_cfg_section_t * section, const char * filename);
  *  missing parent sections).
  */
 
-bg_cfg_section_t * bg_cfg_registry_find_section(bg_cfg_registry_t * reg,
+gavl_dictionary_t * bg_cfg_registry_find_section(bg_cfg_registry_t * reg,
                                                 const char * path);
 
 /** \ingroup cfg_section
@@ -166,10 +166,10 @@ bg_cfg_section_t * bg_cfg_registry_find_section(bg_cfg_registry_t * reg,
  *  If the child section does not exist, an empty section is created.
  */
 
-bg_cfg_section_t * bg_cfg_section_find_subsection(bg_cfg_section_t * section,
+gavl_dictionary_t * bg_cfg_section_find_subsection(gavl_dictionary_t * section,
                                                   const char * name);
 
-void bg_cfg_section_delete_subsection_by_name(bg_cfg_section_t * section,
+void bg_cfg_section_delete_subsection_by_name(gavl_dictionary_t * section,
                                               const char * name);
 
 /** \ingroup cfg_section
@@ -180,7 +180,7 @@ void bg_cfg_section_delete_subsection_by_name(bg_cfg_section_t * section,
  */
 
 
-const bg_cfg_section_t * bg_cfg_section_find_subsection_c(const bg_cfg_section_t * s,
+const gavl_dictionary_t * bg_cfg_section_find_subsection_c(const gavl_dictionary_t * s,
                                                           const char * name);
 
 #if 0
@@ -191,7 +191,7 @@ const bg_cfg_section_t * bg_cfg_section_find_subsection_c(const bg_cfg_section_t
  *  \returns Configuration section
  */
 
-bg_cfg_section_t * bg_cfg_section_create_subsection_at_pos(bg_cfg_section_t * section,
+gavl_dictionary_t * bg_cfg_section_create_subsection_at_pos(gavl_dictionary_t * section,
                                                            int pos);
 
 /** \ingroup cfg_section
@@ -201,7 +201,7 @@ bg_cfg_section_t * bg_cfg_section_create_subsection_at_pos(bg_cfg_section_t * se
  *  \param pos New position of the subsection (starting with 0)
  */
 
-void bg_cfg_section_move_child(bg_cfg_section_t * section, bg_cfg_section_t * child,
+void bg_cfg_section_move_child(gavl_dictionary_t * section, gavl_dictionary_t * child,
                                int pos);
 
 #endif
@@ -216,7 +216,7 @@ void bg_cfg_section_move_child(bg_cfg_section_t * section, bg_cfg_section_t * ch
  *  \returns Configuration section
  */
 
-bg_cfg_section_t * bg_cfg_section_create(const char * name);
+gavl_dictionary_t * bg_cfg_section_create(const char * name);
 
 /** \ingroup cfg_section
  *  \brief Create a config section from a parameter array
@@ -229,7 +229,7 @@ bg_cfg_section_t * bg_cfg_section_create(const char * name);
  *  array.
  */
 
-bg_cfg_section_t *
+gavl_dictionary_t *
 bg_cfg_section_create_from_parameters(const char * name,
                                       const bg_parameter_info_t * parameters);
 
@@ -242,7 +242,7 @@ bg_cfg_section_create_from_parameters(const char * name,
  *  entries with the values set to their defaults
  */
 
-void bg_cfg_section_create_items(bg_cfg_section_t * section,
+void bg_cfg_section_create_items(gavl_dictionary_t * section,
                                  const bg_parameter_info_t * parameters);
 
 /** \ingroup cfg_section
@@ -250,7 +250,7 @@ void bg_cfg_section_create_items(bg_cfg_section_t * section,
  *  \param section Configuration section
  */
 
-void bg_cfg_section_destroy(bg_cfg_section_t * section);
+void bg_cfg_section_destroy(gavl_dictionary_t * section);
 
 /** \ingroup cfg_section
  *  \brief Duplicate a configuration section 
@@ -258,7 +258,7 @@ void bg_cfg_section_destroy(bg_cfg_section_t * section);
  *  \returns A newly allocated section with all values copied from src.
  */
 
-bg_cfg_section_t * bg_cfg_section_copy(const bg_cfg_section_t * src);
+gavl_dictionary_t * bg_cfg_section_copy(const gavl_dictionary_t * src);
 
 /** \ingroup cfg_section
  *  \brief Set values in a configuration section from another section
@@ -270,7 +270,7 @@ bg_cfg_section_t * bg_cfg_section_copy(const bg_cfg_section_t * src);
  *  done for all children of src.
  */
 
-void bg_cfg_section_transfer(bg_cfg_section_t * src, bg_cfg_section_t * dst);
+void bg_cfg_section_transfer(gavl_dictionary_t * src, gavl_dictionary_t * dst);
 
 /*
  *  Get/Set section names
@@ -282,7 +282,7 @@ void bg_cfg_section_transfer(bg_cfg_section_t * src, bg_cfg_section_t * dst);
  *  \returns The name
  */
 
-const char * bg_cfg_section_get_name(bg_cfg_section_t * section);
+const char * bg_cfg_section_get_name(gavl_dictionary_t * section);
 
 #define bg_cfg_section_set_parameter_int(s,n,v)    gavl_dictionary_set_int(s,n,v)
 #define bg_cfg_section_set_parameter_float(s,n,v)  gavl_dictionary_set_float(s,n,v)
@@ -303,7 +303,7 @@ const char * bg_cfg_section_get_name(bg_cfg_section_t * section);
  *  from the parameter description.
  */
 
-void bg_cfg_section_set_parameter(bg_cfg_section_t * section,
+void bg_cfg_section_set_parameter(gavl_dictionary_t * section,
                                   const bg_parameter_info_t * info,
                                   const gavl_value_t * value);
 
@@ -324,7 +324,7 @@ void bg_cfg_section_set_parameter_func(void * data,
  *  \todo Document syntax for all parameter types
  */
 
-int bg_cfg_section_set_parameters_from_string(bg_cfg_section_t * section,
+int bg_cfg_section_set_parameters_from_string(gavl_dictionary_t * section,
                                               const bg_parameter_info_t * info,
                                               const char * str);
 
@@ -338,11 +338,11 @@ int bg_cfg_section_set_parameters_from_string(bg_cfg_section_t * section,
  *  from the parameter description.
  */
 
-void bg_cfg_section_get_parameter(bg_cfg_section_t * section,
+void bg_cfg_section_get_parameter(gavl_dictionary_t * section,
                                   const bg_parameter_info_t * info,
                                   gavl_value_t * value);
 
-const gavl_value_t * bg_cfg_section_get_parameter_c(const bg_cfg_section_t * section,
+const gavl_value_t * bg_cfg_section_get_parameter_c(const gavl_dictionary_t * section,
                                                             const char * name);
 
 
@@ -354,15 +354,15 @@ const gavl_value_t * bg_cfg_section_get_parameter_c(const bg_cfg_section_t * sec
  *  If the subsection if no child of section, this function does nothing.
  */
 
-void bg_cfg_section_delete_subsection(bg_cfg_section_t * section,
-                                      bg_cfg_section_t * subsection);
+void bg_cfg_section_delete_subsection(gavl_dictionary_t * section,
+                                      gavl_dictionary_t * subsection);
 
 /** \ingroup cfg_section
  *  \brief Delete all subsections
  *  \param section The configuration section
  */
 
-void bg_cfg_section_delete_subsections(bg_cfg_section_t * section);
+void bg_cfg_section_delete_subsections(gavl_dictionary_t * section);
 
 /* Get parameter values, return 0 if no such entry */
 
@@ -374,7 +374,7 @@ void bg_cfg_section_delete_subsections(bg_cfg_section_t * section);
  *  \returns 1 if entry was available, 0 else.
  */ 
 
-int bg_cfg_section_get_parameter_int(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_int(const gavl_dictionary_t * section,
                                       const char * name, int * value);
 
 /** \ingroup cfg_section
@@ -385,7 +385,7 @@ int bg_cfg_section_get_parameter_int(const bg_cfg_section_t * section,
  *  \returns 1 if entry was available, 0 else.
  */ 
 
-int bg_cfg_section_get_parameter_float(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_float(const gavl_dictionary_t * section,
                                        const char * name, float * value);
 
 /** \ingroup cfg_section
@@ -396,7 +396,7 @@ int bg_cfg_section_get_parameter_float(const bg_cfg_section_t * section,
  *  \returns 1 if entry was available, 0 else.
  */ 
 
-int bg_cfg_section_get_parameter_string(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_string(const gavl_dictionary_t * section,
                                         const char * name, const char ** value);
 
 /** \ingroup cfg_section
@@ -407,7 +407,7 @@ int bg_cfg_section_get_parameter_string(const bg_cfg_section_t * section,
  *  \returns 1 if entry was available, 0 else.
  */ 
 
-int bg_cfg_section_get_parameter_time(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_time(const gavl_dictionary_t * section,
                                       const char * name, gavl_time_t * value);
 
 
@@ -425,7 +425,7 @@ int bg_cfg_section_get_parameter_time(const bg_cfg_section_t * section,
  *  data from the section to a module.
  */ 
 
-void bg_cfg_section_apply(const bg_cfg_section_t * section,
+void bg_cfg_section_apply(const gavl_dictionary_t * section,
                           const bg_parameter_info_t * parameters,
                           bg_set_parameter_func_t func,
                           void * callback_data);
@@ -441,7 +441,7 @@ void bg_cfg_section_apply(const bg_cfg_section_t * section,
  *  call func with a NULL name argument at the end.
  */ 
 
-void bg_cfg_section_apply_noterminate(bg_cfg_section_t * section,
+void bg_cfg_section_apply_noterminate(gavl_dictionary_t * section,
                                       const bg_parameter_info_t * infos,
                                       bg_set_parameter_func_t func,
                                       void * callback_data);
@@ -459,7 +459,7 @@ void bg_cfg_section_apply_noterminate(bg_cfg_section_t * section,
  *  has parameters, which are changed internally.
  */ 
 
-void bg_cfg_section_get(bg_cfg_section_t * section,
+void bg_cfg_section_get(gavl_dictionary_t * section,
                         const bg_parameter_info_t * parameters,
                         bg_get_parameter_func_t func,
                         void * callback_data);
@@ -471,7 +471,7 @@ void bg_cfg_section_get(bg_cfg_section_t * section,
  *  \returns 1 if the child section is available, 0 else.
  */ 
 
-int bg_cfg_section_has_subsection(const bg_cfg_section_t * section,
+int bg_cfg_section_has_subsection(const gavl_dictionary_t * section,
                                   const char * name);
 
 /** \ingroup cfg_section
@@ -480,7 +480,7 @@ int bg_cfg_section_has_subsection(const bg_cfg_section_t * section,
  *  \param info Parameter info
  */ 
 
-void bg_cfg_section_restore_defaults(bg_cfg_section_t * section,
+void bg_cfg_section_restore_defaults(gavl_dictionary_t * section,
                                      const bg_parameter_info_t * info);
 
 /* Global init functions */

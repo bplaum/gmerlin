@@ -208,6 +208,12 @@ struct bg_gtk_mdb_tree_s
   bg_msg_sink_t * dlg_sink;
   };
 
+void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
+                                         const char * label,
+                                         const char * klass,
+                                         const char * uri);
+
+
 void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
                                         const char * hash);
 

@@ -47,7 +47,7 @@ bg_controllable_t ctrl;
 
 
 const bg_parameter_info_t * s_params;
-bg_cfg_section_t * s_section = NULL;
+gavl_dictionary_t * s_section = NULL;
 
 bg_websocket_context_t * ctx = NULL;
 

@@ -69,6 +69,9 @@ GAVL_STREAM_OVERLAY;
 
 static const uint32_t plugin_flags = BG_PLUGIN_FILE;
 
+#define CTX_TRACKLIST "tracklist"
+#define CTX_PROFILE   "profile"
+
 struct transcoder_window_s
   {
   GtkWidget * win;
@@ -91,18 +94,15 @@ struct transcoder_window_s
   int show_logwindow;
   
   GtkWidget * progress_bar;
-  //  bg_gtk_time_display_t * time_remaining;
-  //  bg_gtk_scrolltext_t   * scrolltext;
-  
   /* Configuration stuff */
 
   char * output_directory;
   int delete_incomplete;
 
-  bg_cfg_section_t * track_defaults_section;
+  gavl_dictionary_t * track_defaults_section;
 
   bg_parameter_info_t * encoder_parameters;
-  bg_cfg_section_t * encoder_section;
+  gavl_dictionary_t * encoder_section;
     
   /* The actual transcoder */
 
@@ -160,6 +160,10 @@ struct transcoder_window_s
 
   bg_msg_sink_t * msg_sink;
   };
+
+
+static void transcoder_window_save_profile(transcoder_window_t * win,
+                                           const char * file);
 
 
 static int start_transcode(transcoder_window_t * win);
@@ -304,6 +308,48 @@ static int handle_msg(void * data, gavl_msg_t * msg)
 
   switch(msg->NS)
     {
+    case GAVL_MSG_NS_GUI:
+      switch(msg->ID)
+        {
+        case GAVL_MSG_GUI_FILE_LOAD:
+          {
+          const char * ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          const char * uri = gavl_msg_get_arg_string_c(msg, 0);
+          if(!ctx || !uri)
+            return 1;
+          
+          if(!strcmp(ctx, CTX_PROFILE))
+            {
+            transcoder_window_load_profile(win, uri);
+            }
+          else if(!strcmp(ctx, CTX_TRACKLIST))
+            {
+            track_list_load(win->tracklist, uri);
+            }
+          
+          }
+          break;
+        case GAVL_MSG_GUI_FILE_SAVE:
+          {
+          const char * ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          const char * uri = gavl_msg_get_arg_string_c(msg, 0);
+          if(!ctx || !uri)
+            return 1;
+
+          if(!strcmp(ctx, CTX_PROFILE))
+            {
+            transcoder_window_save_profile(win, uri);
+            }
+          else if(!strcmp(ctx, CTX_TRACKLIST))
+            {
+            track_list_save(win->tracklist, uri);
+            }
+          
+          }
+          break;
+        }
+      break;
+    
     case BG_MSG_NS_TRANSCODER:
       
       switch(msg->ID)
@@ -409,7 +455,7 @@ static gboolean idle_callback(gpointer data)
 
 static int start_transcode(transcoder_window_t * win)
   {
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
 
   
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "output");
@@ -459,7 +505,7 @@ static int start_transcode(transcoder_window_t * win)
 void transcoder_window_load_profile(transcoder_window_t * win,
                                     const char * file)
   {
-  bg_cfg_section_t * s;
+  gavl_dictionary_t * s;
   bg_cfg_registry_load(bg_cfg_registry, file);
   s = bg_cfg_section_create_from_parameters("encoders", win->encoder_parameters);
   bg_cfg_section_transfer(s, win->encoder_section);
@@ -475,7 +521,6 @@ static void transcoder_window_save_profile(transcoder_window_t * win,
 static void button_callback(GtkWidget * w, gpointer data)
   {
   transcoder_window_t * win = data;
-  char * tmp_string;
   
   if((w == win->run_button) || (w == win->actions_menu.run_item))
     {
@@ -504,50 +549,30 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if((w == win->load_button) || (w == win->file_menu.load_item))
     {
-    tmp_string = bg_gtk_get_filename_read(TR("Load task list"),
-                                          &win->task_path, win->load_button);
-    if(tmp_string)
-      {
-      track_list_load(win->tracklist, tmp_string);
-      free(tmp_string);
-      }
+    bg_gtk_get_filename_read(TR("Load task list"), CTX_TRACKLIST,
+                                          &win->task_path, win->load_button, win->msg_sink);
     }
   else if((w == win->save_button) || (w == win->file_menu.save_item))
     {
-    tmp_string = bg_gtk_get_filename_write(TR("Save task list"),
+    bg_gtk_get_filename_write(TR("Save task list"), CTX_TRACKLIST,
                                            &win->task_path, 1,
-                                           win->save_button);
-    if(tmp_string)
-      {
-      track_list_save(win->tracklist, tmp_string);
-      free(tmp_string);
-      }
+                                           win->save_button, win->msg_sink);
     }
   else if(w == win->options_menu.load_item)
     {
-    tmp_string = bg_gtk_get_filename_read(TR("Load profile"),
-                                          &win->profile_path, win->win);
-    if(tmp_string)
-      {
-      transcoder_window_load_profile(win, tmp_string);
-      free(tmp_string);
-      }
+    bg_gtk_get_filename_read(TR("Load profile"), CTX_PROFILE,
+                                          &win->profile_path, win->win, win->msg_sink);
     }
   else if(w == win->options_menu.save_item)
     {
-    tmp_string = bg_gtk_get_filename_write(TR("Save profile"),
+    bg_gtk_get_filename_write(TR("Save profile"), CTX_PROFILE,
                                            &win->profile_path, 1,
-                                           win->win);
-    if(tmp_string)
-      {
-      transcoder_window_save_profile(win, tmp_string);
-      free(tmp_string);
-      }
+                                           win->win, win->msg_sink);
     }
   else if((w == win->quit_button) || (w == win->file_menu.quit_item))
     {
     gtk_widget_hide(win->win);
-    gtk_main_quit();
+    bg_gtk_quit();
     }
   else if((w == win->properties_button) || (w == win->options_menu.config_item))
     {
@@ -604,7 +629,7 @@ static gboolean delete_callback(GtkWidget * w, GdkEvent * evt,
   {
   transcoder_window_t * win = data;
   gtk_widget_hide(win->win);
-  gtk_main_quit();
+  bg_gtk_quit();
   return TRUE;
   }
 
@@ -739,7 +764,7 @@ transcoder_window_t * transcoder_window_create()
   GtkWidget * frame;
   GtkWidget * box;
   transcoder_window_t * ret;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
 
   gavl_dictionary_t * enc_section;
   
@@ -939,7 +964,7 @@ transcoder_window_t * transcoder_window_create()
 
 void transcoder_window_destroy(transcoder_window_t* w)
   {
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   
   bg_parameter_info_destroy_array(w->encoder_parameters);
   
@@ -1016,7 +1041,7 @@ static const bg_parameter_info_t image_reader_parameters[] =
 static void transcoder_window_preferences(transcoder_window_t * w)
   {
   bg_dialog_t * dlg;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   void * parent;
 
   bg_audio_filter_chain_t * ac;

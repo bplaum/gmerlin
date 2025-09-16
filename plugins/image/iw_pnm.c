@@ -109,15 +109,16 @@ static int write_header_pnm(void * priv, const char * filename,
     }
   
   p->output = fopen(real_filename,"wb");
-  free(real_filename);
   
   if(!p->output)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s: %s",
            real_filename, strerror(errno));
+    free(real_filename);
     return 0;
     }
- 
+  free(real_filename);
+  
 
   if(p->binary)
     {

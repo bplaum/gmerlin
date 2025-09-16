@@ -50,7 +50,6 @@ typedef struct
 struct dialog_section_s
   {
   bg_set_parameter_func_t set_param;
-  bg_get_parameter_func_t get_param;
   
   void * callback_data;
 
@@ -58,7 +57,7 @@ struct dialog_section_s
   int num_widgets;
 
   const bg_parameter_info_t * infos;
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   
   /* Dialog sections can be nested */
   struct dialog_section_s ** children;

@@ -35,8 +35,8 @@
 bg_video_filter_chain_t * fc;
 
 const bg_parameter_info_t * fv_parameters;
-bg_cfg_section_t * fv_section = NULL;
-bg_cfg_section_t * opt_section = NULL;
+gavl_dictionary_t * fv_section = NULL;
+gavl_dictionary_t * opt_section = NULL;
 
 bg_gavl_video_options_t opt;
 

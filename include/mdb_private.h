@@ -236,7 +236,7 @@ struct bg_mdb_s
   bg_http_server_t * srv;
   
   bg_cfg_registry_t * cfg_reg;
-  bg_cfg_section_t * section; // mdb
+  gavl_dictionary_t * section; // mdb
 
   bg_parameter_info_t * parameters;
 

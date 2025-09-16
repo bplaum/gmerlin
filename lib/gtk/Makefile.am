@@ -36,7 +36,6 @@ cfg_stringlist.c \
 cfg_time.c \
 chapterdialog.c \
 dictview.c \
-display.c \
 driveselect.c \
 fileselect.c \
 fileentry.c \
@@ -44,7 +43,6 @@ gtkutils.c \
 logwindow.c \
 mdb_list.c \
 mdb_tree.c \
-message.c \
 multiinfo.c \
 textview.c \
 trackinfo.c \

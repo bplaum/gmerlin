@@ -756,13 +756,13 @@ char ** bg_cmdline_get_locations_from_args(int * argc, char *** _argv)
   }
 
 
-int bg_cmdline_apply_options(bg_cfg_section_t * section,
+int bg_cmdline_apply_options(gavl_dictionary_t * section,
                              bg_set_parameter_func_t set_parameter,
                              void * data,
                              const bg_parameter_info_t * parameters,
                              const char * option_string)
   {
-  bg_cfg_section_t * section_priv = NULL;
+  gavl_dictionary_t * section_priv = NULL;
 
   if(!section)
     {

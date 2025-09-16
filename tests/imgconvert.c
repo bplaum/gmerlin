@@ -40,7 +40,7 @@ bg_parameter_info_t conversion_parameters[] =
     { /* End of parameters */ }
   };
 
-bg_cfg_section_t * conversion_section = NULL;
+gavl_dictionary_t * conversion_section = NULL;
 bg_gavl_video_options_t vopt;
 
 gavl_pixelformat_t force_pixelformat = GAVL_PIXELFORMAT_NONE;

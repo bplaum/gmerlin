@@ -368,8 +368,6 @@ static const bg_input_plugin_t multi_plugin =
       .destroy =        destroy_multi,
 
       .get_controllable = get_controllable_multi,
-      //      .get_parameters = get_parameters_edl,
-      //      .set_parameter =  set_parameter_edl
     },
     .get_media_info = get_media_info_multi,
     

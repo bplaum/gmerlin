@@ -174,7 +174,6 @@ static bg_parameter_info_t info_1[] =
       .flags =     PARAMETER_FLAGS,
       .val_default = GAVL_VALUE_INIT_INT(1),
       .help_string = "Checkbutton help",
-      .preset_path = "test1",
     },
     {
       .name =        "button",
@@ -284,7 +283,6 @@ static bg_parameter_info_t info_2[] =
       .flags =     PARAMETER_FLAGS,
       .val_default = GAVL_VALUE_INIT_COLOR_RGB(0.0, 1.0, 0.0),
       .help_string =   "Color RGB help",
-      .preset_path = "test2",
     },
     {
       .name =      "color_rgba",
@@ -350,7 +348,6 @@ static bg_parameter_info_t info_3[] =
       .multi_descriptions = (char const *[]){ "Multimenu 1", "Multimenu 2", NULL },
       .multi_parameters =   multimenu_parameters,
       .help_string =   "Multimenu help",
-      .preset_path = "test3",
     },
 #if 1
     {
@@ -381,7 +378,6 @@ static bg_parameter_info_t info_4[] =
       .multi_descriptions = (char const *[]){ "Multichain 1", "Multichain 2", NULL },
       .multi_parameters =   multichain_parameters,
       .help_string =        "Multichain help",
-      .preset_path =        "test4",
     },
     { /* End of parameters */ }
   };
@@ -394,7 +390,6 @@ static bg_parameter_info_t info_5[] =
       .type =               BG_PARAMETER_DIRLIST,
       .flags =              PARAMETER_FLAGS,
       .help_string =        "Directory list",
-      .preset_path =        "test5",
     },
     { /* End of parameters */ }
   };
@@ -666,7 +661,8 @@ int main(int argc, char ** argv)
   bg_dialog_set_sink(test_dialog, sink);
   
   bg_dialog_show(test_dialog, NULL);
-
+  gtk_main();
+  
   /* Apply sections */
   fprintf(stderr, "*** Applying section ***\n");  
   bg_cfg_section_apply(cfg_ctx[0].s, info_1,set_parameter,NULL);

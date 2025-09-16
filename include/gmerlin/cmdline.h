@@ -67,7 +67,7 @@ typedef struct
   char ** argv;
 
   /* If non NULL, the parameters are stored here */
-  bg_cfg_section_t * s;
+  gavl_dictionary_t * s;
 
   /* Option refers to a plugin. It will generate a generic help string */
   int plugin_type;
@@ -127,7 +127,7 @@ void bg_cmdline_print_help(char * argv0, bg_help_format_t);
 void bg_cmdline_print_help_parameters(const bg_parameter_info_t * parameters,
                                       bg_help_format_t);
 
-int bg_cmdline_apply_options(bg_cfg_section_t * section,
+int bg_cmdline_apply_options(gavl_dictionary_t * section,
                              bg_set_parameter_func_t set_parameter,
                              void * data,
                              const bg_parameter_info_t * parameters,

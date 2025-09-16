@@ -67,15 +67,12 @@ static void free_string_array(char ** arr)
   free(arr);
   }
 
-void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
-                                const bg_parameter_info_t * src, const char * pfx)
+void bg_parameter_info_copy(bg_parameter_info_t * dst,
+                                const bg_parameter_info_t * src)
   {
   int num_options, i;
 
-  if(pfx)
-    dst->name = gavl_sprintf("%s.%s", pfx, src->name);
-  else
-    dst->name = gavl_strrep(dst->name, src->name);
+  dst->name = gavl_strrep(dst->name, src->name);
   
   dst->long_name = gavl_strrep(dst->long_name, src->long_name);
   dst->help_string = gavl_strrep(dst->help_string, src->help_string);
@@ -84,7 +81,6 @@ void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
 
   dst->gettext_domain    = gavl_strrep(dst->gettext_domain,    src->gettext_domain);
   dst->gettext_directory = gavl_strrep(dst->gettext_directory, src->gettext_directory);
-  dst->preset_path       = gavl_strrep(dst->preset_path,       src->preset_path);
 
   gavl_value_copy(&dst->val_default, &src->val_default);
   
@@ -136,7 +132,7 @@ void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
             {
             if(src->multi_parameters[i])
               dst->multi_parameters_nc[i] =
-                bg_parameter_info_copy_array_pfx(src->multi_parameters[i], pfx);
+                bg_parameter_info_copy_array(src->multi_parameters[i]);
             i++;
             }
           }
@@ -168,14 +164,9 @@ void bg_parameter_info_copy_pfx(bg_parameter_info_t * dst,
   bg_parameter_info_set_const_ptrs(dst);
   }
 
-void bg_parameter_info_copy(bg_parameter_info_t * dst,
-                            const bg_parameter_info_t * src)
-  {
-  bg_parameter_info_copy_pfx(dst, src, NULL);
-  }
 
 bg_parameter_info_t *
-bg_parameter_info_copy_array_pfx(const bg_parameter_info_t * src, const char * pfx)
+bg_parameter_info_copy_array(const bg_parameter_info_t * src)
   {
   int num_parameters, i;
   bg_parameter_info_t * ret;
@@ -188,16 +179,11 @@ bg_parameter_info_copy_array_pfx(const bg_parameter_info_t * src, const char * p
   ret = calloc(num_parameters + 1, sizeof(bg_parameter_info_t));
   
   for(i = 0; i < num_parameters; i++)
-    bg_parameter_info_copy_pfx(&ret[i], &src[i], pfx);
+    bg_parameter_info_copy(&ret[i], &src[i]);
   
   return ret;
   }
 
-bg_parameter_info_t *
-bg_parameter_info_copy_array(const bg_parameter_info_t * src)
-  {
-  return bg_parameter_info_copy_array_pfx(src, NULL);
-  }
 
 void bg_parameter_info_free(bg_parameter_info_t * info)
   {
@@ -212,8 +198,6 @@ void bg_parameter_info_free(bg_parameter_info_t * info)
     free(info->gettext_domain);
   if(info->gettext_directory)
     free(info->gettext_directory);
-  if(info->preset_path)
-    free(info->preset_path);
 
   gavl_value_free(&info->val_min);
   gavl_value_free(&info->val_max);

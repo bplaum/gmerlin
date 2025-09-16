@@ -15,7 +15,6 @@ if HAVE_GTK
 gtk_programs = \
 cfgtest \
 mdb-tree \
-message \
 chapter
 else
 gtk_programs =
@@ -126,13 +125,6 @@ mdb_tree_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 chapter_SOURCES = chapter.c
 chapter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
-
-
-# visualization_SOURCES = visualization.c
-# visualization_LDADD = ../lib/libgmerlin.la
-
-message_SOURCES = message.c
-message_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
 resource_SOURCES = resource.c
 resource_LDADD = ../lib/libgmerlin.la

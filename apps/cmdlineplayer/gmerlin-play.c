@@ -308,7 +308,7 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
-  bg_cfg_section_t * cfg_section;
+  gavl_dictionary_t * cfg_section;
   
   gavl_array_init(&fe_arr);
   bg_frontend_set_option(&fe_arr, "console");

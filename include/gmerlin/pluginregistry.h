@@ -244,7 +244,7 @@ struct bg_plugin_handle_s
  */
 
 void
-bg_plugin_registry_create_1(bg_cfg_section_t * section);
+bg_plugin_registry_create_1(gavl_dictionary_t * section);
 
 /** \ingroup plugin_registry
  * \brief Create a plugin registry with options
@@ -256,7 +256,7 @@ bg_plugin_registry_create_1(bg_cfg_section_t * section);
  */
 
 // void
-// bg_plugin_registry_create_with_options(bg_cfg_section_t * section,
+// bg_plugin_registry_create_with_options(gavl_dictionary_t * section,
 //                                       const bg_plugin_registry_options_t * opt);
 
 
@@ -532,7 +532,7 @@ void bg_plugin_registry_set_priority(bg_plugin_registry_t * reg,
  *  \param plugin_name Short name of the plugin
  *  \returns The config section belonging to the plugin or NULL
  */
-bg_cfg_section_t *
+gavl_dictionary_t *
 bg_plugin_registry_get_section(bg_plugin_registry_t * reg,
                                const char * plugin_name);
 
@@ -652,7 +652,7 @@ bg_plugin_registry_set_compressor_parameter(bg_plugin_registry_t * plugin_reg,
 
 gavl_codec_id_t
 bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
-                                     bg_cfg_section_t * section);
+                                     gavl_dictionary_t * section);
   
 
 /** \ingroup plugin_registry
@@ -665,7 +665,7 @@ bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
  */
 
 const char * 
-bg_encoder_section_get_plugin(const bg_cfg_section_t * s,
+bg_encoder_section_get_plugin(const gavl_dictionary_t * s,
                               gavl_stream_type_t stream_type);
 
 /** \ingroup plugin_registry
@@ -681,9 +681,9 @@ bg_encoder_section_get_plugin(const bg_cfg_section_t * s,
   
 void
 bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
-                                     const bg_cfg_section_t * s,
+                                     const gavl_dictionary_t * s,
                                      gavl_stream_type_t stream_type,
-                                     const bg_cfg_section_t ** section_ret,
+                                     const gavl_dictionary_t ** section_ret,
                                      const bg_parameter_info_t ** params_ret);
 
 /** \ingroup plugin_registry
@@ -698,9 +698,9 @@ bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
 
 void
 bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
-                                     const bg_cfg_section_t * s,
+                                     const gavl_dictionary_t * s,
                                      gavl_stream_type_t stream_type,
-                                     const bg_cfg_section_t ** section_ret,
+                                     const gavl_dictionary_t ** section_ret,
                                      const bg_parameter_info_t ** params_ret);
 
 

@@ -234,9 +234,16 @@ response_callback(GtkWidget *chooser,
       break;
     }
   
-  //  gtk_main_quit();
   }
 
+static gboolean idle_func(gpointer user_data)
+  {
+  bg_gtk_drivesel_t * d = user_data;
+  
+  bg_msg_sink_iteration(d->res_sink);
+  
+  return TRUE;
+  }
 
 bg_gtk_drivesel_t *
 bg_gtk_drivesel_create(const char * title,
@@ -337,17 +344,12 @@ bg_gtk_drivesel_create(const char * title,
   ret->res_sink = bg_msg_sink_create(handle_msg, ret, 0);
   
   bg_msg_hub_connect_sink(resman->evt_hub, ret->res_sink);
+
+  ret->idle_tag = g_timeout_add(100, idle_func, ret);
+  
   return ret;
   }
 
-static gboolean idle_func(gpointer user_data)
-  {
-  bg_gtk_drivesel_t * d = user_data;
-  
-  bg_msg_sink_iteration(d->res_sink);
-  
-  return TRUE;
-  }
 
 
 /* Destroy driveselector */
@@ -364,13 +366,6 @@ void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel)
 void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal)
   {
   gtk_window_set_modal(GTK_WINDOW(drivesel->dialog), modal);
-  drivesel->idle_tag = g_timeout_add(100, idle_func, drivesel);
   gtk_widget_show(drivesel->dialog);
   
-  if(modal)
-    {
-    gtk_main();
-    g_source_remove(drivesel->idle_tag);
-    drivesel->idle_tag = 0;
-    }
   }

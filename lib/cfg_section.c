@@ -32,14 +32,14 @@
 #include <registry_priv.h>
 #include <gmerlin/utils.h>
 
-bg_cfg_section_t * bg_cfg_section_create(const char * name)
+gavl_dictionary_t * bg_cfg_section_create(const char * name)
   {
-  bg_cfg_section_t * ret = calloc(1, sizeof(*ret));
+  gavl_dictionary_t * ret = calloc(1, sizeof(*ret));
   gavl_dictionary_set_string(ret, BG_CFG_TAG_NAME, name);
   return ret;
   }
 
-bg_cfg_section_t * bg_cfg_section_find_subsection(bg_cfg_section_t * s,
+gavl_dictionary_t * bg_cfg_section_find_subsection(gavl_dictionary_t * s,
                                                   const char * name)
   {
   s = gavl_dictionary_get_dictionary_create(s, BG_CFG_TAG_CHILDREN);
@@ -48,7 +48,7 @@ bg_cfg_section_t * bg_cfg_section_find_subsection(bg_cfg_section_t * s,
   return s;
   }
 
-void bg_cfg_section_delete_subsection_by_name(bg_cfg_section_t * s,
+void bg_cfg_section_delete_subsection_by_name(gavl_dictionary_t * s,
                                               const char * name)
   {
   if((s = gavl_dictionary_get_dictionary_nc(s, BG_CFG_TAG_CHILDREN)))
@@ -56,7 +56,7 @@ void bg_cfg_section_delete_subsection_by_name(bg_cfg_section_t * s,
   return;
   }
 
-const bg_cfg_section_t * bg_cfg_section_find_subsection_c(const bg_cfg_section_t * s,
+const gavl_dictionary_t * bg_cfg_section_find_subsection_c(const gavl_dictionary_t * s,
                                                           const char * name)
   {
   if((s = gavl_dictionary_get_dictionary(s, BG_CFG_TAG_CHILDREN)) &&
@@ -65,7 +65,7 @@ const bg_cfg_section_t * bg_cfg_section_find_subsection_c(const bg_cfg_section_t
   return NULL;
   }
 
-int bg_cfg_section_has_subsection(const bg_cfg_section_t * s,
+int bg_cfg_section_has_subsection(const gavl_dictionary_t * s,
                                   const char * name)
   {
   if((s = gavl_dictionary_get_dictionary(s, BG_CFG_TAG_CHILDREN)) &&
@@ -74,7 +74,7 @@ int bg_cfg_section_has_subsection(const bg_cfg_section_t * s,
   return 0;
   }
 
-gavl_value_t * bg_cfg_section_find_item(bg_cfg_section_t * section,
+gavl_value_t * bg_cfg_section_find_item(gavl_dictionary_t * section,
                                          const bg_parameter_info_t * info)
   {
   gavl_value_t * ret;
@@ -121,13 +121,13 @@ gavl_value_t * bg_cfg_section_find_item(bg_cfg_section_t * section,
   return ret;
   }
 
-static gavl_value_t * find_item_nocreate(bg_cfg_section_t * section,
+static gavl_value_t * find_item_nocreate(gavl_dictionary_t * section,
                                           const bg_parameter_info_t * info)
   {
   return gavl_dictionary_get_nc(section, info->name);
   }
 
-static const gavl_value_t * find_item_c(const bg_cfg_section_t * section,
+static const gavl_value_t * find_item_c(const gavl_dictionary_t * section,
                                          const bg_parameter_info_t * info)
   {
   return gavl_dictionary_get(section, info->name);
@@ -137,7 +137,7 @@ static const gavl_value_t * find_item_c(const bg_cfg_section_t * section,
  *  Get/Set values
  */
 
-void bg_cfg_section_set_parameter(bg_cfg_section_t * section,
+void bg_cfg_section_set_parameter(gavl_dictionary_t * section,
                                   const bg_parameter_info_t * info,
                                   const gavl_value_t * value)
   {
@@ -262,7 +262,7 @@ static int check_option(const bg_parameter_info_t * info,
 
 /* Returns characters read or 0 */
 int
-bg_cfg_section_set_parameters_from_string(bg_cfg_section_t * sec,
+bg_cfg_section_set_parameters_from_string(gavl_dictionary_t * sec,
                                           const bg_parameter_info_t * parameters,
                                           const char * str_start)
   {
@@ -274,8 +274,8 @@ bg_cfg_section_set_parameters_from_string(bg_cfg_section_t * sec,
   const bg_parameter_info_t * info;
   char * real_section_name;
   
-  bg_cfg_section_t * real_section;
-  bg_cfg_section_t * subsection;
+  gavl_dictionary_t * real_section;
+  gavl_dictionary_t * subsection;
   
   const char * str = str_start;
   
@@ -582,7 +582,7 @@ bg_cfg_section_set_parameters_from_string(bg_cfg_section_t * sec,
   }
 
 
-void bg_cfg_section_get_parameter(bg_cfg_section_t * section,
+void bg_cfg_section_get_parameter(gavl_dictionary_t * section,
                                   const bg_parameter_info_t * info,
                                   gavl_value_t * value)
   {
@@ -595,19 +595,19 @@ void bg_cfg_section_get_parameter(bg_cfg_section_t * section,
   gavl_value_copy(value, item);
   }
 
-const gavl_value_t * bg_cfg_section_get_parameter_c(const bg_cfg_section_t * section,
+const gavl_value_t * bg_cfg_section_get_parameter_c(const gavl_dictionary_t * section,
                                                             const char * name)
   {
   return gavl_dictionary_get(section, name);
   }
 
-void bg_cfg_section_destroy(bg_cfg_section_t * s)
+void bg_cfg_section_destroy(gavl_dictionary_t * s)
   {
   gavl_dictionary_free(s);
   free(s);
   }
 
-static void do_apply(const bg_cfg_section_t * section,
+static void do_apply(const gavl_dictionary_t * section,
                      const bg_parameter_info_t * infos,
                      bg_set_parameter_func_t func,
                      void * callback_data, int terminate)
@@ -665,7 +665,7 @@ static void do_apply(const bg_cfg_section_t * section,
     func(callback_data, NULL, NULL);
   }
 
-void bg_cfg_section_apply(const bg_cfg_section_t * section,
+void bg_cfg_section_apply(const gavl_dictionary_t * section,
                           const bg_parameter_info_t * infos,
                           bg_set_parameter_func_t func,
                           void * callback_data)
@@ -673,7 +673,7 @@ void bg_cfg_section_apply(const bg_cfg_section_t * section,
   do_apply(section, infos, func, callback_data, 1);
   }
 
-void bg_cfg_section_apply_noterminate(bg_cfg_section_t * section,
+void bg_cfg_section_apply_noterminate(gavl_dictionary_t * section,
                                       const bg_parameter_info_t * infos,
                                       bg_set_parameter_func_t func,
                                       void * callback_data)
@@ -681,7 +681,7 @@ void bg_cfg_section_apply_noterminate(bg_cfg_section_t * section,
   do_apply(section, infos, func, callback_data, 0);
   }
 
-void bg_cfg_section_get(bg_cfg_section_t * section,
+void bg_cfg_section_get(gavl_dictionary_t * section,
                         const bg_parameter_info_t * infos,
                         bg_get_parameter_func_t func,
                         void * callback_data)
@@ -707,13 +707,13 @@ void bg_cfg_section_get(bg_cfg_section_t * section,
 
 /* Get parameter values, return 0 if no such entry */
 
-int bg_cfg_section_get_parameter_int(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_int(const gavl_dictionary_t * section,
                                      const char * name, int * value)
   {
   return gavl_dictionary_get_int(section, name, value);
   }
 
-int bg_cfg_section_get_parameter_float(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_float(const gavl_dictionary_t * section,
                                        const char * name, float * value)
   {
   double val_dbl = 0.0;
@@ -726,7 +726,7 @@ int bg_cfg_section_get_parameter_float(const bg_cfg_section_t * section,
     return 0;
   }
 
-int bg_cfg_section_get_parameter_string(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_string(const gavl_dictionary_t * section,
                                         const char * name,
                                         const char ** value)
   {
@@ -736,7 +736,7 @@ int bg_cfg_section_get_parameter_string(const bg_cfg_section_t * section,
     return 0;
   }
 
-int bg_cfg_section_get_parameter_time(const bg_cfg_section_t * section,
+int bg_cfg_section_get_parameter_time(const gavl_dictionary_t * section,
                                       const char * name, gavl_time_t * value)
   
   {
@@ -745,20 +745,20 @@ int bg_cfg_section_get_parameter_time(const bg_cfg_section_t * section,
 
 /* Copy one config section to another */
 
-bg_cfg_section_t * bg_cfg_section_copy(const bg_cfg_section_t * src)
+gavl_dictionary_t * bg_cfg_section_copy(const gavl_dictionary_t * src)
   {
-  bg_cfg_section_t * ret = calloc(1, sizeof(*ret));
+  gavl_dictionary_t * ret = calloc(1, sizeof(*ret));
   gavl_dictionary_copy(ret, src);
   return ret;
   }
 
-void bg_cfg_section_transfer(bg_cfg_section_t * src, bg_cfg_section_t * dst)
+void bg_cfg_section_transfer(gavl_dictionary_t * src, gavl_dictionary_t * dst)
   {
   /* Copy items */
   gavl_dictionary_copy(dst, src);
   }
 
-const char * bg_cfg_section_get_name(bg_cfg_section_t * s)
+const char * bg_cfg_section_get_name(gavl_dictionary_t * s)
   {
   if(!s)
     return NULL;
@@ -766,24 +766,24 @@ const char * bg_cfg_section_get_name(bg_cfg_section_t * s)
   }
 
 
-bg_cfg_section_t *
+gavl_dictionary_t *
 bg_cfg_section_create_from_parameters(const char * name,
                                       const bg_parameter_info_t * parameters)
   {
-  bg_cfg_section_t * ret;
+  gavl_dictionary_t * ret;
   ret = bg_cfg_section_create(name);
   bg_cfg_section_create_items(ret, parameters);
   return ret;
   }
 
-static void create_items(bg_cfg_section_t * section,
+static void create_items(gavl_dictionary_t * section,
                          const bg_parameter_info_t * info, int stop_at_section)
   {
   int i;
   int j;
 
-  bg_cfg_section_t * subsection;
-  bg_cfg_section_t * subsubsection;
+  gavl_dictionary_t * subsection;
+  gavl_dictionary_t * subsubsection;
 
   i = 0;
 
@@ -848,14 +848,14 @@ static void create_items(bg_cfg_section_t * section,
     }
   }
 
-void bg_cfg_section_create_items(bg_cfg_section_t * section,
+void bg_cfg_section_create_items(gavl_dictionary_t * section,
                                  const bg_parameter_info_t * info)
   {
   create_items(section, info, 0);
   }
 
-void bg_cfg_section_delete_subsection(bg_cfg_section_t * section,
-                                      bg_cfg_section_t * subsection)
+void bg_cfg_section_delete_subsection(gavl_dictionary_t * section,
+                                      gavl_dictionary_t * subsection)
   {
   const char * name;
   if(!(section = gavl_dictionary_get_dictionary_create(section, BG_CFG_TAG_CHILDREN)) ||
@@ -864,19 +864,19 @@ void bg_cfg_section_delete_subsection(bg_cfg_section_t * section,
   gavl_dictionary_set(section, name, NULL);
   }
 
-void bg_cfg_section_delete_subsections(bg_cfg_section_t * section)
+void bg_cfg_section_delete_subsections(gavl_dictionary_t * section)
   {
   if(gavl_dictionary_set(section, BG_CFG_TAG_CHILDREN, NULL))
     return;
   }
 
-void bg_cfg_section_restore_defaults(bg_cfg_section_t * s,
+void bg_cfg_section_restore_defaults(gavl_dictionary_t * s,
                                      const bg_parameter_info_t * info)
   {
   gavl_value_t * item;
   int i;
-  bg_cfg_section_t * subsection;
-  bg_cfg_section_t * subsubsection;
+  gavl_dictionary_t * subsection;
+  gavl_dictionary_t * subsubsection;
   
   while(info->name)
     {

@@ -25,7 +25,7 @@
 
 /* Create an empty item */
 
-gavl_value_t * bg_cfg_section_find_item(bg_cfg_section_t * section,
+gavl_value_t * bg_cfg_section_find_item(gavl_dictionary_t * section,
                                          const bg_parameter_info_t * info);
 
 #define BG_CFG_REGISTRY_INFO "$INFO"

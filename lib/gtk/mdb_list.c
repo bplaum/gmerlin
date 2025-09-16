@@ -1383,9 +1383,9 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
       gavl_msg_set_id_ns(msg, BG_CMD_DB_SORT, BG_MSG_NS_DB);
 
       if(tree->menu_ctx.a)
-        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, tree->menu_ctx.a->id);
+        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
       else if(tree->menu_ctx.item)
-        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(tree->menu_ctx.item));
+        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
       
       bg_msg_sink_put(sink);
       }
@@ -2484,10 +2484,10 @@ static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
   }
 
 
-static void create_container_generic(bg_gtk_mdb_tree_t * tree,
-                                     const char * label,
-                                     const char * klass,
-                                     const char * uri)
+void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
+                                         const char * label,
+                                         const char * klass,
+                                         const char * uri)
   {
   gavl_msg_t * msg;
   gavl_dictionary_t * c;
@@ -2595,21 +2595,14 @@ static void create_container(bg_gtk_mdb_tree_t * tree)
     {
     if(!label)
       label = "Unnamed";
-    create_container_generic(tree, label, klass, NULL);
+    bg_gtk_mdb_create_container_generic(tree, label, klass, NULL);
     }
   gavl_dictionary_free(&dict);
   }
 
 static void create_directory(bg_gtk_mdb_tree_t * tree)
   {
-  char * uri = bg_gtk_get_directory("Add directory",
-                                    bg_gtk_get_toplevel(tree->treeview));
-
-  if(!uri)
-    return;
-  
-  create_container_generic(tree, NULL, GAVL_META_CLASS_DIRECTORY, uri);
-  free(uri);
+  bg_gtk_get_directory("Add directory", NULL, tree->treeview, tree->dlg_sink);
   }
 
 static void load_uri(bg_gtk_mdb_tree_t * tree)

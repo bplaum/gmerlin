@@ -276,12 +276,10 @@ static void button_callback(GtkWidget * w, gpointer data)
   if(w == win->ok_button)
     {
     win->is_ok = 1;
-    gtk_main_quit();
     gtk_widget_hide(win->window);
     }
   else if((w == win->cancel_button) || (w == win->window))
     {
-    gtk_main_quit();
     gtk_widget_hide(win->window);
     win->is_ok = 0;
     }
@@ -490,7 +488,6 @@ void bg_gtk_chapter_dialog_show(gavl_chapter_list_t ** list,
                                  GTK_WINDOW(parent));
   
   gtk_widget_show(dlg->window);
-  gtk_main();
 
   if(dlg->is_ok)
     {

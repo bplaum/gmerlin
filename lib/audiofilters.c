@@ -195,7 +195,6 @@ static const bg_parameter_info_t params[] =
     {
       .name      = BG_FILTER_CHAIN_PARAM_PLUGINS,
       .long_name = TRS("Audio Filters"),
-      .preset_path = "audiofilters",
       .gettext_domain = PACKAGE,
       .gettext_directory = LOCALE_DIR,
       .type = BG_PARAMETER_MULTI_CHAIN,

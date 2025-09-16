@@ -2002,34 +2002,22 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
   
   switch(msg->NS)
     {
+    case GAVL_MSG_NS_GUI:
+      {
+      switch(msg->ID)
+        {
+        case GAVL_MSG_GUI_DIRECTORY:
+          {
+          bg_gtk_mdb_create_container_generic(tree, NULL, GAVL_META_CLASS_DIRECTORY,
+                                              gavl_msg_get_arg_string_c(msg, 0));
+          }
+          break;
+        }
+      }
     case BG_MSG_NS_DIALOG:
       {
       switch(msg->ID)
         {
-#if 0
-        case BG_MSG_DIALOG_CLOSED:
-          {
-          const char * ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-          
-          if(!strcmp(ctx_id, CTX_FILESELECT))
-            {
-            gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 1);
-            gtk_widget_set_sensitive(t->add_file_button, 1);
-            t->filesel = NULL;
-            }
-          else if(!strcmp(ctx_id, CTX_URLSELECT))
-            {
-            
-            }
-          else if(!strcmp(ctx_id, CTX_DRIVESELECT))
-            {
-            gtk_widget_set_sensitive(t->add_drives_button, 1);
-            gtk_widget_set_sensitive(t->menu.add_menu.add_drives_item, 1);
-            
-            }
-          }
-          break;
-#endif
         case BG_MSG_DIALOG_ADD_LOCATIONS:
           {
           gavl_array_t arr;

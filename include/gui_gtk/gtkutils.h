@@ -140,6 +140,10 @@ GtkWidget * bg_gtk_dict_view_get_widget(bg_gtk_dict_view_t * w);
 void bg_gtk_dict_view_set_dict(bg_gtk_dict_view_t * w, const gavl_dictionary_t * dict);
 void bg_gtk_dict_view_destroy(bg_gtk_dict_view_t * w);
 
+void bg_gtk_quit();
+
+// #define BG_GTK_ACTION_FUNC(name, ns, id)
+  
 
 #endif // BG_GTKUTILS_H_INCLUDED
 

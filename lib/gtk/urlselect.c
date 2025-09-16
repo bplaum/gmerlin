@@ -42,8 +42,6 @@ struct bg_gtk_urlsel_s
 
   bg_msg_sink_t * sink;
   const char * ctx;
-  
-  int is_modal;
   };
 
 static void
@@ -78,8 +76,6 @@ response_callback(GtkWidget *chooser,
       {
       //      fprintf(stderr, "Close\n");
       gtk_widget_hide(f->dialog);
-      if(f->is_modal)
-        gtk_main_quit();
       
       msg = bg_msg_sink_get(f->sink);
       gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
@@ -88,8 +84,6 @@ response_callback(GtkWidget *chooser,
       }
       break;
     }
-  
-  //  gtk_main_quit();
   }
 
 
@@ -160,9 +154,4 @@ void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal)
   {
   gtk_window_set_modal(GTK_WINDOW(urlsel->dialog), modal);
   gtk_widget_show(urlsel->dialog);
-  
-  urlsel->is_modal = modal;
-  if(modal)
-    gtk_main();
-  
   }
