@@ -518,7 +518,7 @@ void bg_player_set_status(bg_player_t * player, int status)
 const bg_parameter_info_t *
 bg_player_get_visualization_parameters(bg_player_t *  player)
   {
-  return bg_visualizer_get_parameters(player->visualizer);
+  return bg_visualizer_get_parameters();
   }
 
 void
