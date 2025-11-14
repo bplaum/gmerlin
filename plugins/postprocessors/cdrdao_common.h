@@ -80,7 +80,7 @@
 
 typedef struct bg_cdrdao_s bg_cdrdao_t;
 
-bg_cdrdao_t * bg_cdrdao_create();
+bg_cdrdao_t * bg_cdrdao_create(void);
 void bg_cdrdao_destroy(bg_cdrdao_t *);
 void bg_cdrdao_set_callbacks(bg_cdrdao_t *, bg_e_pp_callbacks_t * callbacks);
 

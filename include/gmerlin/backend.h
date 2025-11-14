@@ -70,7 +70,7 @@ char * bg_make_backend_id(const char * klass);
 
 /* Gmerlin backends */
 
-void * bg_backend_gmerlin_create();
+void * bg_backend_gmerlin_create(void);
 void bg_backend_gmerlin_destroy(void *);
 int bg_backend_gmerlin_open(void *, const char * uri);
 bg_controllable_t * bg_backend_gmerlin_get_controllable(void *);

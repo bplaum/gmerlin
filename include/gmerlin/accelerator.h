@@ -46,7 +46,7 @@ void
 bg_accelerator_map_destroy(bg_accelerator_map_t * m);
 
 bg_accelerator_map_t *
-bg_accelerator_map_create();
+bg_accelerator_map_create(void);
 
 void
 bg_accelerator_map_remove(bg_accelerator_map_t * m, int id);

@@ -41,7 +41,7 @@
 
 #define TR_DOM(str) dgettext((translation_domain ? translation_domain : PACKAGE), str)
 
-void bg_translation_init();
+void bg_translation_init(void);
 
 void bg_bindtextdomain(const char * domainname, const char * dirname);
 

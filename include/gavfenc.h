@@ -26,7 +26,7 @@
 
 bg_plugin_info_t * bg_gavfenc_info(bg_plugin_registry_t * reg);
 
-const bg_plugin_common_t * bg_gavfenc_get();
+const bg_plugin_common_t * bg_gavfenc_get(void);
 
 void * bg_gavfenc_create(bg_plugin_registry_t * reg);
 

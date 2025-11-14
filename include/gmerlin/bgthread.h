@@ -29,7 +29,7 @@ typedef struct bg_thread_s        bg_thread_t;
 
 
 bg_thread_common_t *
-bg_thread_common_create();
+bg_thread_common_create(void);
 
 void bg_thread_common_destroy(bg_thread_common_t * com);
 

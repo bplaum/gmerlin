@@ -57,7 +57,7 @@ void bg_gtk_tooltips_set_tip(GtkWidget * w, const char * str,
                              const char * translation_domain);
 
 void bg_gtk_set_tooltips(int enable);
-int bg_gtk_get_tooltips();
+int bg_gtk_get_tooltips(void);
 
 GtkWidget * bg_gtk_get_toplevel(GtkWidget * w);
 
@@ -73,7 +73,7 @@ int bg_gtk_widget_is_toplevel(GtkWidget * w);
 void bg_gtk_widget_set_can_default(GtkWidget *w, gboolean can_default);
 void bg_gtk_widget_set_can_focus(GtkWidget *w, gboolean can_focus);
 
-GtkWidget * bg_gtk_combo_box_new_text();
+GtkWidget * bg_gtk_combo_box_new_text(void);
 void bg_gtk_combo_box_append_text(GtkWidget *combo_box, const gchar *text);
 void bg_gtk_combo_box_remove_text(GtkWidget * b, int index);
 
@@ -139,12 +139,12 @@ int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
 
 typedef struct bg_gtk_dict_view_s bg_gtk_dict_view_t;
 
-bg_gtk_dict_view_t * bg_gtk_dict_view_create();
+bg_gtk_dict_view_t * bg_gtk_dict_view_create(void);
 GtkWidget * bg_gtk_dict_view_get_widget(bg_gtk_dict_view_t * w);
 void bg_gtk_dict_view_set_dict(bg_gtk_dict_view_t * w, const gavl_dictionary_t * dict);
 void bg_gtk_dict_view_destroy(bg_gtk_dict_view_t * w);
 
-void bg_gtk_quit();
+void bg_gtk_quit(void);
 GtkWidget * bg_gtk_find_widget_by_name(GtkWidget *parent, const char *name);
 
 int bg_g_value_to_gavl(const GValue * gval, gavl_value_t * gavl, gavl_parameter_type_t type);

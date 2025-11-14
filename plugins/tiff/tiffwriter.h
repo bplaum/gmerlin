@@ -22,7 +22,7 @@
 
 typedef struct bg_tiff_writer_s bg_tiff_writer_t;
 
-bg_tiff_writer_t * bg_tiff_writer_create();
+bg_tiff_writer_t * bg_tiff_writer_create(void);
 
 const bg_parameter_info_t * bg_tiff_writer_get_parameters(void);
 

@@ -26,7 +26,7 @@
 
 typedef struct bg_subtitle_handler_s bg_subtitle_handler_t;
 
-bg_subtitle_handler_t * bg_subtitle_handler_create();
+bg_subtitle_handler_t * bg_subtitle_handler_create(void);
 void bg_subtitle_handler_destroy(bg_subtitle_handler_t *);
 
 void bg_subtitle_handler_init(bg_subtitle_handler_t * h,

@@ -31,7 +31,7 @@ typedef struct bg_volume_manager_s bg_volume_manager_t;
 #define BG_VOLUMEMANAGER_STATE_VOLUMES "volumes"
 
 
-bg_volume_manager_t * bg_volume_manager_create();
+bg_volume_manager_t * bg_volume_manager_create(void);
 void bg_volume_manager_destroy(bg_volume_manager_t *);
 
 bg_msg_hub_t * bg_volume_manager_get_msg_hub(bg_volume_manager_t *);

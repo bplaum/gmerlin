@@ -41,7 +41,7 @@ void bg_frontends_destroy(bg_frontend_t **, int num_frontends);
 
 /* gmerlin frontend */
 int bg_frontend_gmerlin_ping(void * data);
-void * bg_frontend_gmerlin_create();
+void * bg_frontend_gmerlin_create(void);
 void bg_frontend_gmerlin_destroy(void * priv);
 int bg_frontend_gmerlin_open_mdb(void * data, bg_controllable_t * ctrl);
 int bg_frontend_gmerlin_open_renderer(void * data, bg_controllable_t * ctrl);

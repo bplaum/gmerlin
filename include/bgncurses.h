@@ -26,9 +26,9 @@
 
 
 
-int bg_ncurses_init();
+int bg_ncurses_init(void);
 
-int bg_ncurses_cleanup();
+int bg_ncurses_cleanup(void);
 
 void bg_ncurses_process_events(bg_msg_sink_t * sink);
 

@@ -23,7 +23,7 @@
 #ifndef BG_XSPF_H_INCLUDED
 #define BG_XSPF_H_INCLUDED
 
-xmlDocPtr bg_xspf_create();
+xmlDocPtr bg_xspf_create(void);
 
 xmlNodePtr bg_xspf_get_playlist(xmlDocPtr xspf);
 xmlNodePtr bg_xspf_get_tracklist(xmlDocPtr xspf);

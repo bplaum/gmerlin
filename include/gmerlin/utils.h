@@ -117,7 +117,7 @@ int bg_search_file_exec(const char * file, char ** path);
  * list of known webbrowsers.
  */
  
-char * bg_find_url_launcher();
+char * bg_find_url_launcher(void);
 
 /** \brief Display html help
  *  \param path Path
@@ -539,7 +539,7 @@ void bg_metadata_date_now(gavl_dictionary_t * m, const char * key);
 /** \brief Make the current process become a daemon
  */
 
-void bg_daemonize();
+void bg_daemonize(void);
 
 /** \brief Mime types
  */
@@ -601,7 +601,7 @@ void * bg_sha1_buffer(const char *buffer, size_t len, void *resblock);
 
 char * bg_get_chapter_label(int index, int64_t t, int scale, const char * name);
 
-const char * bg_tempdir();
+const char * bg_tempdir(void);
 
 /* Remove file, directories are removed recursively */
 int bg_remove_file(const char * file);
@@ -613,11 +613,11 @@ char * bg_search_application_icon(const char * file, int size);
 
 /* @} */
 
-void bg_sigint_raise();
+void bg_sigint_raise(void);
 
-void bg_handle_sigint();
+void bg_handle_sigint(void);
 
-int bg_got_sigint();
+int bg_got_sigint(void);
 
 
 /* ID3V2 write support.
@@ -655,10 +655,10 @@ extern char const * const bg_language_labels[];
 char * bg_rb_make_uri(const char * station_uuid);
 char * bg_rb_resolve_uri(const char * uri);
 int bg_rb_check_uri(const char * uri);
-char  *bg_get_rb_server();
+char  *bg_get_rb_server(void);
 
 /* Global cleanup function */
-void bg_global_cleanup();
+void bg_global_cleanup(void);
 
 
 #ifdef DEBUG

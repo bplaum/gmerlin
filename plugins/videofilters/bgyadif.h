@@ -22,7 +22,7 @@
 
 typedef struct bg_yadif_s bg_yadif_t;
 
-bg_yadif_t * bg_yadif_create();
+bg_yadif_t * bg_yadif_create(void);
 
 void bg_yadif_destroy(bg_yadif_t * d);
 

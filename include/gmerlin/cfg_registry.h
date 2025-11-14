@@ -76,7 +76,7 @@ typedef gavl_dictionary_t bg_cfg_registry_t;
  *  To free the registry, use \ref bg_cfg_registry_destroy.
  */
 
-// bg_cfg_registry_t * bg_cfg_registry_create_1();
+// bg_cfg_registry_t * bg_cfg_registry_create_1(void);
 
 /** \ingroup cfg_registry
  *  \brief Destroy configuration registry and free all associated memory
@@ -450,7 +450,7 @@ extern bg_cfg_registry_t * bg_cfg_registry;
 
 void bg_cfg_registry_init(const char * dir);
 
-void bg_cfg_registry_cleanup();
+void bg_cfg_registry_cleanup(void);
 
 /* Commandline options for loading and saving the registry from the command line */
 void bg_cfg_registry_opt_sc(void * data, int * argc, char *** _argv, int arg);
@@ -458,7 +458,7 @@ void bg_cfg_registry_opt_sc(void * data, int * argc, char *** _argv, int arg);
 void bg_cfg_registry_opt_c(void * data, int * argc, char *** _argv, int arg);
 
 /* Save config if bg_cfg_registry_opt_sc was called before */
-void bg_cfg_registry_save_config();
+void bg_cfg_registry_save_config(void);
 
 void bg_cfg_section_from_strings(const gavl_dictionary_t * src, gavl_dictionary_t * dst,
                                  const bg_parameter_info_t * info);

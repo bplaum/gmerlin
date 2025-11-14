@@ -43,7 +43,7 @@
 /* Get the process wide resource manager, create a new one if necessary */
   
 
-bg_controllable_t * bg_resourcemanager_get_controllable();
+bg_controllable_t * bg_resourcemanager_get_controllable(void);
 
 gavl_array_t * bg_resourcemanager_get(const char * klass);
 
@@ -62,7 +62,7 @@ void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_ti
 void bg_opt_list_recording_sources(void * data, int * argc, char *** _argv, int arg);
 
 /* Clean up resource manager (usually you don't need to call this) */
-void bg_resourcemanager_cleanup();
+void bg_resourcemanager_cleanup(void);
 
 
 /* To be used by resource plugins (i.e. from the resource detector thread) only */

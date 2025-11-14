@@ -215,7 +215,7 @@ void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t 
 
 typedef struct bg_media_dirs_s bg_media_dirs_t;
 
-bg_media_dirs_t * bg_media_dirs_create();
+bg_media_dirs_t * bg_media_dirs_create(void);
 
 void bg_media_dirs_destroy(bg_media_dirs_t *);
 

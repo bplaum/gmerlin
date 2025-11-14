@@ -112,7 +112,7 @@ void bg_log_remove_dest(bg_msg_sink_t * q);
 
 // void gavl_log_set_verbose_level(int level);
 
-// int gavl_log_get_verbose_level();
+// int gavl_log_get_verbose_level(void);
 
 
 /** \ingroup log
@@ -123,7 +123,7 @@ void bg_log_remove_dest(bg_msg_sink_t * q);
  *  can make sure, that only your thread can trigger an error.
  */
 
-// char * gavl_log_last_error();
+// char * gavl_log_last_error(void);
 
 /** \ingroup log
  *  \brief Initialize syslog logging
@@ -137,18 +137,18 @@ void bg_log_syslog_init(const char * name);
  *  \returns The name passed to \ref gavl_log_syslog_init or NULL
  */
 
-const char * bg_log_syslog_name();
+const char * bg_log_syslog_name(void);
 
-void bg_log_stderr_init();
+void bg_log_stderr_init(void);
 
-void bg_log_cleanup();
+void bg_log_cleanup(void);
 
 /** \ingroup log
  *  Flush the log queue, must be done periodically by the
  *  application
  */
 
-// void gavl_log_syslog_flush();
+// void gavl_log_syslog_flush(void);
 
 
 

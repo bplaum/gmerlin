@@ -37,7 +37,7 @@ int bg_x11_grab_window_get_parameter(void * data, const char * name,
                                      gavl_value_t * val);
 
 
-bg_x11_grab_window_t * bg_x11_grab_window_create();
+bg_x11_grab_window_t * bg_x11_grab_window_create(void);
 void bg_x11_grab_window_destroy(bg_x11_grab_window_t *);
 
 int bg_x11_grab_window_init(bg_x11_grab_window_t *, gavl_video_format_t * format);

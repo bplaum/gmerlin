@@ -27,9 +27,9 @@
 
 typedef struct bg_transcoder_s bg_transcoder_t;
 
-bg_transcoder_t * bg_transcoder_create();
+bg_transcoder_t * bg_transcoder_create(void);
 
-const bg_parameter_info_t * bg_transcoder_get_parameters();
+const bg_parameter_info_t * bg_transcoder_get_parameters(void);
 
 void bg_transcoder_set_parameter(void * priv, const char * name,
                                  const gavl_value_t * val);

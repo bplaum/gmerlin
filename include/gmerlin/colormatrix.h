@@ -25,7 +25,7 @@
 
 typedef struct bg_colormatrix_s bg_colormatrix_t;
 
-bg_colormatrix_t * bg_colormatrix_create();
+bg_colormatrix_t * bg_colormatrix_create(void);
 
 void bg_colormatrix_destroy(bg_colormatrix_t *);
 

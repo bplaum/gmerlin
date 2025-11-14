@@ -25,7 +25,7 @@
 
 typedef struct bg_deinterlacer_s bg_deinterlacer_t;
 
-bg_deinterlacer_t * bg_deinterlacer_create();
+bg_deinterlacer_t * bg_deinterlacer_create(void);
 
 void bg_deinterlacer_destroy(bg_deinterlacer_t * d);
 

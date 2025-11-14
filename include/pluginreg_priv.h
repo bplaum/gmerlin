@@ -38,7 +38,7 @@ bg_plugin_info_t * bg_plugin_registry_load(const char * filename);
 void bg_plugin_registry_save(bg_plugin_info_t * info);
 void bg_plugin_info_destroy(bg_plugin_info_t * info);
 
-bg_plugin_info_t * bg_edldec_get_info();
-bg_plugin_info_t * bg_multi_input_get_info();
+bg_plugin_info_t * bg_edldec_get_info(void);
+bg_plugin_info_t * bg_multi_input_get_info(void);
 
 #endif // PLUGINREG_PRIV_H_INCLUDED

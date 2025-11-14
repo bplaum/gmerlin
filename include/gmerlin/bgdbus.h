@@ -169,7 +169,7 @@ void bg_dbus_register_object(bg_dbus_connection_t * conn, const char * path,
 
 void bg_dbus_unregister_object(bg_dbus_connection_t * conn, const char * path, bg_msg_sink_t * sink);
   
-void bg_dbus_cleanup();
+void bg_dbus_cleanup(void);
 
 
 

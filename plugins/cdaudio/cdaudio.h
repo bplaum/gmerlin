@@ -121,7 +121,7 @@ int bg_cdaudio_get_metadata_cdtext(CdIo_t*,
  *  Several versions (cdparanoia, simple linux ripper) can go here
  */
 
-void * bg_cdaudio_rip_create();
+void * bg_cdaudio_rip_create(void);
 
 int bg_cdaudio_rip_init(void *, CdIo_t *cdio, int start_sector);
 
@@ -133,7 +133,7 @@ void bg_cdaudio_rip_seek(void * data, int sector);
 
 void bg_cdaudio_rip_close(void * data);
 
-const bg_parameter_info_t * bg_cdaudio_rip_get_parameters();
+const bg_parameter_info_t * bg_cdaudio_rip_get_parameters(void);
 
 int
 bg_cdaudio_rip_set_parameter(void * data, const char * name,

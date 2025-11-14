@@ -106,7 +106,7 @@
    to let the plugin loader obtain the API version */
 
 #define BG_GET_PLUGIN_API_VERSION \
-  int get_plugin_api_version() __attribute__ ((visibility("default"))); \
+  int get_plugin_api_version(void) __attribute__ ((visibility("default"))); \
   int get_plugin_api_version() { return BG_PLUGIN_API_VERSION; }
 
 #define BG_PLUGIN_PRIORITY_MIN 1

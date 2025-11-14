@@ -695,7 +695,7 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin);
  *  registry. Free the returned info with \ref bg_plugin_unref
  */
 
-bg_plugin_handle_t * bg_plugin_handle_create();
+bg_plugin_handle_t * bg_plugin_handle_create(void);
 
 
 /** \ingroup plugin_registry
@@ -781,8 +781,8 @@ void bg_track_find_subtitles(gavl_dictionary_t * track);
 
 extern bg_plugin_registry_t * bg_plugin_reg;
 
-void bg_plugins_init();
-void bg_plugins_cleanup();
+void bg_plugins_init(void);
+void bg_plugins_cleanup(void);
 
 /* New interface for commandline programs */
 
@@ -977,9 +977,9 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
 char * bg_get_default_sink_uri(int plugin_type);
 
 #define bg_rb_plugin_name "i_rb"
-const bg_plugin_common_t * bg_rb_plugin_get();
-bg_plugin_info_t * bg_rb_plugin_get_info();
-void * bg_rb_plugin_create();
+const bg_plugin_common_t * bg_rb_plugin_get(void);
+bg_plugin_info_t * bg_rb_plugin_get_info(void);
+void * bg_rb_plugin_create(void);
 
 bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type);
 

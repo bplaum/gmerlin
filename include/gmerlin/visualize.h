@@ -43,7 +43,7 @@
 
 typedef struct bg_visualizer_s bg_visualizer_t;
 
-const bg_parameter_info_t * bg_visualizer_get_parameters();
+const bg_parameter_info_t * bg_visualizer_get_parameters(void);
 
 
 bg_visualizer_t * bg_visualizer_create(bg_player_t * p);

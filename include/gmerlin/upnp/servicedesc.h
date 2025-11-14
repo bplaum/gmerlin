@@ -25,7 +25,7 @@
 
 #include <gmerlin/xmlutils.h>
 
-xmlDocPtr bg_upnp_service_description_create();
+xmlDocPtr bg_upnp_service_description_create(void);
 xmlNodePtr bg_upnp_service_description_add_action(xmlDocPtr doc, const char * name);
 
 void bg_upnp_service_action_add_argument(xmlNodePtr node,
