@@ -18,13 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 typedef struct track_dialog_s track_dialog_t;
 
-track_dialog_t * track_dialog_create(bg_transcoder_track_t * t,
-                                     void (*update_callback)(void * priv),
-                                     void * update_priv, int show_tooltips);
+int track_dialog_handle_message(track_list_t * l, gavl_msg_t * msg);
+
+GtkWidget * track_dialog_create(track_list_t * list);
 
 void track_dialog_run(track_dialog_t *, GtkWidget * parent);
 void track_dialog_destroy(track_dialog_t *);

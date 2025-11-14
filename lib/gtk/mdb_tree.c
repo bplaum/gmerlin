@@ -2002,11 +2002,71 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
   
   switch(msg->NS)
     {
+    case BG_MSG_NS_PARAMETER:
+      {
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name = NULL;
+          const char * ctx = NULL;
+          gavl_value_t val;
+          
+          bg_msg_get_parameter_ctx(msg, &ctx, &name, &val);
+
+          if(!ctx)
+            return 1;
+
+          if(name)
+            {
+            gavl_dictionary_set(&tree->dlg_dict, name, &val);
+            return 1;
+            }
+
+          /*
+           *   ctx && !name
+           */
+          
+          if(!strcmp(ctx, MSG_ADD_STREAM))
+            {
+            const char * uri = gavl_dictionary_get_string(&tree->dlg_dict, GAVL_META_URI);
+            const char * label = gavl_dictionary_get_string(&tree->dlg_dict, GAVL_META_LABEL);
+
+            if(uri)
+              {
+              if(label)
+                bg_gtk_mdb_add_stream_source(tree, label, uri);
+              else
+                bg_gtk_mdb_add_stream_source(tree, "New stream source", uri);
+              }
+            
+            }
+          else if(!strcmp(ctx, MSG_ADD_CONTAINER))
+            {
+            const char * klass = gavl_dictionary_get_string(&tree->dlg_dict, GAVL_META_CLASS);
+            const char * label = gavl_dictionary_get_string(&tree->dlg_dict, GAVL_META_LABEL);
+            
+            if(klass)
+              {
+              if(!label)
+                label = "Unnamed";
+              bg_gtk_mdb_create_container_generic(tree, label, klass, NULL);
+              }
+            
+            }
+          
+
+          
+          }
+          break;
+        }
+      }
+      break;
     case GAVL_MSG_NS_GUI:
       {
       switch(msg->ID)
         {
-        case GAVL_MSG_GUI_DIRECTORY:
+        case BG_MSG_DIALOG_DIRECTORY:
           {
           bg_gtk_mdb_create_container_generic(tree, NULL, GAVL_META_CLASS_DIRECTORY,
                                               gavl_msg_get_arg_string_c(msg, 0));
@@ -2042,6 +2102,46 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
             bg_msg_sink_put(sink);
             }
           gavl_array_free(&arr);
+          }
+          break;
+#if 0
+        case BG_MSG_DIALOG_FILE_LOAD:
+          {
+          
+          }
+          break;
+#endif
+        case BG_MSG_DIALOG_FILE_SAVE:
+          {
+          const char * ctx =
+            gavl_dictionary_get_string(&msg->header,
+                                       GAVL_MSG_CONTEXT_ID);
+          if(!ctx)
+            return 1;
+
+          if(!strcmp(ctx, MSG_SAVE_SELECTED))
+            {
+            char * str;
+            int type;
+            const char * filename = gavl_msg_get_arg_string_c(msg, 0);
+            gavl_dictionary_t * selected = bg_gtk_mdb_list_extract_selected(tree->menu_ctx.a);
+            type = gavl_msg_get_arg_int(msg, 1);
+            str = bg_tracks_to_string(selected, type, 1);
+            gavl_dictionary_destroy(selected);
+            bg_write_file(filename, str, strlen(str));
+            free(str);
+            }
+          else if(!strcmp(ctx, MSG_SAVE_ALBUM))
+            {
+            char * str;
+            int type;
+            const char * filename = gavl_msg_get_arg_string_c(msg, 0);
+            type = gavl_msg_get_arg_int(msg, 1);
+            str = bg_tracks_to_string(tree->menu_ctx.album, type, 1);
+            bg_write_file(filename, str, strlen(str));
+            free(str);
+            }
+          
           }
           break;
         }

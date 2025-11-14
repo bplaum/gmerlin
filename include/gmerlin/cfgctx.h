@@ -30,16 +30,23 @@
 
 typedef struct
   {
-  bg_parameter_info_t * p;
+  const bg_parameter_info_t * parameters;
+  bg_parameter_info_t * parameters_priv;
+
   gavl_dictionary_t * s;
   gavl_dictionary_t * s_priv; // Privately owned, will be free()d by bg_cfg_ctx_free
 
+  const gavl_dictionary_t * params;
+  gavl_dictionary_t params_priv;
+  
   bg_set_parameter_func_t set_param;
   void * cb_data;
   char * name;
   char * long_name;
   
   bg_msg_sink_t * sink;
+  bg_msg_sink_t * sink_priv; // Privately owned, will be free()d by bg_cfg_ctx_free
+  
   int msg_id;
 
   } bg_cfg_ctx_t;
@@ -60,14 +67,12 @@ bg_cfg_ctx_t * bg_cfg_ctx_copy_array(const bg_cfg_ctx_t * src);
 
 void bg_cfg_ctx_destroy_array(bg_cfg_ctx_t * ctx);
 
-//void bg_cfg_ctx_set_parameter_array(void * data, const char * name,
-//                                    gavl_value_t * val);
-
 void bg_cfg_ctx_set_parameter(void * data, const char * name,
                               const gavl_value_t * val);
 
 const bg_parameter_info_t *
-bg_cfg_ctx_find_parameter(bg_cfg_ctx_t * arr, const char * ctx, const char * name, bg_cfg_ctx_t ** cfg_ctx);
+bg_cfg_ctx_find_parameter(bg_cfg_ctx_t * arr, const char * ctx, const char * name,
+                          bg_cfg_ctx_t ** cfg_ctx);
 
 bg_cfg_ctx_t * bg_cfg_ctx_find(bg_cfg_ctx_t * arr, const char * ctx);
 
@@ -84,6 +89,8 @@ void bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx,
                                       gavl_dictionary_t * parent);
 
 void bg_cfg_ctx_array_clear_sections(bg_cfg_ctx_t * ctx);
+
+void bg_cfg_ctx_finalize(bg_cfg_ctx_t * ctx);
 
 
 #endif // BG_CFG_CTX_H_INCLUDED

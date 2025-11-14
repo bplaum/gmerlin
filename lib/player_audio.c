@@ -181,11 +181,6 @@ const bg_parameter_info_t * bg_player_get_audio_parameters(bg_player_t * p)
   return parameters;
   }
 
-const bg_parameter_info_t * bg_player_get_audio_filter_parameters(bg_player_t * p)
-  {
-  return bg_audio_filter_chain_get_parameters(p->audio_stream.fc);
-  }
-
 void bg_player_set_audio_parameter(void * data, const char * name,
                                    const gavl_value_t * val)
   {

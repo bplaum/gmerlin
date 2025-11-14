@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -611,7 +609,7 @@ void bg_osd_update(bg_osd_t * osd)
       osd->ovl->duration = osd->p.duration;
       osd->ovl->timestamp = current_time;
       }
-    
+    //    fprintf(stderr, "Put overlay %s\n", osd->ovl);
     gavl_video_sink_put_frame(osd->sink, osd->ovl);
     gavl_packet_free(&osd->p);
     gavl_packet_init(&osd->p);
@@ -623,6 +621,8 @@ void bg_osd_update(bg_osd_t * osd)
     if((osd->p.flags & PACKET_FLAG_CLEAR) ||
        (current_time > osd->ovl->timestamp + osd->ovl->duration))
       {
+      //      fprintf(stderr, "Overlay expired %d\n", osd->p.flags & PACKET_FLAG_CLEAR);
+
       gavl_video_sink_put_frame(osd->sink, NULL);
       osd->ovl = NULL;
       osd->current_osd = OSD_NONE;

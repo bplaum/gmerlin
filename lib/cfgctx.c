@@ -38,7 +38,6 @@ static const bg_parameter_info_t *
 bg_parameter_find_ctx(bg_cfg_ctx_t * ctx,
                       const char * name);
 
-
 void bg_cfg_ctx_init(bg_cfg_ctx_t * ctx,
                      const bg_parameter_info_t * p,
                      const char * name,
@@ -49,7 +48,12 @@ void bg_cfg_ctx_init(bg_cfg_ctx_t * ctx,
   memset(ctx, 0, sizeof(*ctx));
   ctx->name = gavl_strdup(name);
   ctx->long_name = gavl_strdup(long_name);
-  ctx->p = bg_parameter_info_copy_array(p);
+  
+  if(p)
+    {
+    ctx->parameters_priv = bg_parameter_info_copy_array(p);
+    ctx->parameters = ctx->parameters_priv;
+    }
   ctx->set_param = set_param;
   ctx->cb_data = cb_data;
   }
@@ -57,7 +61,7 @@ void bg_cfg_ctx_init(bg_cfg_ctx_t * ctx,
 void bg_cfg_ctx_apply(bg_cfg_ctx_t * ctx)
   {
   bg_cfg_section_apply(ctx->s,
-                       ctx->p,
+                       ctx->parameters,
                        ctx->set_param,
                        ctx->cb_data);
   }
@@ -69,14 +73,19 @@ void bg_cfg_ctx_set_name(bg_cfg_ctx_t * ctx, const char * name)
 
 void bg_cfg_ctx_free(bg_cfg_ctx_t * ctx)
   {
-  if(ctx->p)
-    bg_parameter_info_destroy_array(ctx->p);
+  if(ctx->parameters_priv)
+    bg_parameter_info_destroy_array(ctx->parameters_priv);
   if(ctx->name)
     free(ctx->name);
   if(ctx->long_name)
     free(ctx->long_name);
   if(ctx->s_priv)
     bg_cfg_section_destroy(ctx->s_priv);
+  if(ctx->sink_priv)
+    bg_msg_sink_destroy(ctx->sink_priv);
+
+
+  gavl_dictionary_free(&ctx->params_priv);
   }
 
 void bg_cfg_ctx_copy(bg_cfg_ctx_t * dst, const bg_cfg_ctx_t * src)
@@ -86,8 +95,12 @@ void bg_cfg_ctx_copy(bg_cfg_ctx_t * dst, const bg_cfg_ctx_t * src)
   
   dst->name      = gavl_strdup(src->name);
   dst->long_name = gavl_strdup(src->long_name);
-  
-  dst->p = bg_parameter_info_copy_array(src->p);
+
+  if(src->parameters)
+    {
+    dst->parameters_priv = bg_parameter_info_copy_array(src->parameters);
+    dst->parameters = dst->parameters_priv;
+    }
   dst->set_param = NULL;
   dst->cb_data   = NULL;
   dst->sink      = NULL;
@@ -99,7 +112,7 @@ bg_cfg_ctx_t * bg_cfg_ctx_copy_array(const bg_cfg_ctx_t * src)
   int i;
   int num = 0;
 
-  while(src[num].p)
+  while(src[num].name)
     num++;
 
   ret = calloc(num+1, sizeof(*ret));
@@ -113,7 +126,7 @@ void bg_cfg_ctx_destroy_array(bg_cfg_ctx_t * ctx)
   {
   int i = 0;
   
-  while(ctx[i].p)
+  while(ctx[i].name)
     {
     bg_cfg_ctx_free(&ctx[i]);
     i++;
@@ -125,10 +138,9 @@ bg_cfg_ctx_t * bg_cfg_ctx_find(bg_cfg_ctx_t * arr, const char * ctx)
   {
   int idx = 0;
   
-  while(arr[idx].p)
+  while(arr[idx].name)
     {
-    if(arr[idx].name &&
-       !strcmp(ctx, arr[idx].name))
+    if(!strcmp(ctx, arr[idx].name))
       return arr + idx;
     idx++;
     }
@@ -157,11 +169,11 @@ void bg_cfg_ctx_set_parameter(void * data, const char * name,
     
     if(name && (info = bg_parameter_find_ctx(ctx, name)))
       {
-      bg_msg_set_parameter_ctx(msg, BG_MSG_SET_PARAMETER_CTX, ctx->name, name, val);
+      bg_msg_set_parameter_ctx(msg, BG_CMD_SET_PARAMETER, ctx->name, name, val);
       }
     else
       {
-      bg_msg_set_parameter_ctx(msg, BG_MSG_SET_PARAMETER_CTX, ctx->name, NULL, NULL);
+      bg_msg_set_parameter_ctx(msg, BG_CMD_SET_PARAMETER, ctx->name, NULL, NULL);
       }
     
     bg_msg_sink_put(ctx->sink);
@@ -185,30 +197,21 @@ bg_cfg_ctx_find_parameter(bg_cfg_ctx_t * arr, const char * ctx, const char * nam
   if(cfg_ctx)
     *cfg_ctx = arr;
   
-  return bg_parameter_find(arr->p, name);
+  return bg_parameter_find(arr->parameters, name);
   }
 
 /* Called by frontend */
 void bg_cfg_ctx_apply_array(bg_cfg_ctx_t * ctx)
   {
   int i = 0;
-  while(ctx[i].p)
+  while(ctx[i].name)
     {
     if((ctx[i].set_param || ctx[i].sink) && ctx[i].s)
       {
-#if 0
-      
-      bg_cfg_section_apply_noterminate(ctx[i].s,
-                                       ctx[i].p,
-                                       bg_cfg_ctx_set_parameter,
-                                       &ctx[i]);
-#else
       bg_cfg_section_apply(ctx[i].s,
-                           ctx[i].p,
+                           ctx[i].parameters,
                            bg_cfg_ctx_set_parameter,
                            &ctx[i]);
-#endif
-      
       }
     else
       fprintf(stderr, "Not applying ctx %s\n", ctx[i].name);
@@ -226,12 +229,59 @@ void bg_cfg_ctx_set_cb_array(bg_cfg_ctx_t * ctx,
                              void * cb_data)
   {
   int i = 0;
-  while(ctx[i].p)
+  while(ctx[i].name)
     {
     ctx[i].set_param = set_param;
     ctx[i].cb_data   = cb_data;
     i++;
     }
+  }
+
+#if 0
+static int handle_message(void * data, gavl_msg_t * msg)
+  {
+  bg_cfg_ctx_t * ctx = data;
+  
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_PARAMETER:
+      switch(msg->ID)
+        {
+        case BG_MSG_SET_PARAMETER:
+        case BG_MSG_SET_PARAMETER_CTX:
+          {
+          const char * name;
+          gavl_value_t val;
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+
+          ctx->set_param(ctx->cb_data, name, &val);
+          gavl_value_free(&val);
+          }
+        }
+      break;
+    }
+  
+  return 1;
+  }
+#endif
+
+void bg_cfg_ctx_finalize(bg_cfg_ctx_t * ctx)
+  {
+  if(!ctx->params && ctx->parameters)
+    {
+    gavl_parameter_info_append_static(&ctx->params_priv, ctx->parameters);
+    ctx->params = &ctx->params_priv;
+    }
+
+#if 0  
+  if(ctx->set_param && !ctx->sink)
+    {
+    ctx->sink_priv = bg_msg_sink_create(handle_message, ctx, 1);
+    ctx->sink = ctx->sink_priv;
+    }
+#endif
+  
   }
 
 static const bg_parameter_info_t *
@@ -250,7 +300,7 @@ bg_parameter_find_ctx(bg_cfg_ctx_t * ctx,
     const char * val_str = NULL;
   
     str = gavl_strbreak(name, '.');
-    info = bg_parameter_find(ctx->p, str[0]);
+    info = bg_parameter_find(ctx->parameters, str[0]);
     
     if(info->type == BG_PARAMETER_MULTI_CHAIN)
       {
@@ -294,7 +344,7 @@ bg_parameter_find_ctx(bg_cfg_ctx_t * ctx,
       }
     }
   else
-    ret = bg_parameter_find(ctx->p, name);
+    ret = bg_parameter_find(ctx->parameters, name);
 
   fail:
   
@@ -313,30 +363,29 @@ void bg_cfg_ctx_set_sink_array(bg_cfg_ctx_t * ctx,
                                bg_msg_sink_t * sink)
   {
   int i = 0;
-  while(ctx[i].p)
+  while(ctx[i].parameters)
     {
     ctx[i].sink = sink;
     i++;
     }
-  
   }
 
 void
 bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx, gavl_dictionary_t * parent)
   {
   int i = 0;
-  while(ctx[i].p)
+  while(ctx[i].parameters)
     {
     if(!parent)
       {
-      ctx[i].s_priv = bg_cfg_section_create_from_parameters(ctx[i].name, ctx[i].p);
+      ctx[i].s_priv = bg_cfg_section_create_from_parameters(ctx[i].name, ctx[i].parameters);
       ctx[i].s = ctx[i].s_priv;
       }
     else if(!bg_cfg_section_has_subsection(parent, ctx[i].name))
       {
       ctx[i].s = bg_cfg_section_find_subsection(parent, ctx[i].name);
       /* Set defaults */
-      bg_cfg_section_create_items(ctx[i].s, ctx[i].p);
+      bg_cfg_section_create_items(ctx[i].s, ctx[i].parameters);
       }
     else
       ctx[i].s = bg_cfg_section_find_subsection(parent,ctx[i].name);
@@ -347,7 +396,7 @@ bg_cfg_ctx_array_create_sections(bg_cfg_ctx_t * ctx, gavl_dictionary_t * parent)
 void bg_cfg_ctx_array_clear_sections(bg_cfg_ctx_t * ctx)
   {
   int i = 0;
-  while(ctx[i].p)
+  while(ctx[i].parameters)
     {
     if(ctx[i].s_priv)
       {

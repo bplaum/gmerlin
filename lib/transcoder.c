@@ -704,7 +704,7 @@ static void init_audio_stream(audio_stream_t * ret,
                        set_audio_parameter_general, ret);
 
   bg_cfg_section_apply(bg_transcoder_track_get_cfg_filter(s),
-                       bg_audio_filter_chain_get_parameters(ret->fc),
+                       NULL,
                        bg_audio_filter_chain_set_parameter, ret->fc);
   
   ret->com.in_index = in_index;
@@ -748,7 +748,7 @@ static void init_video_stream(video_stream_t * ret,
                        set_video_parameter_general, ret);
 
   bg_cfg_section_apply(bg_transcoder_track_get_cfg_filter(s),
-                       bg_video_filter_chain_get_parameters(ret->fc),
+                       NULL,
                        bg_video_filter_chain_set_parameter, ret->fc);
   
   ret->com.in_index = in_index;
@@ -2570,8 +2570,7 @@ static int create_output_file_cb(void * priv, const char * filename)
 
 static void create_encoder(bg_transcoder_t * ret)
   {
-  ret->enc = bg_encoder_create(NULL,
-                               ret->transcoder_track,
+  ret->enc = bg_encoder_create(ret->transcoder_track,
                                GAVL_STREAM_AUDIO |
                                GAVL_STREAM_VIDEO |
                                GAVL_STREAM_TEXT |
@@ -2918,7 +2917,7 @@ int bg_transcoder_init(bg_transcoder_t * ret,
     gavl_dictionary_set_string_nocopy(&ret->metadata, GAVL_META_DATE,
                                       gavl_sprintf("%s-99-99", var1));
   
-  bg_transcoder_track_get_duration(track, &duration, NULL);
+  duration = gavl_track_get_duration(track);
 
   if(duration != GAVL_TIME_UNDEFINED)
     gavl_dictionary_set_long(&ret->metadata, GAVL_META_APPROX_DURATION, duration);

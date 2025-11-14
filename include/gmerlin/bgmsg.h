@@ -93,24 +93,14 @@ void bg_msg_set_chain_parameter_ctx(gavl_msg_t * msg,
                                     const char * sub_name,
                                     const gavl_value_t * val);
 
+#if 0
 void bg_msg_set_multi_parameter_ctx(gavl_msg_t * msg,
                                     const char * ctx,
                                     const char * name,
                                     const char * el_name,
                                     const char * sub_name,
                                     const gavl_value_t * val);
-
-/** \brief Set a parameter
- *  \param msg A message
- *  \param type Type of the parameter
- *  \param name Name of the parameter
- *  \param val Value for the parameter
- */
-
-void bg_msg_set_parameter_idx(gavl_msg_t * msg,
-                              const char * name,
-                              const gavl_value_t * val,
-                              int idx);
+#endif
 
 /** \brief Get a parameter
  *  \param msg A message
@@ -154,22 +144,6 @@ void bg_msg_get_multi_parameter_ctx(gavl_msg_t * msg,
                                     const char ** sub_name,
                                     gavl_value_t * val);
 
-
-
-/** \brief Get a parameter
- *  \param msg A message
- *  \param name Name of the parameter
- *  \param type Type of the parameter
- *  \param val Value for the parameter
- *  \param idx Start index
- *
- *  Name and val must be freed when no longer used
- */
-
-void bg_msg_get_parameter_idx(gavl_msg_t * msg,
-                              const char ** name,
-                              gavl_value_t * val,
-                              int idx);
 
 int bg_msg_merge(gavl_msg_t * msg, gavl_msg_t * next);
 
@@ -363,25 +337,20 @@ void bg_control_cleanup(bg_control_t * c);
  *  BG_MSG_NS_PARAMETER
  */
 
+#define BG_MSG_PARAMETER_SUBSECTION "subsection"
+
 /*
     arg0: name  (string)
     arg1: val
  */
 
-#define BG_MSG_SET_PARAMETER           1
+#define BG_CMD_SET_PARAMETER           1
+
 
 /*
-    arg0: ctx   (string)
-    arg1: name  (string)
-    arg2: val
- */
-
-#define BG_MSG_SET_PARAMETER_CTX       2
-
-/*
-    arg0: ctx   (string)
-    arg1: name  (string)
-    arg2: val
+    header context: ctx   (string)
+    arg0: name  (string)
+    arg1 val
  */
 
 #define BG_MSG_PARAMETER_CHANGED_CTX   3
@@ -394,7 +363,7 @@ void bg_control_cleanup(bg_control_t * c);
     arg4: val
  */
 
-#define BG_MSG_SET_CHAIN_PARAMETER_CTX 4
+#define BG_CMD_SET_CHAIN_PARAMETER_CTX  4
 
 /*
     arg0: ctx      (string)
@@ -404,38 +373,13 @@ void bg_control_cleanup(bg_control_t * c);
     arg4: val
  */
 
-#define BG_MSG_SET_MULTI_PARAMETER_CTX  5
-
-
-/*
-   arg0: ID (or NULL)
-   arg1: index (or -1)
-*/   
-
-#define BG_CMD_MENU_ITEM_SELECT          1
+#define BG_CMD_SET_MULTI_PARAMETER_CTX  5
 
 /*
-   arg0: menu ID (or NULL)
-   arg1  ID (or NULL)
-   arg2: index (or -1)
-*/   
+ *  Button pressed
+ */
 
-#define BG_CMD_MENU_ITEM_FIRE            2
-
-/*
-   arg0: menu ID (or NULL)
-   arg1: ID
-   arg2: index
-*/   
-
-#define BG_MSG_MENU_ITEM_SELECTED        101
-
-/*
-   arg0: menu ID (or NULL)
-   arg1: ID
-   arg2: index
-*/   
-#define BG_MSG_MENU_ITEM_FIRED           102
+#define BG_CMD_PARAMETER_BUTTON         6
 
 /* State */
 
@@ -488,8 +432,17 @@ void bg_control_cleanup(bg_control_t * c);
 // BG_MSG_NS_DIALOG
 // GAVL_MSG_CONTEXT_ID must always be the name of the dialog
 
+
+/* Commands */
+
+
 #define BG_MSG_DIALOG_ADD_LOCATIONS      1
 #define BG_MSG_DIALOG_CLOSED             2
+#define BG_MSG_DIALOG_FILE_LOAD          3  // Fileselector callback (arg0: string)
+#define BG_MSG_DIALOG_FILE_SAVE          4  // Fileselector callback (arg0: string)
+#define BG_MSG_DIALOG_DIRECTORY          5  // Fileselector callback (arg0: string)
+#define BG_MSG_DIALOG_URI                6  // uriselector callback (arg0: string)
+
 
 
 /**@} */

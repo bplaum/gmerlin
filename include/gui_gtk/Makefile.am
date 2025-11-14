@@ -5,8 +5,7 @@ aboutwindow.h \
 audio.h \
 backendmenu.h \
 multiinfo.h \
-chapterdialog.h \
-fileentry.h \
+configdialog.h \
 driveselect.h \
 fileselect.h \
 gtkutils.h \

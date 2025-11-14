@@ -74,7 +74,7 @@ bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt);
  */
 
 const bg_parameter_info_t *
-bg_audio_filter_chain_get_parameters(bg_audio_filter_chain_t * ch);
+bg_audio_filter_chain_get_parameters(void);
 
 /** \brief Set a parameter for an audio chain
  *  \param data An audio filter chain as void*
@@ -171,7 +171,7 @@ bg_video_filter_chain_create(const bg_gavl_video_options_t * opt);
  */
 
 const bg_parameter_info_t *
-bg_video_filter_chain_get_parameters(bg_video_filter_chain_t * ch);
+bg_video_filter_chain_get_parameters(void);
 
 /** \brief Set a parameter for a video chain
  *  \param data A video converter as void*

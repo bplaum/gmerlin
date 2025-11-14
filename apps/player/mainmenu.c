@@ -179,13 +179,8 @@ static GtkWidget * create_menu()
   {
   GtkWidget * ret;
   //  GtkWidget * tearoff_item;
-
   ret = gtk_menu_new();
-#if 0
-  tearoff_item = gtk_tearoff_menu_item_new();
-  gtk_widget_show(tearoff_item);
-  gtk_menu_shell_append(GTK_MENU_SHELL(ret), tearoff_item);
-#endif
+  gtk_widget_set_size_request(ret, 10, 10);
   return ret;
   }
 

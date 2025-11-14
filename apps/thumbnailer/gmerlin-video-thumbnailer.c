@@ -257,7 +257,8 @@ int main(int argc, char ** argv)
 
   if(!output_handle)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", plugin_info->long_name);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed",
+             bg_plugin_info_get_long_name(plugin_info));
     return -1;
     }
   

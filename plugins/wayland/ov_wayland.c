@@ -133,7 +133,7 @@ static void hide_cursor(wayland_t * wayland)
   {
   if(wayland->flags & FLAG_CURSOR_HIDDEN)
     return;
-
+  
   wayland->flags |= FLAG_CURSOR_HIDDEN;
 
   }
@@ -143,7 +143,7 @@ static void registry_handler(void *data, struct wl_registry *registry,
   {
   wayland_t * wayland = data;
 
-  fprintf(stderr, "registry_handler %s\n", interface);
+  //  fprintf(stderr, "registry_handler %s\n", interface);
   
   if(strcmp(interface, "wl_compositor") == 0)
     {
@@ -181,7 +181,7 @@ static const struct wl_registry_listener registry_listener =
 static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
                              uint32_t serial)
   {
-  fprintf(stderr, "xdg_wm_base_ping\n");
+  //  fprintf(stderr, "xdg_wm_base_ping\n");
   xdg_wm_base_pong(xdg_wm_base, serial);
   }
 
@@ -197,7 +197,7 @@ static void xdg_surface_configure(void *data,
                                   uint32_t serial)
   {
   wayland_t * wayland = data;
-  fprintf(stderr, "xdg_surface_configure\n");
+  //  fprintf(stderr, "xdg_surface_configure\n");
 
   xdg_surface_ack_configure(xdg_surface, serial);
 
@@ -217,7 +217,8 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
                        int32_t w, int32_t h, struct wl_array *states)
   {
   wayland_t * wayland = data;
-  fprintf(stderr, "xdg_toplevel_configure %d %d\n", w, h);
+  struct wl_region *region = wl_compositor_create_region(wayland->compositor);
+  //  fprintf(stderr, "xdg_toplevel_configure %d %d\n", w, h);
 
   if(!w && !h)
     return;
@@ -226,8 +227,14 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
     return;
   
   bg_glvideo_set_window_size(wayland->g, w, h);
+
+  wl_region_add(region, 0, 0, w, h);
+  wl_surface_set_opaque_region(wayland->surface, region);
+  
+  
   wl_egl_window_resize(wayland->egl_window, w, h, 0, 0);
   wl_surface_commit(wayland->surface);
+  wl_region_destroy(region);
   }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
@@ -247,14 +254,14 @@ static void pointer_enter(void *data, struct wl_pointer *pointer,
                          uint32_t serial, struct wl_surface *surface,
                          wl_fixed_t surface_x, wl_fixed_t surface_y)
   {
-  fprintf(stderr, "pointer_enter\n");
+  //  fprintf(stderr, "pointer_enter\n");
 
   }
 
 static void pointer_leave(void *data, struct wl_pointer *pointer,
                          uint32_t serial, struct wl_surface *surface)
   {
-  fprintf(stderr, "pointer_leave\n");
+  //  fprintf(stderr, "pointer_leave\n");
   
   }
 
@@ -262,7 +269,7 @@ static void pointer_motion(void *data, struct wl_pointer *pointer,
                           uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
   {
   wayland_t * wayland = data;
-  fprintf(stderr, "pointer_motion\n");
+  //  fprintf(stderr, "pointer_motion\n");
 
   show_cursor(wayland);
   wayland->last_active_time = gavl_timer_get(wayland->timer);
@@ -283,7 +290,7 @@ static void pointer_button(void *data, struct wl_pointer *pointer,
   int flag = 0;
   wayland_t * wayland = data;
 
-  fprintf(stderr, "Button %d\n", button);
+  //  fprintf(stderr, "Button %d\n", button);
 
   switch(button)
     {
@@ -301,13 +308,9 @@ static void pointer_button(void *data, struct wl_pointer *pointer,
     }
   
   if(state == WL_POINTER_BUTTON_STATE_PRESSED)
-    {
     wayland->gavl_state |= flag;
-    }
   else if(state == WL_POINTER_BUTTON_STATE_RELEASED)
-    {
     wayland->gavl_state &= ~flag;
-    }
   
   }
 
@@ -634,6 +637,8 @@ static int ensure_window(void * priv)
     return 0;
     }
 
+  
+  
   map_window(wayland);
     
   while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)))
@@ -735,12 +740,12 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
 
               if(val.v.i)
                 {
-                fprintf(stderr, "Set fullscreen\n");
+                //                fprintf(stderr, "Set fullscreen\n");
                 xdg_toplevel_set_fullscreen(wayland->xdg_toplevel, NULL);
                 }
               else
                 {
-                fprintf(stderr, "Unset fullscreen\n");
+                //                fprintf(stderr, "Unset fullscreen\n");
                 xdg_toplevel_unset_fullscreen(wayland->xdg_toplevel);
                 }
               }
@@ -764,15 +769,26 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
 
               if(!wayland->display)
                 return 1;
+
+              gavl_value_get_int(&val, &visible);
+              fprintf(stderr, "wayland set state %s %s %d\n", ctx, var, visible);
               
-              if(gavl_value_get_int(&val, &visible) && visible)
+              if((wayland->flags & FLAG_MAPPED))
                 {
-                map_window(wayland);
+                if(!visible)
+                  {
+                  unmap_window(wayland);
+                  handle_events_wayland(wayland);
+                  wayland->flags &= ~FLAG_MAPPED;
+                  }
                 }
               else
                 {
-                unmap_window(wayland);
-                handle_events_wayland(wayland);
+                if(visible)
+                  {
+                  map_window(wayland);
+                  wayland->flags |= FLAG_MAPPED;
+                  }
                 }
               }
             else
@@ -1096,7 +1112,6 @@ static void handle_events_x11(void * priv)
 static void handle_events_internal(wayland_t * wayland,
                                    int timeout)
   {
-
   while(wl_display_prepare_read(wayland->display) != 0)
     wl_display_dispatch_pending(wayland->display);
 
@@ -1116,8 +1131,7 @@ static void handle_events_internal(wayland_t * wayland,
 static void handle_events_wayland(void * priv)
   {
   wayland_t * wayland = priv;
-
-
+  
   handle_events_internal(wayland, 0);
   
   if(gavl_timer_get(wayland->timer) -

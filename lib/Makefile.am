@@ -162,10 +162,8 @@ msgsink.c \
 multiinput.c \
 npt.c \
 objectcache.c \
-ocr.c \
 osd.c \
 ov.c \
-ovl2text.c \
 parameter.c \
 parameter_xml.c \
 player.c \

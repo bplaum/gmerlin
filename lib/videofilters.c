@@ -56,8 +56,6 @@ struct bg_video_filter_chain_s
   const bg_gavl_video_options_t * opt;
   bg_plugin_registry_t * plugin_reg;
   
-  bg_parameter_info_t * parameters;
-
   gavl_array_t filter_arr;
   
   int need_rebuild;
@@ -130,7 +128,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
     case BG_MSG_NS_PARAMETER:
       switch(msg->ID)
         {
-        case BG_MSG_SET_CHAIN_PARAMETER_CTX:
+        case BG_CMD_SET_CHAIN_PARAMETER_CTX:
           {
           int idx = 0;
           const char * sub_name = NULL;
@@ -175,35 +173,14 @@ bg_video_filter_chain_create(const bg_gavl_video_options_t * opt)
   return ret;
   }
 
-static const bg_parameter_info_t params[] =
-  {
-    {
-     .name      = BG_FILTER_CHAIN_PARAM_PLUGINS,
-      .long_name = TRS("Video Filters"),
-      .gettext_domain = PACKAGE,
-      .gettext_directory = LOCALE_DIR,
-      .type = BG_PARAMETER_MULTI_CHAIN,
-      .flags = BG_PARAMETER_SYNC,
-    },
-    { /* End */ }
-  };
-
-static void create_video_parameters(bg_video_filter_chain_t * ch)
-  {
-  ch->parameters = bg_parameter_info_copy_array(params);
-  bg_plugin_registry_set_parameter_info(ch->plugin_reg,
-                                        BG_PLUGIN_FILTER_VIDEO,
-                                        BG_PLUGIN_FILTER_1,
-                                        ch->parameters);
-  }
 
 const bg_parameter_info_t *
-bg_video_filter_chain_get_parameters(bg_video_filter_chain_t * ch)
+bg_video_filter_chain_get_parameters()
   {
-  if(!ch->parameters)
-    create_video_parameters(ch);
-  return ch->parameters;
+  bg_cfg_ctx_t * ctx = bg_plugin_config_get_ctx(BG_PLUGIN_FILTER_VIDEO);
+  return ctx->parameters;
   }
+
 
 void
 bg_video_filter_chain_set_parameter(void * data, const char * name,
@@ -301,8 +278,6 @@ bg_video_filter_chain_set_parameter(void * data, const char * name,
 void bg_video_filter_chain_destroy(void * ch1)
   {
   bg_video_filter_chain_t * ch = ch1;
-  if(ch->parameters)
-    bg_parameter_info_destroy_array(ch->parameters);
 
   if(ch->cmd_sink)
     bg_msg_sink_destroy(ch->cmd_sink);

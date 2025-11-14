@@ -42,6 +42,9 @@
 
 #define LOG_DOMAIN "ladspa"
 
+#define RUN_ADDING      "%run_adding"
+#define RUN_ADDING_GAIN "%run_adding_gain"
+
 static bg_parameter_info_t * 
 create_parameters(const LADSPA_Descriptor * desc)
   {
@@ -192,7 +195,7 @@ create_parameters(const LADSPA_Descriptor * desc)
 
   if(desc->run_adding)
     {
-    ret[index].name = gavl_strrep(ret[index].name, "$run_adding");
+    ret[index].name = gavl_strrep(ret[index].name, RUN_ADDING);
     ret[index].long_name = gavl_strrep(ret[index].long_name,
                                      TR("Add effect to input data"));
     ret[index].type = BG_PARAMETER_CHECKBUTTON;
@@ -203,7 +206,7 @@ create_parameters(const LADSPA_Descriptor * desc)
     }
   if(desc->set_run_adding_gain)
     {
-    ret[index].name = gavl_strrep(ret[index].name, "$run_adding_gain");
+    ret[index].name = gavl_strrep(ret[index].name, RUN_ADDING_GAIN);
     ret[index].long_name = gavl_strrep(ret[index].long_name,
                                      TR("Add gain (dB)"));
     ret[index].type = BG_PARAMETER_SLIDER_FLOAT;
@@ -256,11 +259,13 @@ static bg_plugin_info_t * get_info(const LADSPA_Descriptor * desc)
   {
   bg_plugin_info_t * ret;
   int in_ports, out_ports, in_control_ports, out_control_ports;
+  char * name = gavl_sprintf("fa_ladspa_%s", desc->Label);
   
   ret = calloc(1, sizeof(*ret));
 
-  ret->name        = gavl_sprintf("fa_ladspa_%s", desc->Label);
-  ret->long_name   = gavl_strdup(desc->Name);
+  bg_plugin_info_set_name(ret, name);
+  bg_plugin_info_set_long_name(ret, desc->Name);
+  
   ret->type        = BG_PLUGIN_FILTER_AUDIO;
   ret->api         = BG_PLUGIN_API_LADSPA;
   ret->flags       = BG_PLUGIN_FILTER_1;
@@ -279,6 +284,9 @@ static bg_plugin_info_t * get_info(const LADSPA_Descriptor * desc)
     }
   
   ret->parameters = create_parameters(desc);
+
+  free(name);
+
   return ret;
   }
 
@@ -543,7 +551,7 @@ static void set_parameter_ladspa(void * priv, const char * name,
   lp = (ladspa_priv_t *)priv;
 
 
-  if(!strcmp(name, "$run_adding_gain"))
+  if(!strcmp(name, RUN_ADDING_GAIN))
     {
     gain_lin = pow(10, val->v.d / 20.0);
     
@@ -555,7 +563,7 @@ static void set_parameter_ladspa(void * priv, const char * name,
     lp->run_adding_gain = gain_lin;
     return;
     }
-  if(!strcmp(name, "$run_adding"))
+  if(!strcmp(name, RUN_ADDING))
     {
     if(lp->desc->run_adding)
       lp->run_adding = val->v.i;

@@ -45,38 +45,6 @@ bg_gavl_video_options_t vopt;
 
 gavl_pixelformat_t force_pixelformat = GAVL_PIXELFORMAT_NONE;
 
-static void set_video_parameter(void * data, const char * name,
-                                const gavl_value_t * v)
-  {
-  if(!name)
-    return;
-  bg_gavl_video_set_parameter(data, name, v);
-  }
-
-
-static void opt_video_options(void * data, int * argc, char *** argv, int arg)
-  {
-  //  fprintf(stderr, "opt_video_options\n");
-
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -co requires an argument\n");
-    exit(-1);
-    }
-
-  /* Parse the option string */
-  if(!bg_cmdline_apply_options(conversion_section,
-                               set_video_parameter,
-                               &vopt,
-                               conversion_parameters,
-                               (*argv)[arg]))
-    {
-    fprintf(stderr, "Error parsing option string %s\n", (*argv)[arg]);
-    exit(-1);
-    }
-     
-  bg_cmdline_remove_arg(argc, argv, arg);
-  }
 
 static void opt_pfmt(void * data, int * argc, char *** argv, int arg)
   {
@@ -107,13 +75,6 @@ static void opt_pfmt(void * data, int * argc, char *** argv, int arg)
 
 static bg_cmdline_arg_t global_options[] =
   {
-    {
-      .arg =         "-co",
-      .help_arg =    "<options>",
-      .help_string = "Conversion options",
-      .callback =    opt_video_options,
-      .parameters =  conversion_parameters,
-    },
     {
       .arg =         "-pfmt",
       .help_arg =    "<format>",

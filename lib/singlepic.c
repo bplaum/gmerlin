@@ -222,8 +222,8 @@ static int probe_image(input_t * inp, const char * filename)
   if(!inp->handle)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN_DEC,
-           "Plugin %s could not be loaded",
-           info->name);
+             "Plugin %s could not be loaded",
+             bg_plugin_info_get_name(info));
     return 0;
     }
   
@@ -1003,10 +1003,17 @@ static void set_parameter_encoder(void * priv, const char * name,
     }
   else if(!strcmp(name, "plugin"))
     {
-    const char * plugin_name = bg_multi_menu_get_selected_name(val);
+    const char * plugin_name;
+    const gavl_dictionary_t * dict = gavl_value_get_dictionary(val);
+
+    plugin_name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME);
+    
     /* Load plugin */
 
-    if(!e->plugin_handle || strcmp(e->plugin_handle->info->name, plugin_name))
+    fprintf(stderr, "set_parameter_encoder\n");
+    gavl_value_dump(val, 2);
+    
+    if(!e->plugin_handle || strcmp(bg_plugin_info_get_name(e->plugin_handle->info), plugin_name))
       {
       if(e->plugin_handle)
         {
@@ -1014,8 +1021,8 @@ static void set_parameter_encoder(void * priv, const char * name,
         e->plugin_handle = NULL;
         }
 
-      e->plugin_handle = bg_plugin_load_with_options(bg_multi_menu_get_selected(val));
-      e->image_writer = (bg_image_writer_plugin_t*)(e->plugin_handle->plugin);
+      e->plugin_handle = bg_plugin_load_with_options(dict);
+      e->image_writer = (bg_image_writer_plugin_t*)e->plugin_handle->plugin;
       
       if(e->image_writer->set_callbacks)
         e->image_writer->set_callbacks(e->plugin_handle->priv, &e->iw_callbacks);

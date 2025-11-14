@@ -57,22 +57,25 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
   const char * name;
   gavl_dictionary_t * track_encoder_section;
   gavl_dictionary_t * stream_encoder_section;
+
+  fprintf(stderr, "bg_transcoder_track_set_encoders\nEncoder section:\n");
+  gavl_dictionary_dump(encoder_section, 2);
   
   if((val = gavl_dictionary_get(encoder_section, "ve")))
-    video_dict = bg_multi_menu_get_selected(val);
+    video_dict = gavl_value_get_dictionary(val);
   else
     video_dict = NULL;
   
-  track_encoder_section = bg_track_get_cfg_encoder_nc(t);
+  track_encoder_section = bg_transcoder_track_get_cfg_encoder_nc(t);
   gavl_dictionary_reset(track_encoder_section);
   
   if((num = gavl_track_get_num_audio_streams(t)))
     {
-    val = gavl_dictionary_get(encoder_section, "ae");
-    dict = bg_multi_menu_get_selected(val);
+    dict = gavl_dictionary_get_dictionary(encoder_section, "ae");
 
-    gavl_dictionary_set_dictionary(track_encoder_section, "ae", dict);
-
+    gavl_dictionary_copy_value(track_encoder_section,
+                               encoder_section, "ae");
+    
     if((!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
         !strcmp(name, "$to_video")))
       {
@@ -86,7 +89,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
     
     for(i = 0; i < num; i++)
       {
-      stream_encoder_section = bg_stream_get_cfg_encoder_nc(gavl_track_get_audio_stream_nc(t, i));
+      stream_encoder_section = bg_transcoder_track_get_cfg_encoder_nc(gavl_track_get_audio_stream_nc(t, i));
       gavl_dictionary_reset(stream_encoder_section);
       if(enc)
         gavl_dictionary_copy(stream_encoder_section, enc);
@@ -95,13 +98,14 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
 
   if((num = gavl_track_get_num_video_streams(t)))
     {
-    gavl_dictionary_set_dictionary(track_encoder_section, "ve", video_dict);
-
+    gavl_dictionary_copy_value(track_encoder_section,
+                               encoder_section, "ve");
+    
     enc = bg_cfg_section_find_subsection_c(video_dict, "$video");
     
     for(i = 0; i < num; i++)
       {
-      stream_encoder_section = bg_stream_get_cfg_encoder_nc(gavl_track_get_video_stream_nc(t, i));
+      stream_encoder_section = bg_transcoder_track_get_cfg_encoder_nc(gavl_track_get_video_stream_nc(t, i));
       gavl_dictionary_reset(stream_encoder_section);
       if(enc)
         gavl_dictionary_copy(stream_encoder_section, enc);
@@ -110,11 +114,9 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
     }
   if((num_text_streams = gavl_track_get_num_text_streams(t)))
     {
-    val = gavl_dictionary_get(encoder_section, "te");
-    dict = bg_multi_menu_get_selected(val);
-
-    gavl_dictionary_set_dictionary(track_encoder_section, "te", dict);
-
+    gavl_dictionary_copy_value(track_encoder_section,
+                               encoder_section, "te");
+    
     if(!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
        !strcmp(name, "$to_video"))
       enc = bg_cfg_section_find_subsection_c(video_dict, "$text");
@@ -133,10 +135,9 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
   num = 0;
   if(num_text_streams || (num = gavl_track_get_num_overlay_streams(t)))
     {
-    val = gavl_dictionary_get(encoder_section, "oe");
-    dict = bg_multi_menu_get_selected(val);
+    gavl_dictionary_copy_value(track_encoder_section,
+                               encoder_section, "oe");
     
-    gavl_dictionary_set_dictionary(track_encoder_section, "oe", dict);
     
     if(!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
        !strcmp(name, "$to_video"))
@@ -154,7 +155,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
     
     for(i = 0; i < num; i++)
       {
-      stream_encoder_section = bg_stream_get_cfg_encoder_nc(gavl_track_get_overlay_stream_nc(t, i));
+      stream_encoder_section = bg_transcoder_track_get_cfg_encoder_nc(gavl_track_get_overlay_stream_nc(t, i));
       gavl_dictionary_reset(stream_encoder_section);
       if(enc)
         gavl_dictionary_copy(stream_encoder_section, enc);
@@ -165,35 +166,34 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
 void bg_transcoder_track_get_encoders(const bg_transcoder_track_t * t,
                                       gavl_dictionary_t * encoder_section)
   {
-  gavl_value_t * val;
-  const gavl_dictionary_t * dict;
+  //  gavl_value_t * val;
+  //  const gavl_dictionary_t * dict;
   const gavl_dictionary_t * track_encoder_section;
 
-  track_encoder_section = bg_track_get_cfg_encoder(t);
+  track_encoder_section = bg_transcoder_track_get_cfg_encoder(t);
   
-  if((dict = gavl_dictionary_get_dictionary(track_encoder_section, "ae")) &&
-     (val = gavl_dictionary_get_nc(encoder_section, "ae")))
-    {
-    bg_multi_menu_set_selected(val, dict);
-    }
+  gavl_dictionary_copy_value(encoder_section,
+                             track_encoder_section, "ae");
 
-  if((dict = gavl_dictionary_get_dictionary(track_encoder_section, "ve")) &&
-     (val = gavl_dictionary_get_nc(encoder_section, "ve")))
-    {
-    bg_multi_menu_set_selected(val, dict);
-    }
+  /*
+  fprintf(stderr, "Get encoders:\n");
+  gavl_value_dump(gavl_dictionary_get(encoder_section, "ae"), 2);
+  fprintf(stderr, "\n");
+  */
+  
+  gavl_dictionary_copy_value(encoder_section,
+                             track_encoder_section, "ve");
+  gavl_dictionary_copy_value(encoder_section,
+                             track_encoder_section, "te");
 
-  if((dict = gavl_dictionary_get_dictionary(track_encoder_section, "te")) &&
-     (val = gavl_dictionary_get_nc(encoder_section, "te")))
-    {
-    bg_multi_menu_set_selected(val, dict);
-    }
-
-  if((dict = gavl_dictionary_get_dictionary(track_encoder_section, "oe")) &&
-     (val = gavl_dictionary_get_nc(encoder_section, "ov")))
-    {
-    bg_multi_menu_set_selected(val, dict);
-    }
+  /*
+  fprintf(stderr, "Get encoders te:\n");
+  gavl_value_dump(gavl_dictionary_get(encoder_section, "te"), 2);
+  fprintf(stderr, "\n");
+  */
+  
+  gavl_dictionary_copy_value(encoder_section,
+                             track_encoder_section, "oe");
   
   }
 
@@ -204,35 +204,6 @@ static const bg_parameter_info_t parameters_general[] =
       .long_name =   TRS("Subdirectory"),
       .type =        BG_PARAMETER_STRING,
       .help_string = TRS("Subdirectory, where this track will be written to"),
-    },
-    {
-      .name =      "set_start_time",
-      .long_name = TRS("Set start time"),
-      .type =      BG_PARAMETER_CHECKBUTTON,
-      .flags =     BG_PARAMETER_HIDE_DIALOG,
-      .val_default = GAVL_VALUE_INIT_INT(0),
-      .help_string = TRS("Specify a start time below. This time will be slightly wrong if the input \
-format doesn't support sample accurate seeking.")
-    },
-    {
-      .name =      "start_time",
-      .long_name = TRS("Start time"),
-      .type =      BG_PARAMETER_TIME,
-      .flags =     BG_PARAMETER_HIDE_DIALOG,
-      .val_default = GAVL_VALUE_INIT_LONG(0)
-    },
-    {
-      .name =      "set_end_time",
-      .long_name = TRS("Set end time"),
-      .type =      BG_PARAMETER_CHECKBUTTON,
-      .val_default = GAVL_VALUE_INIT_INT(0),
-      .help_string = TRS("Specify an end time below.")
-    },
-    {
-      .name =      "end_time",
-      .long_name = TRS("End time"),
-      .type =      BG_PARAMETER_TIME,
-      .val_default = GAVL_VALUE_INIT_LONG(0)
     },
     { /* End of parameters */ }
   };
@@ -306,12 +277,6 @@ static const bg_parameter_info_t general_parameters_overlay[] =
       .val_default = GAVL_VALUE_INIT_STRING("forget"),
     },
     {
-      .name =        "in_language",
-      .long_name =   TRS("Input Language"),
-      .type =        BG_PARAMETER_STRING,
-      .flags =       BG_PARAMETER_HIDE_DIALOG,
-    },
-    {
       .name =        GAVL_META_LANGUAGE,
       .long_name =   TRS("Language"),
       .type =        BG_PARAMETER_STRINGLIST,
@@ -329,89 +294,13 @@ static const bg_parameter_info_t general_parameters_overlay[] =
     { /* End of parameters */ }
   };
 
-/* Create subtitle parameters */
-#if 0
-static void create_subtitle_parameters(bg_transcoder_track_t * track)
-  {
-  int i;
-  bg_parameter_info_t * info;
-
-  /* Create subtitle parameters. These depend on the number of video streams */
-
-  for(i = 0; i < track->num_text_streams; i++)
-    {
-    /* Forget, Dump, Blend #1, Blend #2 ... */
-    track->text_streams[i].general_parameters =
-      bg_parameter_info_copy_array(general_parameters_text);
-    info = track->text_streams[i].general_parameters;
-
-    if(track->num_video_streams > 1)
-      {
-      gavl_value_set_int(&info[1].val_max, track->num_video_streams);
-      info[1].flags &= ~BG_PARAMETER_HIDE_DIALOG;
-      }
-    
-    }
-  for(i = 0; i < track->num_overlay_streams; i++)
-    {
-    /* Forget, Blend #1, Blend #2 ... */
-
-    track->overlay_streams[i].general_parameters =
-      bg_parameter_info_copy_array(general_parameters_overlay);
-    info = track->overlay_streams[i].general_parameters;
-
-    if(track->num_video_streams > 1)
-      {
-      gavl_value_set_int(&info[1].val_max, track->num_video_streams);
-      info[1].flags &= ~BG_PARAMETER_HIDE_DIALOG;
-      }
-    }
-  }
-#endif
-
 /* Create parameters if the config sections are already there */
 
 bg_parameter_info_t *
 bg_transcoder_track_create_parameters(bg_transcoder_track_t * track)
   {
-  gavl_time_t duration = GAVL_TIME_UNDEFINED;
-  int i;
-  int can_seek = 0;
   bg_parameter_info_t * ret;
-  const gavl_dictionary_t * track_metadata;
-
-  track_metadata = gavl_track_get_metadata(track);
-  
   ret = bg_parameter_info_copy_array(parameters_general);
-    
-  gavl_dictionary_get_long(track_metadata, GAVL_META_APPROX_DURATION, &duration);
-  gavl_dictionary_get_int(track_metadata, GAVL_META_CAN_SEEK, &can_seek);
-    
-  if(duration != GAVL_TIME_UNDEFINED)
-    {
-    i = 0;
-      
-    while(ret[i].name)
-      {
-      if(!strcmp(ret[i].name, "start_time"))
-        {
-        gavl_value_set_long(&ret[i].val_max, duration);
-        if(can_seek)
-          ret[i].flags &= ~BG_PARAMETER_HIDE_DIALOG;
-
-        }
-      else if(!strcmp(ret[i].name, "end_time"))
-        {
-        gavl_value_set_long(&ret[i].val_max, duration);
-        }
-      else if(!strcmp(ret[i].name, "set_start_time"))
-        {
-        if(can_seek)
-          ret[i].flags &= ~BG_PARAMETER_HIDE_DIALOG;
-        }
-      i++;
-      }
-    }
   return ret;
   }
 
@@ -473,7 +362,7 @@ static void set_track(bg_transcoder_track_t * track,
   /* Create sections */
   gavl_dictionary_t * general_section_cfg;
   gavl_dictionary_t * general_section_dst;
-  gavl_dictionary_t * filter_section;
+  const gavl_dictionary_t * filter_section;
   gavl_dictionary_t * textrenderer_section;
   gavl_dictionary_t * sec;
   
@@ -500,8 +389,7 @@ static void set_track(bg_transcoder_track_t * track,
     {
     general_section_cfg =
       bg_cfg_section_find_subsection(track_defaults_section, "audio");
-    filter_section =
-      bg_cfg_section_find_subsection(track_defaults_section, "audiofilters");
+    filter_section = bg_plugin_config_get_section(BG_PLUGIN_FILTER_AUDIO);
     
     for(i = 0; i < num; i++)
       {
@@ -525,7 +413,7 @@ static void set_track(bg_transcoder_track_t * track,
     general_section_cfg = bg_cfg_section_find_subsection(track_defaults_section,
                                                          "video");
     filter_section =
-      bg_cfg_section_find_subsection(track_defaults_section, "videofilters");
+      bg_plugin_config_get_section(BG_PLUGIN_FILTER_VIDEO);
     
     for(i = 0; i < num; i++)
       {
@@ -545,7 +433,7 @@ static void set_track(bg_transcoder_track_t * track,
   if((num = gavl_track_get_num_text_streams(track)))
     {
     general_section_cfg = bg_cfg_section_find_subsection(track_defaults_section,
-                                                     "text");
+                                                         "text");
     textrenderer_section = bg_cfg_section_find_subsection(track_defaults_section,
                                                           "textrenderer");
     for(i = 0; i < num; i++)
@@ -624,11 +512,6 @@ bg_transcoder_track_create(const char * url,
     {
     gavl_value_t val;
     gavl_dictionary_t * t;
-    //    gavl_dictionary_t * tm;
-
-    //    int cover_w, cover_h;
-    //    const char * cover_uri;
-    //    const char * cover_mimetype;
     
     ret = gavl_array_create();
     
@@ -648,9 +531,6 @@ bg_transcoder_track_create(const char * url,
             
       gavl_value_free(&val);
       }
-
-    
-
     }
   
   if(media_info)
@@ -743,12 +623,6 @@ static const bg_parameter_info_t general_parameters_audio[] =
       .help_string = TRS("Choose the desired action for the stream. If copying is not possible, the stream will be transcoded"),
     },
     {
-      .name =        "in_language",
-      .long_name =   TRS("Input Language"),
-      .type =        BG_PARAMETER_STRING,
-      .flags =       BG_PARAMETER_HIDE_DIALOG,
-    },
-    {
       .name =        GAVL_META_LANGUAGE,
       .long_name =   TRS("Language"),
       .type =        BG_PARAMETER_STRINGLIST,
@@ -823,7 +697,7 @@ const char * bg_transcoder_track_get_audio_encoder(const bg_transcoder_track_t *
   const char * ret;
   const gavl_dictionary_t * dict;
   
-  if((dict = gavl_dictionary_get_dictionary(bg_track_get_cfg_encoder(t),
+  if((dict = gavl_dictionary_get_dictionary(bg_transcoder_track_get_cfg_encoder(t),
                                             "ae")) &&
      (ret = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
      strcmp(ret, "$to_video"))
@@ -837,7 +711,7 @@ const char * bg_transcoder_track_get_video_encoder(const bg_transcoder_track_t *
   {
   const gavl_dictionary_t * dict;
 
-  if((dict = gavl_dictionary_get_dictionary(bg_track_get_cfg_encoder(t),
+  if((dict = gavl_dictionary_get_dictionary(bg_transcoder_track_get_cfg_encoder(t),
                                             "ve")))
     return gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME);
   else
@@ -849,7 +723,7 @@ const char * bg_transcoder_track_get_text_encoder(const bg_transcoder_track_t * 
   const char * ret;
   const gavl_dictionary_t * dict;
 
-  if((dict = gavl_dictionary_get_dictionary(bg_track_get_cfg_encoder(t),
+  if((dict = gavl_dictionary_get_dictionary(bg_transcoder_track_get_cfg_encoder(t),
                                             "te")) &&
      (ret = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
      strcmp(ret, "$to_video"))
@@ -863,70 +737,13 @@ const char * bg_transcoder_track_get_overlay_encoder(const bg_transcoder_track_t
   const char * ret;
   const gavl_dictionary_t * dict;
 
-  if((dict = gavl_dictionary_get_dictionary(bg_track_get_cfg_encoder(t),
+  if((dict = gavl_dictionary_get_dictionary(bg_transcoder_track_get_cfg_encoder(t),
                                             "oe")) &&
      (ret = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) &&
      strcmp(ret, "$to_video"))
     return ret;
   else
     return NULL;
-  }
-
-void bg_transcoder_track_get_duration(const bg_transcoder_track_t * t, gavl_time_t * ret,
-                                      gavl_time_t * ret_total)
-  {
-  gavl_time_t start_time = 0, end_time = 0, duration_total = 0;
-  int set_start_time = 0, set_end_time = 0;
-  const gavl_dictionary_t * general_section = bg_transcoder_track_get_cfg_general(t);
-  const gavl_dictionary_t * metadata_section = gavl_track_get_metadata(t);
-  bg_cfg_section_get_parameter_int(general_section,  "set_start_time", &set_start_time);
-  bg_cfg_section_get_parameter_int(general_section,  "set_end_time", &set_end_time);
-
-  bg_cfg_section_get_parameter_time(metadata_section, GAVL_META_APPROX_DURATION, &duration_total);
-  bg_cfg_section_get_parameter_time(general_section, "start_time", &start_time);
-  bg_cfg_section_get_parameter_time(general_section, "end_time",   &end_time);
-
-  if(ret_total)
-    *ret_total = duration_total;
-  
-  if(duration_total == GAVL_TIME_UNDEFINED)
-    {
-    if(set_end_time)
-      *ret = end_time;
-    else
-      *ret = duration_total;
-    }
-  else
-    {
-    if(set_start_time)
-      {
-      if(set_end_time) /* Start and end */
-        {
-        *ret = end_time - start_time;
-        if(*ret < 0)
-          *ret = 0;
-        }
-      else /* Start only */
-        {
-        *ret = duration_total - start_time;
-        if(*ret < 0)
-          *ret = 0;
-        }
-      }
-    else
-      {
-      if(set_end_time) /* End only */
-        {
-        *ret = end_time;
-        }
-      else
-        {
-        *ret = duration_total;
-        }
-      }
-    }
-  
-  return;
   }
 
 #if 1

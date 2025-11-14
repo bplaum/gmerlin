@@ -33,29 +33,21 @@
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/utils.h>
 
-#include <gmerlin/cfg_dialog.h>
 #include <gmerlin/iconfont.h>
 #include <gmerlin/bggavl.h>
 #include <gmerlin/translation.h>
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "tracklist"
 
-#include <gui_gtk/fileselect.h>
-#include <gui_gtk/urlselect.h>
-#include <gui_gtk/driveselect.h>
-#include <gui_gtk/chapterdialog.h>
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/mdb.h>
+#include <gui_gtk/configdialog.h>
 
 #include <gmerlin/transcoder_track.h>
 #include "tracklist.h"
 #include "trackdialog.h"
 
-static const char * CTX_FILESELECT = "fileselect";
-static const char * CTX_URLSELECT = "urlselect";
-static const char * CTX_DRIVESELECT = "driveselect";
-
-static void track_list_update(track_list_t * w);
+void track_list_update(track_list_t * w);
 
 
 #define cp_tracks_name "gmerlin_transcoder_tracks"
@@ -66,6 +58,13 @@ static void track_list_update(track_list_t * w);
 #define DND_TEXT_URI_LIST     2
 #define DND_TEXT_PLAIN        3
 #define DND_TRANSCODER_TRACKS 4
+
+#define CTX_ENCODERS "enc"
+#define CTX_MASSTAG  "masstag"
+#define CTX_RENAME   "rename"
+
+#define RENAME_MASK  "rename-mask"
+#define OPEN_PATH    "open_path"
 
 static GtkTargetEntry dnd_dst_entries[] =
   {
@@ -89,50 +88,6 @@ static int is_urilist(char * target_name)
   }
 
 
-typedef struct
-  {
-  GtkWidget * add_files_item;
-  GtkWidget * add_urls_item;
-  GtkWidget * add_drives_item;
-  GtkWidget * menu;
-  } add_menu_t;
-
-typedef struct
-  {
-  GtkWidget * move_up_item;
-  GtkWidget * move_down_item;
-  GtkWidget * remove_item;
-  GtkWidget * configure_item;
-  GtkWidget * encoder_item;
-  GtkWidget * chapter_item;
-  GtkWidget * mass_tag_item;
-  GtkWidget * split_at_chapters_item;
-  GtkWidget * auto_number_item;
-  GtkWidget * auto_rename_item;
-  GtkWidget * menu;
-  } selected_menu_t;
-
-typedef struct
-  {
-  GtkWidget * cut_item;
-  GtkWidget * copy_item;
-  GtkWidget * paste_item;
-  GtkWidget * menu;
-  } edit_menu_t;
-
-typedef struct
-  {
-  GtkWidget *      add_item;
-  add_menu_t       add_menu;
-  GtkWidget *      selected_item;
-  selected_menu_t  selected_menu;
-
-  GtkWidget *      edit_item;
-  edit_menu_t      edit_menu;
-  
-  GtkWidget      * menu;
-  } menu_t;
-
 enum
   {
     COLUMN_INDEX,
@@ -142,62 +97,9 @@ enum
     NUM_COLUMNS
   };
 
-struct track_list_s
-  {
-  GtkWidget * treeview;
-  GtkWidget * widget;
-
-  /* Buttons */
-
-  GtkWidget * add_file_button;
-  GtkWidget * add_url_button;
-  GtkWidget * add_drives_button;
-
-  GtkWidget * delete_button;
-  GtkWidget * config_button;
-  GtkWidget * encoder_button;
-  GtkWidget * chapter_button;
-
-  GtkWidget * cut_button;
-  GtkWidget * copy_button;
-  GtkWidget * paste_button;
-
-  gavl_dictionary_t t;
-
-  GtkTreeViewColumn * col_name;
-
-  bg_transcoder_track_t * selected_track;
-  int num_selected;
-
-  gulong select_handler_id;
-
-  gavl_dictionary_t * track_defaults_section;
-  gavl_dictionary_t * encoder_section;
-  const bg_parameter_info_t * encoder_parameters;
-  
-  GtkWidget * time_total;
-  int show_tooltips;
-
-  menu_t menu;
-
-  char * open_path;
-  char * rename_mask;
-  bg_gtk_filesel_t * filesel;
-  bg_gtk_drivesel_t * drivesel;
-  bg_gtk_urlsel_t * urlsel;
-  
-  char * clipboard;
-  
-  GtkAccelGroup * accel_group;
-
-  bg_msg_sink_t * dlg_sink;
-
-  track_dialog_t * track_dialog;
-  
-  };
 
 
-/* Called when the selecection changed */
+/* Called when the selection changed */
 
 static void select_row_callback(GtkTreeSelection * sel,
                                 gpointer data)
@@ -265,7 +167,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     //    gtk_widget_set_sensitive(w->up_button, 1);
     //    gtk_widget_set_sensitive(w->down_button, 1);
     gtk_widget_set_sensitive(w->delete_button, 1);
-    gtk_widget_set_sensitive(w->chapter_button, 1);
     gtk_widget_set_sensitive(w->cut_button, 1);
     gtk_widget_set_sensitive(w->copy_button, 1);
     
@@ -274,7 +175,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     gtk_widget_set_sensitive(w->menu.selected_menu.configure_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.remove_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.encoder_item, 1);
-    gtk_widget_set_sensitive(w->menu.selected_menu.chapter_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.mass_tag_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.split_at_chapters_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.auto_number_item, 1);
@@ -293,7 +193,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     //    gtk_widget_set_sensitive(w->up_button, 0);
     //    gtk_widget_set_sensitive(w->down_button, 0);
     gtk_widget_set_sensitive(w->delete_button, 0);
-    gtk_widget_set_sensitive(w->chapter_button, 0);
     gtk_widget_set_sensitive(w->cut_button, 0);
     gtk_widget_set_sensitive(w->copy_button, 0);
 
@@ -302,7 +201,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     gtk_widget_set_sensitive(w->menu.selected_menu.configure_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.remove_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.encoder_item, 0);
-    gtk_widget_set_sensitive(w->menu.selected_menu.chapter_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.mass_tag_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.split_at_chapters_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.auto_number_item, 0);
@@ -319,7 +217,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     //    gtk_widget_set_sensitive(w->up_button, 1);
     //    gtk_widget_set_sensitive(w->down_button, 1);
     gtk_widget_set_sensitive(w->delete_button, 1);
-    gtk_widget_set_sensitive(w->chapter_button, 0);
     gtk_widget_set_sensitive(w->cut_button, 1);
     gtk_widget_set_sensitive(w->copy_button, 1);
 
@@ -328,7 +225,6 @@ static void select_row_callback(GtkTreeSelection * sel,
     gtk_widget_set_sensitive(w->menu.selected_menu.configure_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.remove_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.encoder_item, 1);
-    gtk_widget_set_sensitive(w->menu.selected_menu.chapter_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.mass_tag_item, 1);
     gtk_widget_set_sensitive(w->menu.selected_menu.split_at_chapters_item, 0);
     gtk_widget_set_sensitive(w->menu.selected_menu.auto_number_item, 1);
@@ -354,22 +250,19 @@ static void set_duration(track_list_t * w, gavl_time_t duration)
   g_free(markup);
   }
 
-static void track_list_update(track_list_t * w)
+void track_list_update(track_list_t * w)
   {
   int i;
   GtkTreeModel * model;
   GtkTreeIter iter;
   const bg_transcoder_track_t * track;
   gavl_time_t track_duration;
-  gavl_time_t track_duration_total;
   int num_tracks;
   
   gavl_time_t duration_total;
   const char * name;
   
   char string_buffer[GAVL_TIME_STRING_LEN + 32];
-  char string_buffer1[GAVL_TIME_STRING_LEN + 32];
-  char * buf;
   const char * type;
   
   GtkTreeSelection * selection;
@@ -400,8 +293,7 @@ static void track_list_update(track_list_t * w)
     sprintf(string_buffer, "%d.", i+1);
     
     gtk_list_store_set(GTK_LIST_STORE(model),
-                       &iter,
-                       COLUMN_INDEX,
+                       &iter, COLUMN_INDEX,
                        string_buffer, -1);
 
     /* Set type */
@@ -409,19 +301,17 @@ static void track_list_update(track_list_t * w)
     if((type = gavl_dictionary_get_string(gavl_track_get_metadata(track), GAVL_META_CLASS)) &&
        (type = bg_get_type_icon(type)))
       gtk_list_store_set(GTK_LIST_STORE(model),
-                         &iter,
-                         COLUMN_TYPE,
+                         &iter, COLUMN_TYPE,
                          type, -1);
     
     /* Set name */
     gtk_list_store_set(GTK_LIST_STORE(model),
-                       &iter,
-                       COLUMN_NAME,
+                       &iter, COLUMN_NAME,
                        name, -1);
     
     /* Set time */
     
-    bg_transcoder_track_get_duration(track, &track_duration, &track_duration_total);
+    track_duration = gavl_track_get_duration(track);
     
     if(duration_total != GAVL_TIME_UNDEFINED)
       {
@@ -431,24 +321,13 @@ static void track_list_update(track_list_t * w)
         duration_total += track_duration;
       }
 
-    if(track_duration == track_duration_total)
+    if(track_duration)
       {
       gavl_time_prettyprint(track_duration, string_buffer);
       gtk_list_store_set(GTK_LIST_STORE(model),
                          &iter,
                          COLUMN_DURATION,
                          string_buffer, -1);
-      }
-    else
-      {
-      gavl_time_prettyprint(track_duration, string_buffer);
-      gavl_time_prettyprint(track_duration_total, string_buffer1);
-      buf = gavl_sprintf("%s/%s", string_buffer, string_buffer1);
-      gtk_list_store_set(GTK_LIST_STORE(model),
-                         &iter,
-                         COLUMN_DURATION,
-                         buf, -1);
-      free(buf);
       }
     
     /* Select track */
@@ -659,62 +538,137 @@ static void add_files(track_list_t * l, const gavl_array_t * files)
       gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
 
     track_list_update(l);
-
+    
     if(new_tracks)
       gavl_array_destroy(new_tracks);
-    
-    i++;
-    
     }
   
-  /* Remember open path */
-  if(l->filesel)
-    l->open_path = gavl_strrep(l->open_path,
-                               bg_gtk_filesel_get_directory(l->filesel));
   
   }
 
 static int handle_dlg_message(void * data, gavl_msg_t * msg)
   {
-  track_list_t * t = data;
+  track_list_t * l = data;
+
+  if(l->selected_track && (track_dialog_handle_message(l, msg)))
+    return 1;
+  
   switch(msg->NS)
     {
+    case BG_MSG_NS_PARAMETER:
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name;
+          const char * ctx;
+          
+          gavl_value_t val;
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+          ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+#if 1
+          fprintf(stderr, "BG_MSG_SET_PARAMETER\n");
+          fprintf(stderr, "  ctx:  %s\n", ctx);
+          fprintf(stderr, "  name: %s\n", name);
+          gavl_value_dump(&val, 2);
+          fprintf(stderr, "\n");
+#endif
+
+          if(!ctx)
+            return 1;
+
+          if(!strcmp(ctx, CTX_MASSTAG) && name)
+            {
+
+            int j, num;
+            gavl_dictionary_t * m;
+            gavl_dictionary_t * track;
+              
+            if(val.type == GAVL_TYPE_STRING)
+              {
+              /* Don't touch the field if empty */
+              if(!val.v.str || (*val.v.str == '\0'))
+                {
+                return 1;
+                }
+              /* Delete field if field was "-" */
+              else if(!strcmp(val.v.str, "-"))
+                gavl_value_reset(&val);
+              }
+            
+            num = gavl_get_num_tracks(&l->t);
+            for(j = 0; j < num; j++)
+              {
+              if((track = gavl_get_track_nc(&l->t, j)) &&
+                 gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
+                {
+                m = gavl_track_get_metadata_nc(track);
+                bg_metadata_set_parameter(m, name, &val);
+                }
+              }
+            }
+          else if(!strcmp(ctx, CTX_RENAME) && name)
+            {
+            gavl_dictionary_t * track;
+            int i, num;
+            char * new_name;
+    
+            num = gavl_get_num_tracks(&l->t);
+            for(i = 0; i < num; i++)
+              {
+              if((track = gavl_get_track_nc(&l->t, i)) &&
+                 gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
+                {
+                gavl_dictionary_t * m = gavl_track_get_metadata_nc(track);
+                if((new_name = bg_create_track_name(m, val.v.str)))
+                  gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, new_name);
+                }
+              }
+            
+            /* Save for later use */
+            gavl_dictionary_set(bg_cfg_registry_find_section(bg_cfg_registry, "track_list"),
+                                RENAME_MASK, &val);
+            
+            track_list_update(l);
+            }
+          
+          if(!name)
+            {
+            if(!strcmp(ctx, CTX_ENCODERS))
+              {
+              int i, num;
+              gavl_dictionary_t * track;
+              num = gavl_get_num_tracks(&l->t);
+              for(i = 0; i < num; i++)
+                {
+                if((track = gavl_get_track_nc(&l->t, i)) &&
+                   gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
+                  {
+                  bg_transcoder_track_set_encoders(track, &l->dlg_section);
+                  }
+                }
+              }
+            }
+          else
+            {
+            gavl_dictionary_set(&l->dlg_section, name, &val);
+            }
+          gavl_value_free(&val);
+          }
+        }
+      break;
     case BG_MSG_NS_DIALOG:
       {
       switch(msg->ID)
         {
-        case BG_MSG_DIALOG_CLOSED:
-          {
-          const char * ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
-          
-          if(!strcmp(ctx_id, CTX_FILESELECT))
-            {
-            gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 1);
-            gtk_widget_set_sensitive(t->add_file_button, 1);
-            bg_gtk_filesel_destroy(t->filesel);
-            t->filesel = NULL;
-            }
-          else if(!strcmp(ctx_id, CTX_URLSELECT))
-            {
-            gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 1);
-            gtk_widget_set_sensitive(t->add_url_button, 1);
-            bg_gtk_urlsel_destroy(t->urlsel);
-            t->urlsel = NULL;
-            }
-          else if(!strcmp(ctx_id, CTX_DRIVESELECT))
-            {
-            gtk_widget_set_sensitive(t->add_drives_button, 1);
-            gtk_widget_set_sensitive(t->menu.add_menu.add_drives_item, 1);
-            
-            }
-          }
-          break;
         case BG_MSG_DIALOG_ADD_LOCATIONS:
           {
           gavl_array_t arr;
           gavl_array_init(&arr);
           gavl_msg_get_arg_array(msg, 0, &arr);
-          add_files(t, &arr);
+          add_files(l, &arr);
           gavl_array_free(&arr);
           }
           break;
@@ -724,26 +678,6 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
   return 1;
   }
 
-/* Set track name */
-
-static void update_track(void * data)
-  {
-  track_list_t * l = data;
-
-  track_list_update(l);
-  }
-
-typedef struct
-  {
-  int changed;
-  } encoder_parameter_data;
-
-static void set_encoder_parameter(void * data, const char * name,
-                                 const gavl_value_t * val)
-  {
-  encoder_parameter_data * d = data;
-  d->changed = 1;
-  }
 
 static const gavl_dictionary_t * get_first_selected(track_list_t * l)
   {
@@ -765,69 +699,55 @@ static const gavl_dictionary_t * get_first_selected(track_list_t * l)
 
 static void configure_encoders(track_list_t * l)
   {
-  gavl_dictionary_t * s;
-  bg_dialog_t * dlg;
+  GtkWidget * dlg;
+  bg_cfg_ctx_t ctx;
   
   const gavl_dictionary_t * first_selected = NULL;
-  gavl_dictionary_t * track = NULL;
-
-  encoder_parameter_data d;
-  d.changed = 0;
   
   if(!(first_selected = get_first_selected(l)))
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "configure_encoders: No tracks selected");
     return;
     }
-  s = bg_cfg_section_create("Encoders");
 
+  bg_cfg_ctx_init(&ctx, l->encoder_parameters, CTX_ENCODERS,
+                  TR("Encoders"), NULL, NULL);
+  
+  ctx.s_priv = bg_cfg_section_create("Encoders");
+  ctx.s = ctx.s_priv;
+  
   /* All settings, which are not in the track, are taken from the
      current encoder settings */
 
-  gavl_dictionary_copy(s, l->encoder_section);
+  gavl_dictionary_copy(ctx.s, l->encoder_section);
+  bg_transcoder_track_get_encoders(first_selected, ctx.s);
   
-  bg_transcoder_track_get_encoders(first_selected, s);
+  ctx.sink = l->dlg_sink;
 
-  bg_cfg_section_dump(s, "encoders_1.xml");
+  //  fprintf(stderr, "Encoders:\n");
+  //  gavl_dictionary_dump(ctx.s, 2);
+  /* Store the encoders also locally because we receive only the changed ones
+     from the dialog */
+  gavl_dictionary_reset(&l->dlg_section);
+  gavl_dictionary_copy(&l->dlg_section, ctx.s);
   
-  dlg = bg_dialog_create(s,
-                         set_encoder_parameter,
-                         &d,
-                         l->encoder_parameters,
-                         TR("Encoder configuration"));
-  
-  bg_dialog_show(dlg, l->widget);
-  
-  if(d.changed)
-    {
-    int i, num;
-    num = gavl_get_num_tracks(&l->t);
-    for(i = 0; i < num; i++)
-      {
-      if((track = gavl_get_track_nc(&l->t, i)) &&
-         gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
-        {
-        bg_transcoder_track_set_encoders(track, s);
-        }
-      }
-    // bg_cfg_section_dump(s, "encoders_2.xml");
-    }
-
-  bg_dialog_destroy(dlg);
-  bg_cfg_section_destroy(s);
+  dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
+                                           TR("Encoders"),
+                                           l->widget,
+                                           &ctx);
+  gtk_window_present(GTK_WINDOW(dlg));
+  bg_cfg_ctx_free(&ctx);
   }
 
 static void mass_tag(track_list_t * l)
   {
-  bg_dialog_t * dlg;
+  bg_cfg_ctx_t ctx;
+  GtkWidget * dlg;
   const bg_transcoder_track_t * first_selected;
-  bg_transcoder_track_t * track;
 
   bg_parameter_info_t * params;
   gavl_dictionary_t * s;
-  encoder_parameter_data d;
-  int i, j;
-  d.changed = 0;
+  int i;
 
   if(!(first_selected = get_first_selected(l)))
     return;
@@ -852,56 +772,20 @@ static void mass_tag(track_list_t * l)
     i++;
     }
 
-  /* Create and show dialog */
-  dlg = bg_dialog_create(s,
-                         set_encoder_parameter,
-                         &d,
-                         params,
-                         TR("Mass tag"));
-  bg_dialog_show(dlg, l->widget);
-
-  /* Apply values */
-  if(d.changed)
-    {
-    int i, num;
-    gavl_dictionary_t * m;
-    
-    num = gavl_get_num_tracks(&l->t);
-    for(j = 0; j < num; j++)
-      {
-      if((track = gavl_get_track_nc(&l->t, j)) &&
-         gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
-        {
-        m = gavl_track_get_metadata_nc(track);
-        i = 0;
-        while(params[i].name)
-          {
-          const gavl_value_t * val;
-
-          val = gavl_dictionary_get(s, params[i].name);
-
-          if(val->type == GAVL_TYPE_STRING)
-            {
-            /* Don't touch the field if empty */
-            if(!val || !val->v.str || (*val->v.str == '\0'))
-              {
-              i++;
-              continue;
-              }
-            /* Delete field if field was "-" */
-            else if(!strcmp(val->v.str, "-"))
-              val = NULL;
-            }
-          
-          bg_metadata_set_parameter(m, params[i].name, val);
-          i++;
-          }
-        }
-      }
-    }
   
-  bg_dialog_destroy(dlg);
-  bg_cfg_section_destroy(s);
+  bg_cfg_ctx_init(&ctx, params, CTX_MASSTAG,
+                  TR("Mass tag"), NULL, NULL);
+
+  ctx.sink = l->dlg_sink;
+  ctx.s = s;
+  
+  dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
+                                           TR("Mass tag"),
+                                           l->widget,
+                                           &ctx);
+  gtk_window_present(GTK_WINDOW(dlg));
+  bg_cfg_ctx_free(&ctx);
+
   bg_parameter_info_destroy_array(params);
   }
 
@@ -912,7 +796,7 @@ static void split_at_chapters(track_list_t * w)
   gavl_array_t * tracks;
   const gavl_dictionary_t * track;
   
-  fprintf(stderr, "split_at_chapters\n");
+  //  fprintf(stderr, "split_at_chapters\n");
   
   tracks = gavl_get_tracks_nc(&w->t);
 
@@ -949,7 +833,7 @@ static void split_at_chapters(track_list_t * w)
 static const bg_parameter_info_t auto_rename_parameters[] =
   {
     {
-      .name =        "rename_mask",
+      .name =        RENAME_MASK,
       .long_name =   TRS("Format for track names"),
       .type =        BG_PARAMETER_STRING,
       .help_string = TRS("Format specifier for tracknames from\n\
@@ -966,75 +850,37 @@ metadata\n\
     { /* End */ },
   };
 
-typedef struct
-  {
-  char * rename_mask;
-  } auto_rename_parameter_data;
-
-static void set_auto_rename_parameter(void * data, const char * name,
-                                      const gavl_value_t * val)
-  {
-  auto_rename_parameter_data * d = data;
-
-  if(!name)
-    return;
-  if(!strcmp(name, "rename_mask"))
-    d->rename_mask = gavl_strrep(d->rename_mask,
-                               val->v.str);
-  }
 
 static void auto_rename(track_list_t * l)
   {
-  bg_parameter_info_t * metadata_params;
   bg_parameter_info_t * auto_rename_params;
-  auto_rename_parameter_data d;
-  bg_dialog_t * dlg;
+  GtkWidget * dlg;
+  bg_cfg_ctx_t ctx;
+  const char * str;
   
-  metadata_params = bg_metadata_get_parameters(NULL);
   auto_rename_params =
     bg_parameter_info_copy_array(auto_rename_parameters);
-  
-  gavl_value_set_string(&auto_rename_params[0].val_default,
-                        l->rename_mask);
 
-  memset(&d, 0, sizeof(d));
+  if((str = gavl_dictionary_get_string(bg_cfg_registry_find_section(bg_cfg_registry, "track_list"),
+                                       RENAME_MASK)))
+    gavl_value_set_string(&auto_rename_params[0].val_default,
+                          str);
+  else
+    gavl_value_set_string(&auto_rename_params[0].val_default,
+                          "%2n %p - %t");
   
+  bg_cfg_ctx_init(&ctx, auto_rename_params, CTX_RENAME,
+                  TR("Auto rename"), NULL, NULL);
   
-  /* Create dialog */
-  dlg = bg_dialog_create(NULL,
-                         set_auto_rename_parameter,
-                         &d,
-                         auto_rename_params,
-                         TR("Auto rename"));
-  bg_dialog_show(dlg, l->widget);
-  bg_dialog_destroy(dlg);
+  ctx.sink = l->dlg_sink;
   
-  if(d.rename_mask)
-    {
-    gavl_dictionary_t * track;
-    int i, num;
-    char * new_name;
-    
-    num = gavl_get_num_tracks(&l->t);
-    for(i = 0; i < num; i++)
-      {
-      if((track = gavl_get_track_nc(&l->t, i)) &&
-         gavl_track_get_gui_state(track, GAVL_META_GUI_SELECTED))
-        {
-        gavl_dictionary_t * m = gavl_track_get_metadata_nc(track);
-        if((new_name = bg_create_track_name(m, d.rename_mask)))
-          gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, new_name);
-        
-        }
-      }
-    
-    /* Save for later use */
-    l->rename_mask = gavl_strrep(l->rename_mask, d.rename_mask);
-    free(d.rename_mask);
-    track_list_update(l);
-    }
+  dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
+                                           TR("Auto rename"),
+                                           l->widget,
+                                           &ctx);
+  gtk_window_present(GTK_WINDOW(dlg));
+  bg_cfg_ctx_free(&ctx);
   
-  bg_parameter_info_destroy_array(metadata_params);
   bg_parameter_info_destroy_array(auto_rename_params);
   }
 
@@ -1060,50 +906,24 @@ static void auto_number(track_list_t * l)
 
 static void button_callback(GtkWidget * w, gpointer data)
   {
-  
-  
-
-  gavl_time_t track_duration;
-  gavl_time_t track_duration_total;
-  
   track_list_t * t = data;
 
   if((w == t->add_file_button) || (w == t->menu.add_menu.add_files_item))
     {
-    t->filesel = bg_gtk_filesel_create("Add Files",
-                                       t->dlg_sink,
-                                       CTX_FILESELECT,
-                                       bg_gtk_get_toplevel(t->add_file_button)/* parent */);
-    
-    bg_gtk_filesel_set_directory(t->filesel, t->open_path);
-    gtk_widget_set_sensitive(t->add_file_button, 0);
-    gtk_widget_set_sensitive(t->menu.add_menu.add_files_item, 0);
-    bg_gtk_filesel_run(t->filesel, 0);     
+    bg_gtk_load_media_files(TR("Add Files"), NULL,
+                            t->add_file_button, t->dlg_sink);
     }
   else if((w == t->add_url_button) || (w == t->menu.add_menu.add_urls_item))
     {
-    t->urlsel = bg_gtk_urlsel_create(TR("Add URLs"),
-                                     t->dlg_sink, CTX_URLSELECT,
-                                     bg_gtk_get_toplevel(t->add_url_button));
-    
-    gtk_widget_set_sensitive(t->add_url_button, 0);
-    gtk_widget_set_sensitive(t->menu.add_menu.add_urls_item, 0);
-    bg_gtk_urlsel_run(t->urlsel, 0);
+    bg_gtk_urlsel_show(TR("Add URLs"),
+                       t->dlg_sink, 
+                       bg_gtk_get_toplevel(t->add_url_button));
     }
   else if((w == t->add_drives_button) || (w == t->menu.add_menu.add_drives_item))
     {
-    if(!t->drivesel)
-      t->drivesel = bg_gtk_drivesel_create("Add drive",
-                                           t->dlg_sink,
-                                           CTX_DRIVESELECT,
-                                           NULL  /* parent */);
-    
-    gtk_widget_set_sensitive(t->add_drives_button, 0);
-    gtk_widget_set_sensitive(t->menu.add_menu.add_drives_item, 0);
-    
-    bg_gtk_drivesel_run(t->drivesel, 0);
-    
-    
+    bg_gtk_drivesel_show("Add drive",
+                         t->dlg_sink,
+                         t->add_drives_button);
     }
   else if((w == t->delete_button) || (w == t->menu.selected_menu.remove_item))
     {
@@ -1120,14 +940,11 @@ static void button_callback(GtkWidget * w, gpointer data)
     }
   else if((w == t->config_button) || (w == t->menu.selected_menu.configure_item))
     {
-    if(t->track_dialog)
-      track_dialog_destroy(t->track_dialog);
-
-
-    t->track_dialog = track_dialog_create(t->selected_track, update_track,
-                                       t, t->show_tooltips);
-    track_dialog_run(t->track_dialog, t->treeview);
-
+    GtkWidget * dlg;
+    
+    dlg = track_dialog_create(t);
+    gtk_window_present(GTK_WINDOW(dlg));
+    
     }
   else if((w == t->menu.edit_menu.cut_item) || (w == t->cut_button))
     {
@@ -1140,21 +957,6 @@ static void button_callback(GtkWidget * w, gpointer data)
   else if((w == t->menu.edit_menu.paste_item) || (w == t->paste_button))
     {
     do_paste(t);
-    }
-  else if((w == t->chapter_button) || (w == t->menu.selected_menu.chapter_item))
-    {
-    gavl_chapter_list_t * cl;
-    gavl_dictionary_t * m;
-    
-    bg_transcoder_track_get_duration(t->selected_track,
-                                     &track_duration, &track_duration_total);
-
-    m = gavl_track_get_metadata_nc(t->selected_track);
-    
-    if(!(cl = gavl_dictionary_get_chapter_list_nc(m)))
-      cl = gavl_dictionary_add_chapter_list(m, GAVL_TIME_SCALE);
-    
-    bg_gtk_chapter_dialog_show(&cl, track_duration, t->treeview);
     }
   else if(w == t->menu.selected_menu.mass_tag_item)
     {
@@ -1245,8 +1047,6 @@ static void init_menu(track_list_t * t)
     create_icon_item(t, t->menu.selected_menu.menu, TR("Remove"), BG_ICON_TRASH);
   t->menu.selected_menu.configure_item =
     create_icon_item(t, t->menu.selected_menu.menu, TR("Configure..."), BG_ICON_CONFIG);
-  t->menu.selected_menu.chapter_item =
-    create_item(t, t->menu.selected_menu.menu, TR("Edit chapters..."), BG_ICON_CHAPTERS);
   t->menu.selected_menu.mass_tag_item =
     create_item(t, t->menu.selected_menu.menu, TR("Mass tag..."), NULL);
   t->menu.selected_menu.split_at_chapters_item =
@@ -1307,7 +1107,6 @@ static void init_menu(track_list_t * t)
   gtk_widget_set_sensitive(t->menu.selected_menu.configure_item, 0);
   gtk_widget_set_sensitive(t->menu.selected_menu.remove_item, 0);
   gtk_widget_set_sensitive(t->menu.selected_menu.encoder_item, 0);
-  gtk_widget_set_sensitive(t->menu.selected_menu.chapter_item, 0);
   gtk_widget_set_sensitive(t->menu.selected_menu.mass_tag_item, 0);
   gtk_widget_set_sensitive(t->menu.selected_menu.split_at_chapters_item, 0);
   gtk_widget_set_sensitive(t->menu.selected_menu.auto_number_item, 0);
@@ -1518,11 +1317,6 @@ track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
                        BG_ICON_CONFIG,
                        TRS("Configure selected track"));
 
-  ret->chapter_button =
-    create_icon_button(ret,
-                         BG_ICON_CHAPTERS,
-                         TRS("Edit chapters"));
-  
   ret->encoder_button =
     create_icon_button(ret,
                          BG_ICON_PLUGIN,
@@ -1545,7 +1339,6 @@ track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
   gtk_widget_set_sensitive(ret->delete_button, 0);
   gtk_widget_set_sensitive(ret->encoder_button, 0);
   gtk_widget_set_sensitive(ret->config_button, 0);
-  gtk_widget_set_sensitive(ret->chapter_button, 0);
   //  gtk_widget_set_sensitive(ret->up_button, 0);
   //  gtk_widget_set_sensitive(ret->down_button, 0);
   gtk_widget_set_sensitive(ret->cut_button, 0);
@@ -1699,7 +1492,6 @@ track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
   gtk_box_pack_start(GTK_BOX(box), ret->delete_button, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(box), ret->encoder_button, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(box), ret->config_button, FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(box), ret->chapter_button, FALSE, FALSE, 0);
   //  gtk_box_pack_start(GTK_BOX(box), ret->up_button, FALSE, FALSE, 0);
   //  gtk_box_pack_start(GTK_BOX(box), ret->down_button, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(box), ret->cut_button, FALSE, FALSE, 0);
@@ -1742,18 +1534,16 @@ void track_list_destroy(track_list_t * t)
     }
 
   gavl_dictionary_free(&t->t);
+  gavl_dictionary_free(&t->dlg_section);
+
+  if(t->dlg_sink)
+    bg_msg_sink_destroy(t->dlg_sink);
   
   g_object_unref(t->accel_group);
 
-  if(t->open_path)
-    free(t->open_path);
-  if(t->rename_mask)
-    free(t->rename_mask);
   if(t->clipboard)
     free(t->clipboard);
 
-  bg_msg_sink_destroy(t->dlg_sink);
-  
   free(t);
   }
 
@@ -1827,63 +1617,3 @@ void track_list_save(track_list_t * t, const char * filename)
   }
 
 
-bg_parameter_info_t parameters[] =
-  {
-    {
-      .name =        "open_path",
-      .long_name =   "Open Path",
-      .type =        BG_PARAMETER_DIRECTORY,
-      .flags =       BG_PARAMETER_HIDE_DIALOG,
-      .val_default = GAVL_VALUE_INIT_STRING("."),
-    },
-    {
-      .name =        "rename_mask",
-      .long_name =   "rename mask",
-      .type =        BG_PARAMETER_STRING,
-      .flags =       BG_PARAMETER_HIDE_DIALOG,
-      .val_default = GAVL_VALUE_INIT_STRING("%p - %t"),
-    },
-    { /* End of parameters */ }
-  };
-
-bg_parameter_info_t * track_list_get_parameters(track_list_t * t)
-  {
-  return parameters;
-  }
-
-void
-track_list_set_parameter(void * data, const char * name,
-                         const gavl_value_t * val)
-  {
-  track_list_t * t;
-  if(!name)
-    return;
-
-  t = data;
-  
-  if(!strcmp(name, "open_path"))
-    t->open_path = gavl_strrep(t->open_path, val->v.str);
-  if(!strcmp(name, "rename_mask"))
-    t->rename_mask = gavl_strrep(t->rename_mask, val->v.str);
-  }
-
-int track_list_get_parameter(void * data, const char * name, gavl_value_t * val)
-  {
-  track_list_t * t;
-  if(!name)
-    return 0;
-
-  t = data;
-  
-  if(!strcmp(name, "open_path"))
-    {
-    val->v.str = gavl_strrep(val->v.str, t->open_path);
-    return 1;
-    }
-  else if(!strcmp(name, "rename_mask"))
-    {
-    val->v.str = gavl_strrep(val->v.str, t->rename_mask);
-    return 1;
-    }
-  return 0;
-  }

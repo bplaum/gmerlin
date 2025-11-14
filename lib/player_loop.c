@@ -897,7 +897,7 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
     case BG_MSG_NS_PARAMETER:
       switch(command->ID)
         {
-        case BG_MSG_SET_PARAMETER_CTX:
+        case BG_CMD_SET_PARAMETER:
           {
           const char * name = NULL;
           const char * ctx = NULL;
@@ -944,12 +944,12 @@ int bg_player_handle_command(void * priv, gavl_msg_t * command)
             {
             if(cfg_ctx->set_param)
               cfg_ctx->set_param(cfg_ctx->cb_data, name, &val);
-            bg_parameter_value_free(&val);
+            gavl_value_free(&val);
             }
           
           }
           break;
-        case BG_MSG_SET_CHAIN_PARAMETER_CTX:
+        case BG_CMD_SET_CHAIN_PARAMETER_CTX:
           {
           const char * ctx;
           const char * name;

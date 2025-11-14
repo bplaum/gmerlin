@@ -129,59 +129,6 @@ char * bg_create_unique_filename(char * template)
     }
   }
 
-#if 0
-char ** bg_strbreak(const char * str, char delim)
-  {
-  int num_entries;
-  char *pos, *end = NULL;
-  const char *pos_c;
-  char ** ret;
-  int i;
-  if(!str || (*str == '\0'))
-    return NULL;
-    
-  pos_c = str;
-  
-  num_entries = 1;
-  while((pos_c = strchr(pos_c, delim)))
-    {
-    num_entries++;
-    pos_c++;
-    }
-  ret = calloc(num_entries+1, sizeof(char*));
-
-  ret[0] = gavl_strdup(str);
-  
-  pos = ret[0];
-  for(i = 0; i < num_entries; i++)
-    {
-    if(i)
-      {
-      ret[i] = pos;
-      }
-    if(i < num_entries-1)
-      {
-      end = strchr(pos, delim);
-      *end = '\0';
-      }
-    end++;
-    pos = end;
-    }
-
-  for(i = 0; i < num_entries; i++)
-    strip_space(ret[i], 0);
-  
-  return ret;
-  }
-
-void bg_strbreak_free(char ** retval)
-  {
-  free(retval[0]);
-  free(retval);
-  }
-#endif
-
-
 int bg_string_is_url(const char * str)
   {
   const char * pos, * end_pos;
@@ -323,82 +270,6 @@ int gavl_url_split(const char * url,
     }
   return 1;
   }
-
-#if 0
-
-/*
- *  Split off vars like path?var1=val1&var2=val2#fragment
- */
-
-static void url_vars_to_metadata(const char * pos, gavl_dictionary_t * vars)
-  {
-  int i;
-  char ** str;
-  i = 0;
-  
-  str = gavl_strbreak(pos, '&');
-
-  if(!str)
-    return;
-  
-  while(str[i])
-    {
-    char * key;
-    pos = strchr(str[i], '=');
-    if(!pos)
-      gavl_dictionary_set_int(vars, str[i], 1);
-    else
-      {
-      key = gavl_strndup(str[i], pos);
-      pos++;
-
-      gavl_dictionary_set_string(vars, key, pos);
-      free(key);
-      }
-    i++;
-    }
-  gavl_strbreak_free(str);
-  }
-
-void bg_url_get_vars_c(const char * path,
-                       gavl_dictionary_t * vars)
-  {
-  const char * pos = strrchr(path, '?');
-  if(!pos)
-    return;
-  pos++;
-
-  url_vars_to_metadata(pos, vars);
-  }
- 
-void bg_url_get_vars(char * path,
-                     gavl_dictionary_t * vars)
-  {
-  char * pos;
-
-  /* Hack */
-#if 0
-  pos = strchr(path, '#');
-  if(pos)
-    *pos = '\0';
-#endif
-  /* End Hack */
-
-  pos = strrchr(path, '?');
-  if(!pos)
-    return;
-
-  *pos = '\0';
-  
-  if(!vars)
-    return;
-  
-  pos++;
-
-  if(vars)
-    url_vars_to_metadata(pos, vars);
-  }
-#endif
 
 int bg_url_get_track(const char * path)
   {
@@ -704,6 +575,12 @@ void bg_diprintf(int indent, const char * format, ...)
   va_end(argp);
   }
 
+char * bg_filename_get_dir(const char * filename)
+  {
+  const char * pos = strrchr(filename, '/');
+  return gavl_strndup(filename, pos);
+  }
+
 char * bg_filename_ensure_extension(const char * filename,
                                     const char * ext)
   {
@@ -890,6 +767,7 @@ bg_mimetype_t bg_mimetypes[] =
     { "m3u",  "application/mpegurl",     "M3U", NULL, BG_MIME_SUPPORTS_MULTITRACK  },
     { "m3u8", "application/x-mpegURL",   "M3U8", NULL, BG_MIME_SUPPORTS_MULTITRACK },
     { "mp3",  "audio/mpeg",              "MP3"            },
+    { "mp3",  "audio/mp3",               "MP3"            },
     { "aac",  "audio/aacp",              "AAC+"         },
     { "aac",  "audio/aac",               "AAC"            },
     { "flac", "audio/flac",              "Flac"           },

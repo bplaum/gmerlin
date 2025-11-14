@@ -23,51 +23,32 @@
 #ifndef BG_GTK_FILESELECT_H_INCLUDED
 #define BG_GTK_FILESELECT_H_INCLUDED
 
-typedef struct bg_gtk_filesel_s bg_gtk_filesel_t;
+typedef struct
+  {
+  const char * label;
+  const char * extension;
+  int type;
+  } bg_gtk_file_filter_t;
 
-/* Create fileselector with callback */
-
-bg_gtk_filesel_t *
-bg_gtk_filesel_create(const char * title,
-                      bg_msg_sink_t * sink,
-                      const char * ctx,
-                      GtkWidget * parent_window);
-
-/* Destroy fileselector */
-
-void bg_gtk_filesel_destroy(bg_gtk_filesel_t * filesel);
-
-/* Show the window */
-
-/* A non modal window will destroy itself when it's closed */
-
-void bg_gtk_filesel_run(bg_gtk_filesel_t * filesel, int modal);
-
-/* Get the current working directory */
-
-const char * bg_gtk_filesel_get_directory(bg_gtk_filesel_t * filesel);
-void bg_gtk_filesel_set_directory(bg_gtk_filesel_t * filesel,
-                                  const char * dir);
-
-/*
- *  Create a temporary fileselector and ask
- *  for a file to save something
- *
- *  Return value should be freed with free();
- *
- *
- *  
- */
-
+// BG_MSG_DIALOG_FILE_SAVE
 void bg_gtk_get_filename_write(const char * title, const char * context,
-                               char ** directory,
-                               int ask_overwrite, GtkWidget * parent, bg_msg_sink_t * sink);
-
+                               const char * directory,
+                               int ask_overwrite, GtkWidget * parent, bg_msg_sink_t * sink,
+                               const bg_gtk_file_filter_t * filter);
+// BG_MSG_DIALOG_FILE_LOAD
 void  bg_gtk_get_filename_read(const char * title, const char * context,
-                               char ** directory, GtkWidget * parent, bg_msg_sink_t * sink);
+                               const char * directory, GtkWidget * parent, bg_msg_sink_t * sink);
 
+// BG_MSG_DIALOG_DIRECTORY
 void  bg_gtk_get_directory(const char * title, const char * context,
                            GtkWidget * parent, bg_msg_sink_t * sink);
+
+// BG_MSG_DIALOG_ADD_LOCATIONS
+void bg_gtk_load_media_files(const char * title,
+                             const char * directory,
+                             GtkWidget * parent,
+                             bg_msg_sink_t * sink);
+
 
 #endif // BG_GTK_FILESELECT_H_INCLUDED
 

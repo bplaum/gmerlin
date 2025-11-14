@@ -77,7 +77,9 @@ static const bg_parameter_info_t parameters[] =
 
 void renderer_init(renderer_t * s, gavl_array_t * fe_arr)
   {
-  gavl_dictionary_t * section;
+  gavl_dictionary_t * section_reg;
+  gavl_dictionary_t * section_default;
+
   const gavl_value_t * uuid_val;
   const char * uuid = NULL;
   bg_controllable_t * player_ctrl;
@@ -90,10 +92,16 @@ void renderer_init(renderer_t * s, gavl_array_t * fe_arr)
   
   s->srv = bg_http_server_create();
   
-  section = bg_cfg_registry_find_section(bg_cfg_registry, "renderer");
-  bg_cfg_section_create_items(section, renderer_get_parameters(s));
-  bg_cfg_section_apply(section, renderer_get_parameters(s), renderer_set_parameter, s);
+  section_reg = bg_cfg_registry_find_section(bg_cfg_registry, "renderer");
+  section_default = bg_cfg_section_create("renderer");
 
+  bg_cfg_section_create_items(section_default, renderer_get_parameters(s));
+  gavl_dictionary_update_fields(section_default, section_reg);
+  
+  bg_cfg_section_apply(section_default, renderer_get_parameters(s), renderer_set_parameter, s);
+  gavl_dictionary_destroy(section_default);
+
+  
   /* Create vardir */
   if(!s->vardir)
     s->vardir = bg_search_var_dir(VAR_PREFIX);
@@ -137,8 +145,8 @@ void renderer_init(renderer_t * s, gavl_array_t * fe_arr)
   player_ctrl = bg_player_get_controllable(s->player);
 
   /* Apply config */
-  section = bg_cfg_registry_find_section(bg_cfg_registry, "player");
-  bg_cfg_ctx_array_create_sections(s->player_cfg, section);
+  section_reg = bg_cfg_registry_find_section(bg_cfg_registry, "player");
+  bg_cfg_ctx_array_create_sections(s->player_cfg, section_reg);
   bg_player_apply_cmdline(s->player_cfg);
   
   bg_cfg_ctx_set_sink_array(s->player_cfg, player_ctrl->cmd_sink);

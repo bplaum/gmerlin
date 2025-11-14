@@ -100,7 +100,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 43
+#define BG_PLUGIN_API_VERSION 44
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -238,14 +238,6 @@ struct bg_plugin_common_s
    */
     
   bg_set_parameter_func_t set_parameter;
-
-  /** \brief Get configuration parameter (optional)
-   *
-   *  This must only return parameters, which are changed internally
-   *  by the plugins.
-   */
-  
-  bg_get_parameter_func_t get_parameter;
 
   /** \brief Get the controllablle
    */

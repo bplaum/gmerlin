@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <string.h>
 
 #include <gavl/gavl.h>
@@ -63,8 +61,6 @@ struct bg_visualizer_s
   bg_player_t * player;
   
   bg_controllable_t ctrl;
-
-  bg_parameter_info_t * parameters;
 
   int state;
 
@@ -136,14 +132,8 @@ static void cleanup_audio(bg_visualizer_t * v)
 static const bg_parameter_info_t parameters[] =
   {
     {
-      .name      = "plugin",
-      .long_name = TRS("Plugin"),
-      .type      = BG_PARAMETER_MULTI_MENU,
-      .flags     = BG_PARAMETER_PLUGIN,
-    },
-    {
       .name =        "width",
-      .long_name =   TRS("Width"),
+      .long_name =   TRS("Default width"),
       .type =        BG_PARAMETER_INT,
       .val_min =     GAVL_VALUE_INIT_INT(16),
       .val_max =     GAVL_VALUE_INIT_INT(32768),
@@ -152,7 +142,7 @@ static const bg_parameter_info_t parameters[] =
     },
     {
       .name =       "height",
-      .long_name =  TRS("Height"),
+      .long_name =  TRS("Default height"),
       .type =       BG_PARAMETER_INT,
       .val_min =    GAVL_VALUE_INIT_INT(16),
       .val_max =    GAVL_VALUE_INIT_INT(32768),
@@ -161,19 +151,20 @@ static const bg_parameter_info_t parameters[] =
     },
     {
       .name =        "framerate",
-      .long_name =   TRS("Framerate"),
+      .long_name =   TRS("Default framerate"),
       .type =        BG_PARAMETER_FLOAT,
       .val_min =     GAVL_VALUE_INIT_FLOAT(1.0),
       .val_max =     GAVL_VALUE_INIT_FLOAT(200.0),
       .val_default = GAVL_VALUE_INIT_FLOAT(30.0),
+      .help_string = TRS("Target framerate. The visualization plugin might override this."),
       .num_digits = 2,
     },
     { /* End of parameters */ }
   };
 
-const bg_parameter_info_t * bg_visualizer_get_parameters(bg_visualizer_t * v)
+const bg_parameter_info_t * bg_visualizer_get_parameters(void)
   {
-  return v->parameters;
+  return parameters;
   }
 
 void bg_visualizer_destroy(bg_visualizer_t * v)
@@ -199,18 +190,31 @@ void bg_visualizer_destroy(bg_visualizer_t * v)
 
   gavl_value_free(&v->plugin_cfg);
 
-  if(v->parameters)
-    bg_parameter_info_destroy_array(v->parameters);
-  
   free(v);
-  } 
+  }
 
 static void load_plugin(bg_visualizer_t * v, int plugin)
   {
   //  fprintf(stderr, "load_plugin: %d\n", plugin);
-  
-  bg_multi_menu_set_selected_idx(&v->plugin_cfg, plugin);
 
+  const gavl_array_t * arr;
+  const gavl_dictionary_t * dict;
+
+  if(!(dict = bg_plugin_config_get_section(BG_PLUGIN_VISUALIZATION)) ||
+     !(arr = gavl_dictionary_get_array(dict, BG_PLUGIN_CONFIG_PLUGIN)) ||
+     !(dict = gavl_value_get_dictionary(&arr->entries[plugin])))
+    {
+    if(dict)
+      {
+      fprintf(stderr, "load_plugin failed\n");
+      gavl_dictionary_dump(dict, 2);
+      }
+    
+    /* Error */
+    bg_ov_show_window(v->ov, 0);
+    return;
+    }
+  
   if(v->plugin_ctrl)
     {
     bg_controllable_t * ctrl = NULL;
@@ -226,15 +230,11 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
     
     v->plugin_ctrl = NULL;
     }
-
   
   v->flags &= ~FLAG_VIS_CONNECTED;
-
   
   if(v->h)
     {
-    //    fprintf(stderr, "visualize: unload_plugin\n");
-    
     bg_ov_close(v->ov);
     bg_plugin_unref(v->h);
     v->h = NULL;
@@ -244,16 +244,12 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
     v->vsrc = NULL;
     }
 
-  //  fprintf(stderr, "visualize: load_plugin\n");
-  
-  if(!(v->h = bg_plugin_load_with_options(bg_multi_menu_get_selected(&v->plugin_cfg))))
+  if(!(v->h = bg_plugin_load_with_options(dict)))
     {
-    //    fprintf(stderr, "visualize: loading_plugin failed\n");
     bg_ov_show_window(v->ov, 0);
     return;
     }
-  //  fprintf(stderr, "visualize: load_plugin done\n");
-  
+
   v->plugin = (bg_visualization_plugin_t*)v->h->plugin;
     
   if(v->h->plugin->get_controllable)
@@ -268,16 +264,7 @@ void bg_visualizer_set_parameter(void * priv, const char * name, const gavl_valu
 
   if(!name)
     {
-    //    load_plugin(v, bg_multi_menu_get_selected_idx(&v->plugin_cfg));
     gavl_video_format_set_frame_size(&v->vfmt_default, 1, 1);
-    }
-  else if(!strcmp(name, "plugin"))
-    {
-    //    fprintf(stderr, "Plugin\n");
-    //    gavl_value_dump(val, 2);
-
-    gavl_value_reset(&v->plugin_cfg);
-    gavl_value_copy(&v->plugin_cfg, val);
     }
   else if(!strcmp(name, "width"))
     {
@@ -604,16 +591,6 @@ bg_visualizer_t * bg_visualizer_create(bg_player_t * player)
   
   pthread_mutex_init(&ret->audio_mutex, NULL);
   
-  if(!ret->parameters)
-    {
-    ret->parameters = bg_parameter_info_copy_array(parameters);
-
-    bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                          BG_PLUGIN_VISUALIZATION,
-                                          0, ret->parameters);
-
-    bg_multi_menu_create(&ret->plugin_cfg, ret->parameters);
-    }
   
   if(player)
     {
@@ -815,16 +792,6 @@ void bg_visualizer_set_plugin_by_index(bg_visualizer_t * v, int plugin)
 
   gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_SET_PLUGIN, BG_MSG_NS_VISUALIZER);
   gavl_msg_set_arg_int(msg, 0, plugin);
-  bg_msg_sink_put(v->msink);
-  }
-
-void bg_visualizer_set_plugin_by_string(bg_visualizer_t * v, const char * str)
-  {
-  gavl_msg_t * msg = bg_msg_sink_get(v->msink);
-
-  gavl_msg_set_id_ns(msg, BG_CMD_VISUALIZER_SET_PLUGIN, BG_MSG_NS_VISUALIZER);
-  gavl_msg_set_arg_int(msg, 0, -1);
-  gavl_msg_set_arg_string(msg, 1, str);
   bg_msg_sink_put(v->msink);
   }
   

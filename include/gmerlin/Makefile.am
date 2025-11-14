@@ -9,7 +9,6 @@ bggavl.h \
 bgmsg.h \
 bgdbus.h \
 bgthread.h \
-cfg_dialog.h \
 cfg_registry.h \
 cfgctx.h \
 cmdline.h \
@@ -22,13 +21,11 @@ frontend.h \
 http.h \
 httpserver.h \
 iconfont.h \
-lcdproc.h \
 log.h \
 lpcm_handler.h \
 mdb.h \
 mediaconnector.h \
 objectcache.h \
-ocr.h \
 osd.h \
 ov.h \
 parameter.h \

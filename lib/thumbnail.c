@@ -350,7 +350,8 @@ char * bg_make_thumbnail(gavl_video_frame_t * in_frame,
 
   if(!output_handle)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", plugin_info->long_name);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed",
+             bg_plugin_info_get_long_name(plugin_info));
     goto end;
     }
   

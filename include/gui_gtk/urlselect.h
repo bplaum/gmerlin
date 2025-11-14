@@ -23,24 +23,14 @@
 #ifndef BG_GTK_URLSELECT_H_INCLUDED
 #define BG_GTK_URLSELECT_H_INCLUDED
 
-typedef struct bg_gtk_urlsel_s bg_gtk_urlsel_t;
-
 /* Create urlselector with callback */
 
+// BG_MSG_DIALOG_ADD_LOCATIONS
 
-bg_gtk_urlsel_t *
-bg_gtk_urlsel_create(const char * title,
-                     bg_msg_sink_t * sink,
-                     const char * ctx,
-                     GtkWidget * parent_window);
-
-/* Destroy urlselector */
-
-void bg_gtk_urlsel_destroy(bg_gtk_urlsel_t * urlsel);
-
-/* Show the window */
-
-void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal);
+void
+bg_gtk_urlsel_show(const char * title,
+                   bg_msg_sink_t * sink,
+                   GtkWidget * parent_window);
 
 #endif // BG_GTK_URLSELECT_H_INCLUDED
 

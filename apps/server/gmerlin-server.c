@@ -107,7 +107,9 @@ int main(int argc, char ** argv)
   signal(SIGPIPE, SIG_IGN);
 
   bg_cfg_registry = gavl_dictionary_create();
-  bg_cfg_registry_find_section(bg_cfg_registry, "server"); // Ensure that the server section comes first in the configfile
+
+  // Ensure that the server section comes first in the configfile
+  bg_cfg_registry_find_section(bg_cfg_registry, "server"); 
   
   bg_plugins_init();
   

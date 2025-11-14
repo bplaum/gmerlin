@@ -109,12 +109,6 @@ static void set_parameter_x11(void * priv, const char * name,
   bg_x11_grab_window_set_parameter(x11->win, name, val);
   }
 
-static int get_parameter_x11(void * priv, const char * name,
-                             gavl_value_t * val)
-  {
-  x11_t * x11 = priv;
-  return bg_x11_grab_window_get_parameter(x11->win, name, val);
-  }
 
 static int open_x11(void * priv, const char * location)
   {
@@ -192,7 +186,6 @@ const bg_input_plugin_t the_plugin =
 
       .get_parameters = get_parameters_x11,
       .set_parameter =  set_parameter_x11,
-      .get_parameter =  get_parameter_x11,
       .get_controllable = get_controllable_x11,
       .get_protocols = get_protocols_x11,
     },

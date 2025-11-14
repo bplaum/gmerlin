@@ -26,6 +26,7 @@
 #include <gmerlin/translation.h>
 #include <gavl/gavl.h>
 #include <gavl/value.h>
+#include <gavl/parameter.h>
 
 #if GTK_MAJOR_VERSION >= 4
 #define DELETE_EVENT "close-request"
@@ -59,6 +60,9 @@ void bg_gtk_set_tooltips(int enable);
 int bg_gtk_get_tooltips();
 
 GtkWidget * bg_gtk_get_toplevel(GtkWidget * w);
+
+/* Works with g_idle_add */
+gboolean bg_gtk_destroy_widget(gpointer data);
 
 // #define bg_gtk_box_pack_start_defaults(b, cy 
 //  gtk_box_pack_start(b, c, TRUE, TRUE, 0)
@@ -141,9 +145,21 @@ void bg_gtk_dict_view_set_dict(bg_gtk_dict_view_t * w, const gavl_dictionary_t *
 void bg_gtk_dict_view_destroy(bg_gtk_dict_view_t * w);
 
 void bg_gtk_quit();
+GtkWidget * bg_gtk_find_widget_by_name(GtkWidget *parent, const char *name);
 
-// #define BG_GTK_ACTION_FUNC(name, ns, id)
-  
+int bg_g_value_to_gavl(const GValue * gval, gavl_value_t * gavl, gavl_parameter_type_t type);
+int bg_g_value_from_gavl(GValue * gval, const gavl_value_t * gavl, gavl_parameter_type_t type);
+
+GtkWidget * bg_gtk_simple_list_create(int has_config);
+
+int bg_gtk_simple_list_get_selected(GtkWidget * w);
+
+void bg_gtk_simple_list_add(GtkWidget * w, const char * name, const char * label, int pos);
+void bg_gtk_simple_list_remove(GtkWidget * w, int pos);
+void bg_gtk_simple_list_clear(GtkWidget * w);
+
+char * bg_gtk_simple_list_get_name(GtkWidget * w, int pos);
+// gavl_dictionary_t * bg_gtk_simple_list_get_config(GtkWidget * w, int pos);
 
 #endif // BG_GTKUTILS_H_INCLUDED
 

@@ -252,6 +252,9 @@ void bg_metadata_set_parameter(void * data, const char * name,
   if(!name)
     return;
 
+  if(val->type == GAVL_TYPE_UNDEFINED)
+    return;
+  
   SP_STR_MULTI(GAVL_META_ARTIST);
   SP_STR_MULTI(GAVL_META_ALBUMARTIST);
   SP(GAVL_META_TITLE);

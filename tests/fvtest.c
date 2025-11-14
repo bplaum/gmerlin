@@ -34,7 +34,7 @@
 
 bg_video_filter_chain_t * fc;
 
-const bg_parameter_info_t * fv_parameters;
+bg_parameter_info_t * fv_parameters;
 gavl_dictionary_t * fv_section = NULL;
 gavl_dictionary_t * opt_section = NULL;
 
@@ -115,13 +115,6 @@ static bg_cmdline_arg_t global_options[] =
       .callback =    opt_fv,
     },
     {
-      .arg =         "-opt",
-      .help_arg =    "<video options>",
-      .help_string = "Set video options",
-      .callback =    opt_opt,
-      .parameters =  opt_parameters,
-    },
-    {
       .arg =         "-frame",
       .help_arg =    "<number>",
       .help_string = "Output that frame (default 0)",
@@ -190,7 +183,7 @@ int main(int argc, char ** argv)
   memset(&opt, 0, sizeof(opt));
   bg_gavl_video_options_init(&opt);
   fc = bg_video_filter_chain_create(&opt);
-  fv_parameters = bg_video_filter_chain_get_parameters(fc);
+  fv_parameters = bg_video_filter_chain_get_parameters();
   fv_section =
     bg_cfg_section_create_from_parameters("fv", fv_parameters);
   opt_section =

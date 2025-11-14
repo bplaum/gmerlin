@@ -677,14 +677,6 @@ void bg_player_set_input_parameter(void * data, const char * name,
 
 const bg_parameter_info_t * bg_player_get_audio_parameters(bg_player_t * player);
 
-/** \brief Get audio filter parameters
- *  \param player A player
- *  \returns Null terminated parameter array.
- *
- *  Returned parameters can be passed to \ref bg_player_set_audio_filter_parameter
- */
-
-const bg_parameter_info_t * bg_player_get_audio_filter_parameters(bg_player_t * player);
 
 /** \brief Set an audio parameter
  *  \param data Player casted to void*
@@ -713,13 +705,6 @@ void bg_player_handle_audio_filter_command(bg_player_t * p, gavl_msg_t * msg);
  */
 const bg_parameter_info_t * bg_player_get_video_parameters(bg_player_t * player);
 
-/** \brief Get video filter parameters
- *  \param player A player
- *  \returns Null terminated parameter array.
- *
- *  Returned parameters can be passed to \ref bg_player_set_video_parameter
- */
-const bg_parameter_info_t * bg_player_get_video_filter_parameters(bg_player_t * player);
 
 /** \brief Get video output plugin parameters
  *  \param player A player

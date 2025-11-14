@@ -206,12 +206,23 @@ struct bg_gtk_mdb_tree_s
     } menu_ctx;
   
   bg_msg_sink_t * dlg_sink;
+  gavl_dictionary_t dlg_dict;
   };
+
+#define MSG_ADD_STREAM      "add-stream"
+#define MSG_ADD_CONTAINER   "add-container"
+#define MSG_SAVE_ALBUM      "save-album"
+#define MSG_SAVE_SELECTED   "save-selected"
+#define MSG_LOAD_FILES      "load_files"
 
 void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
                                          const char * label,
                                          const char * klass,
                                          const char * uri);
+
+void bg_gtk_mdb_add_stream_source(bg_gtk_mdb_tree_t * tree,
+                                  const char * label,
+                                  const char * uri);
 
 
 void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
@@ -221,6 +232,9 @@ int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
                                const char * id);
 
 void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPixbuf * pb);
+
+gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(album_t * album);
+
 
 int bg_gtk_mdb_array_get_flag_str(const gavl_array_t * arr, const char * id);
 void bg_gtk_mdb_array_set_flag_str(gavl_array_t * arr, const char * id, int flag);
@@ -262,3 +276,4 @@ void bg_gtk_mdb_browse_children(bg_gtk_mdb_tree_t * t, const char * id);
 void bg_gtk_mdb_browse_object(bg_gtk_mdb_tree_t * t, const char * id);
 
 void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event);
+

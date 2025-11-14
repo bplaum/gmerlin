@@ -14,8 +14,7 @@ AM_LDFLAGS = @GMERLIN_EXE_LDFLAGS@
 if HAVE_GTK
 gtk_programs = \
 cfgtest \
-mdb-tree \
-chapter
+mdb-tree
 else
 gtk_programs =
 endif
@@ -23,13 +22,10 @@ endif
 bin_PROGRAMS = gmerlin-mediadump
 
 noinst_PROGRAMS = \
-fvtest \
 server \
 client \
-dump_plugins \
 extractchannel \
 insertchannel \
-ocrtest \
 textrenderer \
 ladspa \
 makethumbnail \
@@ -37,7 +33,6 @@ msgiotest \
 resource \
 sqlextract \
 upnpdesc \
-websocket_test \
 $(gtk_programs) \
 gmerlin_imgconvert \
 gmerlin_imgdiff \
@@ -53,9 +48,6 @@ gmerlin_vpsnr
 sqlextract_SOURCES = sqlextract.c
 sqlextract_LDADD = ../lib/libgmerlin.la -ldl  @SQLITE3_LIBS@
 
-ocrtest_SOURCES = ocrtest.c
-ocrtest_LDADD = ../lib/libgmerlin.la -ldl
-
 msgiotest_SOURCES = msgiotest.c
 msgiotest_LDADD = ../lib/libgmerlin.la -ldl
 
@@ -65,15 +57,8 @@ upnpdesc_LDADD = ../lib/libgmerlin.la -ldl @UUID_LIBS@ @XML2_LIBS@
 extractchannel_SOURCES = extractchannel.c
 extractchannel_LDADD = ../lib/libgmerlin.la -ldl
 
-websocket_test_LDADD = ../lib/libgmerlin.la -ldl
-
-
 insertchannel_SOURCES = insertchannel.c
 insertchannel_LDADD = ../lib/libgmerlin.la -ldl
-
-
-dump_plugins_SOURCES = dump_plugins.c
-dump_plugins_LDADD = ../lib/libgmerlin.la -ldl
 
 ladspa_SOURCES = ladspa.c
 ladspa_LDADD =  -ldl
@@ -103,28 +88,17 @@ gmerlin_mediadump_LDADD = ../lib/libgmerlin.la -ldl
 gmerlin_vanalyze_SOURCES = gmerlin_vanalyze.c
 gmerlin_vanalyze_LDADD = ../lib/libgmerlin.la -ldl
 
-# gmerlin_visualize_SOURCES = gmerlin_visualize.c
-# gmerlin_visualize_LDADD = ../lib/libgmerlin.la -ldl
-
 gmerlin_imgdiff_SOURCES = gmerlin_imgdiff.c
 gmerlin_imgdiff_LDADD = ../lib/libgmerlin.la -ldl
 
 textrenderer_SOURCES = textrenderer.c
 textrenderer_LDADD = ../lib/libgmerlin.la -ldl
 
-fvtest_SOURCES = fvtest.c
-fvtest_LDADD = ../lib/libgmerlin.la -ldl
-
-
 cfgtest_SOURCES = cfgtest.c
 cfgtest_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
 
 mdb_tree_SOURCES = mdb-tree.c
 mdb_tree_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la @GTK_LIBS@
-
-
-chapter_SOURCES = chapter.c
-chapter_LDADD = ../lib/libgmerlin.la ../lib/gtk/libgmerlin_gtk.la
 
 resource_SOURCES = resource.c
 resource_LDADD = ../lib/libgmerlin.la

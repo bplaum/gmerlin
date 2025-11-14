@@ -23,10 +23,14 @@
 #ifndef BG_GTK_DRIVESEL_H_INCLUDED
 #define BG_GTK_DRIVESEL_H_INCLUDED
 
-typedef struct bg_gtk_drivesel_s bg_gtk_drivesel_t;
-
 /* Create driveselector with callback */
 
+void
+bg_gtk_drivesel_show(const char * title,
+                     bg_msg_sink_t * sink,
+                     GtkWidget * parent_window);
+
+#if 0
 bg_gtk_drivesel_t *
 bg_gtk_drivesel_create(const char * title,
                        bg_msg_sink_t * sink,
@@ -40,6 +44,8 @@ void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel);
 /* Show the window */
 
 void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal);
+#endif
+
 
 #endif // BG_GTK_DRIVESEL_H_INCLUDED
 

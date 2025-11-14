@@ -27,7 +27,6 @@
 
 #define BG_RESOURCE_EXPIRE_TIME  "ExpireTime"
 #define BG_RESOURCE_PRIORITY     "Priority"
-#define BG_RESOURCE_PLUGIN       "Plugin"
 
 #define BG_RESOURCE_PRIORITY_MIN     1
 #define BG_RESOURCE_PRIORITY_DEFAULT 2

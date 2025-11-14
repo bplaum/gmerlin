@@ -86,13 +86,16 @@ static const char * load_blacklist_names  = "README lock";
 
 #define TO_VIDEO "$to_video"
 
+#define SECTION_MASK (BG_PLUGIN_INPUT|BG_PLUGIN_IMAGE_READER)
+
 static int
 get_multipart_edl(const gavl_dictionary_t * track, gavl_dictionary_t * edl);
 
 static void
 set_locations(gavl_dictionary_t * dict, const char * location);
 
-
+#define FLAG_CHANGED      (1<<0)
+#define FLAG_HAVE_CONFIG  (1<<1)
 
 static struct
   {
@@ -122,12 +125,6 @@ meta_plugins[] =
       bg_singlepic_encoder_create,
     },
     {
-      bg_ovl2text_name,
-      bg_ovl2text_info,
-      bg_ovl2text_get,
-      bg_ovl2text_create,
-    },
-    {
       bg_rb_plugin_name,
       bg_rb_plugin_get_info,
       bg_rb_plugin_get,
@@ -140,15 +137,149 @@ meta_plugins[] =
 struct bg_plugin_registry_s
   {
   bg_plugin_info_t * entries;
-  int changed;
+  int flags;
   
   gavl_dictionary_t * state;
   pthread_mutex_t state_mutex;
 
   gavl_array_t * input_mimetypes;
   gavl_array_t * input_protocols;
+
+  /* Configuration contexts for plugins */
+  bg_cfg_ctx_t cfg_ir;
+  bg_cfg_ctx_t cfg_fa;
+  bg_cfg_ctx_t cfg_fv;
+  bg_cfg_ctx_t cfg_i;
+  bg_cfg_ctx_t cfg_vis;
+  
+  bg_msg_sink_t * cfg_sink;
+  
   };
 
+static int handle_cfg_message(void * priv, gavl_msg_t * msg)
+  {
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_PARAMETER:
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name;
+          gavl_value_t val;
+
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+
+          if(name)
+            {
+            gavl_dictionary_t * cfg_section;
+            const char * ctx;
+            ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+            
+            cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, BG_PLUGIN_CONFIG);
+            cfg_section = bg_cfg_section_find_subsection(cfg_section, ctx);
+            gavl_dictionary_set_nocopy(cfg_section, name, &val);
+            }
+          
+          gavl_value_free(&val);
+          }
+          break;
+        }
+      break;
+    }
+  return 1;
+  }
+
+static void init_plugin_config(bg_cfg_ctx_t * ctx,
+                               const char * long_name,
+                               gavl_parameter_type_t type,
+                               bg_plugin_type_t plugin_type)
+  {
+  bg_cfg_ctx_init(ctx, NULL,
+                  bg_plugin_type_to_string(plugin_type),
+                  long_name, NULL, NULL);
+
+  ctx->s = bg_cfg_registry_find_section(bg_cfg_registry, BG_PLUGIN_CONFIG);
+  ctx->s = bg_cfg_section_find_subsection(ctx->s, ctx->name);
+  
+  ctx->parameters_priv = calloc(2, sizeof(*ctx->parameters_priv));
+  ctx->parameters_priv[0].name = gavl_strdup(BG_PLUGIN_CONFIG_PLUGIN);
+  ctx->parameters_priv[0].long_name = gavl_strdup(long_name);
+  ctx->parameters_priv[0].type = type;
+  
+  bg_plugin_registry_set_parameter_info(bg_plugin_reg, 
+                                        plugin_type, 0,
+                                        &ctx->parameters_priv[0]);
+
+  ctx->parameters = ctx->parameters_priv;
+  
+  ctx->sink = bg_plugin_reg->cfg_sink;
+  }
+
+static void plugin_config_init()
+  {
+  if(bg_plugin_reg->flags & FLAG_HAVE_CONFIG)
+    return;
+  
+  bg_plugin_reg->flags |= FLAG_HAVE_CONFIG;
+
+  bg_plugin_reg->cfg_sink = bg_msg_sink_create(handle_cfg_message, NULL, 1);
+  
+  init_plugin_config(&bg_plugin_reg->cfg_ir, TR("Image readers"),
+                     GAVL_PARAMETER_MULTI_LIST, BG_PLUGIN_IMAGE_READER);
+
+  init_plugin_config(&bg_plugin_reg->cfg_fa, TR("Audio filters"),
+                     GAVL_PARAMETER_MULTI_CHAIN, BG_PLUGIN_FILTER_AUDIO);
+
+  init_plugin_config(&bg_plugin_reg->cfg_fv, TR("Video filters"),
+                     GAVL_PARAMETER_MULTI_CHAIN, BG_PLUGIN_FILTER_VIDEO);
+
+  init_plugin_config(&bg_plugin_reg->cfg_i, TR("Input plugins"),
+                     GAVL_PARAMETER_MULTI_LIST, BG_PLUGIN_INPUT);
+
+  init_plugin_config(&bg_plugin_reg->cfg_vis, TR("Visualizations"),
+                     GAVL_PARAMETER_MULTI_LIST, BG_PLUGIN_VISUALIZATION);
+  
+  }
+
+
+bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type)
+  {
+  plugin_config_init();
+  
+  switch(type)
+    {
+    case BG_PLUGIN_INPUT:        //!< Media input
+      return &bg_plugin_reg->cfg_i;
+      break;
+    case BG_PLUGIN_IMAGE_READER: //!< Image reader
+      return &bg_plugin_reg->cfg_ir;
+      break;
+    case BG_PLUGIN_FILTER_AUDIO: //!< Audio filter
+      return &bg_plugin_reg->cfg_fa;
+      break;
+    case BG_PLUGIN_FILTER_VIDEO: //!< Video filter
+      return &bg_plugin_reg->cfg_fv;
+      break;
+    case BG_PLUGIN_VISUALIZATION: //!< Visual
+      return &bg_plugin_reg->cfg_vis;
+      break;
+    default:
+      return NULL;
+    }
+  return NULL;
+  }
+
+const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type)
+  {
+  bg_cfg_ctx_t * ctx;
+
+  if((ctx = bg_plugin_config_get_ctx(type)))
+    return ctx->s;
+  else
+    return NULL;
+  }
 
 void bg_plugin_registry_set_state(bg_plugin_registry_t* plugin_reg, gavl_dictionary_t * state)
   {
@@ -162,6 +293,7 @@ static int handle_ext_message(void * priv, gavl_msg_t * msg)
   
   //  fprintf(stderr, "handle_ext_message\n");
   //  gavl_msg_dump(msg, 2);
+
   
   if(h->control.cmd_sink)
     bg_msg_sink_put_copy(h->control.cmd_sink, msg);
@@ -214,16 +346,8 @@ static int handle_plugin_message(void * priv, gavl_msg_t * msg)
 
 void bg_plugin_info_destroy(bg_plugin_info_t * info)
   {
+  gavl_dictionary_free(&info->dict);
   
-  if(info->gettext_domain)
-    free(info->gettext_domain);
-  if(info->gettext_directory)
-    free(info->gettext_directory);
-
-  if(info->name)
-    free(info->name);
-  if(info->long_name)
-    free(info->long_name);
   if(info->description)
     free(info->description);
 
@@ -272,10 +396,12 @@ static void make_cmp_name(bg_plugin_info_t * i)
   {
   char * tmp_string;
   int len;
-  bg_bindtextdomain(i->gettext_domain,
-                    i->gettext_directory);
-
-  tmp_string = TRD(i->long_name, i->gettext_domain);
+  const char * gettext_domain = bg_plugin_info_get_gettext_domain(i);
+  bg_bindtextdomain(gettext_domain,
+                    bg_plugin_info_get_gettext_directory(i));
+  
+  tmp_string = TRD(bg_plugin_info_get_long_name(i),
+                   gettext_domain);
   
   len = strxfrm(NULL, tmp_string, 0);
   i->cmp_name = malloc(len+1);
@@ -391,7 +517,7 @@ find_by_name(bg_plugin_info_t * info, const char * name)
   {
   while(info)
     {
-    if(!strcmp(info->name, name))
+    if(!strcmp(bg_plugin_info_get_name(info), name))
       return info;
     info = info->next;
     }
@@ -462,7 +588,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
       info = info->next;
       continue;
       }
-    //    fprintf(stderr, "Trying: %s\n", info->name);
+    //    fprintf(stderr, "Trying: %s\n", bg_plugin_info_get_name(info));
     if(gavl_string_array_indexof_i(info->extensions, extension) >= 0)
       {
       if(max_priority < info->priority)
@@ -475,7 +601,7 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
 #if 0
     else
       {
-      fprintf(stderr, "Extension mismatch: %s\n", info->name);
+      fprintf(stderr, "Extension mismatch: %s\n", bg_plugin_info_get_name(info));
       gavl_array_dump(info->extensions, 2);
       }
 #endif
@@ -669,7 +795,7 @@ find_by_codec_tag(uint32_t codec_tag, int typemask)
       continue;
       }
 
-    fprintf(stderr, "checking: %s %p %d\n", info->name, info->codec_tags, codec_tag);
+    fprintf(stderr, "checking: %s %p %d\n", bg_plugin_info_get_name(info), info->codec_tags, codec_tag);
     
     i = 0;
     while(info->codec_tags[i])
@@ -770,8 +896,14 @@ static bg_plugin_info_t * remove_duplicate(bg_plugin_info_t * list)
     
     while(info_2 != info_1)
       {
-      if(info_1->name && info_2->name &&
-         !strcmp(info_1->name, info_2->name))
+      const char * name1;
+      const char * name2;
+
+      
+      
+      if((name1 = bg_plugin_info_get_name(info_1)) &&
+         (name2 = bg_plugin_info_get_name(info_2)) &&
+         !strcmp(name1, name2))
         {
         next = info_1->next;
         list = remove_from_list(list, info_1);
@@ -821,18 +953,15 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin)
   bg_plugin_info_t * new_info;
   new_info = calloc(1, sizeof(*new_info));
 
-  new_info->name = gavl_strrep(new_info->name, plugin->name); 	 
-	  	 
-  new_info->long_name =  gavl_strrep(new_info->long_name, 	 
-                                   plugin->long_name); 	 
-	  	 
-  new_info->description = gavl_strrep(new_info->description, 	 
+  bg_plugin_info_set_gettext_domain(new_info, plugin->gettext_domain);
+  bg_plugin_info_set_gettext_directory(new_info, plugin->gettext_directory);
+
+  bg_plugin_info_set_name(new_info, plugin->name);
+  bg_plugin_info_set_long_name(new_info, plugin->long_name);
+  
+  new_info->description = gavl_strrep(new_info->description,
                                     plugin->description);
   
-  new_info->gettext_domain = gavl_strrep(new_info->gettext_domain, 	 
-                                       plugin->gettext_domain); 	 
-  new_info->gettext_directory = gavl_strrep(new_info->gettext_directory, 	 
-                                          plugin->gettext_directory); 	 
   new_info->type        = plugin->type; 	 
   new_info->flags       = plugin->flags; 	 
   new_info->priority    = plugin->priority;
@@ -1031,6 +1160,7 @@ static bg_plugin_info_t * get_info(void * test_module,
   return new_info;
   }
 
+
 static bg_plugin_info_t *
 scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
                         int * changed,
@@ -1087,9 +1217,7 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
     new_info = find_by_dll(file_info, filename);
     if(new_info)
       {
-      if((st.st_mtime == new_info->module_time) &&
-         (bg_cfg_section_has_subsection(cfg_section,
-                                        new_info->name)))
+      if(st.st_mtime == new_info->module_time)
         {
         file_info = remove_from_list(file_info, new_info);
         
@@ -1152,9 +1280,14 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
       tmp_info->module_time = st.st_mtime;
       
       /* Create parameter entries in the registry */
-      
+
+      if(!(tmp_info->type & SECTION_MASK))
+        {
+        tmp_info = tmp_info->next;
+        continue;
+        }
       plugin_section =
-        bg_cfg_section_find_subsection(cfg_section, tmp_info->name);
+        bg_cfg_section_find_subsection(cfg_section, bg_plugin_info_get_name(tmp_info));
     
       if(tmp_info->parameters)
         {
@@ -1190,6 +1323,7 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
         bg_cfg_section_create_items(stream_section,
                                     tmp_info->overlay_parameters);
         }
+      
       tmp_info = tmp_info->next;
       }
 #ifndef KEEP_OPEN 
@@ -1213,7 +1347,7 @@ scan_directory_internal(const char * directory, bg_plugin_info_t ** _file_info,
 static bg_plugin_info_t *
 scan_directory(const char * directory, bg_plugin_info_t ** _file_info,
                gavl_dictionary_t * cfg_section, bg_plugin_api_t api,
-               int * reg_changed)
+               int * reg_flags)
   {
   int changed = 0;
   bg_plugin_info_t * file_info;
@@ -1250,7 +1384,7 @@ scan_directory(const char * directory, bg_plugin_info_t ** _file_info,
   if(!changed)
     return ret;
   
-  *reg_changed = 1;
+  *reg_flags |= FLAG_CHANGED;
   
   free_info_list(ret);
   ret = scan_directory_internal(directory, _file_info,
@@ -1262,7 +1396,7 @@ static bg_plugin_info_t * scan_multi(const char * path,
                                      bg_plugin_info_t ** _file_info,
                                      gavl_dictionary_t * section,
                                      bg_plugin_api_t api,
-                                     int * reg_changed)
+                                     int * reg_flags)
   {
   char ** paths;
   char ** real_paths;
@@ -1306,7 +1440,7 @@ static bg_plugin_info_t * scan_multi(const char * path,
       {
       tmp_info = scan_directory(real_paths[i],
                                 _file_info, 
-                                section, api, reg_changed);
+                                section, api, reg_flags);
       if(tmp_info)
         ret = append_to_list(ret, tmp_info);
       }
@@ -1334,8 +1468,8 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   bg_plugin_info_t * tmp_info_next;
   char * filename;
   char * env;
-
   char * path;
+  int changed;
   
   ret = calloc(1, sizeof(*ret));
   bg_plugin_reg = ret;
@@ -1353,7 +1487,7 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
     free(filename);
     }
   else
-    ret->changed = 1;
+    ret->flags |= FLAG_CHANGED;
   
   /* Native plugins */
   env = getenv("GMERLIN_PLUGIN_PATH");
@@ -1361,8 +1495,13 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
     path = gavl_sprintf("%s:%s", env, PLUGIN_DIR);
   else
     path = gavl_sprintf("%s", PLUGIN_DIR);
+
+  changed = 0;
   
-  tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_GMERLIN, &ret->changed);
+  tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_GMERLIN, &changed);
+  if(changed)
+    ret->flags |= FLAG_CHANGED;
+
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
   free(path);
@@ -1374,7 +1513,7 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   else
     path = gavl_sprintf("/usr/lib64/ladspa:/usr/local/lib64/ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa");
 
-  tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_LADSPA, &ret->changed);
+  tmp_info = scan_multi(path, &file_info, section, BG_PLUGIN_API_LADSPA, &ret->flags);
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
   
@@ -1382,7 +1521,7 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   
   /* Frei0r */
   tmp_info = scan_multi("/usr/lib64/frei0r-1:/usr/local/lib64/frei0r-1:/usr/lib/frei0r-1:/usr/local/lib/frei0r-1", &file_info, 
-                        section, BG_PLUGIN_API_FREI0R, &ret->changed);
+                        section, BG_PLUGIN_API_FREI0R, &ret->flags);
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
     
@@ -1424,7 +1563,7 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
     /* Sort */
     ret->entries = sort_by_priority(ret->entries);
 
-    if(ret->changed)
+    if(ret->flags & FLAG_CHANGED)
       {
       bg_plugin_registry_save(ret->entries);
 
@@ -1460,11 +1599,6 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
     tmp_info = tmp_info_next;
     }
 #endif
-  }
-
-int bg_plugin_registry_changed(bg_plugin_registry_t * reg)
-  {
-  return reg->changed;
   }
 
 
@@ -1562,7 +1696,7 @@ bg_plugin_get_index(const char * name,
   while((info = find_by_index(bg_plugin_reg->entries, ret,
                               type_mask, flag_mask)))
     {
-    if(!strcmp(info->name, name))
+    if(!strcmp(bg_plugin_info_get_name(info), name))
       return ret;
     ret++;
     }
@@ -1589,21 +1723,7 @@ int bg_get_num_plugins(uint32_t type_mask, uint32_t flag_mask)
   }
 
 
-
-void bg_plugin_registry_set_priority(bg_plugin_registry_t * reg,
-                                     const char * plugin_name,
-                                     int priority)
-  {
-  bg_plugin_info_t * info;
-  info = find_by_name(reg->entries, plugin_name);
-  if(!info)
-    return;
-  info->priority = priority;
-  reg->entries = sort_by_priority(reg->entries);
-  bg_plugin_registry_save(reg->entries);
-  }
-
-gavl_dictionary_t *
+static gavl_dictionary_t *
 bg_plugin_registry_get_section(bg_plugin_registry_t * reg,
                                const char * plugin_name)
   {
@@ -1618,23 +1738,13 @@ void bg_plugin_ref(bg_plugin_handle_t * h)
   h->refcount++;
 
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "bg_plugin_ref %s: %d",
-         h->info->name, h->refcount);
+           bg_plugin_info_get_name(h->info), h->refcount);
   bg_plugin_unlock(h);
   
   }
 
 static void unload_plugin(bg_plugin_handle_t * h)
   {
-  gavl_dictionary_t * section;
-  
-  if(h->plugin->get_parameter)
-    {
-    section = bg_plugin_registry_get_section(bg_plugin_reg, h->info->name);
-    bg_cfg_section_get(section,
-                       h->plugin->get_parameters(h->priv),
-                       h->plugin->get_parameter,
-                       h->priv);
-    }
   if(h->info)
     {
     switch(h->info->api)
@@ -1857,7 +1967,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
   
   if(!(h = bg_plugin_load(info)))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", info->name);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", bg_plugin_info_get_name(info));
     goto fail;
     }
   
@@ -2214,7 +2324,7 @@ static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
         break;
       case BG_PLUGIN_API_LV:
 #ifdef HAVE_LV
-        if(!bg_lv_load(ret, info->name, info->flags, NULL))
+        if(!bg_lv_load(ret, bg_plugin_info_get_name(info), info->flags, NULL))
           goto fail;
 #endif
         break;
@@ -2225,7 +2335,7 @@ static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
     int i = 0;
     while(meta_plugins[i].name)
       {
-      if(!strcmp(meta_plugins[i].name, info->name))
+      if(!strcmp(meta_plugins[i].name, bg_plugin_info_get_name(info)))
         {
         ret->plugin = meta_plugins[i].get_plugin();
         ret->priv   = meta_plugins[i].create();
@@ -2246,8 +2356,10 @@ static bg_plugin_handle_t * load_plugin(const bg_plugin_info_t * info)
     {
     if(bg_plugin_reg->state)
       {
-      bg_state_apply_ctx(bg_plugin_reg->state, ret->info->name, ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
-
+      bg_state_apply_ctx(bg_plugin_reg->state,
+                         bg_plugin_info_get_name(ret->info),
+                         ret->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
+      
       /* Some plugin types have generic state variables also */
 
       if(info->type == BG_PLUGIN_OUTPUT_VIDEO)
@@ -2278,7 +2390,7 @@ fail:
 static void apply_parameters(bg_plugin_handle_t * ret, const gavl_dictionary_t * user_params)
   {
   const bg_parameter_info_t * parameters;
-  gavl_dictionary_t * section;
+  gavl_dictionary_t params;
 
   gavl_dictionary_t tmp_section;
 
@@ -2290,18 +2402,30 @@ static void apply_parameters(bg_plugin_handle_t * ret, const gavl_dictionary_t *
     return;
 
   parameters = ret->plugin->get_parameters(ret->priv);
+
+  /* Generate default section */
+  gavl_dictionary_init(&params);
+
+  gavl_parameter_info_append_static(&params, parameters);
   
-  section = bg_plugin_registry_get_section(bg_plugin_reg, ret->info->name);
+  bg_cfg_section_set_from_params(&tmp_section, &params);
+  
+  if(ret->info->type & SECTION_MASK)
+    {
+    /* Merge section from plugin registry */
+    const gavl_dictionary_t * section =
+      bg_plugin_registry_get_section(bg_plugin_reg,
+                                     bg_plugin_info_get_name(ret->info));
+    bg_cfg_section_merge(&tmp_section, section);
+    }
   
   if(user_params)
     {
-    gavl_dictionary_merge(&tmp_section, user_params, section);
-    gavl_dictionary_set(&tmp_section, BG_CFG_TAG_NAME, NULL);
-    section = &tmp_section;
-    
+    bg_cfg_section_merge(&tmp_section, user_params);
     }
   
-  bg_cfg_section_apply(section, parameters, ret->plugin->set_parameter,
+  gavl_dictionary_set(&tmp_section, BG_CFG_TAG_NAME, NULL);
+  bg_cfg_section_apply(&tmp_section, parameters, ret->plugin->set_parameter,
                        ret->priv);
   
   gavl_dictionary_free(&tmp_section);
@@ -2340,46 +2464,6 @@ bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict)
   
   }
 
-#if 0
-bg_plugin_handle_t * bg_ov_plugin_load(const gavl_dictionary_t * options)
-  {
-  bg_plugin_handle_t * ret;
-  const char * name;
-  const bg_plugin_info_t * info;
-
-  if(!options)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No OV plugin to load");
-    return NULL;
-    }
-  
-  if(!(name = gavl_dictionary_get_string(options, BG_CFG_TAG_NAME)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Plugin config doesn't contain a %s field", BG_CFG_TAG_NAME);
-    return NULL;
-    }
-
-  if(!(info = bg_plugin_find_by_name(name)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No such plugin: %s", name);
-    return NULL;
-    }
-
-  if(info->type != BG_PLUGIN_OUTPUT_VIDEO)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No plugin %s has wrong type (Should be video output)", name);
-    return NULL;
-    }
-  
-  ret = load_plugin(info);
-  
-  
-  if(ret)
-    apply_parameters(ret, options);
-  return ret;
-  }
-#endif
-
 void bg_plugin_lock(void * p)
   {
   bg_plugin_handle_t * h = p;
@@ -2390,42 +2474,6 @@ void bg_plugin_unlock(void * p)
   {
   bg_plugin_handle_t * h = p;
   pthread_mutex_unlock(&h->mutex);
-  }
-
-
-
-
-
-char ** bg_plugin_registry_get_plugins(uint32_t type_mask,
-                                       uint32_t flag_mask)
-  {
-  int num_plugins, i;
-  char ** ret;
-  const bg_plugin_info_t * info;
-  
-  num_plugins = bg_get_num_plugins(type_mask, flag_mask);
-  ret = calloc(num_plugins + 1, sizeof(char*));
-  for(i = 0; i < num_plugins; i++)
-    {
-    info = bg_plugin_find_by_index(i, type_mask, flag_mask);
-    ret[i] = gavl_strdup(info->name);
-    }
-  return ret;
-  
-  }
-
-void bg_plugin_registry_free_plugins(char ** plugins)
-  {
-  int index = 0;
-  if(!plugins)
-    return;
-  while(plugins[index])
-    {
-    free(plugins[index]);
-    index++;
-    }
-  free(plugins);
-  
   }
 
 char * bg_get_default_sink_uri(int plugin_type)
@@ -2443,9 +2491,9 @@ char * bg_get_default_sink_uri(int plugin_type)
     /* A bit uglyish, but does what it should and every other
        window system detection would be much more complicated */
     
-    if(!strcmp(info->name, "ov_x11") && !getenv("DISPLAY"))
+    if(!strcmp(bg_plugin_info_get_name(info), "ov_x11") && !getenv("DISPLAY"))
       continue;
-    else if(!strcmp(info->name, "ov_wayland") && !getenv("WAYLAND_DISPLAY"))
+    else if(!strcmp(bg_plugin_info_get_name(info), "ov_wayland") && !getenv("WAYLAND_DISPLAY"))
       continue;
     
     if(info->protocols && (protocol = gavl_string_array_get(info->protocols, 0)))
@@ -2459,7 +2507,8 @@ static void load_input_plugin(bg_plugin_registry_t * reg,
                               const gavl_dictionary_t * options,
                               bg_plugin_handle_t ** ret)
   {
-  if(!(*ret) || !(*ret)->info || strcmp((*ret)->info->name, info->name))
+  if(!(*ret) || !(*ret)->info || strcmp(bg_plugin_info_get_name((*ret)->info),
+                                        bg_plugin_info_get_name(info)))
     {
     if(*ret)
       {
@@ -3186,7 +3235,7 @@ static int input_plugin_load(const char * location,
     if(!(*ret))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Loading plugin \"%s\" failed"),
-                                           info->long_name);
+               bg_plugin_info_get_long_name(info));
       goto fail;
       }
     
@@ -3195,7 +3244,7 @@ static int input_plugin_load(const char * location,
     if(!plugin->open((*ret)->priv, real_location))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Opening %s with \"%s\" failed"),
-             real_location, info->long_name);
+               real_location, bg_plugin_info_get_long_name(info));
       }
     else
       {
@@ -3238,7 +3287,7 @@ static int input_plugin_load(const char * location,
     if(!plugin->open((*ret)->priv, real_location))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Opening %s with \"%s\" failed"),
-             location, info->long_name);
+               location, bg_plugin_info_get_long_name(info));
       }
     else
       {
@@ -3432,7 +3481,6 @@ static const bg_parameter_info_t encoder_section_audio[] =
       .name      = "$audio",
       .long_name = TRS("Audio"),
       .type      = BG_PARAMETER_SECTION,
-      .flags     = BG_PARAMETER_OWN_SECTION,
     },
     { } // End
   };
@@ -3443,7 +3491,6 @@ static const bg_parameter_info_t encoder_section_video[] =
       .name      = "$video",
       .long_name = TRS("Video"),
       .type      = BG_PARAMETER_SECTION,
-      .flags     = BG_PARAMETER_OWN_SECTION,
     },
     { } // End
   };
@@ -3454,7 +3501,6 @@ static const bg_parameter_info_t encoder_section_overlay[] =
       .name      = "$overlay",
       .long_name = TRS("Overlay subtitles"),
       .type      = BG_PARAMETER_SECTION,
-      .flags     = BG_PARAMETER_OWN_SECTION,
     },
     { } // End
   };
@@ -3465,7 +3511,6 @@ static const bg_parameter_info_t encoder_section_text[] =
       .name      = "$text",
       .long_name = TRS("Text subtitles"),
       .type      = BG_PARAMETER_SECTION,
-      .flags     = BG_PARAMETER_OWN_SECTION,
     },
     { } // End
   };
@@ -3474,9 +3519,6 @@ static bg_parameter_info_t *
 create_encoder_parameters(const bg_plugin_info_t * info, int stream_params)
   {
   bg_parameter_info_t * ret = NULL;
-  
-  //  if(!strcmp(info->name, "e_mpeg"))
-  //    fprintf(stderr, "e_mpeg\n");
   
   if(stream_params &&
      (info->audio_parameters ||
@@ -3537,11 +3579,7 @@ create_encoder_parameters(const bg_plugin_info_t * info, int stream_params)
     }
   else if(info->parameters)
     ret = bg_parameter_info_copy_array(info->parameters);
-
-
-  //  if(!strcmp(info->name, "e_mpeg"))
-  //    bg_parameters_dump(ret, "encoder_parameters");
-    
+  
   return ret;
   }
 
@@ -3577,28 +3615,27 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
     
   bg_parameter_info_set_const_ptrs(ret);
 
-  ret->flags |= BG_PARAMETER_PLUGIN;
-  
   for(i = 0; i < num_plugins; i++)
     {
-    info = bg_plugin_find_by_index(i,
-                                   type_mask, flag_mask);
-    ret->multi_names_nc[start_entries+i] = gavl_strdup(info->name);
+    const char * gettext_domain;
+    const char * gettext_directory;
 
-    //    fprintf(stderr, "  Got %s\n", info->name);
-    
-    /* First plugin is the default one */
+    info = bg_plugin_find_by_index(i, type_mask, flag_mask);
 
-    if((ret->type != BG_PARAMETER_MULTI_CHAIN) && !ret->val_default.v.str)
-      gavl_value_set_string(&ret->val_default, info->name);
+    gettext_domain = bg_plugin_info_get_gettext_domain(info);
+    gettext_directory = bg_plugin_info_get_gettext_directory(info);
     
-    bg_bindtextdomain(info->gettext_domain, info->gettext_directory);
+    ret->multi_names_nc[start_entries+i] = gavl_strdup(bg_plugin_info_get_name(info));
+
+    bg_bindtextdomain(gettext_domain, gettext_directory);
+    
+
     ret->multi_descriptions_nc[start_entries+i] = gavl_strdup(TRD(info->description,
-                                                                  info->gettext_domain));
+                                                                  gettext_domain));
     
     ret->multi_labels_nc[start_entries+i] =
-      gavl_strdup(TRD(info->long_name,
-                          info->gettext_domain));
+      gavl_strdup(TRD(bg_plugin_info_get_long_name(info),
+                      gettext_domain));
     
     if(info->type & (BG_PLUGIN_ENCODER_AUDIO |
                      BG_PLUGIN_ENCODER_VIDEO |
@@ -3622,262 +3659,6 @@ void bg_plugin_registry_set_parameter_info(bg_plugin_registry_t * reg,
   {
   set_parameter_info(reg, type_mask, flag_mask, ret, 1);
   }
-
-static const bg_parameter_info_t registry_settings_parameter =
-  {
-    .name = "$registry",
-    .long_name = TRS("Registry settings"),
-    .type = BG_PARAMETER_SECTION,
-  };
-
-static const bg_parameter_info_t plugin_settings_parameter =
-  {
-    .name = "$plugin",
-    .long_name = TRS("Plugin settings"),
-    .type = BG_PARAMETER_SECTION,
-  };
-
-#if 0
-static const bg_parameter_info_t extensions_parameter =
-  {
-    .name = "$extensions",
-    .long_name = TRS("Extensions"),
-    .type = BG_PARAMETER_STRING,
-  };
-
-static const bg_parameter_info_t protocols_parameter =
-  {
-    .name = "$protocols",
-    .long_name = TRS("Protocols"),
-    .type = BG_PARAMETER_STRING,
-  };
-#endif
-
-static const bg_parameter_info_t priority_parameter =
-  {
-    .name = "$priority",
-    .long_name = TRS("Priority"),
-    .type = BG_PARAMETER_INT,
-    .val_min = GAVL_VALUE_INIT_INT(1),
-    .val_max = GAVL_VALUE_INIT_INT(10),
-  };
-
-void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
-                                                 uint32_t type_mask,
-                                                 uint32_t flag_mask,
-                                                 bg_parameter_info_t * ret)
-  {
-  int num_plugins, i;
-  const bg_plugin_info_t * info;
-  int index, index1, num_parameters;
-  
-  num_plugins =
-    bg_get_num_plugins(type_mask, flag_mask);
-
-  ret->type = BG_PARAMETER_MULTI_LIST;
-  
-  ret->multi_names_nc      = calloc(num_plugins + 1, sizeof(*ret->multi_names));
-  ret->multi_labels_nc     = calloc(num_plugins + 1, sizeof(*ret->multi_labels));
-  ret->multi_parameters_nc = calloc(num_plugins + 1,
-                                 sizeof(*ret->multi_parameters));
-
-  ret->multi_descriptions_nc = calloc(num_plugins + 1,
-                                   sizeof(*ret->multi_descriptions));
-
-  bg_parameter_info_set_const_ptrs(ret);
-  
-  for(i = 0; i < num_plugins; i++)
-    {
-    info = bg_plugin_find_by_index(i,
-                                   type_mask, flag_mask);
-    ret->multi_names_nc[i] = gavl_strdup(info->name);
-
-    /* First plugin is the default one */
-    if(!i && (ret->type != BG_PARAMETER_MULTI_CHAIN)) 
-      {
-      gavl_value_set_string(&ret->val_default, info->name);
-      }
-    
-    bg_bindtextdomain(info->gettext_domain, info->gettext_directory);
-    ret->multi_descriptions_nc[i] = gavl_strdup(TRD(info->description,
-                                                        info->gettext_domain));
-    
-    ret->multi_labels_nc[i] = gavl_strdup(TRD(info->long_name,
-                                               info->gettext_domain));
-
-    /* Create parameters: Extensions and protocols are added to the array
-       if necessary */
-
-    num_parameters = 1; /* Priority */
-
-    if(info->parameters && (info->parameters[0].type != BG_PARAMETER_SECTION))
-      num_parameters++; /* Plugin section */
-
-    if(info->parameters)
-      num_parameters++; /* Registry */
-    
-    //    prefix = gavl_sprintf("%s.", info->name);
-
-    
-    if(info->parameters)
-      {
-      index = 0;
-      while(info->parameters[index].name)
-        {
-        index++;
-        num_parameters++;
-        }
-      }
-    
-    ret->multi_parameters_nc[i] =
-      calloc(num_parameters+1, sizeof(*ret->multi_parameters_nc[i]));
-
-    index = 0;
-
-    /* Now, build the parameter array */
-
-    if(info->parameters && (info->parameters[0].type != BG_PARAMETER_SECTION))
-      {
-      bg_parameter_info_copy(&ret->multi_parameters_nc[i][index],
-                             &plugin_settings_parameter);
-      index++;
-      }
-    
-    if(info->parameters)
-      {
-      index1 = 0;
-
-      while(info->parameters[index1].name)
-        {
-        bg_parameter_info_copy(&ret->multi_parameters_nc[i][index],
-                               &info->parameters[index1]);
-        index++;
-        index1++;
-        }
-      }
-
-    if(info->parameters)
-      {
-      bg_parameter_info_copy(&ret->multi_parameters_nc[i][index],
-                             &registry_settings_parameter);
-      index++;
-      }
-
-
-    bg_parameter_info_copy(&ret->multi_parameters_nc[i][index],
-                           &priority_parameter);
-    
-    gavl_value_set_int(&ret->multi_parameters_nc[i][index].val_default, info->priority);
-    index++;
-    }
-  
-  }
-
-static int find_parameter_input(bg_plugin_registry_t * plugin_reg,
-                                const char * name,
-                                const bg_parameter_info_t ** parameter_info,
-                                bg_plugin_info_t ** plugin_info,
-                                gavl_dictionary_t ** section,
-                                const char ** parameter_name)
-  {
-  const char * pos1;
-  const char * pos2;
-  char * plugin_name;
-  int ret = 0;
-  
-  pos1 = strchr(name, '.');
-  if(!pos1)
-    return 0;
-  pos1++;
-
-  pos2 = strchr(pos1, '.');
-  if(!pos2)
-    return 0;
-
-  plugin_name = gavl_strndup( pos1, pos2);
-  pos2++;
-
-  *parameter_name = pos2;
-  
-  *plugin_info = find_by_name(plugin_reg->entries, plugin_name);
-  if(!(*plugin_info))
-    goto fail;
-  
-  if(*pos2 != '$')
-    {
-    *section = bg_plugin_registry_get_section(plugin_reg,
-                                              plugin_name);
-    
-    *parameter_info = bg_parameter_find((*plugin_info)->parameters, pos2);
-    if(!(*parameter_info))
-      goto fail;
-    }
-  else
-    {
-    *section = NULL;
-    *parameter_info = NULL;
-    }
-  
-  //  fprintf(stderr, "name: %s, plugin: %s, parameter: %s, section: %p, pi: %p\n",
-  //          name, plugin_name, *parameter_name, *section, *parameter_info);
-  
-  ret = 1;
-  fail:
-  free(plugin_name);
-  return ret;
-  }
-
-void bg_plugin_registry_set_parameter_input(void * data, const char * name,
-                                            const gavl_value_t * val)
-  {
-  bg_plugin_registry_t * plugin_reg = data;
-  gavl_dictionary_t * cfg_section;
-  const bg_parameter_info_t * parameter_info;
-  bg_plugin_info_t * plugin_info;
-  const char * parameter_name;
-  
-  if(!name)
-    return;
-
-  //  fprintf(stderr,
-  //          "bg_plugin_registry_set_parameter_input\n");
-
-  if(!find_parameter_input(plugin_reg, name, &parameter_info,
-                           &plugin_info, &cfg_section, &parameter_name))
-    return;
-  
-  if(!strcmp(parameter_name, "$priority"))
-    bg_plugin_registry_set_priority(plugin_reg, plugin_info->name, val->v.i);
-  else
-    bg_cfg_section_set_parameter(cfg_section, parameter_info, val);
-  }
-
-int bg_plugin_registry_get_parameter_input(void * data, const char * name,
-                                            gavl_value_t * val)
-  {
-  bg_plugin_registry_t * plugin_reg = data;
-  gavl_dictionary_t * cfg_section;
-  const bg_parameter_info_t * parameter_info;
-  bg_plugin_info_t * plugin_info;
-  const char * parameter_name;
-  
-  if(!name)
-    return 0;
-
-  //  fprintf(stderr,
-  // "bg_plugin_registry_get_parameter_input\n");
-  
-  if(!find_parameter_input(plugin_reg, name, &parameter_info,
-                           &plugin_info, &cfg_section, &parameter_name))
-    return 0;
-    
-  if(!strcmp(parameter_name, "$priority"))
-    val->v.i = plugin_info->priority;
-  else
-    bg_cfg_section_get_parameter(cfg_section, parameter_info, val);
-  return 1;
-  }
-
 
 static const bg_parameter_info_t audio_encoder_param =
   {
@@ -4028,275 +3809,6 @@ bg_plugin_registry_create_encoder_parameters(bg_plugin_registry_t * reg,
     }
 
   return ret;
-  }
-
-static const gavl_value_t * get_encoder_context(const gavl_dictionary_t * s,
-                                                gavl_stream_type_t stream_type)
-  {
-  
-  switch(stream_type)
-    {
-    case GAVL_STREAM_AUDIO:
-      return gavl_dictionary_get(s, "ae");
-      break;
-    case GAVL_STREAM_TEXT:
-      return  gavl_dictionary_get(s, "te");
-      break;
-    case GAVL_STREAM_OVERLAY:
-      return gavl_dictionary_get(s, "oe");
-      break;
-    case GAVL_STREAM_VIDEO:
-      return gavl_dictionary_get(s, "ve");
-      break;
-    default:
-      return NULL;
-    }
-  }
-
-const char * 
-bg_encoder_section_get_plugin(const gavl_dictionary_t * s,
-                              gavl_stream_type_t stream_type)
-  {
-  const gavl_value_t * val;
-  const gavl_dictionary_t * dict;
-  const char * ret = NULL;
-
-  val = get_encoder_context(s, stream_type);
-  
-  dict = bg_multi_menu_get_selected(val);
-  ret = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME);
-  
-  if(!strcmp(ret, "$to_video"))
-    return NULL;
-  
-  return ret;
-  }
-
-void
-bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
-                                     const gavl_dictionary_t * s,
-                                     gavl_stream_type_t stream_type,
-                                     const gavl_dictionary_t ** section_ret,
-                                     const bg_parameter_info_t ** params_ret)
-  {
-  const gavl_value_t * val;
-  
-  const char * plugin_name;
-  const bg_plugin_info_t * info;
-
-  plugin_name =
-    bg_encoder_section_get_plugin(s, stream_type);
-  
-  if(section_ret)
-    *section_ret = NULL;
-  if(params_ret)
-    *params_ret = NULL;
-
-  if(!plugin_name)
-    return;
-
-  val = get_encoder_context(s, stream_type);
-
-  if(section_ret)
-    *section_ret = bg_multi_menu_get_selected(val);
-  
-  info = bg_plugin_find_by_name(plugin_name);
-  
-  if(!info->parameters)
-    return;
-  
-  if(params_ret)
-    {
-    *params_ret = info->parameters;
-    }
-  }
-
-void
-bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
-                                     const gavl_dictionary_t * s,
-                                     gavl_stream_type_t stream_type,
-                                     const gavl_dictionary_t ** section_ret,
-                                     const bg_parameter_info_t ** params_ret)
-  {
-  const gavl_value_t * val = NULL;
-  
-  const char * plugin_name;
-  const bg_plugin_info_t * info;
-  const gavl_dictionary_t * subsection = NULL;
-  
-  plugin_name =
-    bg_encoder_section_get_plugin(s, stream_type);
-  
-  if(!plugin_name)
-    {
-    plugin_name =
-      bg_encoder_section_get_plugin(s, GAVL_STREAM_VIDEO);
-
-    val = gavl_dictionary_get(s, "ve");
-    }
-  
-  info = bg_plugin_find_by_name(plugin_name);
-  
-  if(section_ret)
-    *section_ret = NULL;
-  if(params_ret)
-    *params_ret = NULL;
-  
-  switch(stream_type)
-    {
-    case GAVL_STREAM_AUDIO:
-      if(params_ret)
-        *params_ret = info->audio_parameters;
-      
-      if(section_ret && info->audio_parameters)
-        {
-        if(!val)
-          val = gavl_dictionary_get(s, "ae");
-
-        subsection = bg_multi_menu_get_selected(val);
-        
-        *section_ret = bg_cfg_section_find_subsection_c(subsection, "$audio");
-        }
-
-      break;
-    case GAVL_STREAM_TEXT:
-      if(params_ret)
-        *params_ret = info->text_parameters;
-
-      if(section_ret && info->text_parameters)
-        {
-        if(!val)
-          val = gavl_dictionary_get(s, "te");
-
-        subsection = bg_multi_menu_get_selected(val);
-        *section_ret = bg_cfg_section_find_subsection_c(subsection, "$text");
-        
-        }
-      
-      break;
-    case GAVL_STREAM_OVERLAY:
-      if(params_ret)
-        *params_ret = info->overlay_parameters;
-
-      if(section_ret && info->overlay_parameters)
-        {
-        if(!val)
-          val = gavl_dictionary_get(s, "oe");
-
-        subsection = bg_multi_menu_get_selected(val);
-        *section_ret = bg_cfg_section_find_subsection_c(subsection, "$overlay");
-        
-        }
-      
-      break;
-    case GAVL_STREAM_VIDEO:
-      if(params_ret)
-        *params_ret = info->video_parameters;
-
-      if(section_ret && info->video_parameters)
-        {
-        if(!val)
-          val = gavl_dictionary_get(s, "ve");
-
-        subsection = bg_multi_menu_get_selected(val);
-        *section_ret = bg_cfg_section_find_subsection_c(subsection, "$video");
-        }
-      break;
-    case GAVL_STREAM_NONE:
-    case GAVL_STREAM_MSG:
-      break;
-    }
-  }
-
-#if 0
-static const bg_parameter_info_t compressor_parameters[] =
-  {
-    {
-      .name = "codec",
-      .long_name = TRS("Codec"),
-      .type = BG_PARAMETER_MULTI_MENU,
-      .flags = BG_PARAMETER_PLUGIN,
-      .val_default = GAVL_VALUE_INIT_STRING("none"),
-      .multi_names = (const char *[]){ "none", NULL },
-      .multi_labels = (const char *[]){ TRS("None"), NULL },
-      .multi_descriptions = (const char *[]){ TRS("Write stream as uncompressed if possible"), NULL },
-      .multi_parameters = (const bg_parameter_info_t*[]) { NULL, NULL },
-    },
-    { /* End */ },
-  };
-#endif
-
-#if 0
-bg_parameter_info_t *
-bg_plugin_registry_create_compressor_parameters(bg_plugin_registry_t * plugin_reg,
-                                                bg_plugin_type_t type)
-  {
-  bg_parameter_info_t * ret =
-    bg_parameter_info_copy_array(compressor_parameters);
-  bg_plugin_registry_set_parameter_info(plugin_reg, type, 0, ret);
-  return ret;
-  }
-#endif
-
-void
-bg_plugin_registry_set_compressor_parameter(bg_plugin_registry_t * plugin_reg,
-                                            bg_plugin_handle_t ** plugin,
-                                            const char * name,
-                                            const gavl_value_t * val)
-  {
-  if(!name)
-    {
-    if(*plugin && (*plugin)->plugin->set_parameter)
-      (*plugin)->plugin->set_parameter((*plugin)->priv, NULL, NULL);
-    return;
-    }
-
-  if(!strcmp(name, "codec"))
-    {
-    if(*plugin && (!val->v.str || strcmp((*plugin)->info->name, val->v.str)))
-      {
-      bg_plugin_unref(*plugin);
-      *plugin = NULL;
-      }
-
-    if(val->v.str && !strcmp(val->v.str, "none"))
-      return;
-    
-    if(val->v.str && !(*plugin))
-      {
-      const bg_plugin_info_t * info;
-      info = bg_plugin_find_by_name(val->v.str);
-      if(!info)
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot find plugin %s",
-               val->v.str);
-        return;
-        }
-      *plugin = bg_plugin_load(info);
-      }
-    
-    }
-  else
-    {
-    if(*plugin)
-      (*plugin)->plugin->set_parameter((*plugin)->priv, name, val);
-    }
-  
-  }
-
-gavl_codec_id_t
-bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
-                                     gavl_dictionary_t * section)
-  {
-  const bg_plugin_info_t * info;
-  const char * codec = NULL;
-  if(!bg_cfg_section_get_parameter_string(section, "codec", &codec))
-    return GAVL_CODEC_ID_NONE;
-
-  info = bg_plugin_find_by_name(codec);
-  if(!info)
-    return GAVL_CODEC_ID_NONE;
-  return info->compressions[0];
   }
 
 int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
@@ -4451,15 +3963,14 @@ void bg_input_plugin_resume(bg_plugin_handle_t * h)
   bg_msg_sink_put(h->ctrl_ext.cmd_sink);
   }
 
-
-
-int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const char * name, const gavl_value_t * val)
+int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const char * name,
+                               const gavl_value_t * val)
   {
   if(!h->control.cmd_sink)
     return 0;
 
   if(!ctx)
-    ctx = h->info->name;
+    ctx = bg_plugin_info_get_name(h->info);
   
   bg_plugin_lock(h);
   bg_state_set(&h->state,
@@ -4467,26 +3978,6 @@ int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const c
                h->ctrl_ext.cmd_sink, BG_CMD_SET_STATE);
   bg_plugin_unlock(h);
   
-  return 1;
-  }
-
-int bg_plugin_handle_get_state(bg_plugin_handle_t * h, const char * ctx, const char * name, gavl_value_t * ret)
-  {
-  const gavl_value_t * src;
-
-  if(!ctx)
-    ctx = h->info->name;
-
-  bg_plugin_lock(h);
-  
-  if(!h->control.cmd_sink ||
-     !(src = bg_state_get(&h->state, ctx, name)))
-    {
-    bg_plugin_unlock(h);
-    return 0;
-    }
-  gavl_value_copy(ret, src);
-  bg_plugin_unlock(h);
   return 1;
   }
 
@@ -4570,17 +4061,6 @@ gavl_dictionary_t * bg_input_plugin_get_track_info(bg_plugin_handle_t * h, int i
   return gavl_get_track_nc(mi, idx);
   }
 
-const char * bg_input_plugin_get_disk_name(bg_plugin_handle_t * h)
-  {
-  gavl_dictionary_t * mi;
-  const gavl_dictionary_t * m;
-  
-  if(!(mi = bg_input_plugin_get_media_info(h)) ||
-     !(m = gavl_dictionary_get_dictionary(mi, GAVL_META_METADATA)))
-    return 0;
-  
-  return gavl_dictionary_get_string(m, GAVL_META_DISK_NAME);
-  }
 
 static int set_track_info(bg_plugin_handle_t * h)
   {
@@ -5073,7 +4553,7 @@ void bg_plugin_registry_list_plugins(bg_plugin_type_t type, int flags)
   for(i = 0; i < num; i++)
     {
     info = bg_plugin_find_by_index(i, type, flags);
-    printf("%s\n", info->name);
+    printf("%s\n", bg_plugin_info_get_name(info));
     }
   
   }
@@ -5193,88 +4673,23 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
     return 1;
   }
 
-int bg_plugin_config_parse_multi(gavl_array_t * arr,
-                                 const char * str)
-  {
-  char ** plugins;
-  gavl_value_t val;
-  gavl_dictionary_t * dict;
-  int i = 0;
-  int ret = 0;
-  
-  plugins = gavl_strbreak(str, '$');
-
-
-  while(plugins[i])
-    {
-    gavl_value_init(&val);
-    dict = gavl_value_set_dictionary(&val);
-
-    if(!bg_plugin_config_parse_single(dict, plugins[i]))
-      {
-      gavl_value_free(&val);
-      goto fail;
-      }
-    
-    gavl_array_splice_val_nocopy(arr, -1, 0, &val);
-    i++;
-    }
-
-  ret = 1;
-  
-  fail:
-  
-  
-  gavl_strbreak_free(plugins);
-
-  return ret;
-  }
 
 /* Load and store per type plugin configuration globally */
 
 const gavl_value_t * bg_plugin_config_get(bg_plugin_type_t type)
   {
-  const gavl_dictionary_t * s = bg_plugin_config_get_section(type);
-
-  if(!s)
-    return NULL;
-  
-  return gavl_dictionary_get(s, "$cfg");
+  gavl_dictionary_t * dict;
+  dict = bg_cfg_registry_find_section(bg_cfg_registry, BG_PLUGIN_CONFIG);
+  dict = bg_cfg_section_find_subsection(dict, bg_plugin_type_to_string(type));
+  return gavl_dictionary_get(dict, BG_PLUGIN_CONFIG_PLUGIN);
   }
 
 void bg_plugin_config_set(bg_plugin_type_t type, const gavl_value_t * val)
   {
-  gavl_dictionary_t * s = bg_plugin_config_get_section_nc(type);
-  gavl_dictionary_set(s, "$cfg", val);
-  }
-
-gavl_dictionary_t * bg_plugin_config_get_section_nc(bg_plugin_type_t type)
-  {
-  gavl_dictionary_t * ret;
-  char * name;
-
-  if(!bg_cfg_registry)
-    return NULL;
-
-  name = gavl_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
-
-  ret = bg_cfg_registry_find_section(bg_cfg_registry, name);
-  free(name);
-  return ret;
-  }
-
-const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type)
-  {
-  const gavl_dictionary_t * ret;
-  char * name;
-
-  if(!bg_cfg_registry)
-    return NULL;
-
-  name = gavl_sprintf("PluginConfig%s", bg_plugin_type_to_string(type));
-  ret = bg_cfg_section_find_subsection_c(bg_cfg_registry, name);
-  free(name);
-  return ret;
+  gavl_dictionary_t * dict;
+  dict = bg_cfg_registry_find_section(bg_cfg_registry, BG_PLUGIN_CONFIG);
+  dict = bg_cfg_section_find_subsection(dict, bg_plugin_type_to_string(type));
+  gavl_dictionary_set(dict, BG_PLUGIN_CONFIG_PLUGIN, val);
   }
 
 /* Commandline options */
@@ -5423,166 +4838,7 @@ static bg_parameter_info_t info_ca[2]  = { { .name = NULL } };
 static bg_parameter_info_t info_cv[2]  = { { .name = NULL } };
 static bg_parameter_info_t info_co[2]  = { { .name = NULL } };
 
-static void init_plugin_parameter(bg_parameter_info_t * ret, 
-                                  bg_parameter_type_t type,
-                                  const char * name,
-                                  const char * long_name)
-  {
-  memset(ret, 0, 2*sizeof(*ret));
-  
-  ret->name = gavl_strdup(name);
-  ret->long_name = gavl_strdup(long_name);
-  ret->type = type;
-  
-  }
 
-const bg_parameter_info_t * bg_plugin_registry_get_audio_compressor_parameter()
-  {
-  bg_parameter_info_t * ret = NULL;
-
-  ret = &info_ca[0];
-
-  init_plugin_parameter(ret, 
-                        BG_PARAMETER_MULTI_MENU,
-                        BG_PARAMETER_NAME_PLUGIN, TRS("Compression"));
-
-  bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                        BG_PLUGIN_COMPRESSOR_AUDIO,
-                                        0,
-                                        ret);
-  
-  return ret;
-  }
-
-const bg_parameter_info_t * bg_plugin_registry_get_video_compressor_parameter()
-  {
-  bg_parameter_info_t * ret = NULL;
-  ret = &info_cv[0];
-
-  init_plugin_parameter(ret, 
-                        BG_PARAMETER_MULTI_MENU,
-                        BG_PARAMETER_NAME_PLUGIN, TRS("Compression"));
-
-  bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                        BG_PLUGIN_COMPRESSOR_VIDEO,
-                                        0,
-                                        ret);
-
-  
-  return ret;
-  }
-
-const bg_parameter_info_t * bg_plugin_registry_get_overlay_compressor_parameter()
-  {
-  bg_parameter_info_t * ret = NULL;
-  ret = &info_co[0];
-
-  init_plugin_parameter(ret, 
-                        BG_PARAMETER_MULTI_MENU,
-                        BG_PARAMETER_NAME_PLUGIN, TRS("Compression"));
-
-  bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                        BG_PLUGIN_COMPRESSOR_VIDEO,
-                                        BG_PLUGIN_HANDLES_OVERLAYS,
-                                        ret);
-  
-  return ret;
-  }
-
-const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_type_t type)
-  {
-  bg_parameter_info_t * ret = NULL;
-  
-  switch(type)
-    {
-    case BG_PLUGIN_OUTPUT_AUDIO:
-      ret = &info_oa[0];
-
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_MENU,
-                              BG_PARAMETER_NAME_PLUGIN, TRS("Plugin"));
-        
-        bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                              BG_PLUGIN_OUTPUT_AUDIO,
-                                              0,
-                                              ret);
-        }
-      break;
-    case BG_PLUGIN_OUTPUT_VIDEO:
-      ret = &info_ov[0];
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_MENU,
-                              BG_PARAMETER_NAME_PLUGIN, TRS("Plugin"));
-
-        bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                              BG_PLUGIN_OUTPUT_VIDEO,
-                                              0,
-                                              ret);
-        }
-      
-      break;
-    case BG_PLUGIN_INPUT:
-      ret = &info_i[0];
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_MENU,
-                              BG_PARAMETER_NAME_PLUGIN, TRS("Plugin"));
-        
-        }
-
-      break;
-    case BG_PLUGIN_VISUALIZATION:
-      ret = &info_i[0];
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_MENU,
-                              BG_PARAMETER_NAME_PLUGIN, TRS("Plugin"));
-
-        bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                              BG_PLUGIN_VISUALIZATION,
-                                              0, ret);
-        }
-
-      break;
-    case BG_PLUGIN_FILTER_AUDIO:
-      ret = &info_fa[0];
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_CHAIN,
-                              BG_FILTER_CHAIN_PARAM_PLUGINS, TRS("Filters"));
-        bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                              BG_PLUGIN_FILTER_AUDIO,
-                                              BG_PLUGIN_FILTER_1,
-                                              ret);
-        }
-      
-      break;
-    case BG_PLUGIN_FILTER_VIDEO:
-      ret = &info_fv[0];
-      if(!ret->name)
-        {
-        init_plugin_parameter(ret, 
-                              BG_PARAMETER_MULTI_CHAIN,
-                              BG_FILTER_CHAIN_PARAM_PLUGINS, TRS("Filters"));
-        bg_plugin_registry_set_parameter_info(bg_plugin_reg,
-                                              BG_PLUGIN_FILTER_VIDEO,
-                                              BG_PLUGIN_FILTER_1,
-                                              ret);
-        }
-      
-      break;
-    default:
-      break;
-    }
-  return ret;
-  }
 
 void bg_track_find_subtitles(gavl_dictionary_t * track)
   {
@@ -5838,17 +5094,9 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
  */
 #define BG_TRACK_DICT_PLUGINREG   "$plugin_reg"
 
-#define BG_TRACK_FORCE_RAW        "force_raw" // non-edl
 #define BG_TRACK_CURRENT_LOCATION "location"
 #define BG_TRACK_CURRENT_TRACK    "track"
 #define BG_TRACK_URIVARS          "urivars"
-
-void
-bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw)
-  {
-  dict = gavl_dictionary_get_dictionary_create(dict, BG_TRACK_DICT_PLUGINREG);
-  gavl_dictionary_set_int(dict, BG_TRACK_FORCE_RAW, force_raw);
-  }
 
 
 void
@@ -5894,18 +5142,6 @@ bg_track_get_uri_vars(const gavl_dictionary_t * dict)
   else
     return NULL;
   }
-
-
-int
-bg_track_get_force_raw(const gavl_dictionary_t * dict)
-  {
-  int ret = 0;
-  if(!(dict = gavl_dictionary_get_dictionary(dict, BG_TRACK_DICT_PLUGINREG)))
-    return 0;
-  gavl_dictionary_get_int(dict, BG_TRACK_FORCE_RAW, &ret);
-  return ret;
-  }
-
 
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict)

@@ -136,7 +136,9 @@ static int resource_supported(gavl_dictionary_t * dict)
     plugin_type = BG_PLUGIN_OUTPUT_AUDIO;
   else if(!strcmp(klass, GAVL_META_CLASS_SINK_VIDEO))
     plugin_type = BG_PLUGIN_OUTPUT_VIDEO;
-  else if(gavl_string_starts_with(klass, "item.recorder."))
+  else if(gavl_string_starts_with(klass, "item.recorder.") ||
+          gavl_string_starts_with(klass, "container.root.removable.cd") ||
+          gavl_string_starts_with(klass, "container.root.removable.dvd"))
     plugin_type = BG_PLUGIN_INPUT;
   
   if(!plugin_type || !(info = bg_plugin_find_by_protocol(uri, plugin_type)))
@@ -145,8 +147,6 @@ static int resource_supported(gavl_dictionary_t * dict)
              klass, bg_plugin_type_to_string(plugin_type));
     goto fail;
     }
-  
-  gavl_dictionary_set_string(dict, BG_RESOURCE_PLUGIN, info->name);
   
   ret = 1;
   
@@ -254,6 +254,7 @@ static void forward_message(gavl_msg_t * msg)
 /* Handle message from application space */
 static int handle_msg_external(void * data, gavl_msg_t * msg)
   {
+  
   switch(msg->NS)
     {
     case GAVL_MSG_NS_GENERIC:
@@ -287,6 +288,43 @@ static int handle_msg_external(void * data, gavl_msg_t * msg)
           
           forward_message(msg);
           del(1, idx);
+          }
+          break;
+        case GAVL_FUNC_QUERY_RESOUCRES:
+          {
+          /* Send all resources to the requesting client */
+          int i;
+
+          //          fprintf(stderr, "Got query func\n");
+
+          for(i = 0; i < resman->remote.num_entries; i++)
+            {
+            const char * id;
+            gavl_msg_t * resp;
+
+            const gavl_dictionary_t * dict;
+            
+            if(!(dict = gavl_value_get_dictionary(&resman->remote.entries[i])) ||
+               !(id = gavl_dictionary_get_string(dict, GAVL_META_ID)))
+              continue;
+
+            resp = bg_msg_sink_get(resman->ctrl.evt_sink);
+            
+            gavl_msg_set_id_ns(resp, GAVL_RESP_QUERY_RESOUCRES, GAVL_MSG_NS_GENERIC);
+            gavl_msg_set_resp_for_req(resp, msg);
+
+            if(i == resman->local.num_entries-1)
+              gavl_msg_set_last(resp, 1);
+            else
+              gavl_msg_set_last(resp, 0);
+            
+            gavl_dictionary_set_string(&resp->header, GAVL_MSG_CONTEXT_ID, id);
+            gavl_msg_set_arg_dictionary(resp, 0, dict);
+            bg_msg_sink_put(resman->ctrl.evt_sink);
+            
+            }
+          
+
           }
           break;
         case GAVL_MSG_QUIT:
@@ -809,8 +847,7 @@ static void list_resource_array(gavl_array_t * arr)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])))
       {
-      printf("# %s [Plugin: %s]\n", gavl_dictionary_get_string(dict, GAVL_META_LABEL),
-             gavl_dictionary_get_string(dict, BG_RESOURCE_PLUGIN));
+      printf("# %s\n", gavl_dictionary_get_string(dict, GAVL_META_LABEL));
       printf("%s\n", gavl_dictionary_get_string(dict, GAVL_META_URI));
       }
     }

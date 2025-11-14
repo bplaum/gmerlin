@@ -50,78 +50,68 @@ response_callback(GtkWidget *chooser,
                  gpointer data)
   {
   gavl_msg_t * msg;
-  bg_gtk_urlsel_t * f = data;
+  //  bg_gtk_urlsel_t * f = data;
+
+  bg_msg_sink_t * sink = data;
   
   switch(response_id)
     {
-    case GTK_RESPONSE_APPLY:
+    case GTK_RESPONSE_OK:
       {
       gavl_array_t filenames;
       const char * str;
+      GtkWidget * entry = bg_gtk_find_widget_by_name(chooser, "entry");
+      
       //      fprintf(stderr, "Apply\n");
       gavl_array_init(&filenames);
 
-      str = gtk_entry_get_text(GTK_ENTRY(f->entry));
+      str = gtk_entry_get_text(GTK_ENTRY(entry));
       gavl_string_array_add(&filenames, str);
 
-      msg = bg_msg_sink_get(f->sink);
+      msg = bg_msg_sink_get(sink);
       gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_ADD_LOCATIONS, BG_MSG_NS_DIALOG);
-      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
       gavl_msg_set_arg_array_nocopy(msg, 0, &filenames);
-      bg_msg_sink_put(f->sink);
+      bg_msg_sink_put(sink);
       gavl_array_free(&filenames);
       }
       break;
-    default:
-      {
-      //      fprintf(stderr, "Close\n");
-      gtk_widget_hide(f->dialog);
-      
-      msg = bg_msg_sink_get(f->sink);
-      gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
-      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
-      bg_msg_sink_put(f->sink);
-      }
-      break;
     }
+
+  g_idle_add ((GSourceFunc) bg_gtk_destroy_widget, chooser);
+  
   }
 
-
-
-bg_gtk_urlsel_t *
-bg_gtk_urlsel_create(const char * title,
-                     bg_msg_sink_t * sink,
-                     const char * ctx,
-                     GtkWidget * parent_window)
+void
+bg_gtk_urlsel_show(const char * title,
+                   bg_msg_sink_t * sink,
+                   GtkWidget * parent_window)
   {
-  bg_gtk_urlsel_t * ret;
   GtkWidget * label;
+  GtkWidget * entry;
   GtkWidget * box;
   GtkDialogFlags flags;
   GtkWidget * content_area;
-  
-  
-  ret = calloc(1, sizeof(*ret));
-  ret->sink = sink;
-  ret->ctx = ctx;
+
+  GtkWidget * dlg;
   
   /* Create window */
   flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-  ret->dialog = gtk_dialog_new_with_buttons("Load URL",
-                                            GTK_WINDOW(parent_window),
-                                            flags,
-                                            TR("Add"),
-                                            GTK_RESPONSE_APPLY,
-                                            TR("Close"),
-                                            GTK_RESPONSE_CLOSE,
-                                            NULL);
+  dlg = gtk_dialog_new_with_buttons("Load URL",
+                                    GTK_WINDOW(parent_window),
+                                    flags,
+                                    TR("Add"),
+                                    GTK_RESPONSE_OK,
+                                    TR("Close"),
+                                    GTK_RESPONSE_CLOSE,
+                                    NULL);
 
-  g_signal_connect(G_OBJECT(ret->dialog), "response", G_CALLBACK(response_callback), ret);
+  g_signal_connect(G_OBJECT(dlg), "response", G_CALLBACK(response_callback), sink);
   
   /* Create entry */
   
-  ret->entry = gtk_entry_new();
-  gtk_widget_show(ret->entry);
+  entry = gtk_entry_new();
+  gtk_widget_set_name(entry, "entry");
+  gtk_widget_show(entry);
   
   /* Pack everything */
   
@@ -131,27 +121,14 @@ bg_gtk_urlsel_create(const char * title,
   gtk_widget_show(label);
   
   bg_gtk_box_pack_start(box, label, 0);
-  bg_gtk_box_pack_start(box, ret->entry, 1);
+  bg_gtk_box_pack_start(box, entry, 1);
   gtk_widget_show(box);
 
-  content_area = gtk_dialog_get_content_area(GTK_DIALOG(ret->dialog));
+  content_area = gtk_dialog_get_content_area(GTK_DIALOG(dlg));
   gtk_container_add(GTK_CONTAINER(content_area), box);
+
+  gtk_window_set_modal(GTK_WINDOW(dlg), 1);
+  gtk_window_present(GTK_WINDOW(dlg));
   
-  return ret;
-  }
-
-/* Destroy urlselector */
-
-void bg_gtk_urlsel_destroy(bg_gtk_urlsel_t * urlsel)
-  {
-  gtk_widget_destroy(urlsel->dialog);
-  free(urlsel);
-  }
-
-/* Show the window */
-
-void bg_gtk_urlsel_run(bg_gtk_urlsel_t * urlsel, int modal)
-  {
-  gtk_window_set_modal(GTK_WINDOW(urlsel->dialog), modal);
-  gtk_widget_show(urlsel->dialog);
+  return;
   }

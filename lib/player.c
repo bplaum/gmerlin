@@ -309,19 +309,7 @@ void bg_player_state_reset(gavl_dictionary_t * dict)
 
 void bg_player_apply_cmdline(bg_cfg_ctx_t * ctx)
   {
-  const gavl_value_t * val;
-  gavl_dictionary_t * s;
-
-  
-  if((s = ctx[BG_PLAYER_CFG_AUDIOFILTER].s) && (val = bg_plugin_config_get(BG_PLUGIN_FILTER_AUDIO)))
-    {
-    gavl_dictionary_set(s, BG_FILTER_CHAIN_PARAM_PLUGINS, val);
-    }
-  
-  if((s = ctx[BG_PLAYER_CFG_VIDEOFILTER].s) && (val = bg_plugin_config_get(BG_PLUGIN_FILTER_VIDEO)))
-    {
-    gavl_dictionary_set(s, BG_FILTER_CHAIN_PARAM_PLUGINS, val);
-    }
+  /* Remove this? */
   }
 
 bg_player_t * bg_player_create()
@@ -390,12 +378,14 @@ bg_player_t * bg_player_create()
   
   bg_player_add_accelerators(ret, bg_player_accels);
 
+#if 1
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_INPUT],
                   bg_player_get_input_parameters(ret),
                   "input",
                   TR("Input"),
                   bg_player_set_input_parameter,
                   ret);
+#endif
   
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_AUDIO], 
                   bg_player_get_audio_parameters(ret),
@@ -403,7 +393,7 @@ bg_player_t * bg_player_create()
                   TR("Audio"),
                   bg_player_set_audio_parameter,
                   ret);
-
+  
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_VIDEO], 
                   bg_player_get_video_parameters(ret),
                   "video",
@@ -411,19 +401,23 @@ bg_player_t * bg_player_create()
                   bg_player_set_video_parameter,
                   ret);
 
+#if 0  
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_AUDIOFILTER], 
-                  bg_player_get_audio_filter_parameters(ret),
+                  NULL,
                   "audiofilter",
                   TR("Audio filter"),
                   bg_player_set_audio_filter_parameter,
                   ret);
+  ret->cfg[BG_PLAYER_CFG_AUDIOFILTER].p = bg_audio_filter_chain_get_parameters();
   
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_VIDEOFILTER], 
-                  bg_player_get_video_filter_parameters(ret),
+                  NULL,
                   "videofilter",
                   TR("Video filter"),
                   bg_player_set_video_filter_parameter,
                   ret);
+  ret->cfg[BG_PLAYER_CFG_VIDEOFILTER].p = bg_video_filter_chain_get_parameters();
+#endif
   
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_SUBTITLE], 
                   bg_player_get_subtitle_parameters(ret),
@@ -441,8 +435,8 @@ bg_player_t * bg_player_create()
 
   bg_cfg_ctx_init(&ret->cfg[BG_PLAYER_CFG_VISUALIZATION], 
                   bg_player_get_visualization_parameters(ret),
-                  "visualization",
-                  TR("Visualization"),
+                  "visualization-general",
+                  TR("General"),
                   bg_player_set_visualization_parameter,
                   ret);
 
@@ -537,9 +531,7 @@ bg_player_set_visualization_parameter(void*data,
   p = (bg_player_t*)data;
 
   bg_player_stream_change_init(p);
-  
   bg_visualizer_set_parameter(p->visualizer, name, val);
-  
   }
 
 static const bg_parameter_info_t parameters[] =

@@ -169,6 +169,14 @@ gavl_dictionary_t * bg_cfg_registry_find_section(bg_cfg_registry_t * reg,
 gavl_dictionary_t * bg_cfg_section_find_subsection(gavl_dictionary_t * section,
                                                   const char * name);
 
+/*
+ * Loop through the items of src and copy all values to dst, which already exist there.
+ * Do the same recuzrsivels for subsections
+ */
+
+void bg_cfg_section_merge(gavl_dictionary_t * dst,
+                          const gavl_dictionary_t * src);
+
 void bg_cfg_section_delete_subsection_by_name(gavl_dictionary_t * section,
                                               const char * name);
 
@@ -183,28 +191,6 @@ void bg_cfg_section_delete_subsection_by_name(gavl_dictionary_t * section,
 const gavl_dictionary_t * bg_cfg_section_find_subsection_c(const gavl_dictionary_t * s,
                                                           const char * name);
 
-#if 0
-/** \ingroup cfg_section
- *  \brief Create a subsection at the specified position
- *  \param section A configuration section
- *  \param pos Position of the subsection (starting with 0)
- *  \returns Configuration section
- */
-
-gavl_dictionary_t * bg_cfg_section_create_subsection_at_pos(gavl_dictionary_t * section,
-                                                           int pos);
-
-/** \ingroup cfg_section
- *  \brief Move a subsection to the specified position
- *  \param section A configuration section
- *  \param child Subsection to be moved
- *  \param pos New position of the subsection (starting with 0)
- */
-
-void bg_cfg_section_move_child(gavl_dictionary_t * section, gavl_dictionary_t * child,
-                               int pos);
-
-#endif
 
 /* 
  *  Create/destroy config sections
@@ -311,22 +297,6 @@ void bg_cfg_section_set_parameter_func(void * data,
                                        const char * name,
                                        const gavl_value_t * value);
 
-
-/** \ingroup cfg_section
- *  \brief Set values from an option string
- *  \param section The configuration section
- *  \param info The parameter destription
- *  \param str A string describing the values
- *
- *  This takes a string from the commandline and
- *  stores it in the section.
- *
- *  \todo Document syntax for all parameter types
- */
-
-int bg_cfg_section_set_parameters_from_string(gavl_dictionary_t * section,
-                                              const bg_parameter_info_t * info,
-                                              const char * str);
 
 /** \ingroup cfg_section
  *  \brief Read a value from the section
@@ -446,23 +416,6 @@ void bg_cfg_section_apply_noterminate(gavl_dictionary_t * section,
                                       bg_set_parameter_func_t func,
                                       void * callback_data);
 
-/** \ingroup cfg_section
- *  \brief Get parameters from a module
- *  \param section The configuration section
- *  \param parameters Parameter array
- *  \param func Function to be called
- *  \param callback_data First argument passed to func
- *
- *  This function iterates though all parameters and calls
- *  func with the stored values. It is the main function to transfer
- *  data from the module to a section. It is used only, if the module
- *  has parameters, which are changed internally.
- */ 
-
-void bg_cfg_section_get(gavl_dictionary_t * section,
-                        const bg_parameter_info_t * parameters,
-                        bg_get_parameter_func_t func,
-                        void * callback_data);
 
 /** \ingroup cfg_section
  *  \brief Qurey if a child section if available
@@ -482,6 +435,14 @@ int bg_cfg_section_has_subsection(const gavl_dictionary_t * section,
 
 void bg_cfg_section_restore_defaults(gavl_dictionary_t * section,
                                      const bg_parameter_info_t * info);
+
+void bg_cfg_section_set_from_params(gavl_dictionary_t * section,
+                                    const gavl_dictionary_t * params);
+
+int
+bg_parameter_init_value(const gavl_dictionary_t * param,
+                        gavl_value_t * val);
+
 
 /* Global init functions */
 

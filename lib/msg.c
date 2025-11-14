@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <string.h>
 #include <assert.h>
 
@@ -44,6 +42,7 @@
    .arg_1 = value
 */
 
+#if 0
 void bg_msg_set_parameter_idx(gavl_msg_t * msg,
                               const char * name,
                               const gavl_value_t * val, int idx)
@@ -60,12 +59,14 @@ void bg_msg_set_parameter_idx(gavl_msg_t * msg,
     }
   gavl_msg_set_arg(msg, idx + 1, val);
   }
+#endif
 
 void bg_msg_set_parameter(gavl_msg_t * msg,
                           const char * name,
                           const gavl_value_t * val)
   {
-  bg_msg_set_parameter_idx(msg, name, val, 0);
+  gavl_msg_set_arg_string(msg, 0, name);
+  gavl_msg_set_arg(msg, 1, val);
   }
 
 /* Called by frontend */
@@ -76,11 +77,12 @@ void bg_msg_set_parameter_ctx(gavl_msg_t * msg,
                               const gavl_value_t * val)
 
   {
-  //  fprintf(stderr, "set_parameter_ctx %s %s\n", ctx, name);
-
   gavl_msg_set_id_ns(msg, id, BG_MSG_NS_PARAMETER);
-  gavl_msg_set_arg_string(msg, 0, ctx);
-  bg_msg_set_parameter_idx(msg, name, val, 1);
+
+  if(ctx)
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, ctx);
+
+  bg_msg_set_parameter(msg, name, val);
   }
 
 void bg_msg_set_chain_parameter_ctx(gavl_msg_t * msg,
@@ -90,14 +92,16 @@ void bg_msg_set_chain_parameter_ctx(gavl_msg_t * msg,
                                     const char * sub_name,
                                     const gavl_value_t * val)
   {
-  gavl_msg_set_id_ns(msg, BG_MSG_SET_CHAIN_PARAMETER_CTX, BG_MSG_NS_PARAMETER);
-  gavl_msg_set_arg_string(msg, 0, ctx);
-
-  gavl_msg_set_arg_string(msg, 1, name);
-  gavl_msg_set_arg_int(msg,    2, idx);
-  bg_msg_set_parameter_idx(msg, sub_name, val, 3);
+  gavl_msg_set_id_ns(msg, BG_CMD_SET_CHAIN_PARAMETER_CTX, BG_MSG_NS_PARAMETER);
+  if(ctx)
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, ctx);
+  
+  bg_msg_set_parameter(msg, sub_name, val);
+  gavl_msg_set_arg_string(msg, 2, name);
+  gavl_msg_set_arg_int(msg,    3, idx);
   }
 
+#if 0
 void bg_msg_set_multi_parameter_ctx(gavl_msg_t * msg,
                                     const char * ctx,
                                     const char * name,
@@ -106,12 +110,16 @@ void bg_msg_set_multi_parameter_ctx(gavl_msg_t * msg,
                                     const gavl_value_t * val)
   {
   gavl_msg_set_id_ns(msg, BG_MSG_SET_MULTI_PARAMETER_CTX, BG_MSG_NS_PARAMETER);
-  gavl_msg_set_arg_string(msg, 0, ctx);
 
-  gavl_msg_set_arg_string(msg, 1, name);
-  gavl_msg_set_arg_string(msg,    2, el_name);
-  bg_msg_set_parameter_idx(msg, sub_name, val, 3);
+  if(ctx)
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, ctx);
+
+  bg_msg_set_parameter(msg, sub_name, val);
+  
+  gavl_msg_set_arg_string(msg, 2, name);
+  gavl_msg_set_arg_string(msg, 3, el_name);
   }
+#endif
 
 void bg_msg_set_parameter_ctx_term(bg_msg_sink_t * sink)
   {
@@ -122,26 +130,18 @@ void bg_msg_set_parameter_ctx_term(bg_msg_sink_t * sink)
 
   gavl_value_init(&val);
   gavl_value_set_string(&val, NULL);
-  bg_msg_set_parameter_ctx(msg, BG_MSG_SET_PARAMETER_CTX, NULL, NULL, &val);
+  bg_msg_set_parameter_ctx(msg, BG_CMD_SET_PARAMETER, NULL, NULL, &val);
   bg_msg_sink_put(sink);
   }
 
-void bg_msg_get_parameter_idx(gavl_msg_t * msg,
-                              const char ** name,
-                              gavl_value_t * val,
-                              int idx)
-  {
-  if(!(*name = gavl_msg_get_arg_string_c(msg, idx + 0)))
-    return;
-  
-  gavl_value_copy(val, &msg->args[idx + 1]);
-  }
   
 void bg_msg_get_parameter(gavl_msg_t * msg,
                           const char ** name,
                           gavl_value_t * val)
   {
-  bg_msg_get_parameter_idx(msg, name, val, 0);
+  if(!(*name = gavl_msg_get_arg_string_c(msg, 0)))
+    return;
+  gavl_value_copy(val, &msg->args[1]);
   }
 
 void bg_msg_get_parameter_ctx(gavl_msg_t * msg,
@@ -149,9 +149,9 @@ void bg_msg_get_parameter_ctx(gavl_msg_t * msg,
                               const char ** name,
                               gavl_value_t * val)
   {
+  bg_msg_get_parameter(msg, name, val);
   if(ctx)
-    *ctx = gavl_msg_get_arg_string_c(msg, 0);
-  bg_msg_get_parameter_idx(msg, name, val, 1);
+    *ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
   }
 
 void bg_msg_get_chain_parameter_ctx(gavl_msg_t * msg,
@@ -161,13 +161,14 @@ void bg_msg_get_chain_parameter_ctx(gavl_msg_t * msg,
                                     const char ** sub_name,
                                     gavl_value_t * val)
   {
+  bg_msg_get_parameter(msg, sub_name, val);
   if(ctx)
-    *ctx = gavl_msg_get_arg_string_c(msg, 0);
+    *ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+  
   if(name)
-    *name = gavl_msg_get_arg_string_c(msg, 1);
+    *name = gavl_msg_get_arg_string_c(msg, 2);
   if(idx)
-    *idx = gavl_msg_get_arg_int(msg, 2);
-  bg_msg_get_parameter_idx(msg, sub_name, val, 3);
+    *idx = gavl_msg_get_arg_int(msg, 3);
   }
 
 void bg_msg_get_multi_parameter_ctx(gavl_msg_t * msg,
@@ -178,12 +179,14 @@ void bg_msg_get_multi_parameter_ctx(gavl_msg_t * msg,
                                     gavl_value_t * val)
   {
   if(ctx)
-    *ctx = gavl_msg_get_arg_string_c(msg, 0);
+    *ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+  bg_msg_get_parameter(msg, sub_name, val);
+
   if(name)
-    *name = gavl_msg_get_arg_string_c(msg, 1);
+    *name = gavl_msg_get_arg_string_c(msg, 2);
   if(el_name)
-    *el_name = gavl_msg_get_arg_string_c(msg, 2);
-  bg_msg_get_parameter_idx(msg, sub_name, val, 3);
+    *el_name = gavl_msg_get_arg_string_c(msg, 3);
   }
 
 

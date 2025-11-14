@@ -92,8 +92,6 @@ flag_names[] =
   {
     { "sync",          BG_PARAMETER_SYNC          },
     { "hide_dialog",   BG_PARAMETER_HIDE_DIALOG   },
-    { "plugin",        BG_PARAMETER_PLUGIN        },
-    { "own_section",   BG_PARAMETER_OWN_SECTION   },
   };
 
 static int string_to_flags(const char * str)

@@ -28,6 +28,7 @@
 
 #include <gmerlin/plugin.h>
 #include <gmerlin/cfg_registry.h>
+#include <gmerlin/cfgctx.h>
 
 /** \defgroup plugin_registry Plugin registry
  *  \brief Database of all installed plugins
@@ -47,36 +48,24 @@
  *  \brief URL variables handled by the registry
  */
 
-// GAVL_URL_VAR_TRACK
-// #define BG_URL_VAR_TRACK    "track"      // Select track (see \ref bg_input_plugin_load_full)
-// #define BG_URL_VAR_VARIANT  "variant"    // Variant for multirate streams
-
 #define BG_URL_VAR_PLUGIN  "plugin"     // Force usage of a plugin
 #define BG_URL_VAR_CMDLINE "cmdlineopt" // Respect the -i option
 
 #define BG_INPUT_FLAG_PREFER_EDL          (1<<0)
-#define BG_INPUT_FLAG_RESOLVE_REDIRECTORS (1<<1)
 #define BG_INPUT_FLAG_SELECT_TRACK        (1<<2)
 #define BG_INPUT_FLAG_GET_FORMAT          (1<<3)
-
-/* For sections, which have a single plugin as parameter */
-#define BG_PARAMETER_NAME_PLUGIN "p"
 
 #define BG_IMGLIST_EXT      "imglist"
 #define BG_IMGLIST_MIMETYPE "video/x-gmerlin-imglist"
 
-
-void
-bg_track_set_force_raw(gavl_dictionary_t * dict, int force_raw);
+#define BG_PLUGIN_CONFIG        "pluginconfig"
+#define BG_PLUGIN_CONFIG_PLUGIN "plugin"
 
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
 
 void
 bg_track_set_uri_vars(gavl_dictionary_t * dict, const gavl_dictionary_t * uri_vars);
-
-int
-bg_track_get_force_raw(const gavl_dictionary_t * dict);
 
 const char *
 bg_track_get_current_location(const gavl_dictionary_t * dict);
@@ -110,13 +99,45 @@ typedef struct bg_plugin_info_s  bg_plugin_info_t;
  *  \brief Information about a plugin
  */
 
+#define BG_PLUGIN_GETTEXT_DOMAIN    "gettext_domain"
+#define BG_PLUGIN_GETTEXT_DIRECTORY "gettext_directory"
+#define BG_PLUGIN_CMPNAME           "cmpname"
+#define BG_PLUGIN_API               "api"
+
+#define bg_plugin_info_get_gettext_domain(inf) \
+  gavl_dictionary_get_string(&inf->dict, BG_PLUGIN_GETTEXT_DOMAIN)
+
+#define bg_plugin_info_get_gettext_directory(inf) \
+  gavl_dictionary_get_string(&inf->dict, BG_PLUGIN_GETTEXT_DIRECTORY)
+
+#define bg_plugin_info_get_name(inf) \
+  gavl_dictionary_get_string(&inf->dict, GAVL_META_NAME)
+
+#define bg_plugin_info_get_long_name(inf) \
+  gavl_dictionary_get_string(&inf->dict, GAVL_META_LABEL)
+
+#define bg_plugin_info_set_gettext_domain(inf,s) \
+  gavl_dictionary_set_string(&inf->dict, BG_PLUGIN_GETTEXT_DOMAIN, s)
+
+#define bg_plugin_info_set_gettext_directory(inf,s) \
+  gavl_dictionary_set_string(&inf->dict, BG_PLUGIN_GETTEXT_DIRECTORY,s)
+
+#define bg_plugin_info_set_name(inf,s) \
+  gavl_dictionary_set_string(&inf->dict, GAVL_META_NAME, s)
+
+#define bg_plugin_info_set_long_name(inf,s) \
+  gavl_dictionary_set_string(&inf->dict, GAVL_META_LABEL, s)
+
+
 struct bg_plugin_info_s
   {
-  char * gettext_domain; //!< First argument for bindtextdomain(). 
-  char * gettext_directory; //!< Second argument for bindtextdomain().
+  gavl_dictionary_t dict;
   
-  char * name;            //!< unique short name
-  char * long_name;       //!< Humanized name
+  //  char * gettext_domain; //!< First argument for bindtextdomain(). 
+  //  char * gettext_directory; //!< Second argument for bindtextdomain().
+  
+  //  char * name;            //!< unique short name
+  //  char * long_name;       //!< Humanized name
 
   gavl_value_t mimetypes_val;
   gavl_value_t extensions_val;
@@ -160,6 +181,7 @@ struct bg_plugin_info_s
   char * cmp_name; //!< Name used for alphabetical sorting. Not for external use.
   
   };
+
 
 const char * bg_plugin_type_to_string(bg_plugin_type_t type);
 bg_plugin_type_t bg_plugin_type_from_string(const char * name);
@@ -362,28 +384,6 @@ bg_plugin_find_by_protocol(const char * protocol, int type_mask);
 
 /* Another method: Return long names as strings (NULL terminated) */
 
-/** \ingroup plugin_registry
- *  \brief Get a list of plugins
- *  \param reg A plugin registry
- *  \param type_mask Mask of all returned plugin types
- *  \param flag_mask Mask of all returned plugin flags
- *  \returns A NULL-terminated list of plugin names.
- *
- *  This functions returns plugin names suitable for adding to
- *  GUI menus. Use \ref bg_plugin_find_by_name to get
- *  the corresponding plugin infos.
- *
- *  Use \ref bg_plugin_registry_free_plugins to free the returned list.
- */
-
-char ** bg_plugin_registry_get_plugins(uint32_t type_mask,
-                                       uint32_t flag_mask);
-
-/** \ingroup plugin_registry
- *  \brief Free a plugin list
- *  \param plugins List returned by \ref bg_plugin_registry_get_plugins
- */
-void bg_plugin_registry_free_plugins(char ** plugins);
 
 
 /*  Finally a version for finding/loading plugins */
@@ -483,59 +483,6 @@ bg_plugin_handle_t *  bg_load_track(const gavl_dictionary_t * track,
 
 void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, int flags);
 
-
-/* Set the supported extensions and mimetypes for a plugin */
-
-/** \ingroup plugin_registry
- *  \brief Set file extensions for a plugin
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param extensions Space separated list of file extensions
- *
- *  The extensions will be saved in the plugin file
- */
-
-void bg_plugin_registry_set_extensions(bg_plugin_registry_t * reg,
-                                       const char * plugin_name,
-                                       const char * extensions);
-
-/** \ingroup plugin_registry
- *  \brief Set protocols for a plugin
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param protocols Space separated list of protocols
- *
- *  The protocols will be saved in the plugin file
- */
-
-void bg_plugin_registry_set_protocols(bg_plugin_registry_t * reg,
-                                      const char * plugin_name,
-                                      const char * protocols);
-
-/** \ingroup plugin_registry
- *  \brief Set priority for a plugin
- *  \param reg A plugin registry
- *  \param plugin_name Name of the plugin
- *  \param priority Priority (BG_PLUGIN_PRIORITY_MIN..BG_PLUGIN_PRIORITY_MAX, should be 1..10)
- *
- *  The priority will be saved in the plugin file
- */
-
-void bg_plugin_registry_set_priority(bg_plugin_registry_t * reg,
-                                     const char * plugin_name,
-                                     int priority);
-
-
-/** \ingroup plugin_registry
- *  \brief Get the config section belonging to a plugin
- *  \param reg A plugin registry
- *  \param plugin_name Short name of the plugin
- *  \returns The config section belonging to the plugin or NULL
- */
-gavl_dictionary_t *
-bg_plugin_registry_get_section(bg_plugin_registry_t * reg,
-                               const char * plugin_name);
-
 /** \ingroup plugin_registry
  *  \brief Set a parameter info for selecting and configuring plugins
  *  \param reg A plugin registry
@@ -549,35 +496,6 @@ void bg_plugin_registry_set_parameter_info(bg_plugin_registry_t * reg,
                                            uint32_t type_mask,
                                            uint32_t flag_mask,
                                            bg_parameter_info_t * ret);
-
-/** \ingroup plugin_registry
- *  \brief Set a parameter info for selecting and configuring input plugins
- *  \param reg A plugin registry
- *  \param type_mask Mask of all returned types
- *  \param flag_mask Mask of all returned flags
- *  \param ret Where the parameter info will be copied
- *
- */
-
-void bg_plugin_registry_set_parameter_info_input(bg_plugin_registry_t * reg,
-                                                 uint32_t type_mask,
-                                                 uint32_t flag_mask,
-                                                 bg_parameter_info_t * ret);
-
-
-/** \ingroup plugin_registry
- *  \brief Set a parameter of an input plugin
- *  \param data A plugin registry cast to void
- *  \param name Name
- *  \param val Value
- *
- */
-
-void bg_plugin_registry_set_parameter_input(void * data, const char * name,
-                                            const gavl_value_t * val);
-
-int bg_plugin_registry_get_parameter_input(void * data, const char * name,
-                                            gavl_value_t * val);
 
 
 /** \ingroup plugin_registry
@@ -593,7 +511,6 @@ int bg_plugin_registry_get_parameter_input(void * data, const char * name,
  *  If you create a config section from the returned parameters
  *  (with \ref bg_cfg_section_create_from_parameters or \ref bg_cfg_section_create_items)
  *  the resulting encoding section will contain the complete encoder setup.
- *  It can be manipulated through the bg_encoder_section_*() functions.
  */
 
 bg_parameter_info_t *
@@ -601,129 +518,6 @@ bg_plugin_registry_create_encoder_parameters(bg_plugin_registry_t * reg,
                                              uint32_t stream_type_mask,
                                              uint32_t flag_mask,
                                              int stream_params);
-
-/** \ingroup plugin_registry
- *  \brief Create a parameter array for compressors
- *  \param plugin_reg A plugin registry
- *  \param flag_mask Mask of all returned plugin flags
- *  \returns Parameter array for setting up encoders
- *
- *  Free the returned parameters with
- *  \ref bg_parameter_info_destroy_array
- *
- */
-
-// bg_parameter_info_t *
-// bg_plugin_registry_create_compressor_parameters(bg_plugin_registry_t * reg,
-//                                                uint32_t flag_mask);
-
-const bg_parameter_info_t * bg_plugin_registry_get_audio_compressor_parameter();
-const bg_parameter_info_t * bg_plugin_registry_get_video_compressor_parameter();
-const bg_parameter_info_t * bg_plugin_registry_get_overlay_compressor_parameter();
-
-
-/** \ingroup plugin_registry
- *  \brief Set a compressor parameter
- *  \param plugin_reg A plugin registry
- *  \param plugin Address of a plugin handle
- *  \param name Parameter name
- *  \param val Value
- *
- *  Call this with the parameters returned by
- *  \ref bg_plugin_registry_create_encoder_parameters and afterwards
- *  *plugin will be a codec plugin with all parameters set.
- */
-
-void
-bg_plugin_registry_set_compressor_parameter(bg_plugin_registry_t * plugin_reg,
-                                            bg_plugin_handle_t ** plugin,
-                                            const char * name,
-                                            const gavl_value_t * val);
-
-/** \ingroup plugin_registry
- *  \brief Get a compression ID from a compressor section
- *  \param plugin_reg A plugin registry
- *  \param section A section
- *  \returns The codec ID
- *
- *  Call this with a section corrsponding to the parameters created by
- *  \ref bg_plugin_registry_create_compressor_parameters
- */
-
-gavl_codec_id_t
-bg_plugin_registry_get_compressor_id(bg_plugin_registry_t * plugin_reg,
-                                     gavl_dictionary_t * section);
-  
-
-/** \ingroup plugin_registry
- *  \brief Get the name for an encoding plugin
- *  \param plugin_reg A plugin registry
- *  \param s An encoder section (see \ref bg_plugin_registry_create_encoder_parameters)
- *  \param stream_type The stream type to encode
- *  \param stream_mask The mask passed to \ref bg_plugin_registry_create_encoder_parameters
- *  \returns Returns the plugin name or NULL if the stream will be encoded by the video encoder
- */
-
-const char * 
-bg_encoder_section_get_plugin(const gavl_dictionary_t * s,
-                              gavl_stream_type_t stream_type);
-
-/** \ingroup plugin_registry
- *  \brief Get the plugin configuration for an encoding plugin
- *  \param plugin_reg A plugin registry
- *  \param s An encoder section (see \ref bg_plugin_registry_create_encoder_parameters)
- *  \param stream_type The stream type to encode
- *  \param stream_mask The mask passed to \ref bg_plugin_registry_create_encoder_parameters
- *  \param section_ret If non-null returns the config section for the plugin
- *  \param params_ret If non-null returns the parameters for the plugin
- */
-
-  
-void
-bg_encoder_section_get_plugin_config(bg_plugin_registry_t * plugin_reg,
-                                     const gavl_dictionary_t * s,
-                                     gavl_stream_type_t stream_type,
-                                     const gavl_dictionary_t ** section_ret,
-                                     const bg_parameter_info_t ** params_ret);
-
-/** \ingroup plugin_registry
- *  \brief Get the stream configuration for an encoding plugin
- *  \param plugin_reg A plugin registry
- *  \param s An encoder section (see \ref bg_plugin_registry_create_encoder_parameters)
- *  \param stream_type The stream type to encode
- *  \param stream_mask The mask passed to \ref bg_plugin_registry_create_encoder_parameters
- *  \param section_ret If non-null returns the config section for the stream
- *  \param params_ret If non-null returns the parameters for the stream
- */
-
-void
-bg_encoder_section_get_stream_config(bg_plugin_registry_t * plugin_reg,
-                                     const gavl_dictionary_t * s,
-                                     gavl_stream_type_t stream_type,
-                                     const gavl_dictionary_t ** section_ret,
-                                     const bg_parameter_info_t ** params_ret);
-
-
-
-/** \defgroup plugin_registry_defaults Defaults saved between sessions
- *  \ingroup plugin_registry
- *  \brief Plugin defaults
- *
- *  The registry stores a complete plugin setup for any kind of application. This includes the
- *  default plugins (see \ref bg_plugin_registry_get_default and bg_plugin_registry_set_default),
- *  their parameters,
- *  as well as flags, whether encoded streams should be multiplexed or not.
- *  It's up the the application if these informations are
- *  used or not.
- *
- *  These infos play no role inside the registry, but they are saved and reloaded
- *  between sessions. 
- *
- */
-
-
-
-/* Rescan the available devices */
 
 
 /** \ingroup plugin_registry
@@ -791,24 +585,6 @@ bg_plugin_registry_save_image(bg_plugin_registry_t * reg,
                               const gavl_video_format_t * format,
                               const gavl_dictionary_t * m);
 
-#if 0
-/** \brief Get thumbnail of a movie
- *  \param gml Location (should be a regular file)
- *  \param thumbnail_file If non-null, returns the filename of the thumbnail
- *  \param plugin_reg Plugin registry
- *  \param frame_ret If non-null, returns the video frame
- *  \param format_ret If non-null, the video format of the thumbnail will be
-                      copied here
- *  \returns 1 if a unique thumbnail could be generated, 0 if a default thumbnail was returned
- *
- */
-
-int bg_get_thumbnail(const char * gml,
-                     bg_plugin_registry_t * plugin_reg,
-                     char ** thumbnail_filename_ret,
-                     gavl_video_frame_t ** frame_ret,
-                     gavl_video_format_t * format_ret);
-#endif
 
 /** \brief Make a thumbnail of a video frame
  *  \param plugin_reg Plugin registry
@@ -921,15 +697,6 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin);
 
 bg_plugin_handle_t * bg_plugin_handle_create();
 
-/** \ingroup plugin_registry
- *  \brief Check if the plugin registry was changed
- *  \returns 1 if the registry was changed, 0 else
- *
- *  If this function returns 1, you should save the associated
- *  config registry also.
- */
-
-int bg_plugin_registry_changed(bg_plugin_registry_t * reg);
 
 /** \ingroup plugin_registry
  *  \brief Save the metadata to an xml file
@@ -973,7 +740,6 @@ gavl_dictionary_t * bg_input_plugin_get_media_info(bg_plugin_handle_t * h);
 
 int bg_input_plugin_get_num_tracks(bg_plugin_handle_t * h);
 gavl_dictionary_t * bg_input_plugin_get_track_info(bg_plugin_handle_t * h, int idx);
-const char * bg_input_plugin_get_disk_name(bg_plugin_handle_t * h);
 
 const gavl_dictionary_t * bg_plugin_registry_get_src(bg_plugin_registry_t * reg,
                                                      const gavl_dictionary_t * track,
@@ -989,22 +755,11 @@ int bg_plugin_registry_probe_image(const char * filename,
                                    gavl_video_format_t * format,
                                    gavl_dictionary_t * m, bg_plugin_handle_t ** h);
 
-
-#if 0
-void bg_plugin_registry_tracks_from_locations(bg_plugin_registry_t * reg,
-                                              const gavl_value_t * val,
-                                              int flags,
-                                              gavl_array_t * ret);
-#endif
-
 int bg_plugin_handle_set_state(bg_plugin_handle_t * h, const char * ctx, const char * name, const gavl_value_t * val);
-int bg_plugin_handle_get_state(bg_plugin_handle_t * h, const char * ctx, const char * name, gavl_value_t * val);
 
 void bg_plugin_handle_connect_control(bg_plugin_handle_t * ret);
 
 int bg_file_is_blacklisted(const char * url);
-
-
 
 /* Shortcuts */
 
@@ -1018,7 +773,9 @@ const gavl_array_t * bg_plugin_registry_get_input_mimetypes(void);
 
 const gavl_array_t * bg_plugin_registry_get_input_protocols(void);
 
-int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dictionary_t * next, int * next_idx);
+int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur,
+                                   const gavl_dictionary_t * next,
+                                   int * next_idx);
 
 void bg_track_find_subtitles(gavl_dictionary_t * track);
 
@@ -1078,8 +835,6 @@ void bg_plugin_registry_opt_vis(void * data, int * argc,
 /* Store plugin options globally */
 const gavl_value_t * bg_plugin_config_get(bg_plugin_type_t type);
 void bg_plugin_config_set(bg_plugin_type_t type, const gavl_value_t *);
-const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type);
-gavl_dictionary_t * bg_plugin_config_get_section_nc(bg_plugin_type_t type);
 
 
 /* Parse a string of the format
@@ -1103,8 +858,6 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
   
 */
 
-int bg_plugin_config_parse_multi(gavl_array_t * arr,
-                                 const char * str);
 
 #define BG_PLUGIN_OPT_INPUT \
   { \
@@ -1221,15 +974,17 @@ int bg_plugin_config_parse_multi(gavl_array_t * arr,
   .callback =    bg_plugin_registry_opt_vis, \
   }
 
-const bg_parameter_info_t * bg_plugin_registry_get_plugin_parameter(bg_plugin_type_t type);
-
 char * bg_get_default_sink_uri(int plugin_type);
 
 #define bg_rb_plugin_name "i_rb"
 const bg_plugin_common_t * bg_rb_plugin_get();
 bg_plugin_info_t * bg_rb_plugin_get_info();
 void * bg_rb_plugin_create();
-  
+
+bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type);
+
+const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type);
+
 
 #endif // BG_PLUGINREGISTRY_H_INCLUDED
 

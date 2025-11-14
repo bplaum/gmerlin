@@ -160,6 +160,9 @@ char * bg_canonical_filename(const char * name);
 char * bg_filename_ensure_extension(const char * filename,
                                     const char * ext);
 
+char * bg_filename_get_dir(const char * filename);
+
+
 /** \brief Get the base name of a path
  *  \param path Path name
  *  \returns A newly allocated label

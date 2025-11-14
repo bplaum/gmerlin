@@ -173,52 +173,6 @@ static int cb_create_temp_file(void * data, const char * filename)
   return ret;
   }
 
-static void init_plugin_from_section(bg_encoder_t * e, plugin_config_t * ret,
-                                     gavl_stream_type_t type)
-  {
-  const char * name;
-  name = bg_encoder_section_get_plugin(e->es, type);
-  if(name)
-    {
-    ret->info = bg_plugin_find_by_name(name);
-    bg_encoder_section_get_plugin_config(bg_plugin_reg,
-                                         e->es, type,
-                                         &ret->section, NULL);
-    }
-  }
-
-static void init_stream_from_section(bg_encoder_t * e,
-                                     stream_config_t * ret,
-                                     gavl_stream_type_t type)
-  {
-  bg_encoder_section_get_stream_config(bg_plugin_reg, e->es,
-                                       type, 
-                                       &ret->section, NULL);
-  }
-
-static void init_from_section(bg_encoder_t * e)
-  {
-  if(e->stream_mask & GAVL_STREAM_AUDIO)
-    {
-    init_plugin_from_section(e, &e->audio_plugin, GAVL_STREAM_AUDIO);
-    init_stream_from_section(e, &e->audio_stream, GAVL_STREAM_AUDIO);
-    }
-  if(e->stream_mask & GAVL_STREAM_TEXT)
-    {
-    init_plugin_from_section(e, &e->text_plugin, GAVL_STREAM_TEXT);
-    init_stream_from_section(e, &e->text_stream, GAVL_STREAM_TEXT);
-    }
-  if(e->stream_mask & GAVL_STREAM_OVERLAY)
-    {
-    init_plugin_from_section(e, &e->overlay_plugin, GAVL_STREAM_OVERLAY);
-    init_stream_from_section(e, &e->overlay_stream, GAVL_STREAM_OVERLAY);
-    }
-  if(e->stream_mask & GAVL_STREAM_VIDEO)
-    {
-    init_plugin_from_section(e, &e->video_plugin, GAVL_STREAM_VIDEO);
-    init_stream_from_section(e, &e->video_stream, GAVL_STREAM_VIDEO);
-    }
-  }
 
 #if 1
 static void init_from_tt(bg_encoder_t * e)
@@ -259,8 +213,7 @@ static void init_from_tt(bg_encoder_t * e)
   }
 #endif
 
-bg_encoder_t * bg_encoder_create(gavl_dictionary_t * es,
-                                 bg_transcoder_track_t * tt,
+bg_encoder_t * bg_encoder_create(bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask)
   {
   bg_encoder_t * ret = calloc(1, sizeof(*ret));
@@ -272,15 +225,10 @@ bg_encoder_t * bg_encoder_create(gavl_dictionary_t * es,
   
   /* Set plugin infos */
 
-  if(es)
-    {
-    ret->es = es;
-    init_from_section(ret);
-    }
-  else if(tt)
+  if(tt)
     {
     ret->tt = tt;
-    ret->es = bg_track_get_cfg_encoder(ret->tt);
+    ret->es = bg_transcoder_track_get_cfg_encoder(ret->tt);
     init_from_tt(ret);
     }
   
@@ -385,7 +333,7 @@ static bg_plugin_handle_t * load_encoder(bg_encoder_t * enc,
     else if(!(info->flags & BG_PLUGIN_PIPE))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-             "Plugin %s cannot write to stdout", info->name);
+               "Plugin %s cannot write to stdout", bg_plugin_info_get_long_name(info));
       return NULL;
       }
     }
@@ -443,7 +391,9 @@ static int check_separate(bg_encoder_t * enc)
 
   if(enc->num_audio_streams)
     {
-    if(!enc->audio_plugin.info && !enc->video_plugin.info)
+    if(!enc->audio_plugin.info &&
+       (!enc->video_plugin.info ||
+        (enc->video_plugin.info->max_audio_streams < enc->num_audio_streams)))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid plugin setup");
       return 0;
@@ -1060,7 +1010,7 @@ int bg_encoder_add_audio_stream(bg_encoder_t * enc,
     s->com.section = s->com.section_priv;
     }
   else if(enc->tt)
-    s->com.section = bg_stream_get_cfg_encoder(gavl_track_get_audio_stream(enc->tt, source_index));
+    s->com.section = bg_transcoder_track_get_cfg_encoder(gavl_track_get_audio_stream(enc->tt, source_index));
   else
     s->com.section = enc->audio_stream.section;
 
@@ -1093,7 +1043,7 @@ int bg_encoder_add_video_stream(bg_encoder_t * enc,
     s->com.section = s->com.section_priv;
     }
   else if(enc->tt)
-    s->com.section = bg_stream_get_cfg_encoder(gavl_track_get_video_stream(enc->tt, source_index));
+    s->com.section = bg_transcoder_track_get_cfg_encoder(gavl_track_get_video_stream(enc->tt, source_index));
   else
     s->com.section = enc->video_stream.section;
 
@@ -1236,7 +1186,7 @@ int bg_encoder_add_overlay_stream(bg_encoder_t * enc,
     if(source_format == GAVL_STREAM_TEXT)
       s->com.section = bg_transcoder_track_get_cfg_encoder_overlay(gavl_track_get_text_stream(enc->tt, source_index));
     else
-      s->com.section = bg_stream_get_cfg_encoder(gavl_track_get_overlay_stream(enc->tt, source_index));
+      s->com.section = bg_transcoder_track_get_cfg_encoder(gavl_track_get_overlay_stream(enc->tt, source_index));
     }
   else
     s->com.section = enc->overlay_stream.section;

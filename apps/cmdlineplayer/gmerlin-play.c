@@ -103,7 +103,7 @@ static void opt_vis(void * data, int * argc, char *** _argv, int arg)
   gavl_url_get_vars(plugin_name, &vars);
 
   bg_cfg_section_apply(&vars,
-                       cfg[BG_PLAYER_CFG_VISUALIZATION].p,
+                       cfg[BG_PLAYER_CFG_VISUALIZATION].parameters,
                        bg_cfg_section_set_parameter_func, cfg[BG_PLAYER_CFG_VISUALIZATION].s);
   
   bg_player_set_visualization(player_ctrl->cmd_sink, plugin_name);
@@ -183,16 +183,6 @@ static bg_cmdline_arg_t global_options[] =
   {
    BG_PLUGIN_OPT_INPUT,
     {
-      .arg =         "-aud",
-      .help_arg =    "<audio_options>",
-      .help_string = "Set audio processing options",
-    },
-    {
-      .arg =         "-vid",
-      .help_arg =    "<video_options>",
-      .help_string = "Set video processing options",
-    },
-    {
       .arg =         "-vis",
       .help_arg =    "plugin_name[?option1=value1[&...]]",
       .help_string = "Set visualization plugin",
@@ -207,16 +197,6 @@ static bg_cmdline_arg_t global_options[] =
     BG_PLUGIN_OPT_OV,
     BG_PLUGIN_OPT_FA,
     BG_PLUGIN_OPT_FV,
-    {
-      .arg =         "-inopt",
-      .help_arg =    "<input_options>",
-      .help_string = "Set generic input options",
-    },
-    {
-      .arg =         "-osd",
-      .help_arg =    "<osd_options>",
-      .help_string = "Set OSD options",
-    },
     {
       .arg =         "-nt",
       .help_string = "Disable time display",
@@ -268,14 +248,6 @@ static bg_cmdline_arg_t global_options[] =
     { /* End of options */ }
   };
 
-static void update_global_options()
-  {
-  bg_cmdline_arg_set_cfg_ctx(global_options, "-aud", &cfg[BG_PLAYER_CFG_AUDIO]);
-  bg_cmdline_arg_set_cfg_ctx(global_options, "-vid", &cfg[BG_PLAYER_CFG_VIDEO]);
-
-  bg_cmdline_arg_set_cfg_ctx(global_options, "-osd", &cfg[BG_PLAYER_CFG_OSD]);
-  bg_cmdline_arg_set_cfg_ctx(global_options, "-inopt", &cfg[BG_PLAYER_CFG_INPUT]);
-  }
 
 /* Input plugin stuff */
 
@@ -335,17 +307,15 @@ int main(int argc, char ** argv)
   
   /* Apply default options */
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "player");
-  
+
+  /* Change our local copy of the configuration */
   bg_cfg_ctx_set_cb_array(cfg, NULL, NULL);
   
   /* Create config sections */
   bg_cfg_ctx_array_create_sections(cfg, cfg_section);
-
   
   bg_cfg_ctx_set_sink_array(cfg, player_ctrl->cmd_sink);
 
-  update_global_options();
-  
   /* Get commandline options */
   bg_cmdline_init(&app_data);
   bg_cmdline_parse(global_options, &argc, &argv, NULL);

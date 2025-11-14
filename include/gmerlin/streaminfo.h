@@ -230,14 +230,6 @@ void bg_dictionary_delete_children_by_flag_nc(gavl_dictionary_t * container,
                                               const char * flag);
 
 
-#define BG_TRACK_ENCODER         "encoder"
-
-#define bg_track_get_cfg_encoder_nc(dict) gavl_dictionary_get_dictionary_create(dict, BG_TRACK_ENCODER)
-#define bg_track_get_cfg_encoder(dict)    gavl_dictionary_get_dictionary(dict, BG_TRACK_ENCODER)
-
-#define bg_stream_get_cfg_encoder_nc(dict) gavl_dictionary_get_dictionary_create(dict, BG_TRACK_ENCODER)
-#define bg_stream_get_cfg_encoder(dict)    gavl_dictionary_get_dictionary(dict, BG_TRACK_ENCODER)
-
 /**
  *  @}
  */

@@ -218,11 +218,11 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
 
     if(!BG_XML_STRCMP(cur->name, name_key))
       {
-      ret->name = gavl_strrep(ret->name, tmp_string);
+      bg_plugin_info_set_name(ret, tmp_string);
       }
     else if(!BG_XML_STRCMP(cur->name, long_name_key))
       {
-      ret->long_name = gavl_strrep(ret->long_name, tmp_string);
+      bg_plugin_info_set_long_name(ret, tmp_string);
       }
     else if(!BG_XML_STRCMP(cur->name, description_key))
       {
@@ -291,11 +291,11 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
       }
     else if(!BG_XML_STRCMP(cur->name, gettext_domain_key))
       {
-      ret->gettext_domain = gavl_strrep(ret->gettext_domain, tmp_string);
+      bg_plugin_info_set_gettext_domain(ret, tmp_string);
       }
     else if(!BG_XML_STRCMP(cur->name, gettext_directory_key))
       {
-      ret->gettext_directory = gavl_strrep(ret->gettext_directory, tmp_string);
+      bg_plugin_info_set_gettext_directory(ret, tmp_string);
       }
     else if(!BG_XML_STRCMP(cur->name, module_time_key))
       {
@@ -397,6 +397,7 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
   int num_flags;
   const char * flag_name;
   const char * type_name;
+  const char * var;
 
   uint32_t flag;
   
@@ -413,11 +414,11 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
   xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
 
   xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)name_key, NULL);
-  xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->name));
+  xmlAddChild(xml_item, BG_XML_NEW_TEXT(bg_plugin_info_get_name(info)));
   xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
 
   xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)long_name_key, NULL);
-  xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->long_name));
+  xmlAddChild(xml_item, BG_XML_NEW_TEXT(bg_plugin_info_get_long_name(info)));
   xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
 
   xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)description_key, NULL);
@@ -497,16 +498,16 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
     free(tmp_string);
     }
 
-  if(info->gettext_domain)
+  if((var = bg_plugin_info_get_gettext_domain(info)))
     {
     xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)gettext_domain_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->gettext_domain));
+    xmlAddChild(xml_item, BG_XML_NEW_TEXT(var));
     xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
     }
-  if(info->gettext_directory)
+  if((var = bg_plugin_info_get_gettext_directory(info)))
     {
     xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)gettext_directory_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->gettext_directory));
+    xmlAddChild(xml_item, BG_XML_NEW_TEXT(var));
     xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
     }
 

@@ -94,8 +94,8 @@ static void dump_plugins(bg_plugin_registry_t * plugin_reg,
     if(format == FORMAT_HTML)
       {
       printf("<table border=\"1\" width=\"100%%\">\n");
-      printf("  <tr><td width=\"15%%\">Internal name</td><td>%s</td></tr>\n", info->name);
-      printf("  <tr><td>External name</td><td>%s</td></tr>\n", info->long_name);
+      printf("  <tr><td width=\"15%%\">Internal name</td><td>%s</td></tr>\n", bg_plugin_info_set_name(info));
+      printf("  <tr><td>External name</td><td>%s</td></tr>\n", bg_plugin_info_get_long_name(info));
       printf("  <tr><td>Module</td><td>%s</td></tr>\n", get_filename(info->module_filename));
       printf("  <tr><td valign=\"top\">Description</td><td>%s</td></tr>\n", info->description);
       
@@ -103,7 +103,7 @@ static void dump_plugins(bg_plugin_registry_t * plugin_reg,
       }
     else
       {
-      printf("@subsection %s\n", info->long_name);
+      printf("@subsection %s\n", bg_plugin_info_set_name(info));
       printf("@table @i\n");
       printf("@item Internal name\n%s\n", info->name);
       printf("@item Module\n%s\n", get_filename(info->module_filename));

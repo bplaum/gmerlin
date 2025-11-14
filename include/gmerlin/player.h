@@ -37,16 +37,13 @@
 #define BG_PLAYER_SEEK_STEP      10 // Seconds
 #define BG_PLAYER_SEEK_FAST_STEP 120 // Seconds
 
-#define BG_PLAYER_CFG_INPUT         0
-#define BG_PLAYER_CFG_AUDIO         1
-#define BG_PLAYER_CFG_AUDIOFILTER   2
-#define BG_PLAYER_CFG_VIDEO         3
-#define BG_PLAYER_CFG_VIDEOFILTER   4
-#define BG_PLAYER_CFG_SUBTITLE      5
-#define BG_PLAYER_CFG_OSD           6
-#define BG_PLAYER_CFG_VISUALIZATION 7
-
-#define BG_PLAYER_CFG_NUM           8
+#define BG_PLAYER_CFG_AUDIO         0
+#define BG_PLAYER_CFG_VIDEO         1
+#define BG_PLAYER_CFG_SUBTITLE      2
+#define BG_PLAYER_CFG_OSD           3
+#define BG_PLAYER_CFG_VISUALIZATION 4
+#define BG_PLAYER_CFG_INPUT         5
+#define BG_PLAYER_CFG_NUM           6
 
 typedef struct bg_player_s bg_player_t;
 
@@ -135,7 +132,6 @@ void bg_player_set_empty_mode(bg_player_t *, int do_quit);
  *  changed by the user. For user settable parameters, see
  *  \ref bg_player_get_input_parameters,
  *  \ref bg_player_get_audio_parameters,
- *  \ref bg_player_get_audio_filter_parameters,
  *  \ref bg_player_get_video_parameters,
  *  \ref bg_player_get_video_filter_parameters
  *  \ref bg_player_get_subtitle_parameters and

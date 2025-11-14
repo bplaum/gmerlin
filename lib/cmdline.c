@@ -258,12 +258,7 @@ static void print_help(const bg_cmdline_arg_t* args, bg_help_format_t format)
   while(args[i].arg)
     {
 
-    if(args[i].parameters)
-      {
-      help_arg = "param1=val1[&param2=val2...]";
-      }
-    else
-      help_arg = args[i].help_arg;
+    help_arg = args[i].help_arg;
     
     switch(format)
       {
@@ -307,10 +302,6 @@ static void print_help(const bg_cmdline_arg_t* args, bg_help_format_t format)
         break;
       }
     
-    if(args[i].parameters)
-      {
-      bg_cmdline_print_help_parameters(args[i].parameters, format);
-      }
     fprintf(out, "\n");
     i++;
     }
@@ -659,22 +650,6 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
           *args[j].argv = argv[i];
           bg_cmdline_remove_arg(argc, _argv, i);
           }
-        else if(args[j].s && args[j].parameters)
-          {
-          if(i >= *argc)
-            {
-            fprintf(stderr, "Option %s requires an argument\n", args[j].arg);
-            exit(-1);
-            }
-
-          bg_cmdline_apply_options(args[j].s,
-                                   NULL,
-                                   NULL,
-                                   args[j].parameters,
-                                   argv[i]);
-          
-          bg_cmdline_remove_arg(argc, _argv, i);
-          }
         
         found = 1;
         break;
@@ -755,117 +730,6 @@ char ** bg_cmdline_get_locations_from_args(int * argc, char *** _argv)
   return ret;
   }
 
-
-int bg_cmdline_apply_options(gavl_dictionary_t * section,
-                             bg_set_parameter_func_t set_parameter,
-                             void * data,
-                             const bg_parameter_info_t * parameters,
-                             const char * option_string)
-  {
-  gavl_dictionary_t * section_priv = NULL;
-
-  if(!section)
-    {
-    section_priv = 
-      bg_cfg_section_create_from_parameters("sec", parameters);
-    section = section_priv;
-    }
-
-  if(!bg_cfg_section_set_parameters_from_string(section,
-                                                parameters,
-                                                option_string))
-    {
-    if(section_priv)
-      bg_cfg_section_destroy(section_priv);
-    return 0;
-    }
-  /* Now, apply the section */
-  if(set_parameter)
-    bg_cfg_section_apply(section, parameters, set_parameter, data);
-
-  if(section_priv)
-    bg_cfg_section_destroy(section_priv);
-  return 1;
-  }
-
-int bg_cmdline_apply_options_ctx(bg_cfg_ctx_t * ctx,
-                                 const char * option_string)
-  {
-  return bg_cmdline_apply_options(ctx->s,
-                                  ctx->set_param,
-                                  ctx->cb_data,
-                                  ctx->p,
-                                  option_string);
-  }
-
-static char * create_stream_key(int stream)
-  {
-  if(stream < 0)
-    return gavl_strdup("opt");
-  else
-    return gavl_sprintf("opt_%d", stream);
-  }
-
-int bg_cmdline_set_stream_options(gavl_dictionary_t * m,
-                                  const char * option_string)
-  {
-  int stream;
-  char * key;
-  /* Options can be prepended by <num>: to specify a particular
-     stream or global */
-  if(isdigit(*option_string))
-    {
-    char * rest;
-    stream = strtol(option_string, &rest, 10);
-    if(!rest || (*rest != ':'))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid stream options %s", option_string);
-      return 0;
-      }
-    if(stream <= 0)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid stream index %d", stream);
-      return 0;
-      }
-
-    stream--; // off by one
-    rest++;   // Skip ':'
-
-    key = create_stream_key(stream);
-    gavl_dictionary_set_string(m, key, rest);
-    free(key);
-    }
-  else
-    {
-    key = create_stream_key(-1);
-    gavl_dictionary_set_string(m, key, option_string);
-    free(key);
-    }
-  return 1;
-  }
-
-const char *
-bg_cmdline_get_stream_options(gavl_dictionary_t * m, int stream)
-  {
-  const char * ret;
-  char * key;
-
-  /* Try specific option */
-  key = create_stream_key(stream);
-  ret = gavl_dictionary_get_string(m, key);
-  free(key);
-
-  if(ret)
-    return ret;
-
-  /* Try generic option */
-  key = create_stream_key(-1);
-  ret = gavl_dictionary_get_string(m, key);
-  free(key);
-
-  return ret; // Can be NULL
-
-  }
 
 static void print_help_parameters(int indent,
                                   const bg_parameter_info_t * parameters,
@@ -1285,36 +1149,6 @@ void bg_cmdline_init(const bg_cmdline_app_data_t * data)
   app_data = data;
   }
 
-void bg_cmdline_arg_set_parameters(bg_cmdline_arg_t * args, const char * opt,
-                                   const bg_parameter_info_t * params)
-  {
-  int i = 0;
-  while(args[i].arg)
-    {
-    if(!strcmp(args[i].arg, opt))
-      {
-      args[i].parameters = params;
-      return;
-      }
-    i++;
-    }
-  }
-
-void bg_cmdline_arg_set_cfg_ctx(bg_cmdline_arg_t * args, const char * opt,
-                                bg_cfg_ctx_t * ctx)
-  {
-  int i = 0;
-  while(args[i].arg)
-    {
-    if(!strcmp(args[i].arg, opt))
-      {
-      args[i].parameters = ctx->p;
-      args[i].s          = ctx->s;
-      return;
-      }
-    i++;
-    }
-  }
 
 int bg_cmdline_check_unsupported(int argc, char ** argv)
   {
@@ -1362,7 +1196,7 @@ int bg_cmdline_parse_parameters(const char * string,
       {
       gavl_value_t val;
       gavl_value_init(&val);
-      val.type = bg_parameter_type_to_gavl(info->type);
+      val.type = gavl_parameter_type_to_gavl(info->type);
       gavl_value_from_string(&val, pos);
       gavl_dictionary_set_nocopy(dict, vars[i], &val);
       }

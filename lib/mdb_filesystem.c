@@ -1622,7 +1622,7 @@ static int handle_msg_filesystem(void * priv, gavl_msg_t * msg)
     case BG_MSG_NS_PARAMETER:
       switch(msg->ID)
         {
-        case BG_MSG_SET_PARAMETER:
+        case BG_CMD_SET_PARAMETER:
           {
           gavl_msg_t * resp;
           const char * name = NULL;

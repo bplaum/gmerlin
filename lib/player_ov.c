@@ -377,7 +377,6 @@ void bg_player_add_accelerators(bg_player_t * player,
   bg_accelerator_map_append_array(player->video_stream.accel_map, list);
   }
 
-
 void bg_player_ov_standby(bg_player_video_stream_t * ctx)
   {
   if(!ctx->ov)
@@ -854,36 +853,4 @@ void bg_player_set_osd_parameter(void * data,
   bg_player_t * p = data;
   bg_osd_set_parameter(p->video_stream.osd, name, val);
   }
-
-
-#if 0
-void bg_player_set_ov_plugin_parameter(void * data, const char * name,
-                                       const gavl_value_t * val)
-  {
-  
-  bg_player_t * player = data;
-  
-  //  fprintf(stderr, "bg_player_set_ov_plugin_parameter %s\n", name);
-  
-  if(!name)
-    return;
-
-  if(!strcmp(name, BG_PARAMETER_NAME_PLUGIN))
-    {
-    ov_set_plugin(player, val);
-    return;
-    }
-  else if(player->video_stream.ov)
-    {
-    bg_plugin_handle_t * h = bg_ov_get_plugin(player->video_stream.ov);
-
-    if(h->plugin->set_parameter)
-      {
-      bg_plugin_lock(h);
-      h->plugin->set_parameter(h->priv, name, val);
-      bg_plugin_unlock(h);
-      }
-    }
-  }
-#endif
 

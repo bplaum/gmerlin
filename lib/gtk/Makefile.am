@@ -19,26 +19,10 @@ noinst_HEADERS = gtk_dialog.h mdb_private.h
 libgmerlin_gtk_la_SOURCES = \
 aboutwindow.c \
 backendmenu.c \
-cfg_button.c \
-cfg_checkbutton.c \
-cfg_color.c \
-cfg_dialog.c \
-cfg_dirlist.c \
-cfg_file.c \
-cfg_font.c \
-cfg_multi_list.c \
-cfg_multi_menu.c \
-cfg_position.c \
-cfg_slider.c \
-cfg_spinbutton.c \
-cfg_string.c \
-cfg_stringlist.c \
-cfg_time.c \
-chapterdialog.c \
+configdialog.c \
 dictview.c \
 driveselect.c \
 fileselect.c \
-fileentry.c \
 gtkutils.c \
 logwindow.c \
 mdb_list.c \

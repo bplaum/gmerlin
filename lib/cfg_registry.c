@@ -18,9 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -88,7 +85,6 @@ gavl_dictionary_t * bg_cfg_registry_find_section(bg_cfg_registry_t * r,
 
 void bg_cfg_registry_opt_c(void * data, int * argc, char *** _argv, int arg)
   {
-  
   if(arg >= *argc)
     {
     fprintf(stderr, "Option -c requires an argument\n");
@@ -128,6 +124,9 @@ void bg_cfg_registry_opt_c(void * data, int * argc, char *** _argv, int arg)
     
     gavl_dictionary_free(&file_reg);
     }
+
+  //  fprintf(stderr, "Loaded registry:\n");
+  //  gavl_dictionary_dump(bg_cfg_registry, 2);
   
   bg_cmdline_remove_arg(argc, _argv, arg);
   }

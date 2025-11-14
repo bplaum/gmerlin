@@ -155,11 +155,6 @@ static const bg_parameter_info_t * get_parameters_v4l(void * priv)
   return NULL;
   }
 
-static int get_parameter_v4l(void * priv, const char * name,
-                             gavl_value_t * val)
-  {
-  return 0;
-  }
 
 static void set_parameter_v4l(void * priv, const char * name,
                               const gavl_value_t * val)
@@ -301,7 +296,6 @@ const bg_input_plugin_t the_plugin =
 
       .get_parameters = get_parameters_v4l,
       .set_parameter =  set_parameter_v4l,
-      .get_parameter =  get_parameter_v4l,
       .get_controllable = get_controllable_v4l,
       .get_protocols = get_protocols_v4l,
     },

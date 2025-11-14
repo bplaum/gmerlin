@@ -56,7 +56,7 @@ static bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int 
 
   if(!(info->type & type_mask))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Plugin %s has wrong type", info->name);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Plugin %s has wrong type", bg_plugin_info_get_long_name(info));
     goto fail;
     }
   if(!(ret->handle = bg_plugin_load(info)))
@@ -67,7 +67,7 @@ static bg_frontend_t * bg_frontend_create(bg_controllable_t * controllable, int 
   if(!plugin->open(ret->handle->priv, controllable))
     goto fail;
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loaded frontend %s", info->name);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loaded frontend %s", bg_plugin_info_get_name(info));
 
   
   if(real_name)

@@ -454,8 +454,10 @@ static void draw_port(port_t * port)
    *   current frame
    */
 
-  //  if((port->idx > 0) && (port->cur))
-  //    fprintf(stderr, "Draw port %d %d %p\n", port->idx, !!(port->g->flags & (FLAG_COORDS_CHANGED)), port->cur);
+  /*
+  if(port->idx > 0)
+    fprintf(stderr, "Draw port %d %d %p\n", port->idx, !!(port->g->flags & (FLAG_COORDS_CHANGED)), port->cur);
+  */
   
   if(!port->cur)
     return;
@@ -630,8 +632,11 @@ static gavl_sink_status_t func_dmabuf_getframe(port_t * port, gavl_video_frame_t
   {
   bg_glvideo_init_colormatrix_dmabuf(port, f);
 
-  //  if(port->idx)
-  //    fprintf(stderr, "func_dmabuf_getframe %d %d %p %p %p\n", port->idx, f->buf_idx, f, port->dma_frame, port->cur);
+  /*
+  if(port->idx)
+    fprintf(stderr, "func_dmabuf_getframe %d %d %p %p %p %p\n", port->idx, f->buf_idx, f,
+            port->dma_frame, port->cur, port->texture);
+  */
   
   if(port->idx > 0)
     {
@@ -647,8 +652,11 @@ static gavl_sink_status_t func_dmabuf_getframe(port_t * port, gavl_video_frame_t
       }
     else
       {
-      if(f && port->cur)
+      if(f)
+        {
+        port->cur = port->texture;
         gavl_video_frame_copy_metadata(port->cur, f);
+        }
       return GAVL_SINK_OK;
       }
     }
@@ -763,10 +771,17 @@ static gavl_sink_status_t sink_put_func_ovl(void * priv, gavl_video_frame_t * f)
 
   if(port->set_frame)
     {
+    //    fprintf(stderr, "Set overlay %p\n", f);
+    
     if(port->set_frame(priv, f) != GAVL_SINK_OK)
-      return GAVL_SINK_ERROR; 
+      {
+      //      fprintf(stderr, "Set overlay failed\n");
+      return GAVL_SINK_ERROR;
+      }
     else
       {
+      //      fprintf(stderr, "Set overlay done %p\n", port->cur);
+      
       if(port->idx > 0)
         port->flags |= PORT_OVERLAY_CHANGED;
 

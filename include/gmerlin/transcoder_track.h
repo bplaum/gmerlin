@@ -39,7 +39,16 @@
 
 #define BG_TRANSCODER_TRACK_ENCODER_TEXT    "$encoder_text"
 #define BG_TRANSCODER_TRACK_ENCODER_OVERLAY "$encoder_overlay"
-#define BG_TRANSCODER_TRACK_TEXTRENDERER    "textrenderer"
+#define BG_TRANSCODER_TRACK_TEXTRENDERER    "$textrenderer"
+#define BG_TRANSCODER_TRACK_ENCODER         "$encoder"
+
+#define BG_TRANSCODER_TRACK_DEFAULT_GENERAL       "general"
+#define BG_TRANSCODER_TRACK_DEFAULT_AUDIO         "audio"
+#define BG_TRANSCODER_TRACK_DEFAULT_VIDEO         "video"
+#define BG_TRANSCODER_TRACK_DEFAULT_TEXT          "text"
+#define BG_TRANSCODER_TRACK_DEFAULT_TEXTRENDERER  "textrenderer"
+#define BG_TRANSCODER_TRACK_DEFAULT_OVERLAY       "overlay"
+
 
 #define BG_TRANSCODER_TRACK_XML_ROOT        "transcoder_tracks"
 
@@ -47,12 +56,14 @@
 typedef gavl_dictionary_t bg_transcoder_track_t;
 
 #define bg_transcoder_track_get_cfg_general_nc(dict)         gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_GENERAL)
+#define bg_transcoder_track_get_cfg_encoder_nc(dict)         gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_ENCODER)
 #define bg_transcoder_track_get_cfg_encoder_text_nc(dict)    gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_ENCODER_TEXT)
 #define bg_transcoder_track_get_cfg_encoder_overlay_nc(dict) gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_ENCODER_OVERLAY)
 #define bg_transcoder_track_get_cfg_textrenderer_nc(dict)    gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_TEXTRENDERER)
 #define bg_transcoder_track_get_cfg_filter_nc(dict)          gavl_dictionary_get_dictionary_create(dict, BG_TRANSCODER_TRACK_FILTER)
 
 #define bg_transcoder_track_get_cfg_general(dict)         gavl_dictionary_get_dictionary(dict, BG_TRANSCODER_TRACK_GENERAL)
+#define bg_transcoder_track_get_cfg_encoder(dict)         gavl_dictionary_get_dictionary(dict, BG_TRANSCODER_TRACK_ENCODER)
 #define bg_transcoder_track_get_cfg_encoder_text(dict)    gavl_dictionary_get_dictionary(dict, BG_TRANSCODER_TRACK_ENCODER_TEXT)
 #define bg_transcoder_track_get_cfg_encoder_overlay(dict) gavl_dictionary_get_dictionary(dict, BG_TRANSCODER_TRACK_ENCODER_OVERLAY)
 #define bg_transcoder_track_get_cfg_textrenderer(dict)    gavl_dictionary_get_dictionary(dict, BG_TRANSCODER_TRACK_TEXTRENDERER)
@@ -94,17 +105,12 @@ bg_transcoder_track_create_from_urilist(const char * list,
 
 /* For putting informations into the track list */
 
-/* strings must be freed after */
-
 const char * bg_transcoder_track_get_name(const bg_transcoder_track_t * t);
 
 const char * bg_transcoder_track_get_audio_encoder(const bg_transcoder_track_t * t);
 const char * bg_transcoder_track_get_video_encoder(const bg_transcoder_track_t * t);
 const char * bg_transcoder_track_get_text_encoder(const bg_transcoder_track_t * t);
 const char * bg_transcoder_track_get_overlay_encoder(const bg_transcoder_track_t * t);
-
-void bg_transcoder_track_get_duration(const bg_transcoder_track_t * t,
-                                      gavl_time_t * ret, gavl_time_t * ret_total);
 
 bg_parameter_info_t *
 bg_transcoder_track_create_parameters(bg_transcoder_track_t * track);

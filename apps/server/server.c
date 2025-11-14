@@ -263,7 +263,9 @@ int server_init(server_t * s, gavl_array_t * fe_arr)
   {
   char * tmp_string;
   bg_controllable_t * mdb_ctrl;
-  gavl_dictionary_t * section;
+  gavl_dictionary_t * section_reg;
+  gavl_dictionary_t * section_default;
+  
   const gavl_value_t * uuid_val;
   const char * uuid = NULL;
     
@@ -274,14 +276,18 @@ int server_init(server_t * s, gavl_array_t * fe_arr)
   
   /* Set parameters */
   
-  section = bg_cfg_registry_find_section(bg_cfg_registry, "server");
-  bg_cfg_section_create_items(section, server_get_parameters(s));
+  section_reg = bg_cfg_registry_find_section(bg_cfg_registry, "server");
+  section_default = bg_cfg_section_create("server");
+  
+  bg_cfg_section_create_items(section_default, server_get_parameters(s));
 
-  //  fprintf(stderr, "Applying server section\n");
-  //  gavl_dictionary_dump(section, 2);
 
-  bg_cfg_section_apply(section, server_get_parameters(s), server_set_parameter, s);
+  gavl_dictionary_update_fields(section_default, section_reg);
+  
 
+  bg_cfg_section_apply(section_default, server_get_parameters(s), server_set_parameter, s);
+  gavl_dictionary_destroy(section_default);
+  
   /* Create vardir */
   if(!s->vardir)
     s->vardir  = bg_search_var_dir(VAR_PREFIX);

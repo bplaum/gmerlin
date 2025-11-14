@@ -50,7 +50,7 @@
 #define STATE_FILE "state.xml"
 #define STATE_ROOT "mdb_state"
 
-#define GENERAL_CTX "$general"
+#define GENERAL_CTX "general"
 
 static const struct
   {
@@ -634,7 +634,19 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
     case BG_MSG_NS_PARAMETER:
       switch(msg->ID)
         {
-        case BG_MSG_SET_PARAMETER_CTX:
+        case BG_CMD_PARAMETER_BUTTON:
+          {
+          const char * ctx = NULL;
+          const char * name = NULL;
+
+          ctx =  gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+          name = gavl_msg_get_arg_string_c(msg, 0);
+
+          fprintf(stderr, "MDB Button pressed: %s %s\n", ctx, name);
+          
+          }
+          break;
+        case BG_CMD_SET_PARAMETER:
           {
           const bg_parameter_info_t * info;
           const char * ctx = NULL;
@@ -682,7 +694,7 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
             if((be = be_from_name(db, ctx)))
               {
               gavl_msg_t * msg1 = bg_msg_sink_get(be->ctrl.cmd_sink);
-              gavl_msg_set_id_ns(msg1, BG_MSG_SET_PARAMETER, BG_MSG_NS_PARAMETER);
+              gavl_msg_set_id_ns(msg1, BG_CMD_SET_PARAMETER, BG_MSG_NS_PARAMETER);
               bg_msg_set_parameter(msg1, name, &val);
               bg_msg_sink_put(be->ctrl.cmd_sink);
               be = NULL;
@@ -1345,12 +1357,17 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
     bg_cfg_registry_save_to(ret->cfg_reg, ret->config_file);
   
   /* Create external config */
-  memcpy(ret->cfg_ext, ret->cfg, (num_backends+1)*sizeof(*ret->cfg_ext));
 
+  for(i = 0; i < num_backends+1; i++)
+    {
+    bg_cfg_ctx_copy(&ret->cfg_ext[i], &ret->cfg[i]);
+    }
+  
   gavl_dictionary_copy(&ret->cfg_section_ext, ret->section);
   
   bg_cfg_ctx_array_create_sections(ret->cfg_ext, &ret->cfg_section_ext);
 
+  bg_cfg_ctx_set_sink_array(ret->cfg_ext, ret->ctrl.cmd_sink);
   
   /* Apply config */
   bg_cfg_ctx_apply_array(ret->cfg);
@@ -1501,12 +1518,14 @@ void bg_mdb_destroy(bg_mdb_t * db)
 
   if(db->cfg_ext)
     {
+#if 0
     i = 0;
     while(db->cfg_ext[i].p)
       {
       db->cfg_ext[i].p = NULL;
       i++;
       }
+#endif
     bg_cfg_ctx_destroy_array(db->cfg_ext);
     }
   

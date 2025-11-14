@@ -44,9 +44,9 @@
 #include <gui_gtk/gtkutils.h>
 #include <gui_gtk/fileselect.h>
 #include <gui_gtk/urlselect.h>
-#include <gavl/metatags.h>
+#include <gui_gtk/configdialog.h>
 
-#include <gmerlin/cfg_dialog.h>
+#include <gavl/metatags.h>
 
 #include "mdb_private.h"
 
@@ -70,7 +70,6 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
                                   int idx);
 
 
-static gavl_dictionary_t * list_extract_selected(album_t * album);
 
 static void clipboard_received_func(GtkClipboard *clipboard,
                                     GtkSelectionData *selection_data,
@@ -273,7 +272,7 @@ static void list_clipboard_clear_func(GtkClipboard *clipboard,
     }
   }
 
-static gavl_dictionary_t * list_extract_selected(album_t * album)
+gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(album_t * album)
   {
   int              i;
   int              num;
@@ -476,7 +475,7 @@ static void list_copy(album_t * a)
                               list_clipboard_clear_func,
                               (gpointer)a->t);
 
-  a->t->list_clipboard = list_extract_selected(a);
+  a->t->list_clipboard = bg_gtk_mdb_list_extract_selected(a);
   }
 
 static void list_paste(album_t * a)
@@ -515,7 +514,7 @@ static void list_favorites(album_t * a)
     return;
     }
 
-  sel = list_extract_selected(a);
+  sel = bg_gtk_mdb_list_extract_selected(a);
       
   if(gavl_track_get_num_children(sel) > 0)
     {
@@ -987,7 +986,7 @@ static void selected_add(bg_gtk_mdb_tree_t * t, album_t * a, int replace, int pl
   if(!t->player_ctrl.cmd_sink)
     return;
   
-  album = list_extract_selected(a);
+  album = bg_gtk_mdb_list_extract_selected(a);
   album_add(t, album, replace, play);
   gavl_dictionary_destroy(album);
   }
@@ -1843,7 +1842,7 @@ static void drag_get_callback(GtkWidget *widget,
   if(!(target_name = gdk_atom_name(gtk_selection_data_get_target(data))))
     goto fail;
   
-  sel = list_extract_selected(a);
+  sel = bg_gtk_mdb_list_extract_selected(a);
   
   str = bg_tracks_to_string(sel, info, 1);
 
@@ -2273,165 +2272,39 @@ void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, gavl_value_t 
   }
 
 
-static const struct
+static const bg_gtk_file_filter_t save_formats[] = 
   {
-  const char * label;
-  const char * pattern;
-  int type;
-  }
-save_formats[] = 
-  {
-    { "Gmerlin", "*.tracks", BG_TRACK_FORMAT_GMERLIN },
-    { "XSPF",    "*.xspf",   BG_TRACK_FORMAT_XSPF    },
-    { "M3U",     "*.m3u",    BG_TRACK_FORMAT_M3U     },
-    { "PLS",     "*.pls",    BG_TRACK_FORMAT_PLS     },
+    { "Gmerlin", ".tracks", BG_TRACK_FORMAT_GMERLIN },
+    { "XSPF",    ".xspf",   BG_TRACK_FORMAT_XSPF    },
+    { "M3U",     ".m3u",    BG_TRACK_FORMAT_M3U     },
+    { "PLS",     ".pls",    BG_TRACK_FORMAT_PLS     },
     { /* End */                                           }
   };
 
-static int filesel_get_filter(GtkFileChooser *filechooser)
-  {
-  int i;
-  const char * filter_name;
-  GtkFileFilter * filter = gtk_file_chooser_get_filter(filechooser);
-  
-  i = 0;
-  filter_name = gtk_file_filter_get_name(filter);
-
-  while(save_formats[i].label)
-    {
-    if(!strcmp(save_formats[i].label, filter_name))
-      return i;
-    i++;
-    }
-  return -1;  
-  }
-
-static void filesel_activate_callback(GtkWidget *button,
-                                      void * data)
-  {
-  int idx;
-  GtkFileChooser *filechooser = data;
-  gchar *name = gtk_file_chooser_get_current_name(filechooser);
-
-  if((idx = filesel_get_filter(filechooser)) < 0)
-    return;
-  
-  if (!g_str_has_suffix (name, save_formats[idx].pattern + 1))
-    {
-    gchar *new_name = g_strconcat(name, save_formats[idx].pattern + 1, NULL);
-    gtk_file_chooser_set_current_name(filechooser, new_name);
-    g_free(new_name);
-    }
-  g_free(name);
-  }
-
-static char * get_save_filename(bg_gtk_mdb_tree_t * tree,
-                                const char * dialog_title, int * type)
-  {
-  int i;
-  int result;
-  GtkWidget * filechooser;
-  GtkWidget * button;
-  char * filename = NULL;
-  
-  filechooser = gtk_file_chooser_dialog_new(dialog_title,
-                                            GTK_WINDOW(bg_gtk_get_toplevel(tree->menu_ctx.widget)),
-                                            GTK_FILE_CHOOSER_ACTION_SAVE,
-                                            "_Cancel",
-                                            GTK_RESPONSE_CANCEL,
-                                            "_Save",
-                                            GTK_RESPONSE_ACCEPT,
-                                            NULL);
-  
-  gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(filechooser), TRUE);
-
-  i = 0;
-
-  while(save_formats[i].label)
-    {
-    GtkFileFilter * filter;
-
-    filter = gtk_file_filter_new();
-    gtk_file_filter_add_pattern(filter, save_formats[i].pattern);
-    gtk_file_filter_set_name(filter,    save_formats[i].label);
-
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(filechooser), filter);
-    i++;
-    }
-
-  button = gtk_dialog_get_widget_for_response(GTK_DIALOG(filechooser), GTK_RESPONSE_ACCEPT);
-  g_signal_connect(button, "activate", G_CALLBACK(filesel_activate_callback), filechooser);
-  
-  result = gtk_dialog_run(GTK_DIALOG(filechooser));
-
-  if(result == GTK_RESPONSE_ACCEPT)
-    {
-    if((i = filesel_get_filter(GTK_FILE_CHOOSER(filechooser))) < 0)
-      return NULL;
-
-    filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filechooser));
-
-    *type = save_formats[i].type;
-    }
-  
-  gtk_widget_destroy(filechooser);
-  return filename;
-  }
 
 static void save_selected(bg_gtk_mdb_tree_t * tree)
   {
-  int type;
-  char * str;
-  char * filename;
-  gavl_dictionary_t * selected;
-  
-  if(!(filename = get_save_filename(tree, TR("Save album"), &type)))
-    return;
-
-  selected = list_extract_selected(tree->menu_ctx.a);
-  
-  str = bg_tracks_to_string(selected, type, 1);
-
-  gavl_dictionary_destroy(selected);
-
-  bg_write_file(filename, str, strlen(str));
-  free(str);
-  g_free(filename);
+  bg_gtk_get_filename_write(TR("Save selected"), MSG_SAVE_SELECTED,
+                            NULL,
+                            1, tree->menu_ctx.widget, tree->dlg_sink,
+                            save_formats);
   }
 
 static void save_tracks(bg_gtk_mdb_tree_t * tree)
   {
-  int type;
-  char * str;
-  char * filename;
-
-  if(!(filename = get_save_filename(tree, TR("Save album"), &type)))
-    return;
-  
-  str = bg_tracks_to_string(tree->menu_ctx.album, type, 1);
-  bg_write_file(filename, str, strlen(str));
-  free(str);
-  g_free(filename);
+  bg_gtk_get_filename_write(TR("Save album"), MSG_SAVE_ALBUM,
+                            NULL,
+                            1, tree->menu_ctx.widget, tree->dlg_sink,
+                            save_formats);
   }
+
 
 static void load_files(bg_gtk_mdb_tree_t * tree)
   {
-  bg_gtk_filesel_t * filesel = 
-    bg_gtk_filesel_create("Load file(s)",
-                          tree->dlg_sink,
-                          "tree",
-                          tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
-
-  bg_gtk_filesel_run(filesel, 1);
-  bg_gtk_filesel_destroy(filesel);
-  }
-
-static void set_parameter_ask_container(void * data, const char * name, const gavl_value_t * val)
-  {
-  gavl_dictionary_t * d = data;
-  if(!name)
-    return;
-  gavl_dictionary_set(d, name, val);
+  bg_gtk_load_media_files("Load file(s)",
+                          NULL,
+                          tree->menu_ctx.widget,
+                          tree->dlg_sink);
   }
 
 static bg_parameter_info_t stream_source_params[] =
@@ -2474,15 +2347,6 @@ static bg_parameter_info_t container_params[] =
   };
 
 
-static void ask_stream_source(GtkWidget * w, gavl_dictionary_t * ret)
-  {
-  bg_dialog_t * dlg;
-  
-  dlg = bg_dialog_create(NULL, set_parameter_ask_container, ret, stream_source_params, TRS("Add stream source"));
-  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(w)));
-  bg_dialog_destroy(dlg);
-  }
-
 
 void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
                                          const char * label,
@@ -2518,9 +2382,9 @@ void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
   }
 
 
-static void add_stream_source(bg_gtk_mdb_tree_t * tree,
-                              const char * label,
-                              const char * uri)
+void bg_gtk_mdb_add_stream_source(bg_gtk_mdb_tree_t * tree,
+                                  const char * label,
+                                  const char * uri)
   {
   gavl_msg_t * msg;
   gavl_dictionary_t * c;
@@ -2551,53 +2415,42 @@ static void add_stream_source(bg_gtk_mdb_tree_t * tree,
 
 static void create_stream_source(bg_gtk_mdb_tree_t * tree)
   {
-  const char *uri;
-  const char *label;
+
+  GtkWidget * dlg;
+  bg_cfg_ctx_t ctx;
+
+  bg_cfg_ctx_init(&ctx, stream_source_params, MSG_ADD_STREAM,
+                  TR("Auto rename"), NULL, NULL);
   
-  gavl_dictionary_t dict;
-
-  gavl_dictionary_init(&dict);
-
-  ask_stream_source(tree->menu_ctx.widget, &dict);
-
-  uri = gavl_dictionary_get_string(&dict, GAVL_META_URI);
-  label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
-
-  if(uri)
-    {
-    if(label)
-      add_stream_source(tree, label, uri);
-    else
-      add_stream_source(tree, "New stream source", uri);
-    }
-  gavl_dictionary_free(&dict);
+  ctx.sink = tree->dlg_sink;
+  
+  dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
+                                           TRS("Add stream source"),
+                                           tree->treeview,
+                                           &ctx);
+  gtk_window_present(GTK_WINDOW(dlg));
+  bg_cfg_ctx_free(&ctx);
+  
   }
 
 
 static void create_container(bg_gtk_mdb_tree_t * tree)
   {
-  const char *label;
-  const char *klass;
-  bg_dialog_t * dlg;
-  gavl_dictionary_t dict;
 
-  gavl_dictionary_init(&dict);
+  GtkWidget * dlg;
+  bg_cfg_ctx_t ctx;
 
-  dlg = bg_dialog_create(NULL, set_parameter_ask_container, &dict, container_params, TRS("Add Folder"));
-  bg_dialog_show(dlg, GTK_WINDOW(bg_gtk_get_toplevel(tree->treeview)));
-  bg_dialog_destroy(dlg);
-  //  ask_container(tree->menu_ctx.widget, &dict);
-
-  klass = gavl_dictionary_get_string(&dict, GAVL_META_CLASS);
-  label = gavl_dictionary_get_string(&dict, GAVL_META_LABEL);
-
-  if(klass)
-    {
-    if(!label)
-      label = "Unnamed";
-    bg_gtk_mdb_create_container_generic(tree, label, klass, NULL);
-    }
-  gavl_dictionary_free(&dict);
+  bg_cfg_ctx_init(&ctx, container_params, MSG_ADD_CONTAINER,
+                  TRS("Add Folder"), NULL, NULL);
+  
+  ctx.sink = tree->dlg_sink;
+  
+  dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
+                                           TRS("Add Folder"),
+                                           tree->treeview,
+                                           &ctx);
+  gtk_window_present(GTK_WINDOW(dlg));
+  bg_cfg_ctx_free(&ctx);
   }
 
 static void create_directory(bg_gtk_mdb_tree_t * tree)
@@ -2607,13 +2460,8 @@ static void create_directory(bg_gtk_mdb_tree_t * tree)
 
 static void load_uri(bg_gtk_mdb_tree_t * tree)
   {
-  bg_gtk_urlsel_t * urlsel = 
-    bg_gtk_urlsel_create("Load URL(s)",
-                         tree->dlg_sink,
-                          "tree",
-                          tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
-
-  bg_gtk_urlsel_run(urlsel, 1);
-  bg_gtk_urlsel_destroy(urlsel);
+  bg_gtk_urlsel_show("Load URL(s)",
+                     tree->dlg_sink,
+                     tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
   }
 

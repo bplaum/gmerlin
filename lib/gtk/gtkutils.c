@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <locale.h>
 
 #include <stdlib.h>
@@ -130,6 +128,11 @@ cairo_surface_t * bg_gtk_pixbuf_scale_alpha(cairo_surface_t * src,
 
 GdkPixbuf * bg_gtk_window_icon_pixbuf = NULL;
 
+gboolean bg_gtk_destroy_widget(gpointer data)
+  {
+  gtk_widget_destroy(data);
+  return G_SOURCE_REMOVE;
+  }
 
 static void set_default_window_icon(void)
   {
@@ -283,17 +286,38 @@ int bg_gtk_get_tooltips()
   return show_tooltips;
   }
 
-GtkWidget * bg_gtk_get_toplevel(GtkWidget * w)
+GtkWidget * bg_gtk_get_toplevel(GtkWidget * widget)
   {
-  GtkWidget * toplevel;
-
-  if(!w)
+  GtkWidget *root;
+    
+  // NULL check
+  if(widget == NULL)
+    {
     return NULL;
+    }
+    
+#if GTK_CHECK_VERSION(4, 0, 0)
+  // GTK 4: Use gtk_widget_get_root()
+  root = gtk_widget_get_root(widget);
+#else
+  // GTK 3: Use gtk_widget_get_toplevel()
+  root = gtk_widget_get_toplevel(widget);
+    
+  // In GTK 3, check if the widget is really a toplevel
+  if(root && !gtk_widget_is_toplevel(root))
+    {
+    return NULL;
+    }
+#endif
+    
+  // Check if the root is actually a GtkWindow
+  if(root && GTK_IS_WINDOW(root))
+    {
+    return root;
+    }
   
-  toplevel = gtk_widget_get_toplevel(w);
-  if(!bg_gtk_widget_is_toplevel(toplevel))
-    toplevel = NULL;
-  return toplevel;
+  return NULL;
+  
   }
 
 static void pixbuf_destroy_notify(guchar *pixels,
@@ -972,3 +996,315 @@ GtkWidget * bg_gtk_create_icon_button(const char * icon)
   
   return ret;
   }
+
+GtkWidget * bg_gtk_find_widget_by_name(GtkWidget *parent, const char *name)
+  {
+  GtkWidget *child;
+
+  const char *widget_name;
+  GtkWidget *found;
+  
+  if (!parent || !name)
+    return NULL;
+    
+  // Check current widget
+  widget_name = gtk_widget_get_name(parent);
+  if(widget_name && g_strcmp0(widget_name, name) == 0)
+    {
+    return parent;
+    }
+
+#if GTK_MAJOR_VERSION >= 4
+  
+  // check all children recursive
+  child = gtk_widget_get_first_child(parent);
+  while(child)
+    {
+    if((found = bg_gtk_find_widget_by_name(child, name)))
+      return found;
+    child = gtk_widget_get_next_sibling(child);
+    }
+#else
+  if(GTK_IS_CONTAINER(parent))
+    {
+    GList *iter;
+    GList *children = gtk_container_get_children(GTK_CONTAINER(parent));
+    
+    for(iter = children; iter != NULL; iter = g_list_next(iter))
+      {
+      child = GTK_WIDGET(iter->data);
+      /* Recursive call */
+      if((found = bg_gtk_find_widget_by_name(child, name)))
+        return found;
+      }
+    if(children)
+      g_list_free(children);
+    }
+
+#endif
+  
+  return NULL;
+  }
+
+int bg_g_value_to_gavl(const GValue * gval, gavl_value_t * gavl, gavl_parameter_type_t type)
+  {
+  switch(type)
+    {
+    case GAVL_PARAMETER_CHECKBUTTON:
+      gavl_value_set_int(gavl, g_value_get_boolean(gval));
+      break;
+    case GAVL_PARAMETER_INT:
+    case GAVL_PARAMETER_SLIDER_INT:
+      {
+      GValue int_val = G_VALUE_INIT;
+      g_value_init(&int_val, G_TYPE_INT);
+      g_value_transform(gval, &int_val);
+      gavl_value_set_int(gavl, g_value_get_int(&int_val));
+      }
+      break;
+    case GAVL_PARAMETER_FLOAT:
+    case GAVL_PARAMETER_SLIDER_FLOAT:
+      gavl_value_set_float(gavl, g_value_get_double(gval));
+      break;
+    case GAVL_PARAMETER_STRING:
+    case GAVL_PARAMETER_STRING_HIDDEN:
+    case GAVL_PARAMETER_FONT:
+    case GAVL_PARAMETER_FILE:
+    case GAVL_PARAMETER_DIRECTORY:
+    case GAVL_PARAMETER_STRINGLIST:
+      {
+      const char * str = g_value_get_string(gval);
+      if(str && (*str == '\0'))
+        str = NULL;
+      gavl_value_set_string(gavl, str);
+      }
+      break;
+    case GAVL_PARAMETER_COLOR_RGB:
+      {
+      GdkRGBA*rgba;
+      double * col = gavl_value_set_color_rgb(gavl);
+      rgba = (GdkRGBA*) g_value_get_boxed(gval);
+
+      col[0] = rgba->red;
+      col[1] = rgba->green;
+      col[2] = rgba->blue;
+      
+      }
+      break;
+    case GAVL_PARAMETER_COLOR_RGBA:
+      {
+      GdkRGBA*rgba;
+      double * col = gavl_value_set_color_rgba(gavl);
+      rgba = (GdkRGBA*) g_value_get_boxed(gval);
+
+      col[0] = rgba->red;
+      col[1] = rgba->green;
+      col[2] = rgba->blue;
+      col[3] = rgba->alpha;
+      
+      }
+      break;
+    case GAVL_PARAMETER_DIRLIST:
+      break;
+    case GAVL_PARAMETER_POSITION:
+    case GAVL_PARAMETER_TIME:
+    case GAVL_PARAMETER_MULTI_MENU:
+    case GAVL_PARAMETER_MULTI_LIST:
+    case GAVL_PARAMETER_MULTI_CHAIN:
+      return 0;
+      break;
+    case GAVL_PARAMETER_SECTION:
+    case GAVL_PARAMETER_BUTTON:
+      break;
+    }
+  return 1;
+  }
+
+int bg_g_value_from_gavl(GValue * gval, const gavl_value_t * gavl, gavl_parameter_type_t type)
+  {
+  switch(type)
+    {
+    case GAVL_PARAMETER_CHECKBUTTON:
+      {
+      int val_i = 0;
+      gavl_value_get_int(gavl, &val_i);
+      g_value_init(gval, G_TYPE_BOOLEAN);
+      g_value_set_boolean(gval, !!val_i);
+      }
+      break;
+    case GAVL_PARAMETER_INT:
+    case GAVL_PARAMETER_SLIDER_INT:
+      {
+      int val_i = 0;
+      gavl_value_get_int(gavl, &val_i);
+      g_value_init(gval, G_TYPE_INT);
+      g_value_set_int(gval, val_i);
+      }
+      break;
+    case GAVL_PARAMETER_FLOAT:
+    case GAVL_PARAMETER_SLIDER_FLOAT:
+      {
+      double val_f = 0;
+      gavl_value_get_float(gavl, &val_f);
+      g_value_init(gval, G_TYPE_DOUBLE);
+      g_value_set_double(gval, val_f);
+      }
+      break;
+    case GAVL_PARAMETER_STRING:
+    case GAVL_PARAMETER_STRING_HIDDEN:
+    case GAVL_PARAMETER_FONT:
+    case GAVL_PARAMETER_STRINGLIST:
+      {
+      const char * str = gavl_value_get_string(gavl);
+
+      if(!str)
+        str = "";
+      
+      g_value_init(gval, G_TYPE_STRING);
+      g_value_set_string(gval, str);
+      }
+      break;
+    case GAVL_PARAMETER_COLOR_RGB:
+      {
+      GdkRGBA rgba;
+      const double * col = gavl_value_get_color_rgb(gavl);
+      g_value_init(gval, GDK_TYPE_RGBA);
+      rgba.red =   col[0];
+      rgba.green = col[1];
+      rgba.blue =  col[2];
+      rgba.alpha = 1.0;
+      g_value_set_boxed(gval, &rgba);
+      }
+      break;
+    case GAVL_PARAMETER_COLOR_RGBA:
+      {
+      GdkRGBA rgba;
+      const double * col = gavl_value_get_color_rgba(gavl);
+      g_value_init(gval, GDK_TYPE_RGBA);
+      rgba.red =   col[0];
+      rgba.green = col[1];
+      rgba.blue =  col[2];
+      rgba.alpha = col[3];
+      g_value_set_boxed(gval, &rgba);
+      }
+      break;
+    case GAVL_PARAMETER_DIRLIST:
+    case GAVL_PARAMETER_FILE:
+    case GAVL_PARAMETER_DIRECTORY:
+    case GAVL_PARAMETER_POSITION:
+    case GAVL_PARAMETER_TIME:
+    case GAVL_PARAMETER_MULTI_MENU:
+    case GAVL_PARAMETER_MULTI_LIST:
+    case GAVL_PARAMETER_MULTI_CHAIN:
+      return 0;
+      break;
+    case GAVL_PARAMETER_SECTION:
+    case GAVL_PARAMETER_BUTTON:
+      break;
+    
+    }
+  return 1;
+  }
+
+enum simple_list_columns
+  {
+    COLUMN_LABEL,
+    COLUMN_NAME,
+    NUM_COLUMNS
+  };
+
+GtkWidget * bg_gtk_simple_list_create(int has_config)
+  {
+  GtkWidget * treeview;
+  GtkListStore *store;
+  GtkCellRenderer *renderer;
+  GtkTreeSelection  *selection;
+  GtkTreeViewColumn *column;
+  
+  store = gtk_list_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING);
+  
+  treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+
+  gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(treeview), FALSE);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new ();
+  gtk_tree_view_column_pack_start(column, renderer, TRUE);
+  gtk_tree_view_column_add_attribute(column,
+                                     renderer,
+                                     "text", COLUMN_LABEL);
+  gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
+  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
+  gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+
+  gtk_widget_set_hexpand(treeview, TRUE);
+  gtk_widget_set_vexpand(treeview, TRUE);
+  
+  return treeview;
+  }
+
+void bg_gtk_simple_list_add(GtkWidget * w, const char * name, const char * label, int pos)
+  {
+  GtkTreeIter iter;
+  GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+  gtk_list_store_insert(GTK_LIST_STORE(model), &iter, pos);
+
+  gtk_list_store_set(GTK_LIST_STORE(model), &iter, COLUMN_NAME, name,
+                     COLUMN_LABEL, label ? label : name, -1);
+  }
+
+int bg_gtk_simple_list_get_selected(GtkWidget * w)
+  {
+  int ret = 0;
+  GtkTreeIter iter;
+  GtkTreeSelection * s = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
+  GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+
+  if(!gtk_tree_model_get_iter_first(model, &iter))
+    return -1;
+  
+  while(1)
+    {
+    if(gtk_tree_selection_iter_is_selected(s, &iter))
+      return ret;
+
+    ret++;
+    
+    if(!gtk_tree_model_iter_next(model, &iter))
+      return -1;
+    }
+  
+  }
+
+char * bg_gtk_simple_list_get_name(GtkWidget * w, int pos)
+  {
+  int i = 0;
+  char * ret;
+  GtkTreeIter iter;
+  GValue value = G_VALUE_INIT;
+  GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+  
+  if(!gtk_tree_model_get_iter_first(model, &iter))
+    return NULL;
+  
+  while(i < pos)
+    {
+    if(!gtk_tree_model_iter_next(model, &iter))
+      return NULL;
+    i++;
+    }
+  
+  gtk_tree_model_get_value(model, &iter, COLUMN_NAME, &value);
+  ret = gavl_strdup(g_value_get_string(&value));
+  g_value_unset(&value);
+  return ret;
+  }
+
+
+void bg_gtk_simple_list_clear(GtkWidget * w)
+  {
+  GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
+  gtk_list_store_clear(GTK_LIST_STORE(model));
+                       
+  }
+

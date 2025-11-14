@@ -37,24 +37,15 @@
 
 #include <gmerlin/utils.h>
 
-struct bg_gtk_drivesel_s
+typedef struct
   {
-  /* 
-  GtkWidget * window;
-  GtkWidget * add_button;
-  GtkWidget * close_button;
-  */
-  GtkWidget * dialog;
+  bg_control_t res_ctrl;
   
-  bg_msg_sink_t * res_sink;
+  //  bg_msg_sink_t * res_sink;
   GtkWidget * combo_box;
-
   guint idle_tag;
-
   bg_msg_sink_t * dlg_sink;
-  const char * ctx;
-  
-  };
+  } bg_gtk_drivesel_t;
 
 enum
   {
@@ -103,16 +94,18 @@ static int id_to_iter(bg_gtk_drivesel_t * d, GtkTreeIter * iter,
 
 static int handle_msg(void * data, gavl_msg_t * msg)
   {
+  bg_gtk_drivesel_t * d = data;
+
   //  fprintf(stderr, "Got resource message\n");
   //  gavl_msg_dump(msg, 2);
-  bg_gtk_drivesel_t * d = data;
-  
+    
   switch(msg->NS)
     {
     case GAVL_MSG_NS_GENERIC:
       switch(msg->ID)
         {
         case GAVL_MSG_RESOURCE_ADDED:
+        case GAVL_RESP_QUERY_RESOUCRES:
           {
           const char * klass;
           const char * uri;
@@ -138,8 +131,8 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           if(!id_to_iter(d, &iter, id))
             {
             gtk_list_store_append(GTK_LIST_STORE(model), &iter);
-            fprintf(stderr, "Resource added: %s\n", id);
-            gavl_dictionary_dump(&dict, 2);
+            //            fprintf(stderr, "Resource added: %s\n", id);
+            //            gavl_dictionary_dump(&dict, 2);
             }
 
           uri = gavl_dictionary_get_string(&dict, GAVL_META_URI);
@@ -192,11 +185,12 @@ response_callback(GtkWidget *chooser,
                  gpointer data)
   {
   gavl_msg_t * msg;
+  bg_controllable_t * resman;
   bg_gtk_drivesel_t * f = data;
   
   switch(response_id)
     {
-    case GTK_RESPONSE_APPLY:
+    case GTK_RESPONSE_OK:
       {
       gavl_array_t filenames;
       GtkTreeIter iter;
@@ -215,41 +209,38 @@ response_callback(GtkWidget *chooser,
       
       msg = bg_msg_sink_get(f->dlg_sink);
       gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_ADD_LOCATIONS, BG_MSG_NS_DIALOG);
-      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
       gavl_msg_set_arg_array_nocopy(msg, 0, &filenames);
       bg_msg_sink_put(f->dlg_sink);
       gavl_array_free(&filenames);
       }
       break;
-    default:
-      {
-      fprintf(stderr, "Close\n");
-      gtk_widget_hide(f->dialog);
-
-      msg = bg_msg_sink_get(f->dlg_sink);
-      gavl_msg_set_id_ns(msg, BG_MSG_DIALOG_CLOSED, BG_MSG_NS_DIALOG);
-      gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, f->ctx); 
-      bg_msg_sink_put(f->dlg_sink);
-      }
-      break;
     }
+
+  if(f->idle_tag > 0)
+    g_source_remove(f->idle_tag);
   
+  resman = bg_resourcemanager_get_controllable();
+
+  bg_controllable_disconnect(resman, &f->res_ctrl);
+  bg_control_cleanup(&f->res_ctrl);
+  
+  free(f);
+  g_idle_add((GSourceFunc)bg_gtk_destroy_widget, chooser);
   }
 
 static gboolean idle_func(gpointer user_data)
   {
   bg_gtk_drivesel_t * d = user_data;
   
-  bg_msg_sink_iteration(d->res_sink);
+  bg_msg_sink_iteration(d->res_ctrl.evt_sink);
   
   return TRUE;
   }
 
-bg_gtk_drivesel_t *
-bg_gtk_drivesel_create(const char * title,
-                       bg_msg_sink_t * sink,
-                       const char * ctx,
-                       GtkWidget * parent_window)
+void 
+bg_gtk_drivesel_show(const char * title,
+                     bg_msg_sink_t * sink,
+                     GtkWidget * parent)
   {
   bg_gtk_drivesel_t * ret;
   GtkWidget * table;
@@ -259,6 +250,12 @@ bg_gtk_drivesel_create(const char * title,
   GtkListStore * store;
   GtkCellRenderer * column;
   GtkDialogFlags flags;
+
+  GtkWidget * dialog;
+
+  gavl_msg_t * cmd;
+  
+  parent = bg_gtk_get_toplevel(parent);
   
 #if 0
   COLUMN_ICON,
@@ -274,24 +271,23 @@ bg_gtk_drivesel_create(const char * title,
                              G_TYPE_STRING,   // Label
                              G_TYPE_STRING,   // uri
                              G_TYPE_STRING);  // id
-    
+  
   ret = calloc(1, sizeof(*ret));
 
   ret->dlg_sink = sink;
-  ret->ctx = ctx;
   
   /* Create dialog */
   flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-  ret->dialog = gtk_dialog_new_with_buttons("Message",
-                                            GTK_WINDOW(parent_window),
-                                            flags,
-                                            TR("Add"),
-                                            GTK_RESPONSE_APPLY,
-                                            TR("Close"),
-                                            GTK_RESPONSE_CLOSE,
-                                            NULL);
-
-  g_signal_connect(G_OBJECT(ret->dialog), "response", G_CALLBACK(response_callback), ret);
+  dialog = gtk_dialog_new_with_buttons("Message",
+                                       GTK_WINDOW(parent),
+                                       flags,
+                                       TR("Ok"),
+                                       GTK_RESPONSE_OK,
+                                       TR("Cancel"),
+                                       GTK_RESPONSE_CANCEL,
+                                       NULL);
+  
+  g_signal_connect(G_OBJECT(dialog), "response", G_CALLBACK(response_callback), ret);
   
   /* Create Menu */
 
@@ -335,25 +331,33 @@ bg_gtk_drivesel_create(const char * title,
   
   gtk_widget_show(table);
 
-  content_area = gtk_dialog_get_content_area(GTK_DIALOG(ret->dialog));
+  content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
   
   gtk_container_add(GTK_CONTAINER(content_area), table);
   
   resman = bg_resourcemanager_get_controllable();
 
-  ret->res_sink = bg_msg_sink_create(handle_msg, ret, 0);
+  bg_control_init(&ret->res_ctrl, 
+                  bg_msg_sink_create(handle_msg, ret, 0));
   
-  bg_msg_hub_connect_sink(resman->evt_hub, ret->res_sink);
+  bg_controllable_connect(resman, &ret->res_ctrl);
 
-  ret->idle_tag = g_timeout_add(100, idle_func, ret);
+  cmd = bg_msg_sink_get(ret->res_ctrl.cmd_sink);
+  gavl_msg_set_id_ns(cmd, GAVL_FUNC_QUERY_RESOUCRES, GAVL_MSG_NS_GENERIC);
+  bg_msg_sink_put(ret->res_ctrl.cmd_sink);
   
-  return ret;
+  ret->idle_tag = g_timeout_add(100, idle_func, ret);
+
+  gtk_window_present(GTK_WINDOW(dialog));
+  
+  //  return ret;
   }
 
 
 
 /* Destroy driveselector */
 
+#if 0
 void bg_gtk_drivesel_destroy(bg_gtk_drivesel_t * drivesel)
   {
   if(drivesel->idle_tag > 0)
@@ -369,3 +373,4 @@ void bg_gtk_drivesel_run(bg_gtk_drivesel_t * drivesel, int modal)
   gtk_widget_show(drivesel->dialog);
   
   }
+#endif

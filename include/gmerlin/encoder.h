@@ -32,8 +32,7 @@
 
 typedef struct bg_encoder_s bg_encoder_t;
 
-bg_encoder_t * bg_encoder_create(gavl_dictionary_t * section,
-                                 bg_transcoder_track_t * tt,
+bg_encoder_t * bg_encoder_create(bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask);
 
 const gavl_dictionary_t * bg_encoder_get_stream_section(bg_encoder_t * enc,

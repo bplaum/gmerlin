@@ -118,27 +118,6 @@ static void gmerlin_apply_state(gmerlin_t * g)
   bg_state_apply(&g->state, g->player_ctrl->cmd_sink, BG_CMD_SET_STATE);
   }
 
-
-static const bg_parameter_info_t input_plugin_parameters[] =
-  {
-    {
-      .name = "input_plugins",
-      .long_name = "Input plugins",
-      .flags = BG_PARAMETER_PLUGIN,
-    },
-    { /* */ },
-  };
-
-static const bg_parameter_info_t image_reader_parameters[] =
-  {
-    {
-      .name = "image_readers",
-      .long_name = "Image readers",
-      .flags = BG_PARAMETER_PLUGIN,
-    },
-    { /* */ },
-  };
-
 void gmerlin_connect_player(gmerlin_t * gmerlin)
   {
   bg_gtk_mdb_tree_set_player_ctrl(gmerlin->mdb_tree, gmerlin->player_ctrl);
@@ -529,27 +508,10 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   ret->logwindow_section =
     bg_cfg_registry_find_section(bg_cfg_registry, "Logwindow");
 
-  ret->input_plugin_parameters =
-    bg_parameter_info_copy_array(input_plugin_parameters);
-  bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
-                                              BG_PLUGIN_INPUT,
-                                              0,
-                                              ret->input_plugin_parameters);
-  
-  ret->image_reader_parameters =
-    bg_parameter_info_copy_array(image_reader_parameters);
-  bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
-                                              BG_PLUGIN_IMAGE_READER,
-                                              0,
-                                              ret->image_reader_parameters);
-  
-
-  
   /* Create player instance */
   
   ret->player = bg_player_create();
   ret->player_ctrl = bg_player_get_controllable(ret->player);
- 
   
   ret->cfg_player = bg_cfg_ctx_copy_array(bg_player_get_cfg(ret->player));
   
@@ -675,7 +637,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
   
   bg_http_server_set_default_port(ret->srv, PLAYER_REMOTE_PORT);
   
-  gmerlin_create_dialog(ret);
+  //  gmerlin_create_dialog(ret);
   
   bg_player_state_init(&ret->state);
   /* Apply the state before the frontends are created */
@@ -719,8 +681,6 @@ void gmerlin_destroy(gmerlin_t * g)
   /* Must destroy the dialogs early, because the
      destructors might reference parameter infos,
      which belong to other modules */
-  if(g->cfg_dialog)
-    bg_dialog_destroy(g->cfg_dialog);
   
   bg_frontends_destroy(g->mdb_frontends, g->num_mdb_frontends);
   bg_frontends_destroy(g->renderer_frontends, g->num_renderer_frontends);
@@ -741,12 +701,6 @@ void gmerlin_destroy(gmerlin_t * g)
   //  bg_lcdproc_destroy(g->lcdproc);
   if(g->srv)
     bg_http_server_destroy(g->srv);
-    
-  if(g->input_plugin_parameters)
-    bg_parameter_info_destroy_array(g->input_plugin_parameters);
-
-  if(g->image_reader_parameters)
-    bg_parameter_info_destroy_array(g->image_reader_parameters);
   
   if(g->info_window)
     bg_gtk_trackinfo_destroy(g->info_window);

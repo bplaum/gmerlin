@@ -35,7 +35,6 @@
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/utils.h>
 
-#include <gmerlin/cfg_dialog.h>
 #include <gmerlin/transcoder_track.h>
 #include <gmerlin/bgmsg.h>
 #include <gmerlin/transcoder.h>
@@ -57,6 +56,7 @@
 #include <gui_gtk/logwindow.h>
 #include <gui_gtk/aboutwindow.h>
 #include <gui_gtk/fileselect.h>
+#include <gui_gtk/configdialog.h>
 
 #include "transcoder_window.h"
 
@@ -71,6 +71,21 @@ static const uint32_t plugin_flags = BG_PLUGIN_FILE;
 
 #define CTX_TRACKLIST "tracklist"
 #define CTX_PROFILE   "profile"
+
+#define GET_CFG_STRING(name) \
+  gavl_dictionary_get_string(bg_cfg_registry_find_section(bg_cfg_registry, \
+                                                          "transcoder_window"), \
+                             name)
+
+#define SET_CFG_STRING(name, val)                                           \
+  gavl_dictionary_set_string(bg_cfg_registry_find_section(bg_cfg_registry, \
+                                                          "transcoder_window"), \
+                             name, val)
+
+#define SET_CFG_STRING_NOCOPY(name, val)                                       \
+  gavl_dictionary_set_string_nocopy(bg_cfg_registry_find_section(bg_cfg_registry, \
+                                                                  "transcoder_window"), \
+                             name, val)
 
 struct transcoder_window_s
   {
@@ -91,7 +106,6 @@ struct transcoder_window_s
   int status_active;
   
   bg_gtk_log_window_t * logwindow;
-  int show_logwindow;
   
   GtkWidget * progress_bar;
   /* Configuration stuff */
@@ -103,21 +117,15 @@ struct transcoder_window_s
 
   bg_parameter_info_t * encoder_parameters;
   gavl_dictionary_t * encoder_section;
-    
+  gavl_dictionary_t encoder_params;
+  
   /* The actual transcoder */
 
   bg_transcoder_t * transcoder;
   bg_transcoder_track_t * transcoder_track;
   
   /* Load/Save stuff */
-  
-  char * task_path;
-  char * profile_path;
-  
   GtkWidget * filesel;
-  char * filesel_file;
-  char * filesel_path;
-  
   GtkWidget * menubar;
 
   struct
@@ -227,55 +235,15 @@ static void
 set_transcoder_window_parameter(void * data, const char * name,
                                 const gavl_value_t * val)
   {
-  transcoder_window_t * win = data;
-
   if(!name)
     return;
   
-  if(!strcmp(name, "task_path"))
-    {
-    win->task_path = gavl_strrep(win->task_path, val->v.str);
-    }
-  else if(!strcmp(name, "profile_path"))
-    {
-    win->profile_path = gavl_strrep(win->profile_path, val->v.str);
-    }
-  else if(!strcmp(name, "show_logwindow"))
-    {
-    win->show_logwindow = val->v.i;
-    }
-  else if(!strcmp(name, "show_tooltips"))
+  if(!strcmp(name, "show_tooltips"))
     {
     bg_gtk_set_tooltips(val->v.i);
     }
   }
 
-static int
-get_transcoder_window_parameter(void * data, const char * name,
-                                gavl_value_t * val)
-  {
-  transcoder_window_t * win = data;
-
-  if(!name)
-    return 1;
-
-  if(!strcmp(name, "task_path"))
-    {
-    val->v.str = gavl_strrep(val->v.str, win->task_path);
-    return 1;
-    }
-  else if(!strcmp(name, "profile_path"))
-    {
-    val->v.str = gavl_strrep(val->v.str, win->profile_path);
-    return 1;
-    }
-  else if(!strcmp(name, "show_logwindow"))
-    {
-    val->v.i = win->show_logwindow;
-    return 1;
-    }
-  return 0;
-  }
 
   
 static void
@@ -308,10 +276,63 @@ static int handle_msg(void * data, gavl_msg_t * msg)
 
   switch(msg->NS)
     {
+    case BG_MSG_NS_PARAMETER:
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name;
+          const char * ctx;
+          gavl_value_t val;
+
+          //       const char * subsection;
+          
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+          ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+          //          subsection = gavl_dictionary_get_string(&msg->header, BG_MSG_PARAMETER_SUBSECTION);
+
+          if(name && 
+             (!strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_GENERAL) ||
+              !strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_AUDIO) ||
+              !strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_VIDEO) ||
+              !strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_TEXT) ||
+              !strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_TEXTRENDERER) || 
+              !strcmp(ctx, BG_TRANSCODER_TRACK_DEFAULT_OVERLAY)))
+            {
+            gavl_dictionary_t * cfg_section =
+              bg_cfg_section_find_subsection(win->track_defaults_section, ctx);
+            
+            gavl_dictionary_set_nocopy(cfg_section, name, &val);
+            }
+          else if(!strcmp(ctx, "transcoder_window"))
+            {
+            gavl_dictionary_t * cfg_section =
+              bg_cfg_registry_find_section(bg_cfg_registry, ctx);
+            
+            set_transcoder_window_parameter(win, name, &val);
+
+            if(name)
+              gavl_dictionary_set_nocopy(cfg_section, name, &val);
+            }
+          else if(!strcmp(ctx, "logwindow"))
+            {
+            gavl_dictionary_t * cfg_section =
+              bg_cfg_registry_find_section(bg_cfg_registry, ctx);
+
+            bg_gtk_log_window_set_parameter(win->logwindow, name, &val);
+            
+            if(name)
+              gavl_dictionary_set_nocopy(cfg_section, name, &val);
+            }
+          }
+        }
+      break;
     case GAVL_MSG_NS_GUI:
       switch(msg->ID)
         {
-        case GAVL_MSG_GUI_FILE_LOAD:
+        case BG_MSG_DIALOG_FILE_LOAD:
           {
           const char * ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           const char * uri = gavl_msg_get_arg_string_c(msg, 0);
@@ -321,15 +342,17 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           if(!strcmp(ctx, CTX_PROFILE))
             {
             transcoder_window_load_profile(win, uri);
+            SET_CFG_STRING_NOCOPY("profile_path", bg_filename_get_dir(uri));
             }
           else if(!strcmp(ctx, CTX_TRACKLIST))
             {
             track_list_load(win->tracklist, uri);
+            SET_CFG_STRING_NOCOPY("task_path", bg_filename_get_dir(uri));
             }
           
           }
           break;
-        case GAVL_MSG_GUI_FILE_SAVE:
+        case BG_MSG_DIALOG_FILE_SAVE:
           {
           const char * ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           const char * uri = gavl_msg_get_arg_string_c(msg, 0);
@@ -339,10 +362,12 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           if(!strcmp(ctx, CTX_PROFILE))
             {
             transcoder_window_save_profile(win, uri);
+            SET_CFG_STRING_NOCOPY("profile_path", bg_filename_get_dir(uri));
             }
           else if(!strcmp(ctx, CTX_TRACKLIST))
             {
             track_list_save(win->tracklist, uri);
+            SET_CFG_STRING_NOCOPY("task_path", bg_filename_get_dir(uri));
             }
           
           }
@@ -550,24 +575,25 @@ static void button_callback(GtkWidget * w, gpointer data)
   else if((w == win->load_button) || (w == win->file_menu.load_item))
     {
     bg_gtk_get_filename_read(TR("Load task list"), CTX_TRACKLIST,
-                                          &win->task_path, win->load_button, win->msg_sink);
+                             GET_CFG_STRING("task_path"), 
+                             win->load_button, win->msg_sink);
     }
   else if((w == win->save_button) || (w == win->file_menu.save_item))
     {
     bg_gtk_get_filename_write(TR("Save task list"), CTX_TRACKLIST,
-                                           &win->task_path, 1,
-                                           win->save_button, win->msg_sink);
+                              GET_CFG_STRING("task_path"), 1,
+                              win->save_button, win->msg_sink, NULL);
     }
   else if(w == win->options_menu.load_item)
     {
     bg_gtk_get_filename_read(TR("Load profile"), CTX_PROFILE,
-                                          &win->profile_path, win->win, win->msg_sink);
+                             GET_CFG_STRING("profile_path"), win->win, win->msg_sink);
     }
   else if(w == win->options_menu.save_item)
     {
     bg_gtk_get_filename_write(TR("Save profile"), CTX_PROFILE,
-                                           &win->profile_path, 1,
-                                           win->win, win->msg_sink);
+                              GET_CFG_STRING("profile_path"), 1,
+                              win->win, win->msg_sink, NULL);
     }
   else if((w == win->quit_button) || (w == win->file_menu.quit_item))
     {
@@ -583,12 +609,15 @@ static void button_callback(GtkWidget * w, gpointer data)
     if(gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(w)))
       {
       gtk_widget_show(bg_gtk_log_window_get_widget(win->logwindow));
-      win->show_logwindow = 1;
+
+      gavl_dictionary_set_int(bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window"),
+                              "show_logwindow", 1);
       }
     else
       {
       gtk_widget_hide(bg_gtk_log_window_get_widget(win->logwindow));
-      win->show_logwindow = 0;
+      gavl_dictionary_set_int(bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window"),
+                              "show_logwindow", 0);
       }
     }
 
@@ -599,12 +628,6 @@ static void button_callback(GtkWidget * w, gpointer data)
 
     gtk_widget_show(win->about_window);
     }
-#if 0
-  else if(w == win->help_menu.help_item)
-    {
-    bg_display_html_help("userguide/GUI-Transcoder.html");
-    }
-#endif
   }
 
 
@@ -713,47 +736,10 @@ static void init_menus(transcoder_window_t * w)
 static void logwindow_close_callback(GtkWidget * w, void*data)
   {
   transcoder_window_t * win = data;
-
-  fprintf(stderr, "Logwindow close\n");
-  
   gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(win->windows_menu.log_item), 0);
-  win->show_logwindow = 0;
-  }
 
-static void remove_missing_encoders_sub(gavl_dictionary_t * dst, const gavl_dictionary_t * src, const char * name)
-  {
-  int i, num;
-  const char * str;
-  const gavl_value_t * src_val;
-  gavl_value_t * dst_val;
-  
-  if(!(dst_val = gavl_dictionary_get_nc(dst, name)) ||
-     !(src_val = gavl_dictionary_get(src, name)))
-    return;
-
-  num = bg_multi_menu_get_num(dst_val);
-  i = 0;
-  while(i < num)
-    {
-    if((str = bg_multi_menu_get_name(dst_val, i)) &&
-       !bg_multi_menu_has_name(src_val, str))
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing entry %s", str);
-      bg_multi_menu_remove(dst_val, i);
-      num--;
-      }
-    else
-      i++;
-    }
-  
-  }
-  
-static void remove_missing_encoders(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
-  {
-  remove_missing_encoders_sub(dst, src, "ae");
-  remove_missing_encoders_sub(dst, src, "te");
-  remove_missing_encoders_sub(dst, src, "oe");
-  remove_missing_encoders_sub(dst, src, "ve");
+  gavl_dictionary_set_int(bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window"),
+                          "show_logwindow", 0);
   }
 
 transcoder_window_t * transcoder_window_create()
@@ -791,23 +777,31 @@ transcoder_window_t * transcoder_window_create()
     bg_plugin_registry_create_encoder_parameters(bg_plugin_reg,
                                                  stream_flags, plugin_flags, 1);
 
-  // bg_parameters_dump(ret->encoder_parameters, "encoder_params.xml");
+  gavl_parameter_info_append_static(&ret->encoder_params,
+                                    ret->encoder_parameters);
+  
+  //  bg_parameters_dump(ret->encoder_parameters, "encoder_params.xml");
   
   ret->encoder_section = bg_cfg_registry_find_section(bg_cfg_registry, "encoders");
 
   //  bg_cfg_section_dump(ret->encoder_section, "encoders_1.xml");
     
   enc_section = bg_cfg_section_create(NULL);
-  bg_cfg_section_create_items(enc_section, ret->encoder_parameters);
 
+  //  bg_cfg_section_create_items(enc_section, ret->encoder_parameters);
+  bg_cfg_section_set_from_params(enc_section, &ret->encoder_params);
+  
+  fprintf(stderr, "enc_section:\n");
+  gavl_dictionary_dump(enc_section, 2);
+  fprintf(stderr, "\n");
+    
   //  bg_cfg_section_dump(enc_section, "encoders_2.xml");
   
   gavl_dictionary_merge2(ret->encoder_section, enc_section);
-
-  /* remove unsupported */
-  remove_missing_encoders(ret->encoder_section, enc_section);
   
-
+  fprintf(stderr, "\n");
+  
+  
   bg_cfg_section_destroy(enc_section);
   
   //  bg_cfg_section_dump(ret->encoder_section, "encoders_3.xml");
@@ -820,10 +814,6 @@ transcoder_window_t * transcoder_window_create()
   
   gtk_window_add_accel_group(GTK_WINDOW(ret->win), track_list_get_accel_group(ret->tracklist));
   
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "track_list");
-  bg_cfg_section_apply(cfg_section, track_list_get_parameters(ret->tracklist),
-                       track_list_set_parameter, ret->tracklist);
-
 
   /* Create log window */
 
@@ -964,29 +954,15 @@ transcoder_window_t * transcoder_window_create()
 
 void transcoder_window_destroy(transcoder_window_t* w)
   {
-  gavl_dictionary_t * cfg_section;
-  
   bg_parameter_info_destroy_array(w->encoder_parameters);
   
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window");
-  bg_cfg_section_get(cfg_section, transcoder_window_parameters,
-                       get_transcoder_window_parameter, w);
-  
-
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "track_list");
-  bg_cfg_section_get(cfg_section, track_list_get_parameters(w->tracklist),
-                     track_list_get_parameter, w->tracklist);
-
   track_list_destroy(w->tracklist);
   
-  bg_gtk_log_window_destroy(w->logwindow);
-
   bg_cfg_registry_save();
   
-  if(w->task_path)
-    free(w->task_path);
-  if(w->profile_path)
-    free(w->profile_path);
+  /* Destroy after saving the logwindow state */
+  bg_gtk_log_window_destroy(w->logwindow);
+  
   
   bg_msg_sink_destroy(w->msg_sink);
 
@@ -1001,21 +977,23 @@ static gboolean remote_callback(gpointer data)
 
 void transcoder_window_run(transcoder_window_t * w)
   {
+  int show_logwindow = 0;
   gtk_widget_show(w->win);
-
-  if(w->show_logwindow)
-    {
+  
+  gavl_dictionary_get_int(bg_cfg_registry_find_section(bg_cfg_registry, "transcoder_window"),
+                          "show_logwindow", &show_logwindow);
+  
+  if(show_logwindow)
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(w->windows_menu.log_item), 1);
-    }
-  //    bg_gtk_log_window_show(w->logwindow);
 
   remote_callback(w);
-
+  
   g_timeout_add(50, remote_callback, w);
   
   gtk_main();
   }
 
+#if 0
 static const bg_parameter_info_t input_plugin_parameters[] =
   {
     {
@@ -1035,193 +1013,170 @@ static const bg_parameter_info_t image_reader_parameters[] =
     },
     { /* */ },
   };
+#endif
 
 /* Configuration stuff */
 
+
 static void transcoder_window_preferences(transcoder_window_t * w)
   {
-  bg_dialog_t * dlg;
-  gavl_dictionary_t * cfg_section;
-  void * parent;
-
-  bg_audio_filter_chain_t * ac;
-  bg_video_filter_chain_t * vc;
-
-  bg_gavl_audio_options_t ao;
-  bg_gavl_video_options_t vo;
-
-  bg_parameter_info_t * params_i;
-  bg_parameter_info_t * params_ir;
-
-  params_i = bg_parameter_info_copy_array(input_plugin_parameters);
-  params_ir = bg_parameter_info_copy_array(image_reader_parameters);
-
-  bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
-                                              BG_PLUGIN_INPUT,
-                                              0,
-                                              params_i);
-  bg_plugin_registry_set_parameter_info_input(bg_plugin_reg,
-                                              BG_PLUGIN_IMAGE_READER,
-                                              0,
-                                              params_ir);
+  GtkWidget * dlg;
+  GtkTreeIter it;
+  bg_cfg_ctx_t ctx;
   
-  memset(&ao, 0, sizeof(ao));
-  memset(&vo, 0, sizeof(vo));
+  dlg = bg_gtk_config_dialog_create_multi(BG_GTK_CONFIG_DIALOG_DESTROY,
+                                          TR("Transcoder configuration"),
+                                          w->win);
 
-  bg_gavl_audio_options_init(&ao);
-  bg_gavl_video_options_init(&vo);
+  /*
+   *  Build dialog 
+   *
+   */
+
+  bg_cfg_ctx_init(&ctx, NULL,
+                  "output",
+                  TR("Output options"),
+                  NULL, NULL);
+  ctx.s = bg_cfg_registry_find_section(bg_cfg_registry, "output");
+  ctx.parameters = bg_transcoder_get_parameters();
+  ctx.sink = w->msg_sink;
+  bg_gtk_config_dialog_add_section(dlg, &ctx,
+                                   NULL);
+  bg_cfg_ctx_free(&ctx);
+
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_GENERAL,
+                  TR("Track defaults"),
+                  NULL, NULL);
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
+  ctx.parameters = bg_transcoder_track_get_general_parameters();
+  ctx.sink = w->msg_sink;
+  bg_gtk_config_dialog_add_section(dlg, &ctx, NULL);
+  bg_cfg_ctx_free(&ctx);
   
-  ac = bg_audio_filter_chain_create(&ao);
-  vc = bg_video_filter_chain_create(&vo);
+  bg_gtk_config_dialog_add_container(dlg, TR("Audio defaults"),
+                                     NULL, &it);
+
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_AUDIO,
+                  TR("General"),
+                  NULL, NULL);
+  ctx.parameters = bg_transcoder_track_audio_get_general_parameters();
+  ctx.sink = w->msg_sink;
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
+
+  bg_gtk_config_dialog_add_section(dlg, &ctx, &it);
+  bg_cfg_ctx_free(&ctx);
+
+  bg_gtk_config_dialog_add_section(dlg, bg_plugin_config_get_ctx(BG_PLUGIN_FILTER_AUDIO), &it);
   
-  dlg = bg_dialog_create_multi(TR("Transcoder configuration"));
+  //  bg_gtk_config_dialog_add_section(dlg, &ctx, &it);
 
-  cfg_section     = bg_cfg_registry_find_section(bg_cfg_registry, "output");
+  bg_gtk_config_dialog_add_container(dlg, TR("Video defaults"),
+                                     NULL, &it);
 
-  bg_dialog_add(dlg,
-                TR("Output options"),
-                cfg_section,
-                NULL,
-                NULL,
-                bg_transcoder_get_parameters());
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_VIDEO,
+                  TR("General"),
+                  NULL, NULL);
+  ctx.parameters = bg_transcoder_track_video_get_general_parameters();
+  ctx.sink = w->msg_sink;
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
 
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "general");
+  bg_gtk_config_dialog_add_section(dlg, &ctx, &it);
+  bg_cfg_ctx_free(&ctx);
   
-  bg_dialog_add(dlg,
-                TR("Track defaults"),
-                cfg_section,
-                NULL,
-                NULL,
-                bg_transcoder_track_get_general_parameters());
+  bg_gtk_config_dialog_add_section(dlg, bg_plugin_config_get_ctx(BG_PLUGIN_FILTER_VIDEO), &it);
+
+  bg_gtk_config_dialog_add_container(dlg, TR("Text subtitle defaults"),
+                                     NULL, &it);
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_TEXT,
+                  TR("General"),
+                  NULL, NULL);
+  ctx.parameters = bg_transcoder_track_text_get_general_parameters();
+  ctx.sink = w->msg_sink;
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
+
+  bg_gtk_config_dialog_add_section(dlg, &ctx, &it);
+  bg_cfg_ctx_free(&ctx);
+
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_TEXTRENDERER,
+                  TR("Textrenderer"),
+                  NULL, NULL);
+  ctx.parameters = bg_text_renderer_get_parameters();
+  ctx.sink = w->msg_sink;
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
+
+  bg_gtk_config_dialog_add_section(dlg, &ctx, &it);
+  bg_cfg_ctx_free(&ctx);
+
+  /* overlay */
   
-  parent = bg_dialog_add_parent(dlg, NULL,
-                                TR("Audio defaults"));
+  bg_cfg_ctx_init(&ctx, NULL,
+                  BG_TRANSCODER_TRACK_DEFAULT_OVERLAY,
+                  TR("Overlay subtitle defaults"),
+                  NULL, NULL);
+  ctx.parameters = bg_transcoder_track_overlay_get_general_parameters();
+  ctx.s = bg_cfg_section_find_subsection(w->track_defaults_section,
+                                         ctx.name);
+  ctx.sink = w->msg_sink;
 
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "audio");
-  bg_dialog_add_child(dlg, parent,
-                      TR("General"),
-                      cfg_section,
-                      NULL,
-                      NULL,
-                      bg_transcoder_track_audio_get_general_parameters());
+  bg_gtk_config_dialog_add_section(dlg, &ctx, NULL);
+  bg_cfg_ctx_free(&ctx);
+
+  /* encoders */
+
+  bg_cfg_ctx_init(&ctx, NULL,
+                  "encoders",
+                  TR("Encoders"),
+                  NULL, NULL);
+  ctx.parameters = w->encoder_parameters;
+  ctx.s = w->encoder_section;
+  ctx.sink = w->msg_sink;
   
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "audiofilters");
-  bg_dialog_add_child(dlg, parent,
-                TR("Filters"),
-                cfg_section,
-                NULL,
-                NULL,
-                bg_audio_filter_chain_get_parameters(ac));
+  bg_gtk_config_dialog_add_section(dlg, &ctx, NULL);
+  bg_cfg_ctx_free(&ctx);
 
+  /* Input plugins */
+
+  bg_gtk_config_dialog_add_section(dlg, bg_plugin_config_get_ctx(BG_PLUGIN_INPUT), NULL);
+  bg_gtk_config_dialog_add_section(dlg, bg_plugin_config_get_ctx(BG_PLUGIN_IMAGE_READER), NULL);
   
+  bg_cfg_ctx_init(&ctx, NULL,
+                  "transcoder_window",
+                  TR("Window"),
+                  NULL, NULL);
+  ctx.parameters = transcoder_window_parameters;
+  ctx.s = bg_cfg_section_find_subsection(bg_cfg_registry,
+                                         ctx.name);
+  ctx.sink = w->msg_sink;
   
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "video");
+  bg_gtk_config_dialog_add_section(dlg, &ctx, NULL);
+  bg_cfg_ctx_free(&ctx);
 
-  parent = bg_dialog_add_parent(dlg, NULL,
-                                TR("Video defaults"));
-
+  bg_cfg_ctx_init(&ctx, NULL,
+                  "logwindow",
+                  TR("Log window"),
+                  NULL, NULL);
+  ctx.s = bg_cfg_section_find_subsection(bg_cfg_registry,
+                                         ctx.name);
+  ctx.sink = w->msg_sink;
   
-  bg_dialog_add_child(dlg, parent, TR("General"),
-                      cfg_section,
-                      NULL,
-                      NULL,
-                      bg_transcoder_track_video_get_general_parameters());
-
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "videofilters");
-  bg_dialog_add_child(dlg, parent,
-                      TR("Filters"),
-                      cfg_section,
-                      NULL,
-                      NULL,
-                      bg_video_filter_chain_get_parameters(vc));
+  ctx.parameters = bg_gtk_log_window_get_parameters(w->logwindow);
+  bg_gtk_config_dialog_add_section(dlg, &ctx, NULL);
+  bg_cfg_ctx_free(&ctx);
   
-  parent = bg_dialog_add_parent(dlg, NULL,
-                                TR("Text subtitle defaults"));
-    
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "text");
-
-  bg_dialog_add_child(dlg, parent, TR("General"),
-                      cfg_section,
-                      NULL,
-                      NULL,
-                      bg_transcoder_track_text_get_general_parameters());
-
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "textrenderer");
-
-  bg_dialog_add_child(dlg, parent, TR("Textrenderer"),
-                      cfg_section,
-                      NULL,
-                      NULL,
-                      bg_text_renderer_get_parameters());
+  /*
+   *  End build dialog
+   */
   
-  cfg_section = bg_cfg_section_find_subsection(w->track_defaults_section,
-                                               "overlay");
-
-  bg_dialog_add(dlg,
-                TR("Overlay subtitle defaults"),
-                cfg_section,
-                NULL,
-                NULL,
-                bg_transcoder_track_overlay_get_general_parameters());
-
-  bg_dialog_add(dlg,
-                TR("Encoders"),
-                w->encoder_section,
-                NULL,
-                NULL,
-                w->encoder_parameters);
+  gtk_window_present(GTK_WINDOW(dlg));
   
-  bg_dialog_add(dlg,
-                TR("Input plugins"),
-                NULL,
-                bg_plugin_registry_set_parameter_input,
-                bg_plugin_reg,
-                params_i);
-
-  bg_dialog_add(dlg,
-                TR("Image readers"),
-                NULL,
-                bg_plugin_registry_set_parameter_input,
-                bg_plugin_reg,
-                params_ir);
-  
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry,
-                                             "transcoder_window");
-
-  bg_dialog_add(dlg,
-                TR("Window"),
-                cfg_section,
-                set_transcoder_window_parameter,
-                w,
-                transcoder_window_parameters);
-
-
-  cfg_section = bg_cfg_registry_find_section(bg_cfg_registry,
-                                             "logwindow");
-
-  bg_dialog_add(dlg,
-                TR("Log window"),
-                cfg_section,
-                bg_gtk_log_window_set_parameter,
-                w->logwindow,
-                bg_gtk_log_window_get_parameters(w->logwindow));
-
-  
-  bg_dialog_show(dlg, w->win);
-  bg_dialog_destroy(dlg);
-
-  bg_audio_filter_chain_destroy(ac);
-  bg_video_filter_chain_destroy(vc);
-
-  bg_gavl_audio_options_free(&ao);
-  bg_gavl_video_options_free(&vo);
-    
   }
-

@@ -52,35 +52,8 @@ gavl_dictionary_t * s_section = NULL;
 bg_websocket_context_t * ctx = NULL;
 
 
-static void opt_s(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -s requires an argument\n");
-    exit(-1);
-    }
-
-  if(!s_section)
-    s_section =
-      bg_cfg_section_create_from_parameters("server", s_params);
-  
-  if(!bg_cmdline_apply_options(s_section,
-                               NULL,
-                               NULL,
-                               s_params,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
 static bg_cmdline_arg_t global_options[] =
   {
-    {
-      .arg =         "-s",
-      .help_arg =    "<options>",
-      .help_string = "Server options",
-      .callback =    opt_s,
-    },
     { /* End */ }
   };
 

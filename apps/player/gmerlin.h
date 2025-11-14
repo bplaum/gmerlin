@@ -36,7 +36,6 @@
 #include <gmerlin/websocket.h>
 #include <gmerlin/mdb.h>
 
-#include <gmerlin/cfg_dialog.h>
 
 #ifdef HAVE_DBUS
 #include <gmerlin/bgdbus.h>
@@ -190,8 +189,6 @@ struct gmerlin_s
   
   /* GUI */
   
-  bg_dialog_t * cfg_dialog;
-  
   bg_gtk_mdb_tree_t * mdb_tree;
   GtkWidget * mdb_window;
   
@@ -213,9 +210,6 @@ struct gmerlin_s
   gavl_dictionary_t * logwindow_section;
   gavl_dictionary_t * infowindow_section;
 
-  bg_parameter_info_t * input_plugin_parameters;
-  bg_parameter_info_t * image_reader_parameters;
-  
   GtkWidget * about_window;
   
   //  bg_lcdproc_t * lcdproc;
@@ -250,6 +244,8 @@ struct gmerlin_s
   pthread_t frontend_thread;
 
   main_menu_t * main_menu;
+
+  bg_msg_sink_t * cfg_sink;
   
   };
 

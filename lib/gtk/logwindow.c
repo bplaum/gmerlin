@@ -111,7 +111,6 @@ static int handle_log_message(void * data, gavl_msg_t * msg)
                           &domain, &message))
         return 1;
       
-      
       switch(level)
         {
         case GAVL_LOG_DEBUG:
@@ -288,34 +287,6 @@ static const bg_parameter_info_t parameters[] =
       .type =        BG_PARAMETER_COLOR_RGB,
       .val_default = GAVL_VALUE_INIT_COLOR_RGB(0.0, 0.0, 1.0),
       .help_string = TRS("Color for debug messages"),
-    },
-    {
-      .name = "x",
-      .long_name = "X",
-      .flags = BG_PARAMETER_HIDE_DIALOG,
-      .type = BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(100)
-    },
-    {
-      .name = "y",
-      .long_name = "Y",
-      .flags = BG_PARAMETER_HIDE_DIALOG,
-      .type = BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(100)
-    },
-    {
-      .name = "width",
-      .long_name = "Width",
-      .flags = BG_PARAMETER_HIDE_DIALOG,
-      .type = BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(0)
-    },
-    {
-      .name = "height",
-      .long_name = "Height",
-      .flags = BG_PARAMETER_HIDE_DIALOG,
-      .type = BG_PARAMETER_INT,
-      .val_default = GAVL_VALUE_INIT_INT(0)
     },
     { /* */ }
   };

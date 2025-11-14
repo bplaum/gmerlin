@@ -24,14 +24,14 @@
 #include <gtk/gtk.h>
 #include <string.h>
 #include <stdio.h>
+#include <gavl/gavl.h>
 
-#include <gmerlin/cfg_dialog.h>
 #include <gmerlin/cmdline.h>
 #include <gmerlin/iconfont.h>
 #include <gmerlin/application.h>
 
 #include <gui_gtk/gtkutils.h>
-
+#include <gui_gtk/configdialog.h>
 
 #define PARAMETER_FLAGS BG_PARAMETER_SYNC
 
@@ -355,7 +355,6 @@ static bg_parameter_info_t info_3[] =
       .long_name =          "Multilist",
       .type =               BG_PARAMETER_MULTI_LIST,
       .flags =     PARAMETER_FLAGS,
-      .val_default = GAVL_VALUE_INIT_STRING("multilist_1,multilist_2"),
       .multi_names =        (char const *[]){ "multilist_1", "multilist_2", NULL },
       .multi_labels =   (char const *[]){ "Multilist 1", "Multilist 2", NULL },
       .multi_descriptions = (char const *[]){ "Multilist 1", "Multilist 2", NULL },
@@ -454,145 +453,36 @@ static void set_parameter(void * data, const char * name,
 static bg_cfg_ctx_t cfg_ctx[] =
   {
     {
-      .p = info_1,
+      .parameters = info_1,
       .name = "ctx1",
       .set_param = set_parameter,
     },
     {
-      .p = info_2,
+      .parameters = info_2,
       .name = "ctx2",
       .set_param = set_parameter,
     },
     {
-      .p = info_3,
+      .parameters = info_3,
       .name = "ctx3",
       .set_param = set_parameter,
     },
     {
-      .p = info_4,
+      .parameters = info_4,
       .name = "ctx4",
       .set_param = set_parameter,
     },
     {
-      .p = info_5,
+      .parameters = info_5,
       .name = "ctx5",
       .set_param = set_parameter,
     },
     { /* End */ },
   };
 
-static void opt_opt1(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -opt1 requires an argument\n");
-    exit(-1);
-    }
-  if(!bg_cmdline_apply_options(cfg_ctx[0].s,
-                               set_parameter,
-                               NULL,
-                               info_1,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-static void opt_opt2(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -opt2 requires an argument\n");
-    exit(-1);
-    }
-  if(!bg_cmdline_apply_options(cfg_ctx[1].s,
-                               set_parameter,
-                               NULL,
-                               info_2,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-static void opt_opt3(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -opt3 requires an argument\n");
-    exit(-1);
-    }
-  if(!bg_cmdline_apply_options(cfg_ctx[2].s,
-                               set_parameter,
-                               NULL,
-                               info_3,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-static void opt_opt4(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -opt4 requires an argument\n");
-    exit(-1);
-    }
-  if(!bg_cmdline_apply_options(cfg_ctx[3].s,
-                               set_parameter,
-                               NULL,
-                               info_4,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
-
-static void opt_opt5(void * data, int * argc, char *** _argv, int arg)
-  {
-  if(arg >= *argc)
-    {
-    fprintf(stderr, "Option -opt5 requires an argument\n");
-    exit(-1);
-    }
-  if(!bg_cmdline_apply_options(cfg_ctx[3].s,
-                               set_parameter,
-                               NULL,
-                               info_5,
-                               (*_argv)[arg]))
-    exit(-1);
-  bg_cmdline_remove_arg(argc, _argv, arg);
-  }
 
 static bg_cmdline_arg_t global_options[] =
   {
-    {
-      .arg =         "-opt1",
-      .help_string = "Set Options 1",
-      .callback =    opt_opt1,
-      .parameters =  info_1,
-    },
-    {
-      .arg =         "-opt2",
-      .help_string = "Set Options 2",
-      .callback =    opt_opt2,
-      .parameters =  info_2,
-    },
-    {
-      .arg =         "-opt3",
-      .help_string = "Set Options 3",
-      .callback =    opt_opt3,
-      .parameters =  info_3,
-    },
-    {
-      .arg =         "-opt4",
-      .help_string = "Set Options 4",
-      .callback =    opt_opt4,
-      .parameters =  info_4,
-    },
-    {
-      .arg =         "-opt5",
-      .help_string = "Set Options 5",
-      .callback =    opt_opt5,
-      .parameters =  info_5,
-    },
     { /* End of options */ }
   };
 
@@ -610,20 +500,65 @@ bg_cmdline_app_data_t app_data =
 
 static int handle_msg(void * priv, gavl_msg_t * msg)
   {
-  fprintf(stderr, "Dialog sent message:\n");
-  gavl_msg_dump(msg, 2 );
+  switch(msg->NS)
+    {
+    case BG_MSG_NS_PARAMETER:
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name;
+          const char * ctx;
+          gavl_value_t val;
+          bg_msg_get_parameter(msg, &name, &val);
+          ctx = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
+
+          fprintf(stderr, "BG_MSG_SET_PARAMETER\n");
+          fprintf(stderr, "  ctx:  %s\n", ctx);
+          fprintf(stderr, "  name: %s\n", name);
+          gavl_value_dump(&val, 2);
+          fprintf(stderr, "\n");
+
+          if(name)
+            {
+
+            if(!strcmp(ctx, "ctx1"))
+              gavl_dictionary_set(cfg_ctx[0].s, name, &val);
+            else if(!strcmp(ctx, "ctx2"))
+              gavl_dictionary_set(cfg_ctx[1].s, name, &val);
+            else if(!strcmp(ctx, "ctx3"))
+              gavl_dictionary_set(cfg_ctx[2].s, name, &val);
+            else if(!strcmp(ctx, "ctx4"))
+              gavl_dictionary_set(cfg_ctx[3].s, name, &val);
+            else if(!strcmp(ctx, "ctx5"))
+              gavl_dictionary_set(cfg_ctx[4].s, name, &val);
+
+
+            }
+          
+          
+          break;
+          }
+        }
+    }
+  
   return 1;
+  }
+
+static void unrealize_cb(GtkWidget* self, gpointer data)
+  {
+  gtk_main_quit();
   }
 
   
 int main(int argc, char ** argv)
   {
+  int i;
   bg_msg_sink_t * sink;
-  bg_dialog_t * test_dialog;
+  GtkWidget * test_dialog;
   bg_cfg_registry_t * registry;
 
   bg_app_init("cfgtest", "cfgtester", NULL);
-
   
   bg_iconfont_init();
   
@@ -646,35 +581,32 @@ int main(int argc, char ** argv)
   
   bg_gtk_init(&argc, &argv);
   
-  //  test_dialog = bg_dialog_create(section, set_param, NULL, info, "Test dialog");
+  test_dialog = bg_gtk_config_dialog_create_multi(0, "Test configuration", NULL);
 
-  test_dialog = bg_dialog_create_multi("Test dialog");
-
+  g_signal_connect(G_OBJECT(test_dialog), "destroy", G_CALLBACK(unrealize_cb), NULL);
+  
   sink = bg_msg_sink_create(handle_msg, NULL, 1);
+
+  for(i = 0; i < 5; i++)
+    {
+    cfg_ctx[i].sink = sink;
+    bg_gtk_config_dialog_add_section(test_dialog, &cfg_ctx[i], NULL);
+    }
   
-  bg_dialog_add_ctx(test_dialog, &cfg_ctx[0]);
-  bg_dialog_add_ctx(test_dialog, &cfg_ctx[1]);
-  bg_dialog_add_ctx(test_dialog, &cfg_ctx[2]);
-  bg_dialog_add_ctx(test_dialog, &cfg_ctx[3]);
-  bg_dialog_add_ctx(test_dialog, &cfg_ctx[4]);
+  gtk_widget_show_all(test_dialog);
   
-  bg_dialog_set_sink(test_dialog, sink);
-  
-  bg_dialog_show(test_dialog, NULL);
   gtk_main();
   
   /* Apply sections */
   fprintf(stderr, "*** Applying section ***\n");  
   bg_cfg_section_apply(cfg_ctx[0].s, info_1,set_parameter,NULL);
-  bg_cfg_section_apply(cfg_ctx[0].s, info_2,set_parameter,NULL);
-  bg_cfg_section_apply(cfg_ctx[0].s, info_3,set_parameter,NULL);
-  bg_cfg_section_apply(cfg_ctx[0].s, info_4,set_parameter,NULL);
-  bg_cfg_section_apply(cfg_ctx[0].s, info_5,set_parameter,NULL);
+  bg_cfg_section_apply(cfg_ctx[1].s, info_2,set_parameter,NULL);
+  bg_cfg_section_apply(cfg_ctx[2].s, info_3,set_parameter,NULL);
+  bg_cfg_section_apply(cfg_ctx[3].s, info_4,set_parameter,NULL);
+  bg_cfg_section_apply(cfg_ctx[4].s, info_5,set_parameter,NULL);
   
   bg_cfg_registry_save_to(registry, "cfg.xml");
-
   gavl_dictionary_destroy(registry);
-  bg_dialog_destroy(test_dialog);
   
   return 0;
   }
