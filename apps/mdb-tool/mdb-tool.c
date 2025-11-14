@@ -270,7 +270,7 @@ int main(int argc, char ** argv)
 
   /* Create registries */
 
-  bg_plugins_init("generic");
+  bg_plugins_init();
 
 #if 0  
   if(gavl_string_starts_with(path, "gmerlin-mdb://"))
