@@ -181,18 +181,14 @@ static void copy_selected(bg_gtk_dict_view_t * w)
   GtkTreeIter iter;
   GtkTreeSelection * selection;
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
-
+  
   GtkTreeModel * model;
   char * str = NULL;
   
   /* */
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(w->w));
-
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
-
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(w->w));
   
   gtk_clipboard_set_with_data(clipboard,
@@ -229,10 +225,7 @@ static void copy_selected(bg_gtk_dict_view_t * w)
 static void copy_all(bg_gtk_dict_view_t * w)
   {
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
-  
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   gtk_clipboard_set_with_data(clipboard,
                               copy_paste_entries,
                               sizeof(copy_paste_entries)/

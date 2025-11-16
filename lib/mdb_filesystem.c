@@ -121,7 +121,8 @@ typedef struct
   gavl_dictionary_t * photo_container;
   
   int have_params;
-
+  int exported;
+  
   int mount_removable;
   
   bg_object_cache_t * cache;
@@ -129,6 +130,9 @@ typedef struct
   gavl_timer_t * timer;
   
   } fs_t;
+
+static void export_dirs_init(bg_mdb_backend_t * b, gavl_array_t * arr);
+
 
 static void save_root_children(bg_mdb_backend_t * be, dir_type_t type)
   {
@@ -153,6 +157,23 @@ static void save_root_children(bg_mdb_backend_t * be, dir_type_t type)
       break;
     }
   }
+
+static int ping_filesystem(bg_mdb_backend_t * be)
+  {
+  int ret = 0;
+  fs_t * p = be->priv;
+
+  if(!p->exported)
+    {
+    export_dirs_init(be, &p->photo_dirs);
+    export_dirs_init(be, &p->local_dirs);
+    p->exported = 1;
+    ret++;
+    }
+  
+  return ret;
+  }
+
 
 static int load_dirent(gavl_dictionary_t * ret, const char * location)
   {
@@ -1268,7 +1289,7 @@ static int add_directory(bg_mdb_backend_t * b, dir_type_t type, int * idx, const
   int location_len;
   fs_t * fs = b->priv;
 
-  fprintf(stderr, "Add directory %s\n", location);
+  //  fprintf(stderr, "Add directory %s\n", location);
   
   location_len = strlen(location);
   
@@ -1390,8 +1411,8 @@ static void do_splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int i
   fs_t * fs = b->priv;
   gavl_array_t * arr;
   
-  //  fprintf(stderr, "Splice %s %d %d %d\nAdd:\n", ctx_id, last, idx, del);
-  //  gavl_value_dump(add, 2);
+  fprintf(stderr, "Splice %s %d %d %d\nAdd:\n", ctx_id, last, idx, del);
+  gavl_value_dump(add, 2);
 
   type = id_to_type(ctx_id);
   
@@ -1672,6 +1693,27 @@ static const bg_parameter_info_t parameters[] =
     { /* End */ },
   };
 
+static void export_dirs_init(bg_mdb_backend_t * b, gavl_array_t * arr)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+  const char * location;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])))
+      {
+      fprintf(stderr, "export_dirs_init\n");
+      gavl_dictionary_dump(dict, 2);
+      
+      if(gavl_track_get_src(dict, GAVL_META_SRC, 0, NULL, &location) && location)
+        bg_mdb_export_media_directory(b->ctrl.evt_sink, location);
+      
+      fprintf(stderr, "\n");
+      }
+    }
+  }
+
 void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   {
   fs_t * priv;
@@ -1683,9 +1725,9 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
   
   b->flags |= BE_FLAG_RESOURCES;
   
-  
   b->destroy = destroy_filesystem;
-
+  b->ping_func = ping_filesystem;
+  
   bg_controllable_init(&b->ctrl,
                        bg_msg_sink_create(handle_msg_filesystem, b, 0),
                        bg_msg_hub_create(1));
@@ -1714,12 +1756,14 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
     bg_array_load_xml(&priv->local_dirs, tmp_string, DIRS_ROOT);
   gavl_track_set_num_children(priv->local_container, priv->local_dirs.num_entries, 0);
   free(tmp_string);
+
   
   tmp_string = gavl_sprintf("%s/"PHOTO_DIRS_NAME, b->db->path);
   if(!access(tmp_string, R_OK))
     bg_array_load_xml(&priv->photo_dirs, tmp_string, DIRS_ROOT);
   gavl_track_set_num_children(priv->photo_container, priv->photo_dirs.num_entries, 0);
   free(tmp_string);
+
   
   //  load_dir_list(b, &priv->photo_dirs);
   //  load_dir_list(b, &priv->local_dirs);

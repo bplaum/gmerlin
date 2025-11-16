@@ -229,6 +229,9 @@ void bg_dictionary_delete_children_nc(gavl_dictionary_t * container,
 void bg_dictionary_delete_children_by_flag_nc(gavl_dictionary_t * container,
                                               const char * flag);
 
+char * bg_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height);
+char * bg_get_metadata_image_uri(const gavl_dictionary_t * m, int max_width, int max_height);
+
 
 /**
  *  @}

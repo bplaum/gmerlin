@@ -27,6 +27,7 @@
 #include <gavl/http.h>
 #include <gmerlin/utils.h>
 #include <gavl/log.h>
+#include <gmerlin/pluginregistry.h>
 
 #define LOG_DOMAIN "downloader"
 
@@ -213,6 +214,20 @@ void bg_downloader_update(bg_downloader_t * d)
             finish_error(d, i);         /* Error */
           else
             finish_success(d, bg_url_to_mimetype(d->downloads[i].uri), i);
+          }
+        else if(gavl_string_starts_with(d->downloads[i].uri, BG_EMBEDDED_COVER_SCHEME"://"))
+          {
+          /* Extract embedded cover */
+          gavl_dictionary_t m;
+          gavl_dictionary_init(&m);
+          
+          if(bg_plugin_registry_extract_embedded_cover(d->downloads[i].uri + strlen(BG_EMBEDDED_COVER_SCHEME"://"),
+                                                       &d->downloads[i].buf, &m))
+            finish_success(d, gavl_dictionary_get_string(&m, GAVL_META_MIMETYPE), i);
+          else
+            finish_error(d, i);         /* Error */
+          
+          gavl_dictionary_free(&m);
           }
         /* Disk cache */
         else if(load_cache_item(d, d->downloads[i].uri, &mimetype, &d->downloads[i].buf))

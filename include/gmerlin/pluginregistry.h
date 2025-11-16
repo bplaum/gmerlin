@@ -61,6 +61,8 @@
 #define BG_PLUGIN_CONFIG        "pluginconfig"
 #define BG_PLUGIN_CONFIG_PLUGIN "plugin"
 
+#define BG_EMBEDDED_COVER_SCHEME "embedded-cover"
+
 void
 bg_track_set_current_location(gavl_dictionary_t * dict, const char * location);
 
@@ -565,6 +567,10 @@ bg_plugin_registry_load_cover_cnv(bg_plugin_registry_t * r,
 void bg_plugin_registry_get_container_data(bg_plugin_registry_t * plugin_reg,
                                            gavl_dictionary_t * container,
                                            const gavl_dictionary_t * child);
+int
+bg_plugin_registry_extract_embedded_cover(const char * uri,
+                                          gavl_buffer_t * buf,
+                                          gavl_dictionary_t * dict);
 
 
 /* Same as above for writing. Does implicit pixelformat conversion */

@@ -131,6 +131,10 @@ static void item_to_storage(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
   {
   //  const char * klass;
   gavl_dictionary_t * m;
+  gavl_dictionary_t * img;
+  int idx = 0;
+  gavl_value_t * val;
+  
   gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
   bg_mdb_delete_http_uris(dict);
   bg_mdb_clear_thumbnail_uris(dict);
@@ -140,6 +144,15 @@ static void item_to_storage(bg_mdb_backend_t * b, gavl_dictionary_t * dict)
   
   gavl_dictionary_set(m, GAVL_META_NEXT_ID, NULL);
   gavl_dictionary_set(m, GAVL_META_PREVIOUS_ID, NULL);
+
+  /* Remove embedded images */
+  while((val = gavl_dictionary_get_item_nc(dict, GAVL_META_COVER_EMBEDDED, idx)))
+    {
+    if((img = gavl_value_get_dictionary_nc(val)))
+      gavl_dictionary_set(img, GAVL_META_IMAGE_BUFFER, NULL);
+    idx++;
+    }
+  
   //  gavl_dictionary_set(m, GAVL_META_NUM_CHILDREN, NULL);
   //  gavl_dictionary_set(m, GAVL_META_NUM_ITEM_CHILDREN, NULL);
   //  gavl_dictionary_set(m, GAVL_META_NUM_CONTAINER_CHILDREN, NULL);

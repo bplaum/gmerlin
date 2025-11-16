@@ -1859,6 +1859,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
       uri = gavl_dictionary_get_string(img, GAVL_META_URI);
       mimetype = gavl_dictionary_get_string(img, GAVL_META_MIMETYPE);
       }
+#if 0 // TODO
     else if((img = gavl_dictionary_get_image_max(metadata,
                                                  GAVL_META_COVER_EMBEDDED, max_width, max_height, NULL)))
       {
@@ -1884,7 +1885,7 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
         mimetype = gavl_dictionary_get_string(img, GAVL_META_MIMETYPE);
         }
       }
-    
+#endif
     if(uri)
       goto have_uri;
     
@@ -5213,4 +5214,43 @@ bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type)
   
   return ret;
   
+  }
+
+int
+bg_plugin_registry_extract_embedded_cover(const char * uri,
+                                          gavl_buffer_t * buf,
+                                          gavl_dictionary_t * m)
+  {
+  int ret = 0;
+  const gavl_value_t * val;
+  const gavl_dictionary_t * dict;
+  const gavl_buffer_t * buf_src;
+  gavl_dictionary_t * mi =
+    bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0);
+
+  if((dict = gavl_get_track(mi, 0)) &&
+     (dict = gavl_track_get_metadata(dict)) &&
+     (val = gavl_dictionary_get(dict, GAVL_META_COVER_EMBEDDED)))
+    {
+    if(val->type == GAVL_TYPE_DICTIONARY)
+      dict = val->v.dictionary;
+    else if(val->type == GAVL_TYPE_ARRAY)
+      {
+      if((val = gavl_array_get(val->v.array, 0)) &&
+         (val->type == GAVL_TYPE_DICTIONARY))
+        dict = val->v.dictionary;
+      }
+
+    if((buf_src = gavl_dictionary_get_binary(dict, GAVL_META_IMAGE_BUFFER)))
+      {
+      gavl_dictionary_copy_value(m, dict, GAVL_META_MIMETYPE);
+      gavl_buffer_append(buf, buf_src);
+      ret = 1;
+      }
+    }
+
+  if(mi)
+    gavl_dictionary_destroy(mi);
+  
+  return ret;
   }

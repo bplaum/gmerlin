@@ -326,6 +326,11 @@ static int handle_msg(void * data, gavl_msg_t * msg)
             if(name)
               gavl_dictionary_set_nocopy(cfg_section, name, &val);
             }
+          else if(!strcmp(ctx, "encoders"))
+            {
+            if(name)
+              gavl_dictionary_set_nocopy(win->encoder_section, name, &val);
+            }
           }
         }
       break;

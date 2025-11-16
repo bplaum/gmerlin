@@ -102,6 +102,10 @@ bg_transcoder_track_create_from_urilist(const char * list,
                                         gavl_dictionary_t * section,
                                         gavl_dictionary_t * encoder_section);
 
+gavl_array_t *
+bg_transcoder_tracks_import(const gavl_array_t * tracks,
+                            gavl_dictionary_t * track_defaults_section,
+                            gavl_dictionary_t * encoder_section);
 
 /* For putting informations into the track list */
 

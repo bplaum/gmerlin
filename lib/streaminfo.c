@@ -403,5 +403,42 @@ gavl_array_t * bg_dictionary_extract_children_by_flag(const gavl_dictionary_t * 
   return ret;
   }
 
+char * bg_get_metadata_image_uri(const gavl_dictionary_t * m, int max_width, int max_height)
+  {
+  const char * uri;
+  const gavl_dictionary_t * img;
+  const char * location;
+  
+  if((img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_COVER_URL, max_width, max_height, NULL)) ||
+     (img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_POSTER_URL, max_width, max_height, NULL)) ||
+     (img = gavl_dictionary_get_image_max(m,
+                                          GAVL_META_ICON_URL, max_width, max_height, NULL)))
+    return  gavl_strdup(gavl_dictionary_get_string(img, GAVL_META_URI));
+  
+  /* Check for an embedded cover of a local file */
+  if((gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location)) &&
+     (gavl_dictionary_get(m, GAVL_META_COVER_EMBEDDED)))
+    {
+    return gavl_sprintf(BG_EMBEDDED_COVER_SCHEME"://%s", location);
+    }
+  else if((uri = gavl_dictionary_get_string(m, GAVL_META_LOGO_URL)))
+    {
+    return gavl_strdup(uri);
+    }
+  return NULL;
+  
+  }
+
+char * bg_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height)
+  {
+  const gavl_dictionary_t * m;
+  
+  if(!(m = gavl_track_get_metadata(dict)))
+    return NULL;
+  
+  return bg_get_metadata_image_uri(m, max_width, max_height);
+  }
 
 

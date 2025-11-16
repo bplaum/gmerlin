@@ -1978,8 +1978,9 @@ void bg_mdb_object_changed(gavl_dictionary_t * dst, const gavl_dictionary_t * sr
   gavl_track_copy_gui_state(dst, src);
   }
 
-static void add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * name)
+static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * name)
   {
+  int ret = 0;
   int i = 0;
   const gavl_dictionary_t * local_dict = NULL;
   const gavl_value_t * local_val;
@@ -2013,6 +2014,7 @@ static void add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char *
         
         /* Remove filesystem specific stuff */
         gavl_dictionary_set(http_dict, GAVL_META_MTIME, NULL);
+        ret++;
         }
       gavl_dictionary_free(&tmp_dict);
       }
@@ -2026,6 +2028,7 @@ static void add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char *
     if(http_uri)
       free(http_uri);
     }
+  return ret;
   }
 
 /* Add / delete http translations of radiobrowser URIs */
@@ -2039,14 +2042,6 @@ static void rb_add_uri(gavl_dictionary_t * m)
   if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
     return;
   
-#if 0  
-  if(!location)
-    {
-    fprintf(stderr, "Scheisse\n");
-    gavl_dictionary_dump(m, 2);
-    return;
-    }
-#endif
   if(!bg_rb_check_uri(location))
     return;
   
@@ -2078,12 +2073,38 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   //  fprintf(stderr, "Add http uris 1\n");
   //  gavl_dictionary_dump(m, 2);
   
-  add_http_uris(mdb, m, GAVL_META_SRC);
-  add_http_uris(mdb, m, GAVL_META_COVER_URL);
-  add_http_uris(mdb, m, GAVL_META_POSTER_URL);
-  add_http_uris(mdb, m, GAVL_META_WALLPAPER_URL);
-  add_http_uris(mdb, m, GAVL_META_ICON_URL);
 
+  if(add_http_uris(mdb, m, GAVL_META_SRC) &&
+     !add_http_uris(mdb, m, GAVL_META_COVER_URL) &&
+     !add_http_uris(mdb, m, GAVL_META_POSTER_URL) &&
+     !add_http_uris(mdb, m, GAVL_META_WALLPAPER_URL) &&
+     !add_http_uris(mdb, m, GAVL_META_ICON_URL))
+    {
+    const char * base_uri;
+    const gavl_dictionary_t * embedded;
+    /* Check for embedded cover */
+    if((embedded = gavl_dictionary_get_dictionary(m, GAVL_META_COVER_EMBEDDED)) &&
+       gavl_metadata_get_src(m, GAVL_META_SRC, 1, NULL, &base_uri) &&
+       gavl_string_starts_with(base_uri, "http://"))
+      {
+      char * cover_uri;
+      const char * pos;
+      fprintf(stderr, "Add embedded cover uri %s\n", base_uri);
+
+      if((pos = strstr(base_uri, BG_HTTP_MEDIA_PATH)))
+        {
+        cover_uri = gavl_sprintf("%s"BG_HTTP_MEDIACOVER_PATH"%s", 
+                                 bg_http_server_get_root_url(mdb->srv),
+                                 pos + strlen(BG_HTTP_MEDIA_PATH));
+        fprintf(stderr, "cover uri: %s\n", cover_uri);
+        }
+      gavl_metadata_add_src(m, GAVL_META_COVER_URL,
+                            gavl_dictionary_get_string(embedded, GAVL_META_MIMETYPE),
+                            cover_uri);
+      free(cover_uri);
+      }
+    }
+  
   //  fprintf(stderr, "Add http uris 2\n");
   //  gavl_dictionary_dump(dict, 2);
 

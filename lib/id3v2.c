@@ -123,12 +123,21 @@ static void add_frame(bg_id3v2_t * tag, uint32_t fourcc,
     add_frame(ret, fcc, val, NULL);                  \
     }
 
+#define ADD_DATE_FRAME(key, fcc) \
+  if((date = gavl_dictionary_get_string(m, key)))   \
+    {                                               \
+    gavl_value_t val_s;                             \
+    gavl_value_init(&val_s);                        \
+    add_frame(ret, fcc, val, NULL);                 \
+    }
+
 bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
   {
   int year;
-  const char * cover_file = NULL;
+  char * cover_file = NULL;
   bg_id3v2_t * ret;
   const gavl_value_t * val;
+  const char * date;
   
   ret = calloc(1, sizeof(*ret));
 
@@ -145,7 +154,9 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
   ADD_FRAME(GAVL_META_GENRE,       MK_FOURCC('T', 'C', 'O', 'N'));
   ADD_FRAME(GAVL_META_AUTHOR,      MK_FOURCC('T', 'C', 'O', 'M'));
   ADD_FRAME(GAVL_META_COPYRIGHT,   MK_FOURCC('T', 'C', 'O', 'P'));
-
+  ADD_FRAME(GAVL_META_STATION,     MK_FOURCC('T', 'R', 'S', 'N'));
+  
+  
   year = bg_metadata_get_year(m);
   if(year)
     {
@@ -158,10 +169,10 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
 
   ADD_FRAME(GAVL_META_COMMENT, MK_FOURCC('C', 'O', 'M', 'M'));
   
-  if(add_cover && (cover_file = gavl_dictionary_get_string_image_max(m, GAVL_META_COVER_URL,
-                                                                     600, 600, "image/jpeg")))
+  if(add_cover && (cover_file = bg_get_metadata_image_uri(m, -1, -1)))
     {
     add_frame(ret, MK_FOURCC('A', 'P', 'I', 'C'), NULL, cover_file);
+    free(cover_file);
     }
   
   return ret;
@@ -234,17 +245,22 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
   if(frame->cover_file)
     {
     uint8_t buf;
-    
     gavl_buffer_t b;
+    gavl_dictionary_t dict;
+    const char * mimetype;
+    
     gavl_buffer_init(&b);
+    gavl_dictionary_init(&dict);
 
-    if(!bg_read_file(frame->cover_file, &b))
+    if(!bg_read_location(frame->cover_file,
+                         &b, 0, 0, &dict) ||
+       !(mimetype = gavl_dictionary_get_string(&dict, GAVL_META_MIMETYPE)))
       return 0;
-
+    
     buf = 0x00;
     gavl_io_write_data(output, &buf, 1); // Encoding
     
-    gavl_io_write_data(output, (uint8_t*)"image/jpeg", 11);
+    gavl_io_write_data(output, (uint8_t*)mimetype, strlen(mimetype)+1);
     buf = 0x03; /* front cover */
     gavl_io_write_data(output, &buf, 1);
     buf = 0;
@@ -252,6 +268,7 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
     gavl_io_write_data(output, b.buf, b.len); // Image
     
     gavl_buffer_free(&b);
+    gavl_dictionary_free(&dict);
     }
   else
     {

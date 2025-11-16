@@ -133,6 +133,7 @@ gl_coords.c \
 gl_shader.c \
 http.c \
 httpconnection.c \
+httpcoverhandler.c \
 httplpcmhandler.c \
 httpmediahandler.c \
 httpplaylisthandler.c \

@@ -32,7 +32,7 @@
 #include <gmerlin/utils.h>
 #include <gmerlin/filters.h>
 
-#include <gmerlin/gui_gtk/configdialog.h>
+#include <gui_gtk/configdialog.h>
 #include <gmerlin/transcoder_track.h>
 #include "tracklist.h"
 #include "trackdialog.h"

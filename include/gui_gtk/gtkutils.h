@@ -88,7 +88,7 @@ void bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   const char * id,
                                   const char * url, int max_width, int max_height);
 
-const char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height);
+// char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height);
 
 /* GtkTable -> GtkGrid translator */
 

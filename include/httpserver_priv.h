@@ -129,6 +129,7 @@ void bg_http_server_init_playlist_handler(bg_http_server_t * srv);
 void bg_http_playlist_handler_destroy(bg_http_playlist_handler_t * h);
 
 void bg_http_server_init_mediafile_handler(bg_http_server_t * s);
+void bg_http_server_init_cover_handler(bg_http_server_t * s);
 
 void bg_http_server_free_header(header_t *);
 

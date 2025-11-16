@@ -206,12 +206,17 @@ void bg_http_server_put_connection(bg_http_server_t * s, bg_http_connection_t * 
 void bg_http_server_init_playlist_handler(bg_http_server_t * srv);
 void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t * container);
 
+
 /*
  *   Media directories
  *
  *   This needs to be shared between the mdb (for generating http uris) and the
  *   server (for handing media requests).
  */
+
+#define BG_HTTP_MEDIA_PATH "/media/"
+#define BG_HTTP_MEDIACOVER_PATH "/mediacover/"
+
 
 typedef struct bg_media_dirs_s bg_media_dirs_t;
 

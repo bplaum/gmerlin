@@ -444,6 +444,8 @@ void bg_http_server_init_mediafile_handler(bg_http_server_t * s)
   bg_http_server_add_handler(s,handle_http_mediafile, BG_HTTP_PROTO_HTTP,
                              NULL, // E.g. /static/ can be NULL
                              s);
+
+  bg_http_server_init_cover_handler(s);
   }
 
 static int header_get_flac(header_t * ret, const gavl_dictionary_t * m, char * filename)

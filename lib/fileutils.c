@@ -31,6 +31,7 @@
 #include <dirent.h>
 #include <time.h>
 #include <glob.h>
+#include <gmerlin/pluginregistry.h>
 
 #include <gmerlin/utils.h>
 #include <gmerlin/log.h>
@@ -204,6 +205,11 @@ int bg_read_location(const char * location_orig,
 
   if(gavl_string_starts_with(location_orig, "appicon:"))
     location = bg_search_application_icon(location_orig + 8, 48);
+  else if(gavl_string_starts_with(location_orig, BG_EMBEDDED_COVER_SCHEME"://"))
+    {
+    return bg_plugin_registry_extract_embedded_cover(location_orig + strlen(BG_EMBEDDED_COVER_SCHEME"://"),
+                                                     ret, dict);
+    }
   else
     location = gavl_strdup(location_orig);
   
@@ -231,8 +237,17 @@ int bg_read_location(const char * location_orig,
   if(!strncasecmp(location, "http://", 7) || !strncasecmp(location, "https://", 8))
     result = bg_http_get_range(location, ret, dict, start, size);
   else
+    {
+    const char * pos;
     result =  bg_read_file_range(location, ret, start, size);
-
+    
+    if((pos = strrchr(location, '.')))
+      {
+      pos++;
+      gavl_dictionary_set_string(dict, GAVL_META_MIMETYPE, bg_ext_to_mimetype(pos));
+      }
+    
+    }
   if(location)
     free(location);
   

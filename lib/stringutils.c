@@ -781,6 +781,7 @@ bg_mimetype_t bg_mimetypes[] =
     /* Image */
     { "png",  "image/png",              "PNG"            },
     { "jpg",  "image/jpeg",             "JPG", (const char*[]){ "jpeg", NULL }  },
+    { "jpg",  "image/jpg",             "JPG", (const char*[]){ "jpeg", NULL }  },
     { "gif",  "image/gif",              "GIF"            },
     { "svg",  "image/svg+xml",          "SVG"            },
     { "ico",  "image/vnd.microsoft.icon", "ICO"          },

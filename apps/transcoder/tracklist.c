@@ -414,13 +414,49 @@ clipboard_received_func_tracks(GtkClipboard *clipboard,
   g_free(text);
   }
 
+static void
+clipboard_received_func_gmerlin_tracks(GtkClipboard *clipboard,
+                                       GtkSelectionData *selection_data,
+                                       gpointer data)
+  {
+  gavl_dictionary_t dict;
+  const gavl_array_t * gmerlin_tracks;
+  gavl_array_t * new_tracks;
+  //  const char * start;
+  //  const char * end;
+  track_list_t * l = data;
+  
+  gavl_dictionary_init(&dict);
+  
+  bg_tracks_from_string(&dict, BG_TRACK_FORMAT_GMERLIN,
+                        (const char*)gtk_selection_data_get_data(selection_data),
+                        gtk_selection_data_get_length(selection_data));
+
+  gmerlin_tracks = gavl_get_tracks(&dict);
+
+  new_tracks = bg_transcoder_tracks_import(gmerlin_tracks,
+                                           l->track_defaults_section,
+                                           l->encoder_section);
+    
+  if(new_tracks)
+    {
+    gavl_array_splice_array(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
+    gavl_array_destroy(new_tracks);
+    }
+    
+  /* Cleanup */
+  gavl_dictionary_free(&dict);
+  track_list_update(l);  
+  
+  //  g_free(text);
+  
+  }
 
 static void do_copy(track_list_t * w)
   {
   gavl_dictionary_t sel;
   gavl_array_t * arr = NULL;
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
   
   gavl_dictionary_init(&sel);
   
@@ -428,8 +464,7 @@ static void do_copy(track_list_t * w)
   
   gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&sel), -1, 0, arr);
   
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   
   gtk_clipboard_set_with_data(clipboard,
                               copy_paste_entries,
@@ -463,11 +498,12 @@ static void target_received_func(GtkClipboard *clipboard,
   track_list_t * l;
   int i = 0;
   char * atom_name;
-  l = (data);
+  l = data;
   
   for(i = 0; i < n_atoms; i++)
     {
     atom_name = gdk_atom_name(atoms[i]);
+    
     if(!atom_name)
       return;
     else if(!strcmp(atom_name, cp_tracks_name))
@@ -479,18 +515,25 @@ static void target_received_func(GtkClipboard *clipboard,
       g_free(atom_name);
       return;
       }
+    else if(!strcmp(atom_name, bg_gtk_atom_tracks_name))
+      {
+      gtk_clipboard_request_contents(clipboard,
+                                     atoms[i],
+                                     clipboard_received_func_gmerlin_tracks,
+                                     l);
+      g_free(atom_name);
+      return;
+      }
+    else
+      g_free(atom_name);
     }
   }
 
 static void do_paste(track_list_t * l)
   {
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
-  //  GdkAtom target;
   
-  //    clipboard_atom = gdk_atom_intern ("PRIMARY", FALSE);
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   
   gdk_atom_intern(cp_tracks_name, FALSE);
   
@@ -1188,7 +1231,6 @@ static void drag_received_callback(GtkWidget *widget,
     }
   else if(!strcmp(target_name, bg_gtk_atom_tracks_name))
     {
-    int i;
     gavl_dictionary_t dict;
     const gavl_array_t * gmerlin_tracks;
     
@@ -1197,26 +1239,16 @@ static void drag_received_callback(GtkWidget *widget,
     
     gmerlin_tracks = gavl_get_tracks(&dict);
 
-    for(i = 0; i < gmerlin_tracks->num_entries; i++)
+    new_tracks = bg_transcoder_tracks_import(gmerlin_tracks,
+                                             l->track_defaults_section,
+                                             l->encoder_section);
+    
+    if(new_tracks)
       {
-      const gavl_dictionary_t * track;
-      const char * uri;
-      
-      if((track = gavl_get_track(&dict, i)) &&
-         gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
-        {
-        new_tracks = 
-          bg_transcoder_track_create(uri, l->track_defaults_section,
-                                     l->encoder_section);
-        
-
-        if(new_tracks)
-          {
-          gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
-          gavl_array_destroy(new_tracks);
-          }
-        }
+      gavl_array_splice_array_nocopy(gavl_get_tracks_nc(&l->t), -1, 0, new_tracks);
+      gavl_array_destroy(new_tracks);
       }
+    
     /* Cleanup */
     gavl_dictionary_free(&dict);
     track_list_update(l);  

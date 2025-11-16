@@ -41,7 +41,6 @@
 #define LOCAL_PATH  "l"
 #define HTTP_PATH "r"
 
-#define PATH_PREFIX "/media/"
 
 /*
  *  Access to media files
@@ -54,9 +53,6 @@
  *  http://example.com:8888/media/403fd4c2a411d838a8121692a7730da5/subdir/path
  *
  *  where "403fd4c2a411d838a8121692a7730da5" is the md5 sum of "/path/to_media_files/"
- *
- *
- *
  */
 
 
@@ -266,7 +262,7 @@ void bg_media_dirs_add_path(bg_media_dirs_t * d, const char * path)
 
   bg_get_filename_hash(gavl_dictionary_get_string(dict, LOCAL_PATH), md5);
     
-  gavl_dictionary_set_string_nocopy(dict, HTTP_PATH, gavl_sprintf(PATH_PREFIX"%s/", md5));
+  gavl_dictionary_set_string_nocopy(dict, HTTP_PATH, gavl_sprintf(BG_HTTP_MEDIA_PATH"%s/", md5));
 
   pthread_mutex_lock(&d->mutex);
   gavl_array_splice_val_nocopy(&d->dirs, -1, 0, &val);
@@ -288,7 +284,7 @@ int bg_is_http_media_uri(const char * uri)
                   NULL,
                   NULL,
                   &path) &&
-     gavl_string_starts_with(path, PATH_PREFIX) &&
+     gavl_string_starts_with(path, BG_HTTP_MEDIA_PATH) &&
      protocol &&
      !strcmp(protocol, "http"))
     ret = 1;
@@ -441,6 +437,11 @@ int bg_media_dirs_set_parameter(void * data, const char * name,
   int ret = 1;
   bg_media_dirs_t * dirs = data;
 
+  fprintf(stderr, "bg_media_dirs_set_parameter: %s\n", name);
+  gavl_value_dump(val, 2);
+  fprintf(stderr, "\n");
+  
+  
   if(!name)
     {
     int i;

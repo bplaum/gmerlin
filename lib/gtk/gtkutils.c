@@ -50,6 +50,7 @@
 #include <gmerlin/downloader.h>
 #include <gmerlin/application.h>
 
+#include <gmerlin/pluginregistry.h>
 #include <gmerlin/utils.h>
 #include <gmerlin/http.h>
 #include <gmerlin/log.h>
@@ -638,64 +639,40 @@ static void cleanup_images()
    typedef void (*bg_gtk_pixbuf_from_uri_callback)(void * data, GtkPixbuf * pb);
 */
 
-const char * bg_gtk_get_track_image_uri(const gavl_dictionary_t * dict, int max_width, int max_height)
-  {
-  const char * uri;
-  const gavl_dictionary_t * m;
-  const gavl_dictionary_t * img;
-
-  //  fprintf(stderr, "bg_gtk_get_track_image_uri: \n");
-  //  gavl_dictionary_dump(dict, 2);
-  //  fprintf(stderr, "\n");
-
-  if(!(m = gavl_track_get_metadata(dict)))
-    return NULL;
-    
-  if((img = gavl_dictionary_get_image_max(m,
-                                          GAVL_META_COVER_URL, max_width, max_height, NULL)) ||
-     (img = gavl_dictionary_get_image_max(m,
-                                          GAVL_META_POSTER_URL, max_width, max_height, NULL)) ||
-     (img = gavl_dictionary_get_image_max(m,
-                                          GAVL_META_ICON_URL, max_width, max_height, NULL)))
-    return  gavl_dictionary_get_string(img, GAVL_META_URI);
-  
-  if((uri = gavl_dictionary_get_string(m, GAVL_META_LOGO_URL)))
-    {
-    return uri;
-    }
-  return NULL;
-  }
 
 GdkPixbuf * bg_gtk_load_track_image(const gavl_dictionary_t * dict, int max_width, int max_height)
   {
-  const char * uri = NULL;
+  GdkPixbuf * ret;
+  char * uri = NULL;
   int use_cache = 0;
 
-  if(!(uri = bg_gtk_get_track_image_uri(dict, max_width, max_height)))
+  if(!(uri = bg_get_track_image_uri(dict, max_width, max_height)))
     return NULL;
-
+  
   if(gavl_string_starts_with(uri, "http://") ||
      gavl_string_starts_with(uri, "https://"))
     use_cache = 1;
   
-  // fprintf(stderr, "Got uri: %s\n", uri);
   
-  return bg_gtk_pixbuf_from_uri(uri, max_width, max_height, use_cache);
+  ret = bg_gtk_pixbuf_from_uri(uri, max_width, max_height, use_cache);
+  free(uri);
+  return ret;
   }
 
 int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
                                   void * cb_data,
                                   const gavl_dictionary_t * track, int max_width, int max_height)
   {
-  const char * uri = NULL;
+  char * uri = NULL;
   const char * id = gavl_track_get_id(track);
 
-  if(!(uri = bg_gtk_get_track_image_uri(track, max_width, max_height)))
+  if(!(uri = bg_get_track_image_uri(track, max_width, max_height)))
     {
     cb(cb_data, id, NULL);
     return 0;
     }
   bg_gtk_pixbuf_from_uri_async(cb, cb_data, id, uri, max_width, max_height);
+  free(uri);
   return 1;
   }
 

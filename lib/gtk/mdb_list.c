@@ -238,24 +238,24 @@ static void list_clipboard_get_func(GtkClipboard *clipboard,
                                     gpointer data)
   {
   char * str;
-
   bg_gtk_mdb_tree_t * tree = data;
-  GdkAtom type_atom = gdk_atom_intern("STRING", FALSE);
-
-  if(!type_atom)
-    return;
   
   str = bg_tracks_to_string(tree->list_clipboard, info, 1);
 
+  fprintf(stderr, "List copy: %s\n", str);
+  
   if(str)
     {
-    gtk_selection_data_set(selection_data, type_atom, 8, (uint8_t*)str,
-                           strlen(str)+1);
+    gtk_selection_data_set(selection_data,
+                           gdk_atom_intern("text/xml", FALSE),
+                           8,
+                           (const guchar *)str,
+                           strlen(str));
     free(str);
     }
   else
-    gtk_selection_data_set(selection_data, type_atom, 8, (uint8_t*)"", 1);
-    
+    gtk_selection_data_set_text(selection_data, "", -1);
+  
   }
 
 static void list_clipboard_clear_func(GtkClipboard *clipboard,
@@ -293,13 +293,20 @@ gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(album_t * album)
   
   for(i = 0; i < num; i++)
     {
+    const char * klass;
+    const gavl_dictionary_t * src = gavl_get_track(album->a, i);
+
+    if((klass = gavl_track_get_media_class(src)) &&
+       (gavl_string_starts_with(klass, GAVL_META_CLASS_CONTAINER)))
+      continue;
+    
     if(gtk_tree_selection_iter_is_selected(selection, &iter))
       {
       gavl_value_t val;
       gavl_dictionary_t * track;
       gavl_value_init(&val);
       track = gavl_value_set_dictionary(&val);
-      gavl_dictionary_copy(track, gavl_get_track(album->a, i));
+      gavl_dictionary_copy(track, src);
       gavl_track_clear_gui_state(track);
       gavl_track_splice_children_nocopy(ret, -1, 0, &val);
       }
@@ -460,13 +467,11 @@ static void list_download_selected(album_t * album)
 static void list_copy(album_t * a)
   {
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
-
+  
   //  if(tree->list_clipboard)
   //    gavl_dictionary_destroy(tree->list_clipboard);
     
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   
   gtk_clipboard_set_with_data(clipboard,
                               list_src_entries,
@@ -481,7 +486,6 @@ static void list_copy(album_t * a)
 static void list_paste(album_t * a)
   {
   GtkClipboard *clipboard;
-  GdkAtom clipboard_atom;
   GdkAtom target;
   
   if(!bg_mdb_is_editable(a->a))
@@ -490,9 +494,7 @@ static void list_paste(album_t * a)
     return;
     }
   
-  //    clipboard_atom = gdk_atom_intern ("PRIMARY", FALSE);
-  clipboard_atom = gdk_atom_intern ("CLIPBOARD", FALSE);   
-  clipboard = gtk_clipboard_get(clipboard_atom);
+  clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     
   target = gdk_atom_intern(bg_gtk_atom_tracks_name, FALSE);
     
