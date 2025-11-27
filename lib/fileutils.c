@@ -241,7 +241,7 @@ int bg_read_location(const char * location_orig,
     const char * pos;
     result =  bg_read_file_range(location, ret, start, size);
     
-    if((pos = strrchr(location, '.')))
+    if(dict && (pos = strrchr(location, '.')))
       {
       pos++;
       gavl_dictionary_set_string(dict, GAVL_META_MIMETYPE, bg_ext_to_mimetype(pos));
