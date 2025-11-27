@@ -2089,14 +2089,14 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
       {
       char * cover_uri;
       const char * pos;
-      fprintf(stderr, "Add embedded cover uri %s\n", base_uri);
+      //      fprintf(stderr, "Add embedded cover uri %s\n", base_uri);
 
       if((pos = strstr(base_uri, BG_HTTP_MEDIA_PATH)))
         {
         cover_uri = gavl_sprintf("%s"BG_HTTP_MEDIACOVER_PATH"%s", 
                                  bg_http_server_get_root_url(mdb->srv),
                                  pos + strlen(BG_HTTP_MEDIA_PATH));
-        fprintf(stderr, "cover uri: %s\n", cover_uri);
+        //        fprintf(stderr, "cover uri: %s\n", cover_uri);
         }
       gavl_metadata_add_src(m, GAVL_META_COVER_URL,
                             gavl_dictionary_get_string(embedded, GAVL_META_MIMETYPE),
