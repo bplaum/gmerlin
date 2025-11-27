@@ -321,6 +321,15 @@ static bg_plugin_handle_t * load_encoder(bg_encoder_t * enc,
   {
   bg_plugin_handle_t * ret;
   bg_encoder_plugin_t * plugin;
+
+  /*  
+  fprintf(stderr, "Load_encoder\n");
+  gavl_dictionary_dump(section, 2);
+  fprintf(stderr, "Load_encoder\n");
+  */
+  
+  if(bg_cfg_section_has_subsection(section, "$general"))
+    section = bg_cfg_section_find_subsection_c(section, "$general");
   
   if(enc->is_stdout)
     {
