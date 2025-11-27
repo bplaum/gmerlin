@@ -149,9 +149,8 @@ static int handle_config_message(void * data, gavl_msg_t * msg)
           fprintf(stderr, "  ctx:        %s\n", ctx);
           fprintf(stderr, "  name:       %s\n", name);
           fprintf(stderr, "  subsection: %s\n", subsection);
-          //          gavl_value_dump(&val, 2);
-          //          fprintf(stderr, "\n");
-
+          gavl_value_dump(&val, 2);
+          fprintf(stderr, "\n");
 #endif
           if(!name)
             {
@@ -1083,6 +1082,7 @@ static void add_config_widgets(GtkWidget * grid,
   {
   int i;
   const gavl_dictionary_t * param;
+  gavl_dictionary_t * sec;
   gavl_parameter_type_t type;
   const char * long_name;
   const char * help_string;
@@ -1111,10 +1111,12 @@ static void add_config_widgets(GtkWidget * grid,
   bg_cfg_section_set_from_params(&s->cur, s->ctx.params);
   
   /* Get saved data */
-  if(ctx->s)
+  if((sec = ctx->s))
     {
-    gavl_dictionary_update_fields_nocreate(&s->cur, ctx->s);
-    s->ctx.s = gavl_dictionary_clone(ctx->s);
+    if(subsection)
+      sec = bg_cfg_section_find_subsection(sec, subsection);
+    gavl_dictionary_update_fields_nocreate(&s->cur, sec);
+    s->ctx.s = gavl_dictionary_clone(sec);
     }
   
   /* Copy callbacks */
