@@ -345,11 +345,51 @@ static void set_language(gavl_dictionary_t * general_section_dst,
     }
   }
 
-static void set_track(bg_transcoder_track_t * track,
-                      const gavl_dictionary_t * media_info,
-                      const gavl_dictionary_t * track_info,
-                      gavl_dictionary_t * track_defaults_section,
-                      gavl_dictionary_t * encoder_section)
+static void sanitize_label(char* str)
+  {
+  int len;
+  int i;
+  
+  if(str == NULL || *str == '\0')
+    {
+    return;
+    }
+  
+  len = strlen(str);
+  
+  for(i = 0; i < len; i++)
+    {
+    char c = str[i];
+    
+    if((c >= 0 && c <= 31) || c == 127)
+      {
+      str[i] = '_';
+      continue;
+      }
+    
+    if(strchr("<>:\"/\\|?*", c) != NULL)
+      {
+      str[i] = '_';
+      }
+    }
+  
+  for(i = 0; i < len && str[i] == '.'; i++)
+    {
+    str[i] = '_';
+    }
+  
+  for(i = len - 1; i > 0 && (str[i] == '.' || str[i] == ' '); i--)
+    {
+    str[i] = '_';
+    len = i;
+    }
+  }
+
+static int set_track(bg_transcoder_track_t * track,
+                     const gavl_dictionary_t * media_info,
+                     const gavl_dictionary_t * track_info,
+                     gavl_dictionary_t * track_defaults_section,
+                     gavl_dictionary_t * encoder_section)
   {
   int i;
   const char * disk_name;
@@ -358,6 +398,7 @@ static void set_track(bg_transcoder_track_t * track,
   gavl_dictionary_t * sm;
   gavl_dictionary_t * s;
   const gavl_dictionary_t * global_metadata;
+  gavl_dictionary_t * metadata;
 
   /* Create sections */
   gavl_dictionary_t * general_section_cfg;
@@ -368,13 +409,21 @@ static void set_track(bg_transcoder_track_t * track,
   
   gavl_dictionary_copy(track, track_info);
 
+  if((metadata  = gavl_track_get_metadata_nc(track)))
+    {
+    char * label = gavl_dictionary_get_string_nc(metadata, GAVL_META_LABEL);
+    if(label)
+      sanitize_label(label);
+    }
+  
   if(!gavl_dictionary_get(track, GAVL_META_STREAMS))
     {
     int num_variants;
     bg_plugin_handle_t * h;
     gavl_dictionary_t * ti;
     /* Open location to load the streams */
-    h = bg_load_track(track, 0, &num_variants);
+    if(!(h = bg_load_track(track, 0, &num_variants)))
+      return 0;
     ti = bg_input_plugin_get_track_info(h, -1);
     gavl_dictionary_copy_value(track, ti, GAVL_META_STREAMS);
     bg_plugin_unref(h);
@@ -383,7 +432,7 @@ static void set_track(bg_transcoder_track_t * track,
   /* Create sections */
 
   if(bg_transcoder_track_get_cfg_general(track))
-    return; /* Transcoding specific stuff is already there */
+    return 1; /* Transcoding specific stuff is already there */
   
   general_section_cfg =
     bg_cfg_section_find_subsection(track_defaults_section, "general");
@@ -485,6 +534,7 @@ static void set_track(bg_transcoder_track_t * track,
       set_language(general_section_dst, general_section_cfg, sm);
       }
     }
+  return 1;
   }
 
 gavl_array_t *
@@ -576,10 +626,15 @@ bg_transcoder_tracks_import(const gavl_array_t * tracks,
     gavl_value_init(&dst_val);
     dst = gavl_value_set_dictionary(&dst_val);
     
-    set_track(dst, NULL, src,
-              track_defaults_section,
-              encoder_section);
-    gavl_array_splice_val_nocopy(ret, -1, 0, &dst_val);
+    if(set_track(dst, NULL, src,
+                 track_defaults_section,
+                 encoder_section))
+      gavl_array_splice_val_nocopy(ret, -1, 0, &dst_val);
+    else
+      {
+      gavl_value_free(&dst_val);
+      }
+    
     }
 
   fprintf(stderr, "Imported tracks:\n");
