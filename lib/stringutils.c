@@ -147,23 +147,6 @@ int bg_string_is_url(const char * str)
   return 1;
   }
 
-char * bg_path_to_label(const char * path)
-  {
-  const char * start;
-  const char * end;
-  start = strrchr(path, '/');
-  if(!start)
-    start = path;
-  else
-    start++;
-
-  end = strrchr(start, '.');
-  if(!end)
-    end = start + strlen(start);
-
-  return gavl_strndup(start, end);
-  }
-
 
 int gavl_url_split(const char * url,
                  char ** protocol,
@@ -575,23 +558,6 @@ void bg_diprintf(int indent, const char * format, ...)
   va_end(argp);
   }
 
-char * bg_filename_get_dir(const char * filename)
-  {
-  const char * pos = strrchr(filename, '/');
-  return gavl_strndup(filename, pos);
-  }
-
-char * bg_filename_ensure_extension(const char * filename,
-                                    const char * ext)
-  {
-  const char * pos;
-
-  if((pos = strrchr(filename, '.')) &&
-     (!strcasecmp(pos+1, ext)))
-    return gavl_strdup(filename);
-  else
-    return gavl_sprintf("%s.%s", filename, ext);
-  }
 
 char * bg_get_stream_label(int index, const gavl_dictionary_t * m)
   {
@@ -810,9 +776,12 @@ bg_mimetype_t bg_mimetypes[] =
 const char * bg_mimetype_to_ext(const char * mimetype)
   {
   int i = 0;
+  int len = strlen(mimetype);
+  
   while(bg_mimetypes[i].mimetype)
     {
-    if(!strcmp(bg_mimetypes[i].mimetype, mimetype))
+    if(gavl_string_starts_with(mimetype, bg_mimetypes[i].mimetype) &&
+       ((mimetype[len] == ';') || (mimetype[len] == '\0')))
       return bg_mimetypes[i].ext;
     i++;
     }
