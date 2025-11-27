@@ -329,7 +329,20 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           else if(!strcmp(ctx, "encoders"))
             {
             if(name)
+              {
+              fprintf(stderr, "Encoder settings: %s\n", name);
+              gavl_value_dump(&val, 2);
+              fprintf(stderr, "\n");
               gavl_dictionary_set_nocopy(win->encoder_section, name, &val);
+              }
+            }
+          else if(!strcmp(ctx, "output"))
+            {
+            if(name)
+              {
+              gavl_dictionary_t * cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "output");
+              gavl_dictionary_set_nocopy(cfg_section, name, &val);
+              }
             }
           }
         }
@@ -347,12 +360,12 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           if(!strcmp(ctx, CTX_PROFILE))
             {
             transcoder_window_load_profile(win, uri);
-            SET_CFG_STRING_NOCOPY("profile_path", bg_filename_get_dir(uri));
+            SET_CFG_STRING_NOCOPY("profile_path", gavl_filename_get_dir(uri));
             }
           else if(!strcmp(ctx, CTX_TRACKLIST))
             {
             track_list_load(win->tracklist, uri);
-            SET_CFG_STRING_NOCOPY("task_path", bg_filename_get_dir(uri));
+            SET_CFG_STRING_NOCOPY("task_path", gavl_filename_get_dir(uri));
             }
           
           }
@@ -367,12 +380,12 @@ static int handle_msg(void * data, gavl_msg_t * msg)
           if(!strcmp(ctx, CTX_PROFILE))
             {
             transcoder_window_save_profile(win, uri);
-            SET_CFG_STRING_NOCOPY("profile_path", bg_filename_get_dir(uri));
+            SET_CFG_STRING_NOCOPY("profile_path", gavl_filename_get_dir(uri));
             }
           else if(!strcmp(ctx, CTX_TRACKLIST))
             {
             track_list_save(win->tracklist, uri);
-            SET_CFG_STRING_NOCOPY("task_path", bg_filename_get_dir(uri));
+            SET_CFG_STRING_NOCOPY("task_path", gavl_filename_get_dir(uri));
             }
           
           }
