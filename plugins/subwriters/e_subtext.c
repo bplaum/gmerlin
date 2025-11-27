@@ -140,7 +140,7 @@ static int open_subtext(void * data, const char * filename,
   e = data;
   
   e->filename =
-    bg_filename_ensure_extension(filename,
+    gavl_filename_ensure_extension(filename,
                                  formats[e->format_index].extension);
 
   if(!bg_encoder_cb_create_output_file(e->cb, e->filename))

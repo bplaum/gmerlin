@@ -74,7 +74,7 @@ static int write_header_gavl(void * priv, const char * filename,
   char * real_filename;
   gavl_t * gavl = priv;
   
-  real_filename = bg_filename_ensure_extension(filename, "gavi");
+  real_filename = gavl_filename_ensure_extension(filename, "gavi");
   
   if(!bg_iw_cb_create_output_file(gavl->cb, real_filename))
     {
