@@ -541,7 +541,7 @@ static int open_wav(void * data, const char * filename,
   else
     {
     FILE * f;
-    wav->filename = bg_filename_ensure_extension(filename, "wav");
+    wav->filename = gavl_filename_ensure_extension(filename, "wav");
 
     if(!bg_encoder_cb_create_output_file(wav->cb, wav->filename))
       return 0;

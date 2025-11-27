@@ -81,7 +81,7 @@ static int write_header_tga(void * priv, const char * filename,
 
   gavl_video_format_copy(&tga->format, format);
 
-  tga->filename = bg_filename_ensure_extension(filename, "tga");
+  tga->filename = gavl_filename_ensure_extension(filename, "tga");
   
   if(!bg_iw_cb_create_output_file(tga->cb, tga->filename))
     return 0;

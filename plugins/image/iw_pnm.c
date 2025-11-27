@@ -100,7 +100,7 @@ static int write_header_pnm(void * priv, const char * filename,
     ext = "ppm";
     }
   
-  real_filename = bg_filename_ensure_extension(filename, ext);
+  real_filename = gavl_filename_ensure_extension(filename, ext);
   
   if(!bg_iw_cb_create_output_file(p->cb, real_filename))
     {

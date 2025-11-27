@@ -73,7 +73,7 @@ static int write_header_tiff(void * priv, const char * filename,
   char * real_filename;
   tiff_t * tiff = priv;
   
-  real_filename = bg_filename_ensure_extension(filename, "tif");
+  real_filename = gavl_filename_ensure_extension(filename, "tif");
   
   if(!bg_iw_cb_create_output_file(tiff->cb, real_filename))
     {

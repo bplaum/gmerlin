@@ -103,7 +103,7 @@ int write_header_jpeg(void * priv, const char * filename,
 
   char * real_filename;
   
-  real_filename = bg_filename_ensure_extension(filename, bg_mimetype_to_ext("image/jpeg"));
+  real_filename = gavl_filename_ensure_extension(filename, bg_mimetype_to_ext("image/jpeg"));
   
   if(!bg_iw_cb_create_output_file(jpeg->cb, real_filename))
     {

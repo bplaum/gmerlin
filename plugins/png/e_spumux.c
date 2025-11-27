@@ -77,7 +77,7 @@ static int open_spumux(void * priv, const char * filename,
   if(metadata)
     gavl_dictionary_copy(&spumux->metadata, metadata);
   
-  spumux->filename = bg_filename_ensure_extension(filename, "xml");
+  spumux->filename = gavl_filename_ensure_extension(filename, "xml");
   
   if(!bg_encoder_cb_create_output_file(spumux->cb, spumux->filename))
     return 0;

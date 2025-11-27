@@ -113,7 +113,7 @@ static int write_header_bmp(void * priv, const char * filename,
   char * real_filename;
   bmp_t * bmp = priv;
 
-  real_filename = bg_filename_ensure_extension(filename, "bmp");
+  real_filename = gavl_filename_ensure_extension(filename, "bmp");
 
   if(!bg_iw_cb_create_output_file(bmp->cb, real_filename))
     {

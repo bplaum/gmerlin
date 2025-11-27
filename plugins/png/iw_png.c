@@ -73,7 +73,7 @@ static int write_header_png(void * priv, const char * filename,
   if(png->writer.dont_force_extension)
     real_filename = gavl_strdup(filename);
   else
-    real_filename = bg_filename_ensure_extension(filename, bg_mimetype_to_ext("image/png"));
+    real_filename = gavl_filename_ensure_extension(filename, bg_mimetype_to_ext("image/png"));
   
   if(!bg_iw_cb_create_output_file(png->cb, real_filename))
     {
