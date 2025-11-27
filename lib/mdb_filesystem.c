@@ -192,6 +192,32 @@ static int load_dirent(gavl_dictionary_t * ret, const char * location)
   return 1;
   }
 
+static int compare_func(const void * p1, const void * p2, void * data)
+  {
+  const char * s1;
+  const char * s2;
+  
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+
+  if(!(dict1 = gavl_value_get_dictionary(p1)) ||
+     !(dict2 = gavl_value_get_dictionary(p2)) ||
+     !(s1 = gavl_dictionary_get_string(dict1, GAVL_META_CLASS)) ||
+     !(s2 = gavl_dictionary_get_string(dict2, GAVL_META_CLASS)))
+    return 0;
+
+  if(!strcmp(s1, s2))
+    {
+    s1 = gavl_dictionary_get_string(dict1, GAVL_META_URI);
+    s2 = gavl_dictionary_get_string(dict2, GAVL_META_URI);
+    return strcoll(s1, s2);
+    }
+  else if(!strcmp(s1, GAVL_META_CLASS_DIRECTORY))
+    return -1;
+  else
+    return 1;
+  }
+
 /* Load directory contents into the directory array (in terms of dirents) */
 
 static void load_directory_contents(bg_mdb_backend_t * be, const char * path, gavl_array_t * ret)
@@ -217,7 +243,7 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
   pattern = gavl_sprintf("%s/*", path);
   pattern = gavl_escape_string(pattern, "[]?");
   
-  glob(pattern, 0, NULL /* errfunc */, &g);
+  glob(pattern, GLOB_NOSORT, NULL /* errfunc */, &g);
   
   for(i = 0; i < g.gl_pathc; i++)
     {
@@ -229,8 +255,11 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
       gavl_value_free(&val);
     }
 
+
+  gavl_array_sort(ret, compare_func, NULL);
+
   //  fprintf(stderr, "Got directory contents:\n");
-  //  gavl_array_dump(&fs->directory, 2);
+  //  gavl_array_dump(ret, 2);
   
   globfree(&g);
   }
@@ -1078,6 +1107,8 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
   bg_mdb_get_browse_children_request(msg, &ctx_id, &start, &num, &one_answer);
 
   type = id_to_type(ctx_id);
+
+  fprintf(stderr, "Browse children %s\n", ctx_id);
   
   if((depth = bg_mdb_id_get_depth(ctx_id)) < 1)
     goto fail;
