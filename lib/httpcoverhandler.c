@@ -126,6 +126,8 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
   int64_t off = 0;
   int64_t len = 0;
 
+  char * basename;
+  
   gavl_buffer_t buf;
 
   char * path = gavl_sprintf(BG_HTTP_MEDIA_PATH"%s", conn->path);
@@ -232,8 +234,6 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
     bg_http_connection_init_res(conn, "HTTP/1.1", 206, "Partial Content");
   else
     bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
-
-  /* dlna content features */
   
   gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
   bg_http_header_set_date(&conn->res, "Date");
@@ -250,6 +250,13 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
   else
     gavl_dictionary_set_long(&conn->res, "Content-Length", buf.len);
 
+  basename = gavl_filename_get_base(local_path_enc);
+
+  gavl_dictionary_set_string_nocopy(&conn->res, "Content-Disposition", 
+                                    gavl_sprintf("inline; filename=\"cover.%s\"; filename*=UTF-8''%s.%s",
+                                                 ext, basename, ext));
+  free(basename);
+  
   bg_http_connection_check_keepalive(conn);
   
   //  gavl_dictionary_set_string(&conn->res, "Cache-control", "no-cache");
