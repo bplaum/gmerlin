@@ -146,33 +146,6 @@ char * bg_create_unique_filename(char * format);
 
 char * bg_canonical_filename(const char * name);
 
-/** \brief Ensure a file extension
- *  \param filename Filename (with or without extension)
- *  \param ext Extension to look for
- *  \returns A newly allocated filename
- *
- *  This function checks case insensitively if filename
- *  ends with the extension. If yes, it returns a copy of
- *  the filename. If not, it returns a copy with the extension
- *  appended. The extention must not start with the dot.
- */
-
-char * bg_filename_ensure_extension(const char * filename,
-                                    const char * ext);
-
-char * bg_filename_get_dir(const char * filename);
-
-
-/** \brief Get the base name of a path
- *  \param path Path name
- *  \returns A newly allocated label
- *
- *  This splits off leading directory names and the file extension
- *  and returns a newly allocated string
- */
-
-char * bg_path_to_label(const char * path);
-
 
 /** @} */
 
