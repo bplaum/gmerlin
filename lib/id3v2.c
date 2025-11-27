@@ -124,11 +124,31 @@ static void add_frame(bg_id3v2_t * tag, uint32_t fourcc,
     }
 
 #define ADD_DATE_FRAME(key, fcc) \
-  if((date = gavl_dictionary_get_string(m, key)))   \
+  if((var = gavl_dictionary_get_string(m, key)))   \
     {                                               \
     gavl_value_t val_s;                             \
+    char * pos;                                     \
     gavl_value_init(&val_s);                        \
-    add_frame(ret, fcc, val, NULL);                 \
+    gavl_value_set_string(&val_s, var);            \
+    if((pos = strchr(gavl_value_get_string_nc(&val_s), ' ')))       \
+      { \
+      *pos = 'T';                                   \
+      } \
+    add_frame(ret, fcc, &val_s, NULL);              \
+    gavl_value_free(&val_s);                        \
+    }
+
+#define ADD_TXXX_FRAME(gavl_key, id3_key)           \
+  if((var = gavl_dictionary_get_string(m, gavl_key)))   \
+    {                                               \
+    gavl_value_t val_s;                             \
+    gavl_array_t * arr;                             \
+    gavl_value_init(&val_s);                        \
+    arr = gavl_value_set_array(&val_s);             \
+    gavl_string_array_add(arr, id3_key);            \
+    gavl_string_array_add(arr, var);                \
+    add_frame(ret, MK_FOURCC('T', 'X', 'X', 'X'), &val_s, NULL);        \
+    gavl_value_free(&val_s);                        \
     }
 
 bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
@@ -137,7 +157,8 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
   char * cover_file = NULL;
   bg_id3v2_t * ret;
   const gavl_value_t * val;
-  const char * date;
+  const char * var;
+  const char * klass;
   
   ret = calloc(1, sizeof(*ret));
 
@@ -147,15 +168,27 @@ bg_id3v2_t * bg_id3v2_create(const gavl_dictionary_t * m, int add_cover)
 
   ADD_FRAME(GAVL_META_ARTIST,      MK_FOURCC('T', 'P', 'E', '1'));
   ADD_FRAME(GAVL_META_ALBUMARTIST, MK_FOURCC('T', 'P', 'E', '2'));
-
   ADD_FRAME(GAVL_META_TITLE,       MK_FOURCC('T', 'I', 'T', '2'));
-  ADD_FRAME(GAVL_META_ALBUM,       MK_FOURCC('T', 'A', 'L', 'B'));
+  
+  if((klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
+     !strcmp(klass, GAVL_META_CLASS_AUDIO_PODCAST_EPISODE))
+    {
+    add_frame(ret, MK_FOURCC('P', 'C', 'S', 'T'), NULL, NULL);
+    ADD_FRAME(GAVL_META_PODCAST, MK_FOURCC('T', 'A', 'L', 'B'));
+    }
+  else
+    {
+    ADD_FRAME(GAVL_META_ALBUM,       MK_FOURCC('T', 'A', 'L', 'B'));
+    }
   ADD_FRAME(GAVL_META_TRACKNUMBER, MK_FOURCC('T', 'R', 'C', 'K'));
   ADD_FRAME(GAVL_META_GENRE,       MK_FOURCC('T', 'C', 'O', 'N'));
   ADD_FRAME(GAVL_META_AUTHOR,      MK_FOURCC('T', 'C', 'O', 'M'));
   ADD_FRAME(GAVL_META_COPYRIGHT,   MK_FOURCC('T', 'C', 'O', 'P'));
   ADD_FRAME(GAVL_META_STATION,     MK_FOURCC('T', 'R', 'S', 'N'));
-  
+  ADD_DATE_FRAME(GAVL_META_DATE_CREATE, MK_FOURCC('T', 'D', 'R', 'C'));
+  ADD_DATE_FRAME(GAVL_META_DATE, MK_FOURCC('T', 'D', 'R', 'L'));
+
+  ADD_TXXX_FRAME(GAVL_META_DESCRIPTION, "description");
   
   year = bg_metadata_get_year(m);
   if(year)
@@ -242,7 +275,13 @@ static int write_frame(gavl_io_t * output, id3v2_frame_t * frame,
   if(gavl_io_write_data(output, flags, 2) < 2)
     goto fail;
 
-  if(frame->cover_file)
+  if(frame->fourcc == MK_FOURCC('P','C','S','T'))
+    {
+    uint8_t pcst[4] = { 0, 0, 0, 0 };
+    if(gavl_io_write_data(output, pcst, 4) < 4)
+      goto fail;
+    }
+  else if(frame->cover_file)
     {
     uint8_t buf;
     gavl_buffer_t b;
