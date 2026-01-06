@@ -2852,8 +2852,10 @@ function create_browser()
     child_div = append_dom_element(div, "div");
     child_div.setAttribute("class", "tile-image");
 
+    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
+      
     make_icon(child_div, obj, this.use_image(klass), 600);
-    
+      
     /* Label */
     table = append_dom_element(div, "table");
     table.setAttribute("style", "width: 100%;");
@@ -2896,7 +2898,7 @@ function create_browser()
     td.setAttribute("class", "listicon");
   
       
-//    console.log("have image " + klass + " " + this.have_container_image);
+    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
     make_icon(td, obj, this.use_image(klass), 256);
     
     td = append_dom_element(tr, "td");

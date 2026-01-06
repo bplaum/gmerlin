@@ -389,9 +389,8 @@ function make_icon(p, obj, use_image, width)
   var m = dict_get_dictionary(obj, GAVL_META_METADATA);
       
   clear_element(p);
-
     
-//  console.log("make_icon " + use_image + " " + dict_get_string(m, GAVL_META_TITLE));
+//  console.log("make_icon " + use_image + " " + JSON.stringify(m));
 //  console.trace();
       
   if(use_image)
@@ -731,7 +730,7 @@ function handle_key_event(e, obj)
     msg += "Ctrl+";
   msg += e.code;
       
-  console.log(msg);
+//  console.log(msg);
       
   for(i = 0; i < obj.shortcuts.length; i++)
     {
@@ -1901,7 +1900,7 @@ function dict_set_array(obj, key, val)
     }
   else
     {
-    console.log("Called dict_set_array with non-array type");
+//    console.log("Called dict_set_array with non-array type");
     return null;
     }
   return obj[key].v;
@@ -1921,7 +1920,7 @@ function dict_set_dictionary(obj, key, val)
     }
   else
     {
-    console.log("Called dict_set_dictionary with non-object type");
+//    console.log("Called dict_set_dictionary with non-object type");
     return null;
     }
   return obj[key].v;
@@ -2215,7 +2214,7 @@ function obj_handle_command(cmd)
             children = dict_get_array(this, GAVL_META_CHILDREN);
 	    }
 
-          console.log("cmd splice " + children);
+          // console.log("cmd splice " + children);
 	      
           if(idx < 0)
 	    idx = children.length;
