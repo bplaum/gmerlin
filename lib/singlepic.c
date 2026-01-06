@@ -62,6 +62,7 @@ static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
   char * ret = NULL;
   const bg_plugin_info_t * info;
   gavl_array_t  arr;
+  const gavl_array_t * ext;
   gavl_array_init(&arr);
   
   num = bg_get_num_plugins(type_mask, flag_mask);
@@ -71,7 +72,8 @@ static char * get_extensions(uint32_t type_mask, uint32_t flag_mask)
   for(i = 0; i < num; i++)
     {
     info = bg_plugin_find_by_index(i, type_mask, flag_mask);
-    gavl_array_splice_array(&arr, -1, 0, info->extensions);
+    ext = bg_plugin_info_get_extensions(info);
+    gavl_array_splice_array(&arr, -1, 0, ext);
     }
   
   ret = bg_string_array_to_string(&arr);
@@ -755,24 +757,26 @@ const bg_plugin_common_t * bg_singlepic_stills_input_get()
 static bg_plugin_info_t * get_input_info(const bg_input_plugin_t * plugin, int still)
   {
   bg_plugin_info_t * ret;
+  gavl_array_t * ext;
   
   if(!bg_get_num_plugins(BG_PLUGIN_IMAGE_READER,
                          BG_PLUGIN_FILE))
     return NULL;
 
   ret = bg_plugin_info_create(&plugin->common);
-  ret->extensions = gavl_value_set_array(&ret->extensions_val);
 
+  ext = bg_plugin_info_set_extensions(ret);
+  
   if(still)  
     {
     char * str;
     str = get_extensions(BG_PLUGIN_IMAGE_READER,
                          BG_PLUGIN_FILE);
-    bg_string_to_string_array(str, ret->extensions);
+    bg_string_to_string_array(str, ext);
     free(str);
     }
   else
-    gavl_string_array_add(ret->extensions, BG_IMGLIST_EXT);
+    gavl_string_array_add(ext, BG_IMGLIST_EXT);
   
   return ret;
   }
