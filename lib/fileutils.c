@@ -38,6 +38,7 @@
 #define LOG_DOMAIN "fileutils"
 
 #include <gmerlin/http.h>
+#include <gmerlin/bggavl.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -271,13 +272,6 @@ int bg_remove_file(const char * file)
   if(S_ISDIR(st.st_mode))
     {
     /* Delete subdirectories */
-#if 0
-    struct
-      {
-      struct dirent d;
-      char b[NAME_MAX]; /* Make sure there is enough memory */
-      } dent;
-#endif
     struct dirent * dent_ptr;
     DIR * d;
 
@@ -465,9 +459,56 @@ int bg_cache_directory_cleanup(const char * cache_dir)
   
   }
 
+gavl_io_t * bg_cache_item_load_metadata(const char * cache_dir,
+                                        const char * md5,
+                                        gavl_dictionary_t * metadata)
+  {
+  int done = 0;
+  
+  gavl_buffer_t buf;
+  
+  gavl_io_t * io = NULL;
+  char * filename = gavl_sprintf("%s/%s", cache_dir, md5);
+  
+  if(access(filename, R_OK))
+    goto fail;
+
+  if(!(io = gavl_io_from_filename(filename, 0)))
+    goto fail;
+  
+  if(!gavl_io_read_buffer(io, &buf))
+    goto fail;
+  
+  if(!bg_dictionary_load_xml_string(metadata, (const char*)buf.buf, -1, GAVL_META_METADATA))
+    goto fail;
+  
+  done = 1;
+
+  fail:
+
+  if(!done)
+    {
+    gavl_io_destroy(io);
+    io = NULL;
+    }
+
+  free(filename);
+  
+  return io;
+  }
+
+int bg_cache_item_load_data(gavl_io_t * io, gavl_buffer_t * buf)
+  {
+  int ret;
+  ret = gavl_io_read_buffer(io, buf);
+  gavl_io_destroy(io);
+  return ret;
+  }
+
+#if 0
 int bg_load_cache_item(const char * cache_dir,
                        const char * md5,
-                       const char ** mimetype,
+                       gavl_dictionary_t * metadata,
                        gavl_buffer_t * buf)
   {
   int ret = 0;
@@ -491,9 +532,12 @@ int bg_load_cache_item(const char * cache_dir,
     
     if(!bg_read_file(g.gl_pathv[i], buf))
       continue;
+
+    if(metadata)
+      {
+      
+      } 
     
-    if(mimetype)
-      *mimetype = bg_url_to_mimetype(g.gl_pathv[i]);
     ret = 1;
     break;
     }
@@ -504,23 +548,100 @@ int bg_load_cache_item(const char * cache_dir,
   return ret;
 
   }
+#endif
 
 void bg_save_cache_item(const char * cache_dir,
                         const char * md5,
-                        const char * mimetype,
+                        const gavl_dictionary_t * metadata,
                         const gavl_buffer_t * buf)
   {
-  const char * ext;
+  char * xml;
+  char * filename;
+  gavl_io_t * io;
+  gavl_buffer_t header;
   
-  if(md5 && mimetype && (ext = bg_mimetype_to_ext(mimetype)))
-    {
-    char * filename;
-    filename = gavl_sprintf("%s/%s.%s", cache_dir, md5, ext);
-    bg_write_file(filename, buf->buf, buf->len);
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving cache item: %s", filename);
-    free(filename);
-    }
+  filename = gavl_sprintf("%s/%s", cache_dir, md5);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving cache item: %s", filename);
+  
+  xml = bg_dictionary_save_xml_string(metadata, "metadata");
+  
+  io = gavl_io_from_filename(filename, 1);
 
+  gavl_buffer_init_static(&header, (uint8_t*)xml, strlen(xml)+1);
+  gavl_io_write_buffer(io, &header);
+  gavl_buffer_free(&header);
   
+  gavl_io_write_buffer(io, buf);
+
+  /* Cleanup */
+  free(filename);
+  free(xml);
+  gavl_io_destroy(io);
   
+  }
+
+static int compare_func(const void * p1, const void * p2, void * data)
+  {
+  const char * s1;
+  const char * s2;
+  
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+
+  if(!(dict1 = gavl_value_get_dictionary(p1)) ||
+     !(dict2 = gavl_value_get_dictionary(p2)) ||
+     !(s1 = gavl_dictionary_get_string(dict1, GAVL_META_URI)) ||
+     !(s2 = gavl_dictionary_get_string(dict2, GAVL_META_URI)))
+    return 0;
+  
+  return strcoll(s1, s2);
+  }
+
+void bg_sort_directory(gavl_array_t * ret)
+  {
+  gavl_array_sort(ret, compare_func, NULL);
+  }
+  
+
+int bg_scan_directory(const char * path,
+                      gavl_array_t * ret)
+  {
+  int i;
+  glob_t g;
+  char * pattern;
+
+  fprintf(stderr, "load_directory_contents %s\n", path);
+    
+  pattern = gavl_sprintf("%s/*", path);
+  pattern = gavl_escape_string(pattern, "[]?");
+  
+  if(glob(pattern, GLOB_NOSORT, NULL /* errfunc */, &g))
+    return 0;
+  
+  for(i = 0; i < g.gl_pathc; i++)
+    {
+    gavl_value_t val;
+    gavl_dictionary_t * dict;
+    struct stat st;
+
+    if(stat(g.gl_pathv[i], &st))
+      continue;
+    
+    gavl_value_init(&val);
+    dict = gavl_value_set_dictionary(&val);
+
+    if(S_ISDIR(st.st_mode))
+      gavl_dictionary_set_string(dict, GAVL_META_CLASS, GAVL_META_CLASS_DIRECTORY);
+    else
+      gavl_dictionary_set_string(dict, GAVL_META_CLASS, GAVL_META_CLASS_LOCATION);
+    
+    gavl_dictionary_set_long(dict, GAVL_META_MTIME, st.st_mtime);
+    gavl_dictionary_set_string(dict, GAVL_META_URI, g.gl_pathv[i]);
+    gavl_array_splice_val_nocopy(ret, -1, 0, &val);
+    }
+  
+  globfree(&g);
+    
+  
+  return 1;
   }

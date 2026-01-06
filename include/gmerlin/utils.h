@@ -474,16 +474,25 @@ size_t bg_file_size(FILE * f);
 
 int bg_cache_directory_cleanup(const char * cache_dir);
 
-int bg_load_cache_item(const char * cache_dir,
+/* int bg_load_cache_item(const char * cache_dir,
                        const char * md5,
-                       const char ** mimetype,
-                       gavl_buffer_t * buf);
+                       gavl_dictionary_t * metadata,
+                       gavl_buffer_t * buf); */
 
 void bg_save_cache_item(const char * cache_dir,
                         const char * md5,
-                        const char * mimetype,
+                        const gavl_dictionary_t * metadata,
                         const gavl_buffer_t * buf);
 
+gavl_io_t * bg_cache_item_load_metadata(const char * cache_dir,
+                                        const char * md5,
+                                        gavl_dictionary_t * metadata);
+int bg_cache_item_load_data(gavl_io_t * io, gavl_buffer_t * buf);
+
+int bg_scan_directory(const char * path,
+                      gavl_array_t * ret);
+
+void bg_sort_directory(gavl_array_t * ret);
 
 
   
