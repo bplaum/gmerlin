@@ -331,6 +331,9 @@ void bg_control_cleanup(bg_control_t * c);
 #define BG_MSG_NS_SSDP              115 // ssdh.h
 #define BG_MSG_NS_MDB_PRIVATE       116 // mdb_private.h
 
+#define BG_MSG_NS_DB_CACHE          117 // mdb.h
+
+
 #define BG_MSG_NS_PRIVATE           200 // Used only within a single .c file
 
 /*
