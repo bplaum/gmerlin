@@ -437,10 +437,11 @@ int bg_media_dirs_set_parameter(void * data, const char * name,
   int ret = 1;
   bg_media_dirs_t * dirs = data;
 
+#if 0  
   fprintf(stderr, "bg_media_dirs_set_parameter: %s\n", name);
   gavl_value_dump(val, 2);
   fprintf(stderr, "\n");
-  
+#endif
   
   if(!name)
     {
