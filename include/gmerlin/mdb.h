@@ -34,6 +34,7 @@
 
 /* IDs of the root elements */      
 
+#define BG_MDB_ID_ROOT              "/"
 #define BG_MDB_ID_FAVORITES         "/favorites"
 #define BG_MDB_ID_MUSICALBUMS       "/albums"
 #define BG_MDB_ID_SONGS             "/songs"
@@ -77,16 +78,6 @@
  */
 
 #define BG_CMD_DB_SORT                    4
-
-
-/*
- *  Make a local copy of an item (currently only supported for
- *  podcast episodes)
- */
-
-
-
-#define BG_CMD_DB_SAVE_LOCAL             6
 
 
 /*
@@ -270,6 +261,80 @@ int bg_mdb_get_group_size(gavl_array_t * arr, const char * id);
 
 int bg_mdb_adjust_num(int start, int * num, int total);
 
+/*
+ *  Client side cache. Also acts as a intermediary between the GUI and the
+ *  backends
+ */
+
+/* Messages for
+   BG_MSG_NS_DB_CACHE
+*/
+
+/* GAVL_MSG_CONTEXT_ID */
+#define BG_CMD_DB_CACHE_CONTAINER_EXPAND   1
+
+/* GAVL_MSG_CONTEXT_ID */
+#define BG_CMD_DB_CACHE_CONTAINER_COLLAPSE 2
+
+/* GAVL_MSG_CONTEXT_ID */
+#define BG_CMD_DB_CACHE_CONTAINER_OPEN     3
+
+/* GAVL_MSG_CONTEXT_ID */
+#define BG_CMD_DB_CACHE_CONTAINER_CLOSE    4
+
+/* GAVL_MSG_CONTEXT_ID: parent */
+/* arg0: IDs to delete (array) */
+#define BG_CMD_DB_CACHE_DELETE_ITEMS       5
+
+/* GAVL_MSG_CONTEXT_ID */
+#define BG_CMD_DB_CACHE_DELETE_CONTAINERS  6
+
+/* Cache -> GUI */
+
+/* GAVL_MSG_CONTEXT_ID: Parent
+   arg0: sibling_before (string)
+   arg1: array
+*/
+
+#define BG_MSG_DB_CACHE_ADD_LIST_ITEMS     100
+#define BG_MSG_DB_CACHE_ADD_TREE_ITEMS     101
+
+/* GAVL_MSG_CONTEXT_ID: ID
+   arg0: dictionary
+*/
+
+#define BG_MSG_DB_CACHE_UPDATE_LIST_ITEM   102
+#define BG_MSG_DB_CACHE_UPDATE_TREE_ITEM   103
+
+/* GAVL_MSG_CONTEXT_ID: Parent
+   arg0: array of IDs
+*/
+
+#define BG_MSG_DB_CACHE_DELETE_LIST_ITEMS  104
+#define BG_MSG_DB_CACHE_DELETE_TREE_ITEMS  105
+
+/* Show info about the container */
+#define BG_MSG_DB_CACHE_CONTAINER_INFO     106
+
+
+typedef struct bg_mdb_cache_s bg_mdb_cache_t;
+
+bg_mdb_cache_t * bg_mdb_cache_create(bg_controllable_t * mdb_ctrl, 
+                                     bg_controllable_t * player_ctrl);
+
+const gavl_dictionary_t * bg_mdb_cache_get_object(bg_mdb_cache_t * cache,
+                                                  const char * id);
+
+gavl_dictionary_t * bg_mdb_cache_get_container(bg_mdb_cache_t * cache,
+                                               const char * parent_id, gavl_array_t * ids);
+
+bg_controllable_t * bg_mdb_cache_get_controllable(bg_mdb_cache_t * cache);
+
+void bg_mdb_cache_set_mdb(bg_mdb_cache_t * cache, bg_controllable_t * mdb_ctrl);
+void bg_mdb_cache_set_player(bg_mdb_cache_t * cache, bg_controllable_t * player_ctrl);
+
+void bg_mdb_cache_destroy(bg_mdb_cache_t * cache);
+void bg_mdb_cache_ping(bg_mdb_cache_t * cache);
 
 
 #endif // BG_MDB_H_INCLUDED
