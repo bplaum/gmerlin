@@ -676,7 +676,6 @@ int bg_gtk_load_track_image_async(bg_gtk_pixbuf_from_uri_callback cb,
   return 1;
   }
 
-
 void bg_gtk_table_attach(GtkWidget *w, GtkWidget * child,
                          int left, int right, int top, int bottom, int hexpand, int vexpand)
   {
