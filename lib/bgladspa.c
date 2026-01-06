@@ -269,8 +269,10 @@ static bg_plugin_info_t * get_info(const LADSPA_Descriptor * desc)
   ret->type        = BG_PLUGIN_FILTER_AUDIO;
   ret->api         = BG_PLUGIN_API_LADSPA;
   ret->flags       = BG_PLUGIN_FILTER_1;
-  ret->description = gavl_sprintf(TR("ladspa plugin\nAuthor:\t%s\nCopyright:\t%s"),
-                                desc->Maker, desc->Copyright);
+
+  bg_plugin_info_set_description_nocopy(ret, 
+                                        gavl_sprintf(TR("ladspa plugin\nAuthor:\t%s\nCopyright:\t%s"),
+                                                     desc->Maker, desc->Copyright));
   
   /* Check for ports */
   count_ports(desc, &in_ports, &out_ports, &in_control_ports,

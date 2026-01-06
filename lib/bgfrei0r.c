@@ -219,9 +219,11 @@ bg_frei0r_get_info(void * dll_handle, const char * filename)
     return ret;
     }
 
-  ret->description = gavl_sprintf(TRS("Author: %s\n%s"),
-                                plugin_info.author, plugin_info.explanation);
-
+  bg_plugin_info_set_description_nocopy(ret, 
+                                        gavl_sprintf(TRS("Author: %s\n%s"),
+                                                     plugin_info.author,
+                                                     plugin_info.explanation));
+  
   ret->parameters = create_parameters(dll_handle, &plugin_info);
   
   return ret;
