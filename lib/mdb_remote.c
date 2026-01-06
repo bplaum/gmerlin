@@ -771,7 +771,6 @@ static int handle_local_msg(void * priv, gavl_msg_t * msg)
         case BG_FUNC_DB_BROWSE_CHILDREN:
         case BG_CMD_DB_SPLICE_CHILDREN:
         case BG_CMD_DB_SORT:
-        case BG_CMD_DB_SAVE_LOCAL:
           /* Forward to remote server */
           {
           int server_idx = -1;
