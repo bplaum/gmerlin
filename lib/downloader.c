@@ -46,6 +46,7 @@ typedef struct
 typedef struct
   {
   char * uri;
+
   gavl_io_t * io;
   gavl_buffer_t buf;
 
@@ -53,6 +54,7 @@ typedef struct
 
   int state;
   
+  gavl_io_t * cache_io;
   } download_t;
 
 struct bg_downloader_s
@@ -162,27 +164,29 @@ static void init_download(bg_downloader_t * d, int i, const char * uri)
   d->num_downloads++;
   }
 
+#if 0
 /* Disk cache */
 static int load_cache_item(bg_downloader_t * d,
                            const char * uri,
-                           const char ** mimetype,
+                           gavl_dictionary_t * metadata,
                            gavl_buffer_t * buf)
   {
   char md5[33];
   bg_get_filename_hash(uri, md5);
-  return bg_load_cache_item(d->cache_dir, md5, mimetype, buf);
+  return bg_load_cache_item(d->cache_dir, md5, metadata, buf);
   }
 
 static int save_cache_item(bg_downloader_t * d,
                            const char * uri,
-                           const char * mimetype,
+                           const gavl_dictionary_t * metadata,
                            const gavl_buffer_t * buf)
   {
   char md5[33];
   bg_get_filename_hash(uri, md5);
-  bg_save_cache_item(d->cache_dir, md5, mimetype, buf);
+  bg_save_cache_item(d->cache_dir, md5, metadata, buf);
   return 1;
   }
+#endif
 
 void bg_downloader_update(bg_downloader_t * d)
   {
@@ -203,7 +207,7 @@ void bg_downloader_update(bg_downloader_t * d)
       /* Check newly added "downloads" */
       if(!(d->downloads[i].state & STATE_STARTED))
         {
-        const char * mimetype = NULL;
+        //        const char * mimetype = NULL;
         
         /* Read local file */
         if(d->downloads[i].uri[0] == '/')
@@ -229,14 +233,11 @@ void bg_downloader_update(bg_downloader_t * d)
           
           gavl_dictionary_free(&m);
           }
-        /* Disk cache */
-        else if(load_cache_item(d, d->downloads[i].uri, &mimetype, &d->downloads[i].buf))
-          {
-          gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got %s from disk cache", d->downloads[i].uri);
-          finish_success(d, mimetype, i);
-          }
         else
           {
+          /* TODO: Load from http cache */
+
+
           /* Download */
           if(!d->downloads[i].io)
             {
@@ -281,7 +282,7 @@ void bg_downloader_update(bg_downloader_t * d)
         if(mimetype && (pos = strchr(mimetype, ';')))
           *pos = '\0';
 
-        save_cache_item(d, d->downloads[i].uri, mimetype, &d->downloads[i].buf);
+        //   save_cache_item(d, d->downloads[i].uri, mimetype, &d->downloads[i].buf);
         gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Finished download %s", d->downloads[i].uri);
         finish_success(d, mimetype, i);
         if(mimetype)
