@@ -51,7 +51,7 @@
 #include "mdb_private.h"
 
 /* Make the display of the track info use the browse_object function */
-#define TEST_BROWSE_OBJECT
+// #define TEST_BROWSE_OBJECT
 
 /* Forward declarations */
 
@@ -66,7 +66,7 @@ static void create_directory(bg_gtk_mdb_tree_t * tree);
 static void create_stream_source(bg_gtk_mdb_tree_t * tree);
 
 
-static void insert_selection_data(album_t * a, GtkSelectionData *data,
+static void insert_selection_data(list_t * list, GtkSelectionData *data,
                                   int idx);
 
 
@@ -171,21 +171,21 @@ int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
 
 void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPixbuf * pb)
   {
-  album_t * a;
+  list_t * list;
   GtkTreeIter iter;
   char * parent_id = NULL;
   GtkTreeModel * model;
 
   if(!id || !(parent_id = bg_mdb_get_parent_id(id)))
     goto fail;
-    
-  if(!(a = bg_gtk_mdb_album_is_open(tree, parent_id)))
+
+  if(!(list = bg_gtk_mdb_tree_find_list(tree, parent_id)))
     goto fail;
 
-  if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(a->list->listview), &iter, id))
+  if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(list->listview), &iter, id))
     goto fail;
 
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(a->list->listview));
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(list->listview));
 
   if(pb)
     {
@@ -210,24 +210,6 @@ void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPi
   }
 
 
-/* */
-
-static int is_item(const gavl_value_t * val)
-  {
-  const gavl_dictionary_t * dict;
-  const gavl_dictionary_t * m;
-  const char * klass;
-
-  if((dict = gavl_value_get_dictionary(val)) &&
-     (m = gavl_track_get_metadata(dict)) &&
-     (klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
-     gavl_string_starts_with(klass, "item"))
-    return 1;
-  
-  return 0;
-  }
-
-
 /* List Functions */
 
 /* Callback functions for the clipboard */
@@ -242,7 +224,7 @@ static void list_clipboard_get_func(GtkClipboard *clipboard,
   
   str = bg_tracks_to_string(tree->list_clipboard, info, 1);
 
-  fprintf(stderr, "List copy: %s\n", str);
+  //  fprintf(stderr, "List copy: %s\n", str);
   
   if(str)
     {
@@ -272,199 +254,76 @@ static void list_clipboard_clear_func(GtkClipboard *clipboard,
     }
   }
 
-gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(album_t * album)
+void bg_gtk_mdb_list_get_selected_ids(list_t * list,
+                                             gavl_array_t * selected)
   {
-  int              i;
-  int              num;
   GtkTreeIter      iter;
   GtkTreeModel     * model;
   GtkTreeSelection * selection;
-  gavl_dictionary_t * ret = gavl_dictionary_create();
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(list->listview));
+  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(list->listview));
   
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(album->list->listview));
-  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(album->list->listview));
-
-  if(!album->a)
-    return ret;
-
-  gtk_tree_model_get_iter_first(model, &iter);
-
-  num = gavl_get_num_tracks(album->a);
-  
-  for(i = 0; i < num; i++)
+  if(gtk_tree_model_get_iter_first(model, &iter))
     {
-    const char * klass;
-    const gavl_dictionary_t * src = gavl_get_track(album->a, i);
-
-    if((klass = gavl_track_get_media_class(src)) &&
-       (gavl_string_starts_with(klass, GAVL_META_CLASS_CONTAINER)))
-      continue;
-    
-    if(gtk_tree_selection_iter_is_selected(selection, &iter))
+    while(1)
       {
-      gavl_value_t val;
-      gavl_dictionary_t * track;
-      gavl_value_init(&val);
-      track = gavl_value_set_dictionary(&val);
-      gavl_dictionary_copy(track, src);
-      gavl_track_clear_gui_state(track);
-      gavl_track_splice_children_nocopy(ret, -1, 0, &val);
-      }
-    if(!gtk_tree_model_iter_next(model, &iter))
-      break;
-    }
-  return ret;
-  }
-
-static void delete_items(bg_msg_sink_t * sink, const char * parent, int idx, int del)
-  {
-  gavl_msg_t * msg = bg_msg_sink_get(sink);
-        
-  gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-        
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, parent);
-  
-  gavl_msg_set_arg_int(msg, 0, idx);
-  gavl_msg_set_arg_int(msg, 1, del);
-  bg_msg_sink_put(sink);
-  }
-
-/* Internal to GUI index */
-static int list_transform_idx(const gavl_dictionary_t * dict, int idx)
-  {
-  int i;
-  const gavl_dictionary_t * d = NULL;
-  const char * klass = NULL;
-  int ret = 0;
-
-  if(!(d = gavl_get_track(dict, idx)) ||
-     !(d = gavl_track_get_metadata(d)) ||
-     !(klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) ||
-     !gavl_string_starts_with(klass, "item"))
-    {
-    return -1;
-    }
-  for(i = 0; i < idx; i++)
-    {
-    if((d = gavl_get_track(dict, i)) &&
-       (d = gavl_track_get_metadata(d)) &&
-       (klass = gavl_dictionary_get_string(d, GAVL_META_CLASS)) &&
-       gavl_string_starts_with(klass, "item"))
-      ret++;
-    }
-  return ret;
-  }
-
-static void list_delete_selected(album_t * album)
-  {
-  int              i;
-  GtkTreeIter      iter;
-  GtkTreeModel     * model;
-  GtkTreeSelection * selection;
-  int idx;
-  int del;
-  int j;
-  int num;
-  
-  const char * id;
-
-  bg_msg_sink_t * sink = album->t->ctrl.cmd_sink;
-  
-  if(!album->a || !bg_mdb_is_editable(album->a))
-    return;
-
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(album->list->listview));
-  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(album->list->listview));
-
-  id = gavl_track_get_id(album->a);
-
-  if(!strcmp(id, BG_PLAYQUEUE_ID))
-    sink = album->t->player_ctrl.cmd_sink;
-  
-  gtk_tree_model_get_iter_first(model, &iter);
-  
-  del = 0;
-  idx = 0;
-
-  // album->a will be updated just after this function call
-  num = gavl_get_num_tracks(album->a);
-
-  //   num = gtk_tree_model_iter_n_children(model, NULL);
-  
-  for(i = 0; i < num; i++)
-    {
-    if(((j = list_transform_idx(album->a, i)) >= 0) &&
-       gtk_tree_model_iter_nth_child(model, &iter, NULL, j) &&
-       gtk_tree_selection_iter_is_selected(selection, &iter))
-      {
-      del++;
-      }
-    else 
-      {
-      if(del)
+      if(gtk_tree_selection_iter_is_selected(selection, &iter))
         {
-        delete_items(sink, id, idx, del);
-        del = 0;
+        gchar * id = NULL;
+        gtk_tree_model_get(model, &iter, LIST_COLUMN_ID, &id, -1);
+
+        if(id)
+          gavl_string_array_add(selected, id);
         }
-      idx++;
+      
+      if(!gtk_tree_model_iter_next(model, &iter))
+        break;
+      
       }
-    
     }
-
-  if(del)
-    delete_items(sink, id, idx, del);
   }
 
-static void list_download_selected(album_t * album)
+gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(list_t * list)
   {
-  int              i;
-  GtkTreeIter      iter;
-  GtkTreeModel     * model;
-  GtkTreeSelection * selection;
-  int j;
-  int num;
-  gavl_array_t arr;
-  gavl_msg_t * cmd;
-  gavl_array_init(&arr);
+  gavl_array_t selected;
+  gavl_dictionary_t * ret;
   
-  if(!album->a)
+  gavl_array_init(&selected);
+  bg_gtk_mdb_list_get_selected_ids(list, &selected);
+  ret = bg_mdb_cache_get_container(list->tree->cache, list->id, &selected);
+  gavl_array_free(&selected);
+  return ret;
+  }
+
+static void list_delete_selected(list_t * list)
+  {
+  gavl_array_t selected;
+
+  bg_msg_sink_t * sink = list->tree->cache_ctrl.cmd_sink;
+  
+  if(!(list->flags & ALBUM_EDITABLE))
     return;
-  
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(album->list->listview));
-  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(album->list->listview));
 
-  
-  gtk_tree_model_get_iter_first(model, &iter);
-  
-  // album->a will be updated just after this function call
-  num = gavl_get_num_tracks(album->a);
+  gavl_array_init(&selected);
+  bg_gtk_mdb_list_get_selected_ids(list, &selected);
 
-  //   num = gtk_tree_model_iter_n_children(model, NULL);
-  
-  for(i = 0; i < num; i++)
+  if(selected.num_entries > 0)
     {
-    if(((j = list_transform_idx(album->a, i)) >= 0) &&
-       gtk_tree_model_iter_nth_child(model, &iter, NULL, j) &&
-       gtk_tree_selection_iter_is_selected(selection, &iter))
-      {
-      cmd = bg_msg_sink_get(album->t->ctrl.cmd_sink);
-      gavl_msg_set_id_ns(cmd, BG_CMD_DB_SAVE_LOCAL, BG_MSG_NS_DB);
-      gavl_dictionary_set_string_nocopy(&cmd->header, GAVL_MSG_CONTEXT_ID,
-                                        iter_to_id_list(GTK_TREE_VIEW(album->list->listview), &iter));
+    gavl_msg_t * cmd;
+    cmd = bg_msg_sink_get(sink);
 
-      //      fprintf(stderr, "Download selected 1\n");
-      //      gavl_msg_dump(cmd, 2);
-      bg_msg_sink_put(album->t->ctrl.cmd_sink);
-
-      }
+    gavl_msg_set_id_ns(cmd, BG_CMD_DB_CACHE_DELETE_ITEMS, BG_MSG_NS_DB_CACHE);
+    gavl_dictionary_set_string(&cmd->header, GAVL_MSG_CONTEXT_ID, list->id);
+    gavl_msg_set_arg_array_nocopy(cmd, 0, &selected);
+    bg_msg_sink_put(sink);
     }
   
-  gavl_array_free(&arr);
-  
+  gavl_array_free(&selected);
   }
 
 
-static void list_copy(album_t * a)
+
+static void list_copy(list_t * list)
   {
   GtkClipboard *clipboard;
   
@@ -478,17 +337,17 @@ static void list_copy(album_t * a)
                               num_list_src_entries,
                               list_clipboard_get_func,
                               list_clipboard_clear_func,
-                              (gpointer)a->t);
+                              (gpointer)list->tree);
 
-  a->t->list_clipboard = bg_gtk_mdb_list_extract_selected(a);
+  list->tree->list_clipboard = bg_gtk_mdb_list_extract_selected(list);
   }
 
-static void list_paste(album_t * a)
+static void list_paste(list_t * list)
   {
   GtkClipboard *clipboard;
   GdkAtom target;
   
-  if(!bg_mdb_is_editable(a->a))
+  if(!(list->flags & ALBUM_EDITABLE))
     {
     //  fprintf(stderr, "Don't paste in read only album\n");
     return;
@@ -500,28 +359,25 @@ static void list_paste(album_t * a)
     
   gtk_clipboard_request_contents(clipboard,
                                  target,
-                                 clipboard_received_func, a);
+                                 clipboard_received_func, list);
   
   }
 
-static void list_favorites(album_t * a)
+static void list_favorites(list_t * list)
   {
-  const char * id;
-
   gavl_dictionary_t * sel;
 
-  if(!(id = gavl_track_get_id(a->a)) ||
-     !strcmp(id, BG_MDB_ID_FAVORITES))
+  if(!strcmp(list->id, BG_MDB_ID_FAVORITES))
     {
     return;
     }
 
-  sel = bg_gtk_mdb_list_extract_selected(a);
+  sel = bg_gtk_mdb_list_extract_selected(list);
       
   if(gavl_track_get_num_children(sel) > 0)
     {
     /* Copy to favorites */
-    gavl_msg_t * msg = bg_msg_sink_get(a->t->ctrl.cmd_sink);
+    gavl_msg_t * msg = bg_msg_sink_get(list->tree->ctrl.cmd_sink);
 
     gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
         
@@ -531,9 +387,9 @@ static void list_favorites(album_t * a)
     gavl_msg_set_arg_int(msg, 0, -1);
     gavl_msg_set_arg_int(msg, 1, 0);
     gavl_msg_set_arg(msg, 2, gavl_dictionary_get(sel, GAVL_META_CHILDREN));
-    bg_msg_sink_put(a->t->ctrl.cmd_sink);
+    bg_msg_sink_put(list->tree->ctrl.cmd_sink);
     }
-      
+  
   gavl_dictionary_destroy(sel);
   }
 
@@ -558,15 +414,22 @@ static void set_entry_list(list_t * l,
     {
     gtk_list_store_set(GTK_LIST_STORE(model), iter,
                        LIST_COLUMN_ICON, bg_get_type_icon(klass),
-                       LIST_COLUMN_HAS_ICON, FALSE, -1);
+                       LIST_COLUMN_HAS_ICON, TRUE, -1);
     }
 
+  gtk_list_store_set(GTK_LIST_STORE(model), iter,
+                     LIST_COLUMN_HAS_PIXBUF, FALSE, -1);
+  
+  if((var = gavl_dictionary_get_string(m, GAVL_META_HASH)))
+    gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_HASH, var, -1);
+    
+    
   markup = bg_gtk_mdb_tree_create_markup(dict, l->klass);
   
   gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_LABEL, markup, -1);
   free(markup);
   
-  gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_COLOR, "#000000", -1);
+  //  gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_COLOR, "#000000", -1);
 
   if((var = gavl_dictionary_get_string(m, GAVL_META_SEARCH_TITLE)) ||
      (var = gavl_dictionary_get_string(m, GAVL_META_TITLE)) ||
@@ -581,13 +444,9 @@ static void set_entry_list(list_t * l,
       strcmp(l->klass, GAVL_META_CLASS_TV_SEASON) &&
       strcmp(l->klass, GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD)))
     {
-    bg_gtk_mdb_array_set_flag_str(&l->a->t->list_icons_to_load, id, 1);
+    bg_gtk_mdb_load_list_icon(l, dict);
     }
-  else
-    {
-    gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_HAS_PIXBUF, FALSE, -1);
-    gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_HAS_ICON, TRUE, -1);
-    }
+  
   if(gavl_track_get_gui_state(dict, GAVL_META_GUI_CURRENT))
     {
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_CURRENT, BG_ICON_PLAY, -1);
@@ -595,34 +454,11 @@ static void set_entry_list(list_t * l,
   else
     gtk_list_store_set(GTK_LIST_STORE(model), iter, LIST_COLUMN_CURRENT, "", -1);
 
+  
   //  if(!l->idle_tag)
   //    l->idle_tag = g_idle_add(idle_callback, l);
   }
 
-void bg_gtk_mdb_album_update_track(album_t * a, const char * id,
-                                   const gavl_dictionary_t * new_dict)
-  {
-  GtkTreeIter iter;
-  
-  //          fprintf(stderr, "Object changed %s\n", ctx_id);
-  //          gavl_dictionary_dump(&new_dict, 2);
-  //          fprintf(stderr, "\n");
-
-  if(!a->list)
-    return;
-  
-  if(bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(a->list->listview), &iter, id))
-    {
-    gavl_dictionary_t * dict;
-    
-    if(a->a && (dict = gavl_get_track_by_id_nc(a->a, id)))
-      {
-      if(new_dict)
-        bg_mdb_object_changed(dict, new_dict); 
-      set_entry_list(a->list, dict, &iter);
-      }
-    }
-  }
 
 
 void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
@@ -686,8 +522,10 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
   free(markup);
 
   gtk_drag_dest_unset(l->listview);
+
+  l->flags |= bg_gtk_mdb_get_edit_flags(dict);
   
-  if(bg_mdb_is_editable(dict))
+  if(l->flags & ALBUM_EDITABLE)
     {
     gtk_drag_dest_set(l->listview,
                       0,
@@ -698,20 +536,117 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
   
   }
 
+void
+bg_gtk_mdb_list_add_entries(list_t * l, const gavl_array_t * entries, const char * sibling_before)
+  {
+  GtkTreeIter it_new;
+  GtkTreeIter it_before;
+  int i;
+  GtkTreeModel * model;
+  if(!entries || !entries->num_entries)
+    return;
+
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(l->listview));
+  
+  if(sibling_before)
+    {
+    if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(l->listview), &it_before,
+                                   sibling_before))
+      return;
+
+    gtk_list_store_insert_after(GTK_LIST_STORE(model),
+                                &it_new, &it_before);
+    }
+  else
+    {
+    gtk_list_store_insert_after(GTK_LIST_STORE(model),
+                                &it_new, NULL);
+    }
+
+  for(i = 0; i < entries->num_entries; i++)
+    {
+    /* Set entry */
+    set_entry_list(l, gavl_value_get_dictionary(&entries->entries[i]),
+                   &it_new);
+    
+    if(i < entries->num_entries-1)
+      {
+      it_before = it_new;
+      gtk_list_store_insert_after(GTK_LIST_STORE(model),
+                                  &it_new, &it_before);
+      }
+    }
+  }
+
+void
+bg_gtk_mdb_list_delete_entries(list_t * l, const gavl_array_t * ids)
+  {
+  int i;
+  GtkTreeIter it;
+  GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(l->listview));
+  
+  for(i = 0; i < ids->num_entries; i++)
+    {
+    if(bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(l->listview), &it, gavl_string_array_get(ids, i)))
+      {
+      gtk_list_store_remove(GTK_LIST_STORE(model), &it);
+      }
+    }
+  }
+
+void
+bg_gtk_mdb_list_update_entry(list_t * l, const char * id, const gavl_dictionary_t * dict)
+  {
+  GtkTreeIter it;
+  if(!bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(l->listview), &it, id))
+    return;
+  set_entry_list(l, dict, &it);
+  }
+
 void bg_gtk_mdb_list_destroy(list_t * l)
   {
+  int idx = 0;
+  GtkWidget * child;
+  gavl_msg_t * msg;
 
+  msg = bg_msg_sink_get(l->tree->cache_ctrl.cmd_sink);
+
+  gavl_msg_set_id_ns(msg, BG_CMD_DB_CACHE_CONTAINER_CLOSE, BG_MSG_NS_DB_CACHE);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, l->id);
+  
+  bg_msg_sink_put(l->tree->cache_ctrl.cmd_sink);
+  
+  l->tree->lists = g_list_remove(l->tree->lists, l);
+
+  /* Remove from notebook */
+  while((child = gtk_notebook_get_nth_page(GTK_NOTEBOOK(l->tree->notebook),
+                                           idx)))
+    {
+    if(child == l->widget)
+      {
+      gtk_notebook_remove_page(GTK_NOTEBOOK(l->tree->notebook), idx);
+      break;
+      }
+    else
+      idx++;
+    }
+
+  if(!child) // Not removed from notebook
+    gtk_widget_destroy(l->widget);
+  
   if(l->tab_icon)
-    g_object_ref(G_OBJECT(l->tab_icon));
+    g_object_unref(G_OBJECT(l->tab_icon));
 
   if(l->tab_image)
-    g_object_ref(G_OBJECT(l->tab_image));
+    g_object_unref(G_OBJECT(l->tab_image));
 
   if(l->window)
     gtk_widget_destroy(l->window);
 
   if(l->last_path)
     gtk_tree_path_free(l->last_path);
+
+  free(l->id);
   
   /* widgets are destroyed when they are removed from the notebook */
   //  else if(l->widget)
@@ -722,32 +657,12 @@ void bg_gtk_mdb_list_destroy(list_t * l)
 
 static void close_button_callback(GtkWidget * wid, gpointer data)
   {
-  int i;
-  bg_gtk_mdb_tree_t * tree = data;
-  
-  for(i = 0; i < tree->tab_albums.num_albums; i++)
-    {
-    if(tree->tab_albums.albums[i]->list->close_button == wid)
-      {
-      bg_gtk_mdb_tree_close_tab_album(tree, i);
-      return;
-      }
-    }
-
-  for(i = 0; i < tree->win_albums.num_albums; i++)
-    {
-    if(tree->win_albums.albums[i]->list->close_button == wid)
-      {
-      bg_gtk_mdb_tree_close_window_album(tree, i);
-      return;
-      }
-    }
-  fprintf(stderr, "Close button callback: Got no album to close\n");
-
+  list_t * list = data;
+  bg_gtk_mdb_list_destroy(list);
   }
 
 
-static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
+static GtkWidget * make_close_button(list_t * list)
   {
   GtkWidget * ret;
   GtkWidget * image;
@@ -766,7 +681,7 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
   gtk_widget_set_focus_on_click(ret, FALSE);
   
   g_signal_connect(G_OBJECT(ret), "clicked",
-                   G_CALLBACK(close_button_callback), tree);
+                   G_CALLBACK(close_button_callback), list);
   
   gtk_widget_show(ret);
   return ret;
@@ -774,12 +689,14 @@ static GtkWidget * make_close_button(bg_gtk_mdb_tree_t * tree)
 
 void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
   {
+  GtkTreeIter it;
+  int edit_flags = 0;
+  
   GtkWidget * menu = t->menu.menu;
   
   /* Show/hide items */
   gtk_widget_hide(t->menu.track_menu.paste_item);
   gtk_widget_hide(t->menu.track_menu.delete_item);
-  gtk_widget_hide(t->menu.track_menu.download_item);
 
   gtk_widget_hide(t->menu.album_menu.sort_item);
   gtk_widget_hide(t->menu.album_menu.load_files_item);
@@ -790,8 +707,7 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
 
   gtk_widget_hide(t->menu.album_menu.delete_item);
   
-  
-  if(t->menu_ctx.tree)
+  if(!t->menu_ctx.list)
     {
     gtk_widget_hide(t->menu.track_item);
 
@@ -812,73 +728,89 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
           t->menu_ctx.album,
           t->menu_ctx.parent /* bg_mdb_is_editable(t->menu_ctx.parent) */ );
 #endif
-  
-  if(t->menu_ctx.album)
+
+  if(!t->menu_ctx.list)
     {
+    GtkTreeIter parent_it;
+    char * parent_id = bg_mdb_get_parent_id(t->menu_ctx.id);
+
+    if(bg_gtk_mdb_tree_id_to_iter(GTK_TREE_VIEW(t->treeview), parent_id, &parent_it))
+      {
+      int flags;
+      GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(t->treeview));
+      
+      gtk_tree_model_get(model, &parent_it, TREE_COLUMN_FLAGS, &flags, -1);
+      if(flags & ALBUM_EDITABLE)
+        gtk_widget_show(t->menu.album_menu.delete_item);
+      }
+      
+    free(parent_id);
+    }
+  
+  if(t->menu_ctx.list)
+    {
+    edit_flags = t->menu_ctx.list->flags;
+    }
+  else if(bg_gtk_mdb_tree_id_to_iter(GTK_TREE_VIEW(t->treeview), t->menu_ctx.id, &it))
+    {
+    GtkTreeModel * model = gtk_tree_view_get_model(GTK_TREE_VIEW(t->treeview));
+    gtk_tree_model_get(model, &it, TREE_COLUMN_FLAGS, &edit_flags, -1);
+    }
+  
+  if(t->menu_ctx.list)
+    {
+    if(edit_flags & ALBUM_EDITABLE)
+      {
+      gtk_widget_show(t->menu.track_menu.paste_item);
+      gtk_widget_show(t->menu.track_menu.delete_item);
+      gtk_widget_show(t->menu.album_menu.sort_item);
+
+      if(edit_flags & ALBUM_CAN_ADD_URL)
+        gtk_widget_show(t->menu.album_menu.load_url_item);
+      if(edit_flags & ALBUM_CAN_ADD_SONG)
+        gtk_widget_show(t->menu.album_menu.load_files_item);
+      }
+
+    if(!strcmp(t->menu_ctx.list->id, BG_MDB_ID_FAVORITES) ||
+       (t->menu_ctx.num_selected < 1))
+      gtk_widget_hide(t->menu.track_menu.favorites_item);
+    else
+      gtk_widget_show(t->menu.track_menu.favorites_item);
+        
+    }
+  else
+    {
+    if(edit_flags & ALBUM_CAN_ADD_STREAM_SOURCE)
+      gtk_widget_show(t->menu.album_menu.new_stream_source_item);
+    if(edit_flags & ALBUM_CAN_ADD_DIRECTORY)
+      gtk_widget_show(t->menu.album_menu.add_directory_item);
+    if(edit_flags & ALBUM_CAN_ADD_CONTAINER)
+      gtk_widget_show(t->menu.album_menu.new_container_item);
+
+    if(edit_flags & ALBUM_EDITABLE)
+      gtk_widget_show(t->menu.album_menu.sort_item);
+    }
+#if 0  
     const char * klass;
     const gavl_dictionary_t * m;
     
-    if(t->menu_ctx.tree && t->menu_ctx.parent)
-      {
-      if(bg_mdb_is_editable(t->menu_ctx.parent))
-        gtk_widget_show(t->menu.album_menu.delete_item);
-      }
-
     m = gavl_track_get_metadata(t->menu_ctx.album);
     klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
+#endif
     
-    if(bg_mdb_is_editable(t->menu_ctx.album))
-      {
-      gtk_widget_show(t->menu.track_menu.paste_item);
- 
-      if(!t->menu_ctx.tree)
-        gtk_widget_show(t->menu.track_menu.delete_item);
-      else if(t->menu_ctx.parent && bg_mdb_is_editable(t->menu_ctx.parent))
-        gtk_widget_show(t->menu.album_menu.delete_item);
-      
-      gtk_widget_show(t->menu.album_menu.sort_item);
-
-      if(!strcmp(klass, GAVL_META_CLASS_ROOT_STREAMS))
-        gtk_widget_show(t->menu.album_menu.new_stream_source_item);
-      else
-        {
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_SONG))
-          gtk_widget_show(t->menu.album_menu.load_files_item);
-
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_DIRECTORY))
-          gtk_widget_show(t->menu.album_menu.add_directory_item);
-        
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_CONTAINER))
-          gtk_widget_show(t->menu.album_menu.new_container_item);
-      
-        if(bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_AUDIO_BROADCAST) ||
-           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_VIDEO_BROADCAST) ||
-           bg_mdb_can_add(t->menu_ctx.album, GAVL_META_CLASS_LOCATION))
-          gtk_widget_show(t->menu.album_menu.load_url_item);
-        }
-      }
-
-    if(!t->menu_ctx.tree && klass && !strcmp(klass, GAVL_META_CLASS_PODCAST))
-      gtk_widget_show(t->menu.track_menu.download_item);
-    
-    if(!strcmp(gavl_track_get_id(t->menu_ctx.album), BG_PLAYQUEUE_ID))
+    if(!t->menu_ctx.list || !strcmp(t->menu_ctx.list->id, BG_PLAYQUEUE_ID))
       {
       gtk_widget_hide(t->menu.album_menu.add_item);
       gtk_widget_hide(t->menu.album_menu.play_item);
       gtk_widget_hide(t->menu.track_menu.add_item);
       }
-    else if(!t->menu_ctx.tree)
+    else if(t->menu_ctx.list)
       {
       gtk_widget_show(t->menu.album_menu.add_item);
       gtk_widget_show(t->menu.album_menu.play_item);
       gtk_widget_show(t->menu.track_menu.add_item);
       }
 
-    if(!strcmp(gavl_track_get_id(t->menu_ctx.album), BG_MDB_ID_FAVORITES) ||
-       (t->menu_ctx.num_selected < 1))
-      gtk_widget_hide(t->menu.track_menu.favorites_item);
-    else
-      gtk_widget_show(t->menu.track_menu.favorites_item);
     
     if(!t->menu_ctx.num_selected)
       {
@@ -893,9 +825,6 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
       gtk_widget_hide(t->menu.track_menu.info_item);
       }
     
-    }
-  
-  
   gtk_menu_popup_at_pointer(GTK_MENU(menu), trigger_event);
   }
 
@@ -981,23 +910,23 @@ static void album_add(bg_gtk_mdb_tree_t * t, gavl_dictionary_t * album, int repl
     do_play(t, play_track);
   }
 
-static void selected_add(bg_gtk_mdb_tree_t * t, album_t * a, int replace, int play)
+static void selected_add(list_t * list, int replace, int play)
   {
   gavl_dictionary_t * album;
 
-  if(!t->player_ctrl.cmd_sink)
+  if(!list->tree->player_ctrl.cmd_sink)
     return;
   
-  album = bg_gtk_mdb_list_extract_selected(a);
-  album_add(t, album, replace, play);
+  album = bg_gtk_mdb_list_extract_selected(list);
+  album_add(list->tree, album, replace, play);
   gavl_dictionary_destroy(album);
   }
 
-static void list_popup_menu(album_t * a, const GdkEvent * evt)
+static void list_popup_menu(list_t * list, const GdkEvent * evt)
   {
-  bg_gtk_mdb_tree_t * t = a->t;
+  bg_gtk_mdb_tree_t * t = list->tree;
   GtkTreeSelection * selection;
-  GtkWidget * w = a->list->listview;
+  GtkWidget * w = list->listview;
   GtkTreeModel * model;
   
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
@@ -1007,28 +936,26 @@ static void list_popup_menu(album_t * a, const GdkEvent * evt)
   
   t->menu_ctx.num_selected =
     gtk_tree_selection_count_selected_rows(selection);
+
+  t->menu_ctx.list = list;
   
   /* Set the menu album */
-  t->menu_ctx.a = a;
-  t->menu_ctx.album = t->menu_ctx.a->a;
-    
+  
+  t->menu_ctx.id = gavl_strrep(t->menu_ctx.id, NULL);
+  
   /* Set selected item */
-  if((t->menu_ctx.num_selected == 1) && t->menu_ctx.album)
+  if((t->menu_ctx.num_selected == 1) && t->menu_ctx.list)
     {
     GtkTreeIter iter;
-    char * id;
-      
+    //    char * id;
+    
     if(gtk_tree_model_get_iter_first(model, &iter))
       {
       while(1)
         {
         if(gtk_tree_selection_iter_is_selected(selection, &iter))
           {
-          id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
-
-          t->menu_ctx.item = gavl_get_track_by_id(t->menu_ctx.album, id);
-            
-          free(id);
+          t->menu_ctx.id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
           break; 
           }
         if(!gtk_tree_model_iter_next(model, &iter))
@@ -1048,23 +975,23 @@ static gboolean list_button_release_callback(GtkWidget * w, GdkEventButton * evt
                                              gpointer data)
   {
   gboolean ret = FALSE;
-  album_t * a = data;
+  list_t * list = data;
   GtkTreeSelection * sel;
   
-  if(a->list->select_on_release && a->list->last_path)
+  if((list->flags & LIST_SELECT_ON_RELEASE) && list->last_path)
     {
     GtkTreeIter iter;
     GtkTreeModel * model;
     
     sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
     model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
-    gtk_tree_model_get_iter(model, &iter, a->list->last_path);
+    gtk_tree_model_get_iter(model, &iter, list->last_path);
     gtk_tree_selection_unselect_all(sel);
     gtk_tree_selection_select_iter(sel, &iter);
     ret = TRUE;
     }
   
-  a->list->select_on_release = 0;
+  list->flags &= ~LIST_SELECT_ON_RELEASE;
   return ret;
   }
 
@@ -1074,14 +1001,14 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   GtkTreeModel * model;
   GtkTreePath * path;
   GtkTreeIter iter;
-  album_t * a = data;
-  bg_gtk_mdb_tree_t * t = a->t;
+  list_t * list = data;
+  bg_gtk_mdb_tree_t * t = list->tree;
   
   gboolean ret = FALSE;
   
   model = gtk_tree_view_get_model(GTK_TREE_VIEW(w));
 
-  a->list->select_on_release = 0;
+  list->flags &= ~LIST_SELECT_ON_RELEASE;
   
   if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(w),
                                    evt->x, evt->y, &path,
@@ -1094,7 +1021,7 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
   
   if((evt->button == 3) && (evt->type == GDK_BUTTON_PRESS))
     {
-    list_popup_menu(a, (const GdkEvent*)evt);
+    list_popup_menu(list, (const GdkEvent*)evt);
     ret = TRUE;
     }
 
@@ -1116,14 +1043,14 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
           }
         else
           {
-          a->list->select_on_release = 1;
+          list->flags |= LIST_SELECT_ON_RELEASE;
           }
         ret = TRUE;
         break;
       case GDK_SHIFT_MASK:
         {
-        if(a->list->last_path)
-          gtk_tree_selection_select_range(sel, a->list->last_path, path);
+        if(list->last_path)
+          gtk_tree_selection_select_range(sel, list->last_path, path);
         ret = TRUE;
         }
         break;
@@ -1136,32 +1063,34 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
         break;
       }
     
-    a->list->last_mouse_x = (int)evt->x;
-    a->list->last_mouse_y = (int)evt->y;
+    list->last_mouse_x = (int)evt->x;
+    list->last_mouse_y = (int)evt->y;
 
     }
   else if((evt->button == 1) && (evt->type == GDK_2BUTTON_PRESS) && path)
     {
     char * id;
-    gavl_dictionary_t * track; 
+    const gavl_dictionary_t * track; 
     id = iter_to_id_list(GTK_TREE_VIEW(w), &iter);
-    gavl_get_track_by_id_nc(a->a, id);
-    track = gavl_get_track_by_id_nc(a->a, id);
+
+    track = bg_mdb_cache_get_object(t->cache, id);
     
-    if(!gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
-      album_add(t, a->a, 1, 0);
+    if(!gavl_string_starts_with(list->id, BG_PLAYQUEUE_ID))
+      {
+      gavl_dictionary_t * a;
+      a = bg_mdb_cache_get_container(list->tree->cache, list->id, NULL);
+      album_add(t, a, 1, 0);
+      gavl_dictionary_destroy(a);
+      }
     
     do_play(t, track);
-    
-    //    entry_add(t, a, id, 0, 1);
-    
     free(id);
     }
 
-  if(a->list->last_path)
-    gtk_tree_path_free(a->list->last_path);
+  if(list->last_path)
+    gtk_tree_path_free(list->last_path);
   
-  a->list->last_path = path;
+  list->last_path = path;
 
   gtk_widget_grab_focus(w);
   
@@ -1171,7 +1100,7 @@ static gboolean list_button_press_callback(GtkWidget * w, GdkEventButton * evt,
 static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
                                         gpointer data)
   {
-  album_t * a = data;
+  list_t * list = data;
 
   switch(evt->keyval)
     {
@@ -1179,7 +1108,7 @@ static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
       {
       if(evt->state & GDK_CONTROL_MASK)
         {
-        list_copy(a);
+        list_copy(list);
         }
       }
       break;
@@ -1187,38 +1116,44 @@ static gboolean list_key_press_callback(GtkWidget * w, GdkEventKey * evt,
       {
       if(evt->state & GDK_CONTROL_MASK)
         {
-        list_paste(a);
+        list_paste(list);
         }
       }
       break;
     case GDK_KEY_Delete:
       {
-      list_delete_selected(a);
+      list_delete_selected(list);
       }
       break;
     case GDK_KEY_f:
-      list_favorites(a);
+      list_favorites(list);
       break;
     case GDK_KEY_a:
-      selected_add(a->t, a, 0, 0);
+      selected_add(list, 0, 0);
       break;
     case GDK_KEY_A:
-      album_add(a->t, a->a, 1, 0);
+      {
+      gavl_dictionary_t * a = bg_mdb_cache_get_container(list->tree->cache, list->tree->menu_ctx.list->id, NULL);
+      album_add(list->tree, a, 1, 0);
+      gavl_dictionary_destroy(a);
+      }
       break;
     case GDK_KEY_Return:
       {
       if(evt->state & GDK_SHIFT_MASK)
         {
-        album_add(a->t, a->a, 1, 1);
+        gavl_dictionary_t * a = bg_mdb_cache_get_container(list->tree->cache, list->tree->menu_ctx.list->id, NULL);
+        album_add(list->tree, a, 1, 1);
+        gavl_dictionary_destroy(a);
         }
       else
         {
-        selected_add(a->t, a, 0, 1);
+        selected_add(list, 0, 1);
         }
       }
       break;
     case GDK_KEY_Menu:
-      list_popup_menu(a, (const GdkEvent*)evt);
+      list_popup_menu(list, (const GdkEvent*)evt);
       //      bg_gtk_mdb_popup_menu(a->t, (const GdkEvent *)evt);
       return TRUE;
       break;
@@ -1292,22 +1227,24 @@ static int handle_msg_show_track_info(void * data, gavl_msg_t * msg)
 #endif
 
 static void show_track_info(bg_gtk_mdb_tree_t * tree,
-                            const gavl_dictionary_t * dict,
+                            const char * id,
                             GtkWidget * toplevel)
   {
 #ifdef TEST_BROWSE_OBJECT
-  const char * id;
+  //  const char * id;
   bg_controllable_t * ctrl;
   gavl_msg_t msg;
   gavl_msg_init(&msg);
   gavl_msg_set_id_ns(&msg, BG_FUNC_DB_BROWSE_OBJECT, BG_MSG_NS_DB);
-  
+
+#if 0  
   if(!(id = gavl_track_get_id(dict)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "show_track_info: Track has no ID");
     return;
     }
-
+#endif
+  
   gavl_dictionary_set_string(&msg.header, GAVL_MSG_CONTEXT_ID, id);
   
   if(gavl_string_starts_with(id, BG_PLAYQUEUE_ID))
@@ -1324,7 +1261,8 @@ static void show_track_info(bg_gtk_mdb_tree_t * tree,
   gavl_msg_free(&msg);
   
 #else
-  bg_gtk_trackinfo_show(dict, toplevel);
+  const gavl_dictionary_t * dict = bg_mdb_cache_get_object(tree->cache, id);
+  bg_gtk_trackinfo_show(NULL, dict, toplevel);
 #endif
   }
 
@@ -1334,8 +1272,8 @@ static void clipboard_received_func(GtkClipboard *clipboard,
                                     GtkSelectionData *selection_data,
                                     gpointer data)
   {
-  album_t * a = data;
-  insert_selection_data(a, selection_data, -1);
+  list_t * list = data;
+  insert_selection_data(list, selection_data, -1);
   }
 
 
@@ -1354,69 +1292,62 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
   else if(item == tree->menu.album_menu.info_item)
     {
     //  fprintf(stderr, "Album info %p\n", tree->menu_ctx.album);
-    if(tree->menu_ctx.album)
-      {
-      show_track_info(tree, tree->menu_ctx.album,
-                      tree->menu_ctx.widget);
-      }
+    if(tree->menu_ctx.list)
+      show_track_info(tree, tree->menu_ctx.list->id, tree->menu_ctx.widget);
+    else
+      show_track_info(tree, tree->menu_ctx.id, tree->menu_ctx.widget);
     }
   else if(item == tree->menu.album_menu.sort_item)
     {
-    //    fprintf(stderr, "Sort %p\n", tree->menu_ctx.item);
+    const char * id;
+    gavl_msg_t * msg;
+    bg_msg_sink_t * sink;
+      
+    if(tree->menu_ctx.list)
+      id = tree->menu_ctx.list->id;
+    else if(tree->menu_ctx.id)
+      id = tree->menu_ctx.id;
+      
+    sink = tree->ctrl.cmd_sink;
+
+    if(!strcmp(id, BG_PLAYQUEUE_ID))
+      sink = tree->player_ctrl.cmd_sink;
+      
+    msg = bg_msg_sink_get(sink);
+    gavl_msg_set_id_ns(msg, BG_CMD_DB_SORT, BG_MSG_NS_DB);
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
+    bg_msg_sink_put(sink);
     
-    if(tree->menu_ctx.item)
-      {
-      const char * id;
-      gavl_msg_t * msg;
-      bg_msg_sink_t * sink;
-      
-      if(tree->menu_ctx.a)
-        id = tree->menu_ctx.a->id;
-      else if(tree->menu_ctx.item)
-        id = gavl_track_get_id(tree->menu_ctx.item);
-
-      sink = tree->ctrl.cmd_sink;
-
-      if(!strcmp(id, BG_PLAYQUEUE_ID))
-        sink = tree->player_ctrl.cmd_sink;
-      
-      msg = bg_msg_sink_get(sink);
-      gavl_msg_set_id_ns(msg, BG_CMD_DB_SORT, BG_MSG_NS_DB);
-
-      if(tree->menu_ctx.a)
-        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
-      else if(tree->menu_ctx.item)
-        gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, id);
-      
-      bg_msg_sink_put(sink);
-      }
     }
   else if(item == tree->menu.album_menu.add_item)
     {
-    //    fprintf(stderr, "Add album\n");
-    if(tree->menu_ctx.a)
-      album_add(tree, tree->menu_ctx.a->a, 1, 0);
+    gavl_dictionary_t * a;
+    a = bg_mdb_cache_get_container(tree->cache, tree->menu_ctx.list->id, NULL);
+    album_add(tree, a, 1, 0);
+    gavl_dictionary_destroy(a);
+    
     }
   else if(item == tree->menu.album_menu.play_item)
     {
-    //    fprintf(stderr, "Play album\n");
-    if(tree->menu_ctx.a)
-      album_add(tree, tree->menu_ctx.a->a, 1, 1);
+    gavl_dictionary_t * a;
+    a = bg_mdb_cache_get_container(tree->cache, tree->menu_ctx.list->id, NULL);
+    album_add(tree, a, 1, 1);
+    gavl_dictionary_destroy(a);
     }
   else if(item == tree->menu.track_menu.add_item)
     {
-    if(tree->menu_ctx.a)
-      selected_add(tree, tree->menu_ctx.a, 0, 0);
+    if(tree->menu_ctx.list)
+      selected_add(tree->menu_ctx.list, 0, 0);
     }
   else if(item == tree->menu.track_menu.play_item)
     {
-    if(tree->menu_ctx.a)
-      selected_add(tree, tree->menu_ctx.a, 0, 1);
+    if(tree->menu_ctx.list)
+      selected_add(tree->menu_ctx.list, 0, 1);
     }
   else if(item == tree->menu.track_menu.favorites_item)
     {
-    if(tree->menu_ctx.a)
-      list_favorites(tree->menu_ctx.a);
+    if(tree->menu_ctx.list)
+      list_favorites(tree->menu_ctx.list);
     }
   else if(item == tree->menu.album_menu.load_files_item)
     {
@@ -1448,13 +1379,13 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     }
   else if(item == tree->menu.track_menu.info_item)
     {
-    if(tree->menu_ctx.item)
-      show_track_info(tree, tree->menu_ctx.item,
+    if(tree->menu_ctx.id)
+      show_track_info(tree, tree->menu_ctx.id,
                       tree->menu_ctx.widget);
     }
   else if(item == tree->menu.track_menu.copy_item)
     {
-    list_copy(tree->menu_ctx.a);
+    list_copy(tree->menu_ctx.list);
     }
   else if(item == tree->menu.track_menu.save_item)
     {
@@ -1464,21 +1395,14 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
     }
   else if(item == tree->menu.track_menu.paste_item)
     {
-    list_paste(tree->menu_ctx.a);
+    list_paste(tree->menu_ctx.list);
     }
   else if(item == tree->menu.track_menu.delete_item)
     {
     //    fprintf(stderr, "Delete\n");
 
-    if(tree->menu_ctx.a)
-      list_delete_selected(tree->menu_ctx.a);
-    }
-  else if(item == tree->menu.track_menu.download_item)
-    {
-    //    fprintf(stderr, "Download selected\n");
-    
-    if(tree->menu_ctx.a)
-      list_download_selected(tree->menu_ctx.a);
+    if(tree->menu_ctx.list)
+      list_delete_selected(tree->menu_ctx.list);
     }
   
   }
@@ -1550,7 +1474,6 @@ void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree)
   m->track_menu.paste_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_PASTE, "Paste", GDK_KEY_v, GDK_CONTROL_MASK);
   m->track_menu.save_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_SAVE, "Save as...", 0, 0);
   m->track_menu.delete_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_TRASH, "Delete...", GDK_KEY_Delete, 0);
-  m->track_menu.download_item = create_list_menu_item(tree, m->track_menu.menu, BG_ICON_DOWNLOAD, "Download", 0, 0);
   gtk_widget_show(m->track_menu.menu);
 
   m->album_item = create_list_menu_item(tree, m->menu, NULL, "Album...", 0, 0);
@@ -1567,7 +1490,7 @@ static gboolean
 motion_callback(GtkWidget * w, GdkEventMotion * evt,
                 gpointer user_data)
   {
-  album_t * a = user_data;
+  list_t * list = user_data;
   
   if(evt->state & GDK_BUTTON1_MASK)
     {
@@ -1576,12 +1499,12 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
     GtkTreeSelection * selection;
     int num_selected;
     selection =
-      gtk_tree_view_get_selection(GTK_TREE_VIEW(a->list->listview));
+      gtk_tree_view_get_selection(GTK_TREE_VIEW(list->listview));
   
     num_selected = gtk_tree_selection_count_selected_rows(selection);
     
-    if((abs((int)(evt->x) - a->list->last_mouse_x) +
-        abs((int)(evt->y) - a->list->last_mouse_y) < 10) ||
+    if((abs((int)(evt->x) - list->last_mouse_x) +
+        abs((int)(evt->y) - list->last_mouse_y) < 10) ||
        !num_selected)
       return FALSE;
 
@@ -1594,7 +1517,8 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
     
     gtk_drag_begin_with_coordinates(w, tl, GDK_ACTION_COPY, 1, (GdkEvent*)evt, evt->x, evt->y);
     gtk_target_list_unref(tl);
-    a->list->select_on_release = 0;
+
+    list->flags &= ~LIST_SELECT_ON_RELEASE;
     }
 
   
@@ -1602,24 +1526,26 @@ motion_callback(GtkWidget * w, GdkEventMotion * evt,
   }
 
 
-static void insert_selection_data(album_t * a, GtkSelectionData *data,
+static void insert_selection_data(list_t * list, GtkSelectionData *data,
                                   int idx)
   {
   const guchar * str = NULL;
   gchar * target_name = NULL;
-  bg_msg_sink_t * sink = a->t->ctrl.cmd_sink;
+  bg_msg_sink_t * sink = list->tree->ctrl.cmd_sink;
+
+  
   
   if(!(target_name = gdk_atom_name(gtk_selection_data_get_target(data))))
     goto fail;
 
-  if(a == &a->t->playqueue)
-    sink = a->t->player_ctrl.cmd_sink;
+  if(!strcmp(list->id, BG_PLAYQUEUE_ID))
+    sink = list->tree->player_ctrl.cmd_sink;
   
   if(!strcmp(target_name, "text/uri-list") ||
      !strcmp(target_name, "text/plain"))
     {
     int i;
-    char ** list;
+    char ** urilist;
     gavl_array_t arr;
     gavl_msg_t * msg;
     int len = gtk_selection_data_get_length(data);
@@ -1627,16 +1553,16 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
     if(!(str = gtk_selection_data_get_data(data)))
       goto fail;
 
-    list = bg_urilist_decode((char*)str, len);
+    urilist = bg_urilist_decode((char*)str, len);
 
     gavl_array_init(&arr);
     i = 0;
 
-    while(list[i])
+    while(urilist[i])
       {
       gavl_value_t val;
       gavl_value_init(&val);
-      gavl_value_set_string(&val, list[i]);
+      gavl_value_set_string(&val, urilist[i]);
       gavl_array_splice_val_nocopy(&arr, i, 0, &val);
 
       // fprintf(stderr, "Insert selection data: %s\n", list[i]);
@@ -1645,12 +1571,12 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
       }
 
     msg = bg_msg_sink_get(sink);
-    bg_mdb_set_load_uris(msg, gavl_track_get_id(a->a), idx, &arr);
+    bg_mdb_set_load_uris(msg, list->id, idx, &arr);
     
     bg_msg_sink_put(sink);
     
     gavl_array_free(&arr);
-    bg_urilist_free(list);
+    bg_urilist_free(urilist);
     }
   else if(!strcmp(target_name, bg_gtk_atom_tracks_name))
     {
@@ -1670,9 +1596,8 @@ static void insert_selection_data(album_t * a, GtkSelectionData *data,
 
     gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
 
-    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID,
-                               gavl_track_get_id(a->a));
-
+    gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, list->id);
+    
     gavl_msg_set_arg_int(msg, 0, idx);
     gavl_msg_set_arg_int(msg, 1, 0);
     gavl_msg_set_arg_array(msg, 2, gavl_get_tracks(&dict));
@@ -1698,11 +1623,11 @@ static gboolean drag_motion_callback(GtkWidget *widget,
   GtkTreePath * path = NULL;
   GtkTreeViewDropPosition pos;
   gint * indices;
-  album_t * a = d;
+  list_t * list = d;
   
   gdk_drag_status(drag_context, gdk_drag_context_get_suggested_action(drag_context), time);
   
-  if(gtk_tree_view_get_dest_row_at_pos(GTK_TREE_VIEW(a->list->listview),
+  if(gtk_tree_view_get_dest_row_at_pos(GTK_TREE_VIEW(list->listview),
                                        x, y, &path,
                                        &pos))
     {
@@ -1713,13 +1638,13 @@ static gboolean drag_motion_callback(GtkWidget *widget,
 
     indices = gtk_tree_path_get_indices(path);
     if(pos == GTK_TREE_VIEW_DROP_BEFORE)
-      a->list->drag_pos = indices[0];
+      list->drag_pos = indices[0];
     else
-      a->list->drag_pos = indices[0]+1;
+      list->drag_pos = indices[0]+1;
     
     //    fprintf(stderr, "drag_motion_callback %d\n", indices[0]);
     
-    gtk_tree_view_set_drag_dest_row(GTK_TREE_VIEW(a->list->listview),
+    gtk_tree_view_set_drag_dest_row(GTK_TREE_VIEW(list->listview),
                                     path, pos);
     }
   
@@ -1739,9 +1664,9 @@ static gboolean drag_drop_callback(GtkWidget *widget,
   GdkAtom target_type = GDK_NONE;
   GList * targets;
   int fmt = -1;
-  album_t * a = d;
+  list_t * list = d;
   
-  a->list->drop_time = time;
+  list->drop_time = time;
 
   if((targets = gdk_drag_context_list_targets(drag_context)))
     {
@@ -1789,19 +1714,17 @@ static void drag_received_callback(GtkWidget *widget,
                                    gpointer d)
   {
   int do_delete = 0;
-  album_t * a = d;
-  drag_motion_callback(widget, drag_context, x, y, time, d);
-  insert_selection_data(a, data, a->list->drag_pos);
-  a->list->drag_pos = -1;
+  list_t * list = d;
+  drag_motion_callback(widget, drag_context, x, y, time, list);
+  insert_selection_data(list, data, list->drag_pos);
+  list->drag_pos = -1;
 
   /* Tell source we are ready */
   gtk_drag_finish(drag_context,
                   TRUE, /* Success */
                   do_delete, /* Delete */
-                  a->list->drop_time);
+                  list->drop_time);
 
-  if(gtk_drag_get_source_widget(drag_context) == widget)
-    a->list->move = 1;
   }
 
 
@@ -1835,7 +1758,7 @@ static void drag_get_callback(GtkWidget *widget,
   GdkAtom type_atom;
   gchar * target_name = NULL;
   gavl_dictionary_t * sel = NULL;
-  album_t * a = user_data;
+  list_t * list = user_data;
   
   type_atom = gdk_atom_intern("STRING", FALSE);
   if(!type_atom)
@@ -1844,7 +1767,7 @@ static void drag_get_callback(GtkWidget *widget,
   if(!(target_name = gdk_atom_name(gtk_selection_data_get_target(data))))
     goto fail;
   
-  sel = bg_gtk_mdb_list_extract_selected(a);
+  sel = bg_gtk_mdb_list_extract_selected(list);
   
   str = bg_tracks_to_string(sel, info, 1);
 
@@ -1866,9 +1789,7 @@ static void drag_get_callback(GtkWidget *widget,
 
   }
 
-
-
-list_t * bg_gtk_mdb_list_create(album_t * a)
+list_t * bg_gtk_mdb_list_create(bg_gtk_mdb_tree_t * tree, const char * id)
   {
   GtkWidget * scrolledwindow;
   GtkListStore * store;
@@ -1878,15 +1799,20 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   char * tmp_string;
   list_t * l = calloc(1, sizeof(*l));
 
+  gavl_msg_t * msg;
+  
+  l->id = gavl_strdup(id);
+
+  l->tree = tree;
+    
   //  GtkCssProvider * provider = gtk_css_provider_new();
   
   //  gtk_css_provider_load_from_data(provider, tree_css, -1, NULL);
   
-  l->a = a;
   l->drag_pos = -1;
   
   /* Close button */
-  l->close_button = make_close_button(a->t);
+  l->close_button = make_close_button(l);
   
   /* Tab label */
 
@@ -1930,9 +1856,9 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
                              GDK_TYPE_PIXBUF,// pixbuf
                              G_TYPE_BOOLEAN, // has_pixbuf
                              G_TYPE_STRING,  // label
-                             G_TYPE_STRING,  // color
                              G_TYPE_STRING,  // id
                              G_TYPE_STRING,  // search_string
+                             G_TYPE_STRING,  // hash
                              G_TYPE_STRING   // current
                              );
 
@@ -1946,34 +1872,34 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
                         GDK_BUTTON1_MOTION_MASK);
   
   g_signal_connect(G_OBJECT(l->listview), "button-press-event",
-                   G_CALLBACK(list_button_press_callback), a);
+                   G_CALLBACK(list_button_press_callback), l);
   g_signal_connect(G_OBJECT(l->listview), "button-release-event",
-                   G_CALLBACK(list_button_release_callback), a);
+                   G_CALLBACK(list_button_release_callback), l);
 
   g_signal_connect(G_OBJECT(l->listview), "key-press-event",
-                   G_CALLBACK(list_key_press_callback), a);
+                   G_CALLBACK(list_key_press_callback), l);
 
   g_signal_connect(G_OBJECT(l->listview), "drag-data-received",
                    G_CALLBACK(drag_received_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   g_signal_connect(G_OBJECT(l->listview), "drag-drop",
                    G_CALLBACK(drag_drop_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   g_signal_connect(G_OBJECT(l->listview), "drag-motion",
                    G_CALLBACK(drag_motion_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   g_signal_connect(G_OBJECT(l->listview), "drag-data-get",
                    G_CALLBACK(drag_get_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   g_signal_connect(G_OBJECT(l->listview), "drag-data-delete",
                    G_CALLBACK(drag_delete_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   g_signal_connect(G_OBJECT(l->listview), "drag-end",
                    G_CALLBACK(drag_end_callback),
-                   (gpointer)a);
+                   (gpointer)l);
   
   g_signal_connect(G_OBJECT(l->listview), "motion-notify-event",
-                   G_CALLBACK(motion_callback), (gpointer)a);
+                   G_CALLBACK(motion_callback), (gpointer)l);
   
   gtk_tree_view_set_search_column(GTK_TREE_VIEW(l->listview), LIST_COLUMN_SEARCH_STRING);
   gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(l->listview), bg_gtk_mdb_search_equal_func,
@@ -1998,8 +1924,6 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   
   gtk_tree_view_column_pack_start(column, text_renderer, FALSE);
   
-  gtk_tree_view_column_add_attribute(column, text_renderer,
-                                     "foreground", LIST_COLUMN_COLOR);
   gtk_tree_view_column_add_attribute(column, text_renderer,
                                      "text", LIST_COLUMN_ICON);
   gtk_tree_view_column_add_attribute(column, text_renderer,
@@ -2032,8 +1956,6 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
   
   gtk_tree_view_column_pack_start(column, text_renderer, FALSE);
 
-  gtk_tree_view_column_add_attribute(column, text_renderer,
-                                     "foreground", LIST_COLUMN_COLOR);
   gtk_tree_view_column_add_attribute(column, text_renderer,
                                      "markup", LIST_COLUMN_LABEL);
 
@@ -2075,32 +1997,17 @@ list_t * bg_gtk_mdb_list_create(album_t * a)
 
   l->widget = scrolledwindow;
 
-  if(a->a)
-    bg_gdk_mdb_list_set_obj(l, a->a);
+  l->tree->lists = g_list_append(l->tree->lists, l);
+
+  msg = bg_msg_sink_get(l->tree->cache_ctrl.cmd_sink);
+  gavl_msg_set_id_ns(msg, BG_CMD_DB_CACHE_CONTAINER_OPEN, BG_MSG_NS_DB_CACHE);
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, l->id);
+  bg_msg_sink_put(l->tree->cache_ctrl.cmd_sink);
   
-  if(!a->a)
-    bg_gtk_mdb_browse_object(a->t, a->id);
-  else
-    {
-    int num;
-    int total;
-
-    num = gavl_get_num_tracks_loaded(a->a, &total);
-    
-    if(total)
-      {
-      if(!num)
-        bg_gtk_mdb_browse_children(a->t, a->id);
-      else
-        bg_gtk_mdb_list_splice_children(l, 0, 0, gavl_dictionary_get_nc(a->a, GAVL_META_TRACKS), 0);
-      }
-    }
-
   return l;
   }
 
-
-
+#if 0
 static void selection_foreach_func(GtkTreeModel *model,
                                    GtkTreePath *path,
                                    GtkTreeIter *iter,
@@ -2117,161 +2024,7 @@ static void selection_foreach_func(GtkTreeModel *model,
   gavl_array_splice_val_nocopy(arr, -1, 0, &val);
   g_free(id);
   }
-
-static void check_current(list_t * l, gavl_dictionary_t * dict)
-  {
-  const char * hash;
-  const gavl_dictionary_t * m;
-  
-  if(!l->a->t->cur)
-    return;
-
-  if((m = gavl_track_get_metadata(dict)) &&
-     (hash = gavl_dictionary_get_string(m, GAVL_META_HASH)) &&
-     !strcmp(hash, l->a->t->cur))
-    gavl_track_set_gui_state(dict, GAVL_META_GUI_CURRENT, 1);
-  
-  }
-
-void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, gavl_value_t * add,
-                                     int splice_internal)
-  {
-  gavl_array_t selected_rows;
-
-  GtkTreeIter iter;
-  GtkTreeModel * model;
-  GtkTreeSelection * selection;
-
-  int i;
-  int num_added = 0;
-  int real_idx;
-  gavl_dictionary_t * dict;
-  
-  const gavl_array_t * arr;
-  
-  selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(l->listview)); 
-  model = gtk_tree_view_get_model(GTK_TREE_VIEW(l->listview));
-
-  /* Save selection */
-  gavl_array_init(&selected_rows);
-  gtk_tree_selection_selected_foreach(selection, selection_foreach_func,
-                                      &selected_rows);  
-  
-
-  /* Calculate base index */
-
-  real_idx = 0;
-  
-  arr = gavl_get_tracks(l->a->a);
-
-  if(arr)
-    {
-    for(i = 0; i < idx; i++)
-      {
-      if(is_item(&arr->entries[i]))
-        real_idx++;
-      }
-    }
-  
-  /* Remove entries */
-
-  if(del > 0)
-    {
-    if(gtk_tree_model_iter_nth_child(model, &iter, NULL, real_idx))
-      {
-      for(i = 0; i < del; i++)
-        {
-        if(is_item(&arr->entries[i+idx]))
-          {
-          if(!gtk_list_store_remove(GTK_LIST_STORE(model), &iter))
-            break;
-          }
-        }
-      
-      }
-
-    }
-  else if(del < 0)
-    {
-    if(gtk_tree_model_iter_nth_child(model, &iter, NULL, real_idx))
-      {
-      while(gtk_list_store_remove(GTK_LIST_STORE(model), &iter))
-        ;
-      }
-    }
-  
-  /* Add entries */
-
-  if(add)
-    {
-    if((arr = gavl_value_get_array(add)))
-      {
-      for(i = 0; i < arr->num_entries; i++)
-        {
-        if(is_item(arr->entries + i))
-          {
-          dict = gavl_value_get_dictionary_nc(arr->entries + i);
-
-          check_current(l, dict);
-          
-          gtk_list_store_insert(GTK_LIST_STORE(model), &iter, real_idx + num_added);
-          set_entry_list(l, dict, &iter);
-          num_added++;
-          }
-        }
-      }
-    else if(is_item(add))
-      {
-      dict = gavl_value_get_dictionary_nc(add);
-      check_current(l, dict);
-      
-      gtk_list_store_insert(GTK_LIST_STORE(model), &iter, real_idx);
-      set_entry_list(l, dict, &iter);
-      num_added = 1;
-      }
-    }
-  
-  /* Restore selection */
-  gtk_tree_selection_unselect_all(selection);
-  for(i = 0; i < selected_rows.num_entries; i++)
-    {
-    if(bg_gtk_mdb_list_id_to_iter(GTK_TREE_VIEW(l->listview), &iter, gavl_value_get_string(&selected_rows.entries[i])))
-      gtk_tree_selection_select_iter(selection, &iter);
-    }
-
-  /* Must be called exactly here */
-
-  //  num = gavl_get_num_tracks_loaded(l->a->a, &total);
-  //  if(num < total)
-
-  if(splice_internal)
-    gavl_track_splice_children(l->a->a, idx, del, add);
-  
-  if(l->move && (num_added > 0))
-    {
-    GtkTreePath * start;
-    GtkTreePath * end;
-    list_delete_selected(l->a);
-    
-//     gtk_tree_selection_select_all(selection);
-
-    start = gtk_tree_path_new_from_indices(idx, -1);
-    end   = gtk_tree_path_new_from_indices(idx + num_added - 1, -1);
-
-    // fprintf(stderr, "Select range: %d %d\n", idx, idx + num_added);
-    
-    gtk_tree_selection_select_range(selection, start, end);
-    
-    gtk_tree_path_free(start);
-    gtk_tree_path_free(end);
-    
-    l->move = 0;
-    }
-   
-  gavl_array_free(&selected_rows); 
-  
-  bg_gtk_widget_queue_redraw(l->listview);
-  }
+#endif
 
 
 static const bg_gtk_file_filter_t save_formats[] = 
@@ -2372,7 +2125,7 @@ void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
   msg = bg_msg_sink_get(tree->ctrl.cmd_sink);
   
   gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(tree->menu_ctx.album));
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, tree->menu_ctx.id);
   gavl_msg_set_arg_int(msg, 0, -1);
   gavl_msg_set_arg_int(msg, 1, 0);
   gavl_msg_set_arg_dictionary_nocopy(msg, 2, c);
@@ -2404,7 +2157,7 @@ void bg_gtk_mdb_add_stream_source(bg_gtk_mdb_tree_t * tree,
   msg = bg_msg_sink_get(tree->ctrl.cmd_sink);
   
   gavl_msg_set_id_ns(msg, BG_CMD_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(tree->menu_ctx.album));
+  gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, tree->menu_ctx.id);
   gavl_msg_set_arg_int(msg, 0, -1);
   gavl_msg_set_arg_int(msg, 1, 0);
   gavl_msg_set_arg_dictionary_nocopy(msg, 2, c);
@@ -2467,3 +2220,63 @@ static void load_uri(bg_gtk_mdb_tree_t * tree)
                      tree->menu_ctx.widget ? bg_gtk_get_toplevel(tree->menu_ctx.widget) : NULL);
   }
 
+int bg_gtk_mdb_get_edit_flags(const gavl_dictionary_t * track)
+  {
+  int ret = 0;
+  const gavl_dictionary_t * m;
+  const char * klass;
+  
+  if(!(m = gavl_track_get_metadata(track)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
+    return ret;
+  
+  if(!bg_mdb_is_editable(track))
+    return ret;
+
+  ret |= ALBUM_EDITABLE;
+
+  if(!strcmp(klass, GAVL_META_CLASS_ROOT_STREAMS))
+    ret |= ALBUM_CAN_ADD_STREAM_SOURCE;
+
+  if(bg_mdb_can_add(track, GAVL_META_CLASS_SONG))
+    ret |= ALBUM_CAN_ADD_SONG;
+  
+  if(bg_mdb_can_add(track, GAVL_META_CLASS_DIRECTORY))
+    ret |= ALBUM_CAN_ADD_DIRECTORY;
+  
+  if(bg_mdb_can_add(track, GAVL_META_CLASS_CONTAINER))
+    ret |= ALBUM_CAN_ADD_CONTAINER;
+      
+  if(bg_mdb_can_add(track, GAVL_META_CLASS_AUDIO_BROADCAST) ||
+     bg_mdb_can_add(track, GAVL_META_CLASS_VIDEO_BROADCAST) ||
+     bg_mdb_can_add(track, GAVL_META_CLASS_LOCATION))
+    ret |= ALBUM_CAN_ADD_URL;
+
+  return ret;
+  }
+
+static int queue_load_icon(gavl_array_t * arr,
+                           const gavl_dictionary_t * track)
+  {
+  gavl_dictionary_t * dict;
+  char * uri;
+  const char * id = gavl_track_get_id(track);
+  
+  if(!(uri = bg_get_track_image_uri(track, LIST_ICON_WIDTH, LIST_ICON_HEIGHT)))
+    return 0;
+
+  dict = gavl_array_append_dictionary(arr);
+  gavl_dictionary_set_string(dict, GAVL_META_ID, id);
+  gavl_dictionary_set_string_nocopy(dict, GAVL_META_URI, uri);
+  return 1;
+  }
+
+void bg_gtk_mdb_load_list_icon(list_t * list, const gavl_dictionary_t * track)
+  {
+  queue_load_icon(&list->tree->list_icons, track);
+  }
+
+void bg_gtk_mdb_load_tree_icon(bg_gtk_mdb_tree_t * tree, const gavl_dictionary_t * track)
+  {
+  queue_load_icon(&tree->tree_icons, track);
+  }

@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#define LIST_ICON_WIDTH  48
+#define LIST_ICON_HEIGHT 72
 
-
-typedef struct album_s album_t;
-
-#define LIST_ICON_WIDTH 48
+#define TREE_ICON_WIDTH  48
+#define TREE_ICON_HEIGHT 72
 
 enum
 {
@@ -31,12 +31,30 @@ enum
   LIST_COLUMN_PIXBUF,
   LIST_COLUMN_HAS_PIXBUF,
   LIST_COLUMN_LABEL,
-  LIST_COLUMN_COLOR,
   LIST_COLUMN_ID,
   LIST_COLUMN_SEARCH_STRING,
+  LIST_COLUMN_HASH,
   LIST_COLUMN_CURRENT,
   NUM_LIST_COLUMNS
 };
+
+enum
+{
+  TREE_COLUMN_ICON,
+  TREE_COLUMN_HAS_ICON,
+  TREE_COLUMN_PIXBUF,
+  TREE_COLUMN_HAS_PIXBUF,
+  TREE_COLUMN_LABEL,
+  TREE_COLUMN_ID,
+  TREE_COLUMN_SEARCH_STRING,
+  TREE_COLUMN_TOOLTIP,
+  TREE_COLUMN_FLAGS,
+  //  TREE_COLUMN_CAN_EXPAND,
+  //  TREE_COLUMN_CAN_OPEN,
+  //  TREE_COLUMN_EDITABLE,
+  NUM_TREE_COLUMNS
+};
+
 
 
 /* Menus for tree and list */
@@ -83,8 +101,6 @@ typedef struct
   GtkWidget * paste_item;
   GtkWidget * delete_item;
 
-  /* Only for podcast episodes */
-  GtkWidget * download_item;
   } track_menu_t;
 
 typedef struct
@@ -98,10 +114,27 @@ typedef struct
   
   } menu_t;
 
-/* List widget */
+/* Tree flags (stored in the model along with the edit flags) */
+
+#define TREE_CAN_EXPAND        (1<<0)
+#define TREE_CAN_OPEN          (1<<1)
+#define TREE_HAS_DUMMY         (1<<2)
+
+/* List widget flags (stored in list_t along with the edit flags) */
+
+#define LIST_SELECT_ON_RELEASE (1<<1)
+
+/* Is in the flags for list_t and tree */
+#define ALBUM_EDITABLE               (1<<8)
+#define ALBUM_CAN_ADD_SONG           (1<<9)
+#define ALBUM_CAN_ADD_CONTAINER     (1<<10)
+#define ALBUM_CAN_ADD_DIRECTORY     (1<<11)
+#define ALBUM_CAN_ADD_STREAM_SOURCE (1<<12)
+#define ALBUM_CAN_ADD_URL           (1<<13)
 
 typedef struct
   {
+  char * id;
   /* List view */
   GtkWidget * listview;
   GtkWidget * widget;
@@ -119,39 +152,23 @@ typedef struct
   /* Window */
   GtkWidget * window;
   
-  album_t * a;
-
   const char * klass;
   
   int drag_pos;
   guint drop_time;
-  int move;        // Move active
+  //  int move;        // Move active
   
   int last_mouse_x;
   int last_mouse_y;
   GtkTreePath * last_path;
 
-  int select_on_release;
+  //  int select_on_release;
 
-  } list_t;
+  bg_gtk_mdb_tree_t * tree;
 
-struct album_s
-  {
-  /* list widget (NULL for expanded albums) */
-  list_t * list;
-  gavl_dictionary_t * a;
-  char * id;
-  bg_gtk_mdb_tree_t * t;
+  int flags;
   
-  int local; // e.g. playerqueue
-  };
-
-typedef struct
-  {
-  album_t ** albums;
-  int num_albums;
-  int albums_alloc;
-  } album_array_t;
+  } list_t;
 
 struct bg_gtk_mdb_tree_s
   {
@@ -162,47 +179,37 @@ struct bg_gtk_mdb_tree_s
   
   bg_control_t ctrl;
   bg_control_t player_ctrl;
+  bg_control_t cache_ctrl;
+  
   bg_controllable_t * player_ctrl_p;
   bg_controllable_t * mdb_ctrl_p;
   
   GtkWidget * notebook;
 
-  album_array_t tab_albums;
-  album_array_t win_albums;
-  album_array_t exp_albums;
+  GList * lists;
   
-  album_t playqueue;
+
+  bg_mdb_cache_t * cache;
   
   menu_t menu;
   
-  //  album_t * menu_album;
   gavl_dictionary_t * list_clipboard;
 
-  gavl_array_t browse_object_requests;
-  gavl_array_t browse_children_requests;
-
-  gavl_array_t icons_to_load;
-  gavl_array_t list_icons_to_load;
+  gavl_array_t tree_icons;
+  gavl_array_t list_icons;
   
   char * playback_id;
   char * cur; // Current track as hash
   
   int icons_loading; // Keeps track on how many icons are loaded in the background right now
-
-  int have_children;
-  
-  int local_folders; // Playqueue etc
   
   struct
     {
-    album_t * a;
+    char * id;
     GtkWidget * widget; // Widget, which caught the event
     int num_selected;
     
-    const gavl_dictionary_t * item;  // If only one item is selected
-    const gavl_dictionary_t * album; // Container
-    const gavl_dictionary_t * parent; // Parent album
-    int tree; // Menu was fired from the tree view
+    list_t * list; /* Currently selected list */
     } menu_ctx;
   
   bg_msg_sink_t * dlg_sink;
@@ -213,7 +220,7 @@ struct bg_gtk_mdb_tree_s
 #define MSG_ADD_CONTAINER   "add-container"
 #define MSG_SAVE_ALBUM      "save-album"
 #define MSG_SAVE_SELECTED   "save-selected"
-#define MSG_LOAD_FILES      "load_files"
+#define MSG_LOAD_FILES      "load-files"
 
 void bg_gtk_mdb_create_container_generic(bg_gtk_mdb_tree_t * tree,
                                          const char * label,
@@ -224,41 +231,40 @@ void bg_gtk_mdb_add_stream_source(bg_gtk_mdb_tree_t * tree,
                                   const char * label,
                                   const char * uri);
 
-
-void bg_gtk_mdb_album_array_set_current(album_array_t * arr, 
-                                        const char * hash);
-
 int bg_gtk_mdb_list_id_to_iter(GtkTreeView *treeview, GtkTreeIter * iter,
                                const char * id);
 
+int bg_gtk_mdb_tree_id_to_iter(GtkTreeView *treeview, const char * id, GtkTreeIter * ret);
+
+void bg_gtk_mdb_list_get_selected_ids(list_t * list,
+                                      gavl_array_t * selected);
+
 void bg_gtk_mdb_list_set_pixbuf(bg_gtk_mdb_tree_t * tree, const char * id, GdkPixbuf * pb);
 
-gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(album_t * album);
+gavl_dictionary_t * bg_gtk_mdb_list_extract_selected(list_t * list);
 
-
-int bg_gtk_mdb_array_get_flag_str(const gavl_array_t * arr, const char * id);
-void bg_gtk_mdb_array_set_flag_str(gavl_array_t * arr, const char * id, int flag);
-
-list_t * bg_gtk_mdb_list_create(album_t * a);
+list_t * bg_gtk_mdb_list_create(bg_gtk_mdb_tree_t * tree, const char * id);
 void bg_gtk_mdb_list_destroy(list_t * l);
 
-void bg_gtk_mdb_album_set_current(album_t * a, const char * hash);
+void
+bg_gtk_mdb_list_add_entries(list_t * l, const gavl_array_t * entries, const char * sibling_before);
+
+void
+bg_gtk_mdb_list_delete_entries(list_t * l, const gavl_array_t * ids);
+
+void
+bg_gtk_mdb_list_update_entry(list_t * l, const char * id, const gavl_dictionary_t * dict);
+
+
+void bg_gtk_mdb_list_set_current(list_t * list, const char * hash);
 
 gboolean
 bg_gtk_mdb_search_equal_func(GtkTreeModel *model, gint column,
                              const gchar *key, GtkTreeIter *iter,
                              gpointer search_data);
 
-void bg_gtk_mdb_tree_update_node(bg_gtk_mdb_tree_t * t, const char * id,
-                                 const gavl_dictionary_t * dict);
-
-album_t * bg_gtk_mdb_album_is_open(bg_gtk_mdb_tree_t * tree, const char * id);
-
-void bg_gtk_mdb_album_update_track(album_t * a, const char * id,
-                                   const gavl_dictionary_t * dict);
-
-void bg_gtk_mdb_tree_close_window_album(bg_gtk_mdb_tree_t * t, int idx);
-void bg_gtk_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx);
+list_t * bg_gtk_mdb_tree_find_list(bg_gtk_mdb_tree_t * t,
+                                   const char * id);
 
 void bg_gtk_mdb_tree_delete_selected_album(bg_gtk_mdb_tree_t * t);
 
@@ -266,14 +272,14 @@ char * bg_gtk_mdb_tree_create_markup(const gavl_dictionary_t * m, const char * p
 
 void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict);
 
-void bg_gtk_mdb_list_splice_children(list_t * l, int idx, int del, gavl_value_t * add, int update_dict);
-
 void bg_gtk_mdb_menu_init(menu_t * m, bg_gtk_mdb_tree_t * tree);
 
 void bg_mdb_tree_close_tab_album(bg_gtk_mdb_tree_t * t, int idx);
 
-void bg_gtk_mdb_browse_children(bg_gtk_mdb_tree_t * t, const char * id);
-void bg_gtk_mdb_browse_object(bg_gtk_mdb_tree_t * t, const char * id);
 
 void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event);
 
+int bg_gtk_mdb_get_edit_flags(const gavl_dictionary_t * track);
+  
+void bg_gtk_mdb_load_list_icon(list_t * list, const gavl_dictionary_t * track);
+void bg_gtk_mdb_load_tree_icon(bg_gtk_mdb_tree_t * tree, const gavl_dictionary_t * track);
