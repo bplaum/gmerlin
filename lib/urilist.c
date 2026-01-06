@@ -31,7 +31,7 @@
 #define HOSTNAME_MAX_LEN 512
 
 static const char * reserved =
-  ":?#[]@!$'()*+;=";
+  ":?#[]@!$'{}*+;=\"";
 
 static int do_substitute(uint8_t c)
   {
