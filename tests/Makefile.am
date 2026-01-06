@@ -25,6 +25,7 @@ noinst_PROGRAMS = \
 server \
 client \
 extractchannel \
+fs_cache \
 insertchannel \
 textrenderer \
 ladspa \
@@ -56,6 +57,9 @@ upnpdesc_LDADD = ../lib/libgmerlin.la -ldl @UUID_LIBS@ @XML2_LIBS@
 
 extractchannel_SOURCES = extractchannel.c
 extractchannel_LDADD = ../lib/libgmerlin.la -ldl
+
+fs_cache_SOURCES = fs_cache.c
+fs_cache_LDADD = ../lib/libgmerlin.la -ldl
 
 insertchannel_SOURCES = insertchannel.c
 insertchannel_LDADD = ../lib/libgmerlin.la -ldl
