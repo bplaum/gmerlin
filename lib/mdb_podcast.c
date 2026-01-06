@@ -49,10 +49,6 @@
    podcasts/subscriptions:               Array with just the URIs of the channels
    podcasts/index:                       Children of the root folder (array)
    podcasts/<md5>:                       Items of the channel (array)
-   podcasts/saved/<md5>                 Saved items of that channel
-   podcasts/saved/<md5>/index:           Metadata of all saved entries
-   podcasts/saved/<md5>/<md5>-media.mp3: Media
-   podcasts/saved/<md5>/<md5>-image.jpg: Image
 
    ID:
    /podcasts/<podcast_id>/<episode_id>
@@ -414,6 +410,317 @@ static int get_num_saved_episodes(bg_mdb_backend_t * b, const char * podcast)
   return ret;
   }
 
+#define ARD_SCRIPT_START "<script id=\"__NEXT_DATA__\" type=\"application/json\">"
+
+static char * convert_ard_image_uri(const char * uri)
+  {
+  char * ret;
+
+  const char * pos;
+
+  if((pos = strstr(uri, "{width}")))
+    {
+    ret = gavl_strndup(uri, pos);
+    ret = gavl_strcat(ret, "640");
+    ret = gavl_strcat(ret, pos + strlen("{width}"));
+    return ret;
+    }
+  return gavl_strdup(uri);
+  }
+
+static int load_ard_episode(struct json_object *episode, gavl_array_t * items, const char * podcast,
+                            char * md5)
+  {
+  const char * title;
+  const char * src;
+  const char * mimetype;
+  const char * var;
+  gavl_value_t it_val;
+  gavl_dictionary_t * it;
+  gavl_dictionary_t * it_m;
+  struct json_object *child;
+  int seconds;
+  
+  if(!(title = bg_json_dict_get_string(episode, "title")) ||
+     !json_object_object_get_ex(episode, "audios", &child) ||
+     !(child = json_object_array_get_idx(child, 0)) ||
+     !(src = bg_json_dict_get_string(child, "url")) ||
+     !(mimetype = bg_json_dict_get_string(child, "mimeType")))
+    return 0;
+    
+  gavl_value_init(&it_val);
+  it = gavl_value_set_dictionary(&it_val);
+  it_m = gavl_dictionary_get_dictionary_create(it, GAVL_META_METADATA);
+  
+  gavl_dictionary_set_string(it_m, GAVL_META_TITLE, title);
+  gavl_dictionary_set_string(it_m, GAVL_META_LABEL, title);
+  gavl_dictionary_set_string(it_m, GAVL_META_PODCAST, podcast);
+  
+  gavl_metadata_add_src(it_m, GAVL_META_SRC, mimetype, src);
+  
+  gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID,
+                                    gavl_sprintf("%s/%s/%s", BG_MDB_ID_PODCASTS, md5,
+                                                 bg_json_dict_get_string(episode, "id")));
+
+  var = bg_json_dict_get_string(episode, "id");
+  
+  gavl_dictionary_set_string_nocopy(it_m, GAVL_META_ID,
+                                    gavl_sprintf("%s/%s/%s", BG_MDB_ID_PODCASTS, md5,
+                                                 var));
+  
+  if((var = bg_json_dict_get_string(episode, "summary")))
+    gavl_dictionary_set_string(it_m, GAVL_META_DESCRIPTION, var);
+
+  if((var = bg_json_dict_get_string(episode, "publishDate")))
+    {
+    gavl_time_t t;
+    char str[GAVL_TIME_STRING_LEN_ABSOLUTE];
+    
+    if(gavl_time_parse_iso8601(var, &t))
+      {
+      gavl_time_prettyprint_absolute(t, str, 1);
+      gavl_dictionary_set_string(it_m, GAVL_META_DATE, str);
+      }
+    }
+
+  
+  if(json_object_object_get_ex(episode, "image", &child))
+    {
+    const char * image_uri;
+    
+    if((image_uri = bg_json_dict_get_string(child, "url1X1")) ||
+       (image_uri = bg_json_dict_get_string(child, "url")))
+      {
+      char * tmp_string;
+      tmp_string = convert_ard_image_uri(image_uri);
+      gavl_metadata_add_src(it_m, GAVL_META_POSTER_URL, NULL, tmp_string);
+      free(tmp_string);
+      }
+    }
+
+  if((seconds = bg_json_dict_get_int(episode, "duration")) > 0)
+    gavl_dictionary_set_long(it_m, GAVL_META_APPROX_DURATION, GAVL_TIME_SCALE*(int64_t)seconds);
+
+  if(json_object_object_get_ex(episode, "programSet", &child) &&
+     json_object_object_get_ex(child, "publicationService", &child))
+    {
+    if((var = bg_json_dict_get_string(child, "genre")))
+      gavl_dictionary_set_string(it_m, GAVL_META_GENRE, var);
+    if((var = bg_json_dict_get_string(child, "title")))
+      gavl_dictionary_set_string(it_m, GAVL_META_STATION, var);
+    }
+  
+  
+  gavl_dictionary_set_string(it_m, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_PODCAST_EPISODE);
+  
+  gavl_array_splice_val_nocopy(items, -1, 0, &it_val);
+  return 1;
+  }
+
+static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
+                          gavl_dictionary_t * channel, gavl_array_t * items)
+  {
+  gavl_buffer_t buf;
+  int num;
+  const char * start;
+  const char * end;
+  const char * podcast;
+  char * core_id = NULL;
+
+  char * json;
+  struct json_object *obj;
+  struct json_object *episodes;
+  struct json_object *episode;
+
+  struct json_object *child;
+  struct json_object *result;
+  int ret = 0;
+  int i;
+  int total;
+  gavl_dictionary_t * channel_m;
+  gavl_dictionary_t * mdb_dict;
+  
+  gavl_buffer_init(&buf);
+  
+  if(!bg_http_get(uri, &buf, NULL))
+    goto fail;
+
+  if(!(start = strstr((char*)buf.buf, ARD_SCRIPT_START)) ||
+     !(end = strstr(start, "</script>")))
+    goto fail;
+
+  start += strlen(ARD_SCRIPT_START);
+
+  json = gavl_strndup(start, end);
+  obj = json_tokener_parse(json);
+  free(json);
+  
+
+  if(!json_object_object_get_ex(obj, "props", &result) ||
+     !json_object_object_get_ex(result, "pageProps", &result) ||
+     !json_object_object_get_ex(result, "initialData", &result) ||
+     !json_object_object_get_ex(result, "data", &result) ||
+     !json_object_object_get_ex(result, "result", &result))
+    goto fail;
+
+  
+  podcast = bg_json_dict_get_string(result, "title");
+  
+  //  fprintf(stderr, "Title: %s\n", podcast);
+  //  fprintf(stderr, "Description: %s\n", bg_json_dict_get_string(result, "description"));
+
+  core_id = gavl_strdup(bg_json_dict_get_string(result, "coreId"));
+  
+  channel_m = gavl_dictionary_get_dictionary_create(channel, GAVL_META_METADATA);
+  mdb_dict = gavl_dictionary_get_dictionary_create(channel, BG_MDB_DICT);
+  gavl_dictionary_set_string(mdb_dict, GAVL_META_URI, uri);
+  
+  gavl_dictionary_set_string(channel_m, GAVL_META_TITLE, podcast);
+  gavl_dictionary_set_string(channel_m, GAVL_META_LABEL, podcast);
+  gavl_dictionary_set_string(channel_m, GAVL_META_DESCRIPTION, bg_json_dict_get_string(result, "description"));
+  gavl_dictionary_set_string(channel_m, GAVL_META_CLASS, GAVL_META_CLASS_PODCAST);
+
+  gavl_dictionary_set_string_nocopy(channel_m,
+                                    GAVL_META_ID,
+                                    gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, md5));
+  
+  if(json_object_object_get_ex(result, "image", &child))
+    {
+    const char * image_uri;
+    
+    if((image_uri = bg_json_dict_get_string(child, "url1X1")) ||
+       (image_uri = bg_json_dict_get_string(child, "url")))
+      {
+      char * tmp_string;
+
+      tmp_string = convert_ard_image_uri(image_uri);
+      gavl_metadata_add_src(channel_m, GAVL_META_POSTER_URL, NULL, tmp_string);
+      free(tmp_string);
+      }
+    }
+
+  if(json_object_object_get_ex(result, "publicationService", &child))
+    {
+    gavl_dictionary_set_string(channel_m, GAVL_META_GENRE, bg_json_dict_get_string(child, "genre"));
+    }
+
+  //  fprintf(stderr, "Got json:\n%s\n", json_object_to_json_string_ext(result, JSON_C_TO_STRING_PRETTY));
+  
+  if(!json_object_object_get_ex(result, "items", &episodes) ||
+     !json_object_object_get_ex(episodes, "nodes", &episodes) ||
+     ((num = json_object_array_length(episodes)) <= 0))
+    goto fail;
+  
+  for(i = 0; i < num; i++)
+    {
+    
+    if(!(episode = json_object_array_get_idx(episodes, i)))
+      goto fail;
+
+    if(!load_ard_episode(episode, items, podcast, md5))
+      goto fail;
+    
+    }
+
+  total = bg_json_dict_get_int(result, "numberOfElements");
+  
+  if(total > 0)
+    {
+    char * query_enc;
+    char * vars_enc;
+    char * json_uri;
+    char * vars;
+    
+    const char * query = "query ProgramSetEpisodesQuery($id:ID!,$offset:Int!,$count:Int!)"
+      "{result:programSet(id:$id){items(offset:$offset first:$count filter:{isPublished:{equalTo:true},itemType:{notEqualTo:EVENT_LIVESTREAM}}){pageInfo{hasNextPage endCursor}nodes{id coreType coreId title isPublished tracking publishDate summary duration path image{url url1X1 description attribution}programSet{id coreId title path publicationService{title genre path organizationName}}audios{url mimeType downloadUrl allowDownload}}}}}";
+
+    if(obj)
+      {
+      json_object_put(obj);
+      obj = NULL;
+      }
+    
+    query_enc=bg_string_to_uri(query, -1);
+    
+    while(items->num_entries < total)
+      {
+      int end = total;
+
+      if(end - items->num_entries > 20)
+        end = items->num_entries + 20;
+
+      vars = gavl_sprintf("{\"id\":\"%s\",\"offset\":%d,\"count\":%d}", core_id, items->num_entries,
+                          end - items->num_entries);
+      
+      vars_enc = bg_string_to_uri(vars, -1);
+      
+      json_uri = gavl_sprintf("https://api.ardaudiothek.de/graphql?query=%s&variables=%s",
+                              query_enc, vars_enc);
+
+      //      fprintf(stderr, "JSON URI: %s\n", json_uri);
+
+      if(!bg_http_get(json_uri, &buf, NULL))
+        goto fail;
+
+      if(!(obj = json_tokener_parse((char*)buf.buf)))
+        goto fail;
+
+
+      if(!json_object_object_get_ex(obj, "data", &episodes) ||
+         !json_object_object_get_ex(episodes, "result", &episodes) ||
+         !json_object_object_get_ex(episodes, "items", &episodes) ||
+         !json_object_object_get_ex(episodes, "nodes", &episodes) ||
+         ((num = json_object_array_length(episodes)) <= 0))
+        goto fail;
+      
+      //      fprintf(stderr, "Got %d items (%d -> %d)\n", num, items->num_entries,
+      //              end);
+      
+      for(i = 0; i < num; i++)
+        {
+        if(!(episode = json_object_array_get_idx(episodes, i)))
+          goto fail;
+
+        if(!load_ard_episode(episode, items, podcast, md5))
+          goto fail;
+        }
+      
+      free(vars);
+      free(vars_enc);
+      free(json_uri);
+
+      //      break;
+      
+      //      gavl_buffer_reset(&buf);
+      
+      }
+    free(query_enc);
+    }
+  
+  /* Read remaining items */
+
+  
+  
+  gavl_track_set_num_children(channel, 0, items->num_entries);
+  
+  ret = 1;
+  
+  //&  fprintf(stderr, "Got podcast desc\n");
+  //  gavl_dictionary_dump(channel_m, 2);
+  
+  //   fprintf(stderr, "Got json: %s\n", json);
+  fail:
+
+  if(core_id)
+    free(core_id);
+  
+  if(obj)
+    json_object_put(obj);
+  
+  gavl_buffer_free(&buf);
+  
+  return ret;
+  }
 
 static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
                       gavl_dictionary_t * channel, gavl_array_t * items)
@@ -432,7 +739,14 @@ static int load_items(bg_mdb_backend_t * b, const char * uri, char * md5,
   xmlNodePtr item;
   xmlNodePtr child;
 
-  xmlDocPtr doc = bg_xml_from_url(uri, NULL);
+  xmlDocPtr doc;
+
+  if(strstr(uri, "://www.ardaudiothek.de/"))
+    {
+    return load_items_ard(b, uri, md5, channel, items);
+    }
+
+  doc = bg_xml_from_url(uri, NULL);
   
   //  podcasts_t * priv = b->priv;
   
@@ -715,10 +1029,9 @@ static int subscribe(bg_mdb_backend_t * b, int i, const gavl_value_t * val, gavl
   gavl_array_init(&items);
   
   bg_get_filename_hash(uri, md5);
-  
+
   if(load_items(b, uri, md5, channel, &items))
     {
-    
     gavl_string_array_insert_at(&p->subscriptions, i, uri);
     save_subscriptions(b);
     
@@ -1017,212 +1330,6 @@ static void save_array(bg_mdb_backend_t * b, const parsed_id_t * id, gavl_array_
   
   }
 
-static void save_local(bg_mdb_backend_t * b, const parsed_id_t * id)
-  {
-  char * dirname = NULL;
-  //  fprintf(stderr, "save_local: %s\n", id);
-  gavl_array_t arr;
-  const gavl_dictionary_t * dict_c;
-  gavl_dictionary_t * m;
-  gavl_dictionary_t * src;
-  const char * uri;
-  int num_episodes = 0;
-  
-  podcasts_t * priv = b->priv;
-  int created_local_folder = 0;
-  char * local_filename;
-
-  gavl_value_t entry_val;
-  gavl_dictionary_t * dict;
-  gavl_msg_t * res;
-  char * filename = NULL; 
-  int ret = 0;
-  
-  gavl_array_init(&arr);
-  gavl_value_init(&entry_val);
-  
-  /* Browse local object */
-
-  if(!load_array(b, id, &arr) ||
-     !(dict_c = gavl_get_track_by_id_arr(&arr, id->id)))
-    goto fail;
-  
-  num_episodes = arr.num_entries;
-  
-  dict = gavl_value_set_dictionary(&entry_val);
-  gavl_dictionary_copy(dict, dict_c);
-  if(!(m = gavl_track_get_metadata_nc(dict)))
-    goto fail;
-
-  gavl_array_reset(&arr);
-  
-  /* Create local directory (if it doesn't exist already) */
-
-  dirname = gavl_sprintf("%s/saved/%s", priv->dir, id->podcast_id);
-  
-  if(!gavl_is_directory(dirname, 1))
-    {
-    gavl_ensure_directory(dirname, 0);
-    created_local_folder = 1;
-    }
-  
-  /* Load saved index and check if we already have this episode */
-  filename = gavl_sprintf("%s/index", dirname);
-  if(!access(filename, R_OK))
-    bg_array_load_xml(&arr, filename, "items");
-  
-  if(gavl_get_track_by_id_arr(&arr, id->id))
-    {
-    fprintf(stderr, "Err 1\n");
-    goto fail;
-    }
-  /* Download remote media */
-  if((src = gavl_metadata_get_src_nc(m, GAVL_META_POSTER_URL, 0)) &&
-     (uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
-    {
-    char * prefix = gavl_sprintf("%s/%s-image", dirname, id->episode_id);
-    
-    if(!(local_filename =  bg_http_download(uri, prefix)))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading poster %s failed", uri);
-      goto fail;
-      }
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved poster %s to %s", uri, local_filename);
-    
-    gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, local_filename);
-    free(prefix);
-    }
-
-  if((src = gavl_metadata_get_src_nc(m, GAVL_META_SRC, 0)) &&
-     (uri = gavl_dictionary_get_string(src, GAVL_META_URI)))
-    {
-    char * prefix = gavl_sprintf("%s/%s-media", dirname, id->episode_id);
-
-    if(!(local_filename = bg_http_download(uri, prefix)))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Downloading media %s failed", uri);
-      goto fail;
-      }
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saved media %s to %s", uri, local_filename);
-    
-    gavl_dictionary_set_string_nocopy(src, GAVL_META_URI, local_filename);
-    free(prefix);
-    }
-  
-  gavl_dictionary_set_string_nocopy(m, GAVL_META_ID,
-                                    gavl_sprintf("%s/%s/saved/%s", BG_MDB_ID_PODCASTS,
-                                                 id->podcast_id, id->episode_id));
-  
-  /* Save metadata */
-  
-  gavl_array_splice_val(&arr, -1, 0, &entry_val);
-  bg_mdb_set_next_previous(&arr);
-  bg_array_save_xml(&arr, filename, "items");
-
-  free(filename);
-  filename = NULL;
-  
-  /* Send events */
-
-  if(created_local_folder)
-    {
-    gavl_value_t add;
-    gavl_dictionary_t * dict;
-    gavl_array_t index;
-    
-    /* Set splice event for podcast */
-    gavl_value_init(&add);
-    dict = gavl_value_set_dictionary(&add);
-    
-    make_saved_container(dict, id, 1);
-
-    res = bg_msg_sink_get(b->ctrl.evt_sink);
-    gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-    gavl_dictionary_set_string_nocopy(&res->header, GAVL_MSG_CONTEXT_ID, gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, id->podcast_id));
-
-    gavl_msg_set_last(res, 1);
-  
-    gavl_msg_set_arg_int(res, 0, 0); // idx
-    gavl_msg_set_arg_int(res, 1, 0); // del
-    gavl_msg_set_arg_nocopy(res, 2, &add);
-    
-    bg_msg_sink_put(b->ctrl.evt_sink);
-    
-    /* Set change event for podcast */
-    gavl_array_init(&index);
-    filename = gavl_sprintf("%s/index", priv->dir);
-    bg_array_load_xml(&index, filename, "items");
-    
-    res = bg_msg_sink_get(b->ctrl.evt_sink);
-
-    gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
-    gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, gavl_sprintf("%s/%s", BG_MDB_ID_PODCASTS, id->podcast_id));
-
-    dict = gavl_get_track_by_id_arr_nc(&index, gavl_dictionary_get_string(&res->header, GAVL_MSG_CONTEXT_ID));
-    
-    gavl_track_set_num_children(dict, 1, num_episodes);
-    gavl_msg_set_arg_dictionary(res, 0, dict);
-
-    //    fprintf(stderr, "set changed callback\n");
-    //    gavl_dictionary_dump(dict, 2);
-    
-    bg_msg_sink_put(b->ctrl.evt_sink);
-    bg_array_save_xml(&index, filename, "items");
-    gavl_array_free(&index);
-    }
-  else
-    {
-    gavl_value_t val;
-    gavl_dictionary_t * dict;
-
-    /* Set splice event for saved */
-    
-    res = bg_msg_sink_get(b->ctrl.evt_sink);
-    gavl_msg_set_id_ns(res, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);
-    gavl_dictionary_set_string_nocopy(&res->header, GAVL_MSG_CONTEXT_ID,
-                                      gavl_sprintf("%s/%s/saved", BG_MDB_ID_PODCASTS, id->podcast_id));
-    
-    gavl_msg_set_last(res, 1);
-  
-    gavl_msg_set_arg_int(res, 0, arr.num_entries-1); // idx
-    gavl_msg_set_arg_int(res, 1, 0); // del
-    gavl_msg_set_arg(res, 2, &entry_val);
-    
-    bg_msg_sink_put(b->ctrl.evt_sink);
-    
-    /* Set change event for saved */
-    gavl_value_init(&val);
-    dict = gavl_value_set_dictionary(&val);
-    make_saved_container(dict, id, arr.num_entries);
-    
-    //    fprintf(stderr, "set changed callback\n");
-    //    gavl_dictionary_dump(dict, 2);
-    
-    res = bg_msg_sink_get(b->ctrl.evt_sink);
-    gavl_msg_set_id_ns(res, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
-    gavl_dictionary_set_string(&res->header, GAVL_MSG_CONTEXT_ID, gavl_track_get_id(dict));
-    gavl_msg_set_arg_dictionary(res, 0, dict);
-    bg_msg_sink_put(b->ctrl.evt_sink);
-    gavl_value_free(&val);
-    }
-
-  ret = 1;
-  
-  fail:
-
-  if(!ret)
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Saving podcast episode failed");
-  
-  gavl_array_free(&arr);
-  gavl_value_free(&entry_val);
-
-  
-  if(filename)
-    free(filename);
-  if(dirname)
-    free(dirname);
-  
-  }
 
 
 static void browse_object(bg_mdb_backend_t * b, gavl_msg_t * msg, const parsed_id_t * id)
@@ -1575,9 +1682,6 @@ static int handle_msg_podcast(void * priv, gavl_msg_t * msg)
             }
           
           }
-          break;
-        case BG_CMD_DB_SAVE_LOCAL:
-          save_local(b, &id);
           break;
         case BG_CMD_DB_SORT:
           {
