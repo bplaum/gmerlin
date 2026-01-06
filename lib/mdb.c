@@ -60,7 +60,7 @@ static const struct
   }
 backends[] =
   {
-    { bg_mdb_create_filesystem,    MDB_BACKEND_FILESYSTEM,    "Filesystem"   },
+    { bg_mdb_create_fs,    MDB_BACKEND_FILESYSTEM,    "Filesystem"   },
     { bg_mdb_create_sqlite,        MDB_BACKEND_SQLITE,        "SQLite"       },
     { bg_mdb_create_xml,           MDB_BACKEND_XML,           "XML"          },
     { bg_mdb_create_remote,        MDB_BACKEND_REMOTE,        "Remote"       },
@@ -448,23 +448,6 @@ static int handle_cmd(void * priv, gavl_msg_t * msg)
         case BG_FUNC_DB_DEL_SQL_DIR:
           /* Forward to sql backend */
           be = be_from_name(db, MDB_BACKEND_SQLITE);
-          break;
-        case BG_CMD_DB_SAVE_LOCAL:
-          {
-          const char * ctx_id;
-          
-          if(!(ctx_id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID)))
-            return 1;
-
-          if(!(obj = container_by_id(db, ctx_id, &real_id)))
-            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Object %s not found", ctx_id);
-          else
-            {
-            if((be_name = bg_mdb_container_get_backend(obj)))
-              be = be_from_name(db, be_name);
-            }
-          
-          }
           break;
         case BG_CMD_DB_SPLICE_CHILDREN:
           {
@@ -1964,6 +1947,9 @@ void bg_mdb_object_changed(gavl_dictionary_t * dst, const gavl_dictionary_t * sr
   
   if((v  = gavl_dictionary_get(src, GAVL_META_STREAMS)))
     gavl_dictionary_set(dst, GAVL_META_STREAMS, v);
+
+  /* Reset number of children */
+  gavl_track_set_num_children(dst, 0, 0);
   
   if((src_m = gavl_track_get_metadata(src)))
     {
@@ -1990,11 +1976,18 @@ static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * 
   char * http_uri;
 
   int num = gavl_dictionary_get_num_items(dict, name);
+
+  //  fprintf(stderr, "Add http uris %d %s\n", num, name);
+  //  gavl_dictionary_dump(dict, 2);
+  //  fprintf(stderr, "\n");
   
   for(i = 0; i < num; i++)
     {
     http_uri = NULL;
     local_uri = NULL;
+
+    //    fprintf(stderr, "Add http uris:\n");
+    //    gavl_value_dump(gavl_dictionary_get_item(dict, name, i), 2);
     
     if((local_val = gavl_dictionary_get_item(dict, name, i)) &&
        (local_dict = gavl_value_get_dictionary(local_val)) &&
@@ -2072,10 +2065,10 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
   
   //  fprintf(stderr, "Add http uris 1\n");
   //  gavl_dictionary_dump(m, 2);
-  
 
-  if(add_http_uris(mdb, m, GAVL_META_SRC) &&
-     !add_http_uris(mdb, m, GAVL_META_COVER_URL) &&
+  add_http_uris(mdb, m, GAVL_META_SRC);
+  
+  if(!add_http_uris(mdb, m, GAVL_META_COVER_URL) &&
      !add_http_uris(mdb, m, GAVL_META_POSTER_URL) &&
      !add_http_uris(mdb, m, GAVL_META_WALLPAPER_URL) &&
      !add_http_uris(mdb, m, GAVL_META_ICON_URL))
@@ -2707,3 +2700,7 @@ void bg_mdb_tracks_sort(gavl_array_t * arr)
     }
   bg_mdb_set_next_previous(arr);
   }
+
+
+/* FS Cache */
+
