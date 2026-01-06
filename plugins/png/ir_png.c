@@ -63,7 +63,8 @@ static void destroy_png(void* priv)
                             &png->end_info);
   
   gavl_buffer_free(&png->buf);
-  
+
+  gavl_dictionary_free(&png->metadata);
   free(png);
   }
 
@@ -98,6 +99,9 @@ static int read_header_png(void * priv, const char * filename,
 
   int bits = 8;
 
+  gavl_dictionary_reset(&png->metadata);
+  
+  
   gavl_buffer_reset(&png->buf);
   
   if(!bg_read_location(filename, &png->buf, 0, 0, NULL))
@@ -310,8 +314,6 @@ static int read_image_png(void * priv, gavl_video_frame_t * frame)
   
   if(rows)
     free(rows);
-  gavl_dictionary_free(&png->metadata);
-
   
 
   return 1;
