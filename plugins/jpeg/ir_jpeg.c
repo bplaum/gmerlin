@@ -245,8 +245,6 @@ int read_header_jpeg(void * priv, const char * filename,
 
   gavl_dictionary_set_string(&jpeg->metadata, GAVL_META_FORMAT, "JPEG");
   gavl_dictionary_set_string(&jpeg->metadata, GAVL_META_MIMETYPE, "image/jpeg");
-
-  
   return 1;
   }
 
