@@ -236,10 +236,12 @@ const bg_plugin_common_t * bg_rb_plugin_get()
 
 bg_plugin_info_t * bg_rb_plugin_get_info()
   {
+  gavl_array_t * protocols;
   bg_plugin_info_t * ret;
+  
   ret = bg_plugin_info_create(&rb_plugin.common);
-  ret->protocols = gavl_value_set_array(&ret->protocols_val);
-  gavl_string_array_add(ret->protocols, RB_PROTOCOL);
+  protocols = bg_plugin_info_set_protocols(ret);
+  gavl_string_array_add(protocols, RB_PROTOCOL);
   return ret;
   }
 
