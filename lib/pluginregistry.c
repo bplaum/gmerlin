@@ -145,6 +145,9 @@ struct bg_plugin_registry_s
   gavl_array_t * input_mimetypes;
   gavl_array_t * input_protocols;
 
+  gavl_array_t * input_extensions;
+  gavl_array_t * image_extensions;
+  
   /* Configuration contexts for plugins */
   bg_cfg_ctx_t cfg_ir;
   bg_cfg_ctx_t cfg_fa;
@@ -348,13 +351,7 @@ void bg_plugin_info_destroy(bg_plugin_info_t * info)
   {
   gavl_dictionary_free(&info->dict);
   
-  if(info->description)
-    free(info->description);
 
-  gavl_value_free(&info->mimetypes_val);
-  gavl_value_free(&info->extensions_val);
-  gavl_value_free(&info->protocols_val);
-  
   if(info->module_filename)
     free(info->module_filename);
   if(info->cmp_name)
@@ -535,7 +532,8 @@ const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol, int t
   char * protocol_priv = NULL;
   const char * pos;
   const bg_plugin_info_t * info = bg_plugin_reg->entries;
-
+  const gavl_array_t * protocols;
+  
   if((pos = strstr(protocol, "://")))
     {
     protocol_priv = gavl_strndup(protocol, pos);
@@ -545,7 +543,8 @@ const bg_plugin_info_t * bg_plugin_find_by_protocol(const char * protocol, int t
   while(info)
     {
     if((info->type & type_mask) &&
-       info->protocols && (gavl_string_array_indexof(info->protocols, protocol) >= 0))
+       (protocols = bg_plugin_info_get_protocols(info)) &&
+       (gavl_string_array_indexof(protocols, protocol) >= 0))
       {
       ret = info;
       break;
@@ -564,7 +563,8 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
   char * extension;
   bg_plugin_info_t * info, *ret = NULL;
   int max_priority = BG_PLUGIN_PRIORITY_MIN - 1;
-
+  const gavl_array_t * extensions;
+  
   if(!filename)
     return NULL;
   
@@ -582,14 +582,13 @@ const bg_plugin_info_t * bg_plugin_find_by_filename(const char * filename,
   while(info)
     {
     if(!(info->type & typemask) ||
-       !info->extensions ||
-       !info->extensions->num_entries)
+       !(extensions = bg_plugin_info_get_extensions(info)))
       {
       info = info->next;
       continue;
       }
     //    fprintf(stderr, "Trying: %s\n", bg_plugin_info_get_name(info));
-    if(gavl_string_array_indexof_i(info->extensions, extension) >= 0)
+    if(gavl_string_array_indexof_i(extensions, extension) >= 0)
       {
       if(max_priority < info->priority)
         {
@@ -616,7 +615,8 @@ const bg_plugin_info_t * bg_plugin_find_by_mimetype(const char * mimetype,
   {
   bg_plugin_info_t * info, *ret = NULL;
   int max_priority = BG_PLUGIN_PRIORITY_MIN - 1;
-
+  const gavl_array_t * mimetypes;
+  
   if(!mimetype)
     return NULL;
   
@@ -624,12 +624,13 @@ const bg_plugin_info_t * bg_plugin_find_by_mimetype(const char * mimetype,
   
   while(info)
     {
-    if(!(info->type & typemask) || !info->mimetypes || !info->mimetypes->num_entries)
+    if(!(info->type & typemask) ||
+       !(mimetypes = bg_plugin_info_get_mimetypes(info)))
       {
       info = info->next;
       continue;
       }
-    if(gavl_string_array_indexof_i(info->mimetypes, mimetype) >= 0)
+    if(gavl_string_array_indexof_i(mimetypes, mimetype) >= 0)
       {
       if(max_priority < info->priority)
         {
@@ -958,9 +959,8 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin)
 
   bg_plugin_info_set_name(new_info, plugin->name);
   bg_plugin_info_set_long_name(new_info, plugin->long_name);
-  
-  new_info->description = gavl_strrep(new_info->description,
-                                    plugin->description);
+
+  bg_plugin_info_set_description(new_info,plugin->description);
   
   new_info->type        = plugin->type; 	 
   new_info->flags       = plugin->flags; 	 
@@ -1004,15 +1004,14 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
 
   if(plugin->get_extensions)
     {
-    new_info->extensions = gavl_value_set_array(&new_info->extensions_val);
-    bg_string_to_string_array(plugin->get_extensions(plugin_priv), new_info->extensions);
-    
+    gavl_array_t * extensions = bg_plugin_info_set_extensions(new_info);
+    bg_string_to_string_array(plugin->get_extensions(plugin_priv), extensions);
     }
 
   if(plugin->get_protocols)
     {
-    new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
-    bg_string_to_string_array(plugin->get_protocols(plugin_priv), new_info->protocols);
+    gavl_array_t * protocols = bg_plugin_info_set_protocols(new_info);
+    bg_string_to_string_array(plugin->get_protocols(plugin_priv), protocols);
     }
 
   
@@ -1055,45 +1054,45 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
 
     if(input->get_mimetypes)
       {
-      new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
-      bg_string_to_string_array(input->get_mimetypes(plugin_priv), new_info->mimetypes);
+      gavl_array_t * mimetypes = bg_plugin_info_set_mimetypes(new_info);
+      bg_string_to_string_array(input->get_mimetypes(plugin_priv), mimetypes);
       }
     
     }
   if(plugin->type & BG_PLUGIN_IMAGE_READER)
     {
+    gavl_array_t * mimetypes;
     bg_image_reader_plugin_t  * ir;
     ir = (bg_image_reader_plugin_t*)plugin;
 
-    new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
-    
-    bg_string_to_string_array(ir->mimetypes, new_info->mimetypes);
+    mimetypes = bg_plugin_info_set_mimetypes(new_info);
+    bg_string_to_string_array(ir->mimetypes, mimetypes);
     }
   if(plugin->type & BG_PLUGIN_IMAGE_WRITER)
     {
+    gavl_array_t * mimetypes;
     bg_image_writer_plugin_t  * iw;
     iw = (bg_image_writer_plugin_t*)plugin;
-
-    new_info->mimetypes = gavl_value_set_array(&new_info->mimetypes_val);
-    
-    bg_string_to_string_array(iw->mimetypes, new_info->mimetypes);
+    mimetypes = bg_plugin_info_set_mimetypes(new_info);
+    bg_string_to_string_array(iw->mimetypes, mimetypes);
     }
   if(plugin->type & (BG_PLUGIN_BACKEND_MDB | BG_PLUGIN_BACKEND_RENDERER))
     {
     bg_backend_plugin_t  * p;
+    gavl_array_t * protocols;
     p = (bg_backend_plugin_t*)plugin;
 
-    new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
-    bg_string_to_string_array(p->protocol, new_info->protocols);
-    
+    protocols =bg_plugin_info_set_protocols(new_info);
+    bg_string_to_string_array(p->protocol, protocols);
     }
   if(plugin->type & BG_PLUGIN_CONTROL)
     {
     bg_control_plugin_t  * p;
+    gavl_array_t * protocols;
     p = (bg_control_plugin_t*)plugin;
 
-    new_info->protocols = gavl_value_set_array(&new_info->protocols_val);
-    bg_string_to_string_array(p->protocols, new_info->protocols);
+    protocols =bg_plugin_info_set_protocols(new_info);
+    bg_string_to_string_array(p->protocols, protocols);
     }
   if(plugin->type & (BG_PLUGIN_COMPRESSOR_AUDIO |
                      BG_PLUGIN_COMPRESSOR_VIDEO |
@@ -1620,6 +1619,10 @@ void bg_plugin_registry_destroy_1(bg_plugin_registry_t * reg)
     gavl_array_destroy(reg->input_protocols);
   if(reg->input_mimetypes)
     gavl_array_destroy(reg->input_mimetypes);
+  if(reg->input_extensions)
+    gavl_array_destroy(reg->input_extensions);
+  if(reg->image_extensions)
+    gavl_array_destroy(reg->image_extensions);
   
   free(reg);
   }
@@ -2483,7 +2486,8 @@ char * bg_get_default_sink_uri(int plugin_type)
   
   const char * protocol;
   const bg_plugin_info_t * info;
-
+  const gavl_array_t * protocols;
+  
   num_plugins = bg_get_num_plugins(plugin_type, 0);
   for(i = 0; i < num_plugins; i++)
     {
@@ -2496,8 +2500,9 @@ char * bg_get_default_sink_uri(int plugin_type)
       continue;
     else if(!strcmp(bg_plugin_info_get_name(info), "ov_wayland") && !getenv("WAYLAND_DISPLAY"))
       continue;
-    
-    if(info->protocols && (protocol = gavl_string_array_get(info->protocols, 0)))
+
+    if((protocols = bg_plugin_info_get_protocols(info)) &&
+       (protocol = gavl_string_array_get(protocols, 0)))
       return gavl_sprintf("%s:///", protocol);
     }
   return NULL;
@@ -3173,7 +3178,7 @@ static int input_plugin_load(const char * location,
   {
   const char * real_location;
   char * protocol = NULL, * path = NULL;
-  
+  const gavl_array_t * protocols;
   int num_plugins, i;
   bg_input_plugin_t * plugin;
   int try_and_error = 1;
@@ -3266,16 +3271,16 @@ static int input_plugin_load(const char * location,
     if(info == first_plugin)
       continue;
 
-    if(info->protocols)
+    if((protocols = bg_plugin_info_get_protocols(info)))
       {
       if(protocol)
         {
-        if(gavl_string_array_indexof(info->protocols, protocol) < 0)
+        if(gavl_string_array_indexof(protocols, protocol) < 0)
           continue;
         }
       else
         {
-        if(gavl_string_array_indexof(info->protocols, "file") < 0)
+        if(gavl_string_array_indexof(protocols, "file") < 0)
           continue;
         }
       }
@@ -3631,8 +3636,9 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
     bg_bindtextdomain(gettext_domain, gettext_directory);
     
 
-    ret->multi_descriptions_nc[start_entries+i] = gavl_strdup(TRD(info->description,
-                                                                  gettext_domain));
+    ret->multi_descriptions_nc[start_entries+i] =
+      gavl_strdup(TRD(bg_plugin_info_get_description(info),
+                      gettext_domain));
     
     ret->multi_labels_nc[start_entries+i] =
       gavl_strdup(TRD(bg_plugin_info_get_long_name(info),
@@ -4222,31 +4228,33 @@ static int load_location(const char * str, int flags, gavl_array_t * ret, int id
     tracks = gavl_get_tracks(mi);
   
   if(tracks && ((result = tracks->num_entries) > 0))
+    {
+    const gavl_dictionary_t * dict_src;
+
+    if((dict_src = gavl_value_get_dictionary(&ret->entries[idx])) &&
+       (dict_src = gavl_track_get_metadata(dict_src)))
+      {
+      int i = 0;
+      gavl_dictionary_t * dict_dst;
+      
+      while(i < tracks->num_entries)
+        {
+        if((dict_dst = gavl_value_get_dictionary_nc(&tracks->entries[i])) &&
+           (dict_dst = gavl_track_get_metadata_nc(dict_dst)))
+          {
+          gavl_dictionary_merge2(dict_dst, dict_src);
+          }
+        i++;
+        }
+      
+      }
+    
     gavl_array_splice_array(ret, idx, 1, tracks);
-  
+    }
   gavl_dictionary_destroy(mi);
   return result;
   }
 
-#if 0
-static int resolve_location(const gavl_dictionary_t * dict, gavl_array_t * dst, int flags)
-  {
-  const gavl_dictionary_t * m;
-  const char * klass;
-  const char * uri;
-  
-  if((m = gavl_track_get_metadata(dict)) &&
-     (klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
-     !strcmp(klass, GAVL_META_CLASS_LOCATION) &&
-     (gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &uri)))
-    {
-    load_location(uri, flags, dst);
-    return 1;
-    }
-  else
-    return 0;
-  }
-#endif
 
 static int resolve_locations(gavl_array_t * dst, int flags)
   {
@@ -4257,7 +4265,6 @@ static int resolve_locations(gavl_array_t * dst, int flags)
   const gavl_dictionary_t * dict;
   const char * klass;
   const char * uri;
-  
   
   while(i < dst->num_entries)
     {
@@ -4290,6 +4297,12 @@ static int resolve_locations(gavl_array_t * dst, int flags)
 void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, int flags)
   {
   int i;
+  const char * label;
+  const char * last_label;
+
+  const char * klass;
+  const char * last_klass;
+  gavl_dictionary_t * last_m;
   
   if(src->type == GAVL_TYPE_DICTIONARY)
     gavl_array_splice_val(dst, -1, 0, src);
@@ -4305,6 +4318,63 @@ void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, i
       break;
     }
 
+  /* If we encounter subsequent entries with the same class and label,
+     we assume that it's just different URIs for the same media source.
+     This is used for m3u files, which contain multiple URIs for the
+     same broadcast */
+  i = 0;
+
+  last_label = NULL;
+  last_klass = NULL;
+  
+  while(i < dst->num_entries)
+    {
+    gavl_dictionary_t * dict;
+
+    if(!(dict = gavl_value_get_dictionary_nc(&dst->entries[i])) ||
+       !(dict = gavl_track_get_metadata_nc(dict)))
+      {
+      i++;
+      last_label = NULL;
+      last_klass = NULL;
+      continue;
+      }
+
+    if(!last_label || !last_klass)
+      {
+      last_m = dict;
+      last_label = gavl_dictionary_get_string(last_m, GAVL_META_LABEL);
+      last_klass = gavl_dictionary_get_string(last_m, GAVL_META_CLASS);
+      i++;
+      }
+    else
+      {
+      label = gavl_dictionary_get_string(dict, GAVL_META_LABEL);
+      klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
+      
+      if(label && last_label && klass && last_klass &&
+         !strcmp(label, last_label) && !strcmp(klass, last_klass))
+        {
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Merging track \"%s\" (%s)\n", label, klass);
+
+        gavl_dictionary_append(last_m, GAVL_META_SRC,
+                               gavl_dictionary_get_item(dict, GAVL_META_SRC, 0));
+
+        gavl_array_splice_val(dst, i, 1, NULL);
+        }
+      else
+        {
+        last_label = label;
+        last_klass = klass;
+        last_m = dict;
+        i++;
+        }
+      
+      }
+    
+    }
+                                  
+  
   }
 
 const gavl_array_t * bg_plugin_registry_get_input_mimetypes()
@@ -4312,7 +4382,8 @@ const gavl_array_t * bg_plugin_registry_get_input_mimetypes()
   int i, j;
   int num_plugins;
   const bg_plugin_info_t * info;
-
+  const gavl_array_t * mimetypes;
+  
   if(!bg_plugin_reg->input_mimetypes)
     {
     bg_plugin_reg->input_mimetypes = gavl_array_create();
@@ -4321,12 +4392,12 @@ const gavl_array_t * bg_plugin_registry_get_input_mimetypes()
     for(i = 0; i < num_plugins; i++)
       {
       info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
-
-      if(!info->mimetypes)
+      
+      if(!(mimetypes = bg_plugin_info_get_mimetypes(info)))
         continue;
-    
-      for(j = 0; j < info->mimetypes->num_entries; j++)
-        gavl_string_array_add(bg_plugin_reg->input_mimetypes, gavl_string_array_get(info->mimetypes, j));
+      
+      for(j = 0; j < mimetypes->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->input_mimetypes, gavl_string_array_get(mimetypes, j));
       }
     }
   
@@ -4338,6 +4409,7 @@ const gavl_array_t * bg_plugin_registry_get_input_protocols()
   int i, j;
   int num_plugins;
   const bg_plugin_info_t * info;
+  const gavl_array_t * protocols;
 
   if(!bg_plugin_reg->input_protocols)
     {
@@ -4348,15 +4420,70 @@ const gavl_array_t * bg_plugin_registry_get_input_protocols()
       {
       info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
       
-      if(!info->protocols)
+      if(!(protocols = bg_plugin_info_get_protocols(info)))
         continue;
       
-      for(j = 0; j < info->protocols->num_entries; j++)
-        gavl_string_array_add(bg_plugin_reg->input_protocols, gavl_string_array_get(info->protocols, j));
+      for(j = 0; j < protocols->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->input_protocols, gavl_string_array_get(protocols, j));
       }
     }
   return bg_plugin_reg->input_protocols;
   }
+
+const gavl_array_t * bg_plugin_registry_get_input_extensions()
+  {
+  int i, j;
+  int num_plugins;
+  const bg_plugin_info_t * info;
+  const gavl_array_t * extensions;
+  
+  if(!bg_plugin_reg->input_extensions)
+    {
+    bg_plugin_reg->input_extensions = gavl_array_create();
+
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
+    for(i = 0; i < num_plugins; i++)
+      {
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_INPUT, 0);
+      
+      if(!(extensions = bg_plugin_info_get_extensions(info)))
+        continue;
+      
+      for(j = 0; j < extensions->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->input_extensions, gavl_string_array_get(extensions, j));
+      }
+    }
+  
+  return bg_plugin_reg->input_extensions;
+  }
+
+const gavl_array_t * bg_plugin_registry_get_image_extensions()
+  {
+  int i, j;
+  int num_plugins;
+  const bg_plugin_info_t * info;
+  const gavl_array_t * extensions;
+  
+  if(!bg_plugin_reg->image_extensions)
+    {
+    bg_plugin_reg->image_extensions = gavl_array_create();
+
+    num_plugins = bg_get_num_plugins(BG_PLUGIN_IMAGE_READER, 0);
+    for(i = 0; i < num_plugins; i++)
+      {
+      info = bg_plugin_find_by_index(i, BG_PLUGIN_IMAGE_READER, 0);
+      
+      if(!(extensions = bg_plugin_info_get_extensions(info)))
+        continue;
+      
+      for(j = 0; j < extensions->num_entries; j++)
+        gavl_string_array_add(bg_plugin_reg->image_extensions, gavl_string_array_get(extensions, j));
+      }
+    }
+  
+  return bg_plugin_reg->image_extensions;
+  }
+
 
 int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur, const gavl_dictionary_t * next, int * next_idx)
   {
@@ -4607,7 +4734,8 @@ void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
   /* TODO */
   char * tmp_string;
   const bg_plugin_info_t * info;
-
+  const gavl_array_t * arr;
+  
   if(arg >= *argc)
     {
     fprintf(stderr, "Option -list-plugin-parameters requires an argument\n");
@@ -4620,15 +4748,15 @@ void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
     exit(-1);
     }
 
-  if(info->extensions)
+  if((arr = bg_plugin_info_get_extensions(info)))
     {
-    tmp_string = gavl_string_array_join(info->extensions, " ");
+    tmp_string = gavl_string_array_join(arr, " ");
     fprintf(stderr, "Extensions: %s\n", tmp_string);
     }
 
-  if(info->protocols)
+  if((arr = bg_plugin_info_get_protocols(info)))
     {
-    tmp_string = gavl_string_array_join(info->protocols, " ");
+    tmp_string = gavl_string_array_join(arr, " ");
     fprintf(stderr, "Protocols: %s\n", tmp_string);
     }
   
@@ -5225,9 +5353,11 @@ bg_plugin_registry_extract_embedded_cover(const char * uri,
   const gavl_value_t * val;
   const gavl_dictionary_t * dict;
   const gavl_buffer_t * buf_src;
-  gavl_dictionary_t * mi =
-    bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0);
-
+  gavl_dictionary_t * mi;
+  
+  if(!(mi = bg_plugin_registry_load_media_info(bg_plugin_reg, uri, 0)))
+    return 0;
+  
   if((dict = gavl_get_track(mi, 0)) &&
      (dict = gavl_track_get_metadata(dict)) &&
      (val = gavl_dictionary_get(dict, GAVL_META_COVER_EMBEDDED)))
@@ -5240,7 +5370,7 @@ bg_plugin_registry_extract_embedded_cover(const char * uri,
          (val->type == GAVL_TYPE_DICTIONARY))
         dict = val->v.dictionary;
       }
-
+    
     if((buf_src = gavl_dictionary_get_binary(dict, GAVL_META_IMAGE_BUFFER)))
       {
       gavl_dictionary_copy_value(m, dict, GAVL_META_MIMETYPE);
@@ -5248,7 +5378,7 @@ bg_plugin_registry_extract_embedded_cover(const char * uri,
       ret = 1;
       }
     }
-
+  
   if(mi)
     gavl_dictionary_destroy(mi);
   

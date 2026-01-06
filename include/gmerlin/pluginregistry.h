@@ -106,6 +106,10 @@ typedef struct bg_plugin_info_s  bg_plugin_info_t;
 #define BG_PLUGIN_CMPNAME           "cmpname"
 #define BG_PLUGIN_API               "api"
 
+#define BG_PLUGIN_MIMETYPES         "mimetypes"
+#define BG_PLUGIN_EXTENSIONS        "extensions"
+#define BG_PLUGIN_PROTOCOLS         "protocols"
+
 #define bg_plugin_info_get_gettext_domain(inf) \
   gavl_dictionary_get_string(&inf->dict, BG_PLUGIN_GETTEXT_DOMAIN)
 
@@ -118,7 +122,21 @@ typedef struct bg_plugin_info_s  bg_plugin_info_t;
 #define bg_plugin_info_get_long_name(inf) \
   gavl_dictionary_get_string(&inf->dict, GAVL_META_LABEL)
 
-#define bg_plugin_info_set_gettext_domain(inf,s) \
+#define bg_plugin_info_get_description(inf) \
+  gavl_dictionary_get_string(&inf->dict, GAVL_META_DESCRIPTION)
+
+#define bg_plugin_info_get_mimetypes(inf)  \
+  gavl_dictionary_get_array(&inf->dict, BG_PLUGIN_MIMETYPES)
+
+#define bg_plugin_info_get_extensions(inf)                        \
+  gavl_dictionary_get_array(&inf->dict, BG_PLUGIN_EXTENSIONS)
+
+#define bg_plugin_info_get_protocols(inf)                      \
+  gavl_dictionary_get_array(&inf->dict, BG_PLUGIN_PROTOCOLS)
+
+/* */
+
+#define bg_plugin_info_set_gettext_domain(inf,s)                        \
   gavl_dictionary_set_string(&inf->dict, BG_PLUGIN_GETTEXT_DOMAIN, s)
 
 #define bg_plugin_info_set_gettext_directory(inf,s) \
@@ -130,29 +148,30 @@ typedef struct bg_plugin_info_s  bg_plugin_info_t;
 #define bg_plugin_info_set_long_name(inf,s) \
   gavl_dictionary_set_string(&inf->dict, GAVL_META_LABEL, s)
 
+#define bg_plugin_info_set_description(inf,s) \
+  gavl_dictionary_set_string(&inf->dict, GAVL_META_DESCRIPTION, s)
+
+#define bg_plugin_info_set_description_nocopy(inf,s)                           \
+  gavl_dictionary_set_string_nocopy(&inf->dict, GAVL_META_DESCRIPTION, s)
+
+#define bg_plugin_info_set_mimetypes(inf)  \
+  gavl_dictionary_get_array_create(&inf->dict, BG_PLUGIN_MIMETYPES)
+
+#define bg_plugin_info_set_extensions(inf)                               \
+  gavl_dictionary_get_array_create(&inf->dict, BG_PLUGIN_EXTENSIONS)
+
+#define bg_plugin_info_set_protocols(inf)                              \
+  gavl_dictionary_get_array_create(&inf->dict, BG_PLUGIN_PROTOCOLS)
 
 struct bg_plugin_info_s
   {
   gavl_dictionary_t dict;
   
-  //  char * gettext_domain; //!< First argument for bindtextdomain(). 
-  //  char * gettext_directory; //!< Second argument for bindtextdomain().
-  
-  //  char * name;            //!< unique short name
-  //  char * long_name;       //!< Humanized name
-
-  gavl_value_t mimetypes_val;
-  gavl_value_t extensions_val;
-  gavl_value_t protocols_val;
-  
-  gavl_array_t * mimetypes;
-  gavl_array_t * extensions;
-  gavl_array_t * protocols;
   
   gavl_codec_id_t * compressions; //!< Compressions, this plugin can handle
   uint32_t        * codec_tags;   //!< Codec tags, this plugin can handle
 
-  char * description;     //!< Description of what the plugin does
+  // char * description;     //!< Description of what the plugin does
 
   char * module_filename; //!< Path of the shared module
   long   module_time;     //!< Modification time of the shared module, needed internally
@@ -353,7 +372,7 @@ bg_plugin_find_by_filename(const char * filename, int type_mask);
  *  \returns A plugin info or NULL
  *
  *  This function returns the first plugin matching type_mask,
- *  whose extensions match filename.
+ *  whose mimetypes match the given mimetype.
  */
 const bg_plugin_info_t *
 bg_plugin_find_by_mimetype(const char * mimetype, int type_mask);
@@ -778,6 +797,10 @@ void bg_ov_plugin_set_paused(bg_plugin_handle_t * h, int paused);
 const gavl_array_t * bg_plugin_registry_get_input_mimetypes(void);
 
 const gavl_array_t * bg_plugin_registry_get_input_protocols(void);
+
+const gavl_array_t * bg_plugin_registry_get_input_extensions(void);
+const gavl_array_t * bg_plugin_registry_get_image_extensions(void);
+
 
 int bg_track_is_multitrack_sibling(const gavl_dictionary_t * cur,
                                    const gavl_dictionary_t * next,
