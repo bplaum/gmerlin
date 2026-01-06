@@ -127,6 +127,7 @@ formats.c \
 frametimer.c \
 frontend.c \
 frontend_gmerlin.c \
+fs_cache.c \
 glvideo.c \
 gl_color.c \
 gl_coords.c \
@@ -142,7 +143,8 @@ iconfont.c \
 id3v2.c \
 language_table.c \
 log.c \
-mdb_filesystem.c \
+mdb_cache.c \
+mdb_fs.c \
 mdb_radiobrowser.c \
 mdb_remote.c \
 mdb_removable.c \
