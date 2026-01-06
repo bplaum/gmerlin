@@ -55,8 +55,6 @@ typedef struct bg_mdb_backend_s bg_mdb_backend_t;
 
 /* Backend flags */
 #define BE_FLAG_DO_CACHE (1<<0)
-// #define BE_FLAG_REMOTE   (1<<1) // We want remote devices
-// #define BE_FLAG_VOLUMES  (1<<2) // We want volumes and drives
 #define BE_FLAG_RESOURCES (1<<2) // We want volumes and drives
 
 #define BE_FLAG_RESCAN   (1<<3) // We want rescan commands
@@ -96,7 +94,7 @@ void bg_mdb_create_upnp(bg_mdb_backend_t * b);
 
 /* Filesystem (scanned while opening) */
 
-void bg_mdb_create_filesystem(bg_mdb_backend_t * b);
+void bg_mdb_create_fs(bg_mdb_backend_t * b);
 
 /* xml */
 void bg_mdb_create_xml(bg_mdb_backend_t * b);
@@ -259,31 +257,62 @@ struct bg_mdb_s
 /* Cleanup object for saving to file */
 void bg_mdb_object_cleanup(gavl_dictionary_t * dict);
 
-#if 0
 typedef struct
   {
-  int start;
-  int end;
+  sqlite3 * db;
+  sqlite3_stmt *select_object;
+  sqlite3_stmt *select_children;
+  sqlite3_stmt *count_children;
+  sqlite3_stmt *insert;
+  sqlite3_stmt *scan_dir;
+  sqlite3_stmt *delete_entry;
+
+  char * current_path;
+  gavl_array_t current_dir;
+  int current_mask;
   
-  char * orig_id;
-  char * translated_id;
-  
-  } bg_mdb_page_t;
+  } bg_mdb_fs_cache_t;
 
-void bg_mdb_page_init_browse_object(bg_mdb_t * mdb, bg_mdb_page_t * page, const char ** id);
-void bg_mdb_page_init_browse_children(bg_mdb_t * mdb, bg_mdb_page_t * page, const char ** id, int * start, int * num);
+#define BG_MDB_FS_MASK_AUDIO      (1<<0)
+#define BG_MDB_FS_MASK_VIDEO      (1<<1)
+#define BG_MDB_FS_MASK_IMAGE      (1<<2)
+#define BG_MDB_FS_MASK_LOCATION   (1<<3)
+#define BG_MDB_FS_MASK_OTHER      (1<<4)
 
-void bg_mdb_page_apply_object(bg_mdb_t * mdb, const bg_mdb_page_t * page, gavl_dictionary_t * dict);
+#define BG_MDB_FS_MASK_DIRECTORY  (1<<8)
+#define BG_MDB_FS_MASK_MULTITRACK (1<<9)
 
-void bg_mdb_page_apply_children(bg_mdb_t * mdb, const bg_mdb_page_t * page, gavl_dictionary_t * array);
+#define BG_MDB_FS_TYPE_DIRECTORY  1
+#define BG_MDB_FS_TYPE_MULTITRACK 2
+#define BG_MDB_FS_TYPE_FILE       3
 
-int bg_mdb_container_create_pages(bg_mdb_t * mdb,
-                                  gavl_dictionary_t * arr, int start,
-                                  int num, int total_children, const char * child_class,
-                                  const char * parent_id);
+#define BG_MDB_FS_ITEM_MASK          0x00ff
+#define BG_MDB_FS_CONTAINER_MASK     0xff00
 
-void bg_mdb_page_free(bg_mdb_page_t * page);
-  
-#endif
+
+
+int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path);
+void bg_mdb_fs_cache_cleanup(bg_mdb_fs_cache_t * c);
+
+int bg_mdb_fs_browse_object(bg_mdb_fs_cache_t * c, const char * path,
+                            gavl_dictionary_t * ret,
+                            int type_mask);
+
+int bg_mdb_fs_browse_children(bg_mdb_fs_cache_t * c, const char * path,
+                              gavl_array_t * ret, int start, int num, int type_mask, int * total_entries);
+
+int bg_mdb_fs_count_children(bg_mdb_fs_cache_t * c, const char * path, int type_mask,
+                             int * num_containers, int * num_items);
+
+//int bg_mdb_load_track_fs(bg_mdb_fs_cache_t * c, gavl_dictionary_t * ret,
+//                         const char * filename, time_t mtime);
+
+int bg_mdb_fs_cache_get(bg_mdb_fs_cache_t * c, const char * filename,
+                        time_t mtime, gavl_dictionary_t * m);
+
+int bg_mdb_fs_cache_put(bg_mdb_fs_cache_t * c, const char * filename,
+                        time_t mtime, const gavl_dictionary_t * m);
+
+
 
 #endif // MDB_PRIVATE_H_INCLUDED
