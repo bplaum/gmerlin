@@ -711,6 +711,9 @@ void bg_dictionary_to_json(const gavl_dictionary_t * dict,
 int bg_dictionary_from_json(gavl_dictionary_t * dict,
                             struct json_object * json);
 
+int bg_dictionary_from_json_string(gavl_dictionary_t * dict,
+                                   const char * str);
+
 const char * bg_json_dict_get_string(json_object * obj, const char * tag);
 int bg_json_dict_get_int(json_object * obj, const char * tag);
 double bg_json_dict_get_double(json_object * obj, const char * tag);

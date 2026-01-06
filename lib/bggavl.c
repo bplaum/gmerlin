@@ -1202,6 +1202,21 @@ int bg_dictionary_from_json(gavl_dictionary_t * dict,
   return 1;
   }
 
+int bg_dictionary_from_json_string(gavl_dictionary_t * dict, const char * str)
+  {
+  int ret = 0;
+  
+  struct json_object * obj;
+
+  if(!(obj = json_tokener_parse(str)))
+    return ret;
+
+  ret = bg_dictionary_from_json(dict, obj);
+  json_object_put(obj);
+  return ret;
+  }
+
+
 /* */
 
 /*
@@ -1842,7 +1857,8 @@ void bg_string_to_string_array(const char * str, gavl_array_t * arr)
   str_arr = gavl_strbreak(str, ' ');
   while(str_arr[idx])
     {
-    gavl_string_array_add(arr, str_arr[idx]);
+    if(str_arr[idx] && *(str_arr[idx]))    
+      gavl_string_array_add(arr, str_arr[idx]);
     idx++;
     }
   gavl_strbreak_free(str_arr);
