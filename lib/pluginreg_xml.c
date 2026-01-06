@@ -100,16 +100,20 @@ flag_names[] =
   };
 
 static const char * const plugin_key            = "PLUGIN";
-static const char * const plugin_registry_key   = "PLUGIN_REGISTRY";
+static const char * const plugin_registry_key   = "PLUGIN_REGISTRY2";
 
+static const char * const dict_key              = "DICT";
+
+#if 0
 static const char * const name_key              = "NAME";
 static const char * const long_name_key         = "LONG_NAME";
 static const char * const description_key       = "DESCRIPTION";
 static const char * const mimetypes_key         = "MIMETYPES";
 static const char * const extensions_key        = "EXTENSIONS";
+#endif
+
 static const char * const compressions_key      = "COMPRESSIONS";
 static const char * const codec_tags_key        = "CODEC_TAGS";
-static const char * const protocols_key         = "PROTOCOLS";
 static const char * const module_filename_key   = "MODULE_FILENAME";
 static const char * const module_time_key       = "MODULE_TIME";
 static const char * const type_key              = "TYPE";
@@ -168,9 +172,8 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
   int index;
   char * start_ptr;
   char * end_ptr;
-  
   bg_plugin_info_t * ret;
-
+  
   ret = calloc(1, sizeof(*ret));
   
   cur = node->children;
@@ -183,7 +186,13 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
       continue;
       }
 
-    if(!BG_XML_STRCMP(cur->name, parameters_key))
+    if(!BG_XML_STRCMP(cur->name, dict_key))
+      {
+      bg_xml_2_dictionary(cur, &ret->dict);
+      cur = cur->next;
+      continue;
+      }
+    else if(!BG_XML_STRCMP(cur->name, parameters_key))
       {
       ret->parameters = bg_xml_2_parameters(doc, cur);
       cur = cur->next;
@@ -216,34 +225,7 @@ static bg_plugin_info_t * load_plugin(xmlDocPtr doc, xmlNodePtr node)
     
     tmp_string = (char*)xmlNodeListGetString(doc, cur->children, 1);
 
-    if(!BG_XML_STRCMP(cur->name, name_key))
-      {
-      bg_plugin_info_set_name(ret, tmp_string);
-      }
-    else if(!BG_XML_STRCMP(cur->name, long_name_key))
-      {
-      bg_plugin_info_set_long_name(ret, tmp_string);
-      }
-    else if(!BG_XML_STRCMP(cur->name, description_key))
-      {
-      ret->description = gavl_strrep(ret->description, tmp_string);
-      }
-    else if(!BG_XML_STRCMP(cur->name, mimetypes_key))
-      {
-      ret->mimetypes = gavl_value_set_array(&ret->mimetypes_val);
-      bg_string_to_string_array(tmp_string, ret->mimetypes);
-      }
-    else if(!BG_XML_STRCMP(cur->name, extensions_key))
-      {
-      ret->extensions = gavl_value_set_array(&ret->extensions_val);
-      bg_string_to_string_array(tmp_string, ret->extensions);
-      }
-    else if(!BG_XML_STRCMP(cur->name, protocols_key))
-      {
-      ret->protocols = gavl_value_set_array(&ret->protocols_val);
-      bg_string_to_string_array(tmp_string, ret->protocols);
-      }
-    else if(!BG_XML_STRCMP(cur->name, compressions_key))
+    if(!BG_XML_STRCMP(cur->name, compressions_key))
       {
       int num;
       char ** comp_list;
@@ -398,7 +380,6 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
   const char * flag_name;
   const char * type_name;
   const char * var;
-
   uint32_t flag;
   
   xmlNodePtr xml_plugin;
@@ -412,51 +393,16 @@ static void save_plugin(xmlNodePtr parent, const bg_plugin_info_t * info)
   xml_plugin = xmlNewTextChild(parent, NULL,
                                (xmlChar*)plugin_key, NULL);
   xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
+  
+  xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)dict_key, NULL);
 
-  xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)name_key, NULL);
-  xmlAddChild(xml_item, BG_XML_NEW_TEXT(bg_plugin_info_get_name(info)));
-  xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
-
-  xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)long_name_key, NULL);
-  xmlAddChild(xml_item, BG_XML_NEW_TEXT(bg_plugin_info_get_long_name(info)));
-  xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
-
-  xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)description_key, NULL);
-  xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->description));
-  xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
+  bg_dictionary_2_xml(xml_item, &info->dict, 2);
   
   xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)module_filename_key,
                              NULL);
   xmlAddChild(xml_item, BG_XML_NEW_TEXT(info->module_filename));
   xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
   
-  if(info->extensions && info->extensions->num_entries)
-    {
-    tmp_string = bg_string_array_to_string(info->extensions);
-    
-    xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)extensions_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(tmp_string));
-    xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
-    free(tmp_string);
-    }
-  if(info->protocols && info->protocols->num_entries)
-    {
-    tmp_string = bg_string_array_to_string(info->protocols);
-
-    xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)protocols_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(tmp_string));
-    xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
-    free(tmp_string);
-    }
-  if(info->mimetypes && info->mimetypes->num_entries)
-    {
-    tmp_string = bg_string_array_to_string(info->mimetypes);
-
-    xml_item = xmlNewTextChild(xml_plugin, NULL, (xmlChar*)mimetypes_key, NULL);
-    xmlAddChild(xml_item, BG_XML_NEW_TEXT(tmp_string));
-    xmlAddChild(xml_plugin, BG_XML_NEW_TEXT("\n"));
-    free(tmp_string);
-    }
   if(info->compressions)
     {
     int index = 0;
