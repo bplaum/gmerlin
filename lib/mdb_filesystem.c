@@ -128,6 +128,8 @@ typedef struct
   bg_object_cache_t * cache;
 
   gavl_timer_t * timer;
+
+  bg_mdb_fs_cache_t c;
   
   } fs_t;
 
@@ -230,6 +232,8 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
 
   fs_t * fs = be->priv;
 
+  fprintf(stderr, "load_directory_contents %s\n", path);
+  
   if(!ret)
     {
     if(fs->directory_path && !strcmp(fs->directory_path, path))
@@ -255,10 +259,9 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
       gavl_value_free(&val);
     }
 
-
   gavl_array_sort(ret, compare_func, NULL);
 
-  //  fprintf(stderr, "Got directory contents:\n");
+  fprintf(stderr, "Got directory contents: %d entries\n", ret->num_entries);
   //  gavl_array_dump(ret, 2);
   
   globfree(&g);
@@ -352,7 +355,7 @@ static int load_directory_info(bg_mdb_backend_t * be,
   char * uri;
   const char * child_uri;
   const gavl_dictionary_t * dict;
-  gavl_dictionary_t dirent;
+  //  gavl_dictionary_t dirent;
   int i;
   gavl_dictionary_t * m;
   gavl_dictionary_t * src;
@@ -362,13 +365,13 @@ static int load_directory_info(bg_mdb_backend_t * be,
   
   //  fs_t * fs = be->priv;
 
-  gavl_dictionary_init(&dirent);
-  gavl_dictionary_copy(&dirent, dirent_p);
+  //  gavl_dictionary_init(&dirent);
+  //  gavl_dictionary_copy(&dirent, dirent_p);
 
   gavl_array_init(&arr);
   
   /* Local copy of URI because the dirent array will be reset */
-  uri = gavl_strdup(gavl_dictionary_get_string(&dirent, GAVL_META_URI));
+  uri = gavl_strdup(gavl_dictionary_get_string(dirent_p, GAVL_META_URI));
   
   load_directory_contents(be, uri, &arr);
   
@@ -457,14 +460,12 @@ static int load_directory_info(bg_mdb_backend_t * be,
     gavl_dictionary_set_string(m, GAVL_META_LABEL, uri); 
 
   src = gavl_metadata_add_src(m, GAVL_META_SRC, NULL, uri);
-  gavl_dictionary_copy_value(src, &dirent, GAVL_META_MTIME);
+  gavl_dictionary_copy_value(src, dirent_p, GAVL_META_MTIME);
   gavl_track_set_num_children(ret, num_containers, num_items);
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
            "Loaded %s, %d containers %d items", uri, num_containers, num_items);
   
-  gavl_dictionary_free(&dirent);
-
   if(uri)
     free(uri);
   if(first_image)
@@ -556,6 +557,22 @@ static char * id_to_path(bg_mdb_backend_t * be, dir_type_t type, const char * id
   return ret;
   }
 
+#if 0
+static int cache_get(bg_mdb_backend_t * be,
+                     gavl_dictionary_t * ret,
+                     const gavl_dictionary_t * dirent)
+  {
+  
+  }
+
+static int cache_put(bg_mdb_backend_t * be,
+                     gavl_dictionary_t * ret,
+                     const gavl_dictionary_t * dirent)
+  {
+  
+  }
+#endif
+
 static int load_item_info(bg_mdb_backend_t * be,
                           gavl_dictionary_t * ret,
                           const gavl_dictionary_t * dirent,
@@ -619,7 +636,6 @@ static int load_item_info(bg_mdb_backend_t * be,
 
   return 1;
   }
-
 
 static int get_track_idx_by_uri(const gavl_array_t * arr, const char * uri)
   {
@@ -704,7 +720,7 @@ static void refresh_children(bg_mdb_backend_t * be,
     if((child_mtime == GAVL_TIME_UNDEFINED) ||
        (child_mtime != dirent_mtime))
       {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", gavl_dictionary_get_string(dirent, GAVL_META_URI));
+      //      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading %s", gavl_dictionary_get_string(dirent, GAVL_META_URI));
       //      fprintf(stderr, "child_mtime:  %"PRId64"\n", child_mtime);
       //      fprintf(stderr, "dirent_mtime: %"PRId64"\n", dirent_mtime);
       /* Re-loading entry */
@@ -1137,6 +1153,8 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
     /* Load objects */
     create_dummy_children(&fs->directory, arr, type);
 
+    //    fprintf(stderr, "Created dummy children: %d %d\n", fs->directory.num_entries, arr->num_entries);
+    
     if(!bg_mdb_adjust_num(start, &num, arr->num_entries))
       goto fail;
     
@@ -1177,10 +1195,12 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
         browse_children_multitrack(be, msg, ctx_id, path, start, num);
       
       gavl_dictionary_get_long(&dirent, GAVL_META_MTIME, &dirent_mtime);
-      
+
       if((cache_val = bg_object_cache_get(fs->cache, ctx_id)))
         {
-        /* Got object from cache, let's check if it's up top date */
+        fprintf(stderr, "Got cache value for %s\n", ctx_id);
+
+        /* Got object from cache, let's check if it's up to date */
         cache_dict = gavl_value_get_dictionary_nc(cache_val);
         
         mtime = obj_get_mtime(cache_dict);
@@ -1209,12 +1229,15 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
         gavl_value_set_dictionary(&new_entry);
         
         cache_val = bg_object_cache_put_nocopy(fs->cache, ctx_id, &new_entry);
+
+        fprintf(stderr, "bg_object_cache_put: %s\n", ctx_id);
         cache_dict = gavl_value_get_dictionary_nc(cache_val);
         
         arr = gavl_dictionary_get_array_create(cache_dict, GAVL_META_CHILDREN);
         load_directory_contents(be, path, NULL);
         create_dummy_children(&fs->directory, arr, type);
-
+        fprintf(stderr, "Created dummy children: %d %d\n", fs->directory.num_entries, arr->num_entries);
+        
         obj_set_mtime(cache_dict, dirent_mtime);
         }
       
@@ -1223,6 +1246,8 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
 
       //  load_directory_contents(be, path);
       refresh_children(be, arr, &fs->directory, type, start, num, ctx_id);
+      fprintf(stderr, "Refreshed children: %d %d\n", fs->directory.num_entries, arr->num_entries);
+      
       goto found;
       }
     }
@@ -1298,6 +1323,8 @@ static void destroy_filesystem(bg_mdb_backend_t * b)
   gavl_array_free(&fs->removables);
   
   bg_object_cache_destroy(fs->cache);
+  bg_mdb_fs_cache_cleanup(&fs->c);
+  
   gavl_timer_destroy(fs->timer);
   free(fs);
   }
@@ -1734,8 +1761,8 @@ static void export_dirs_init(bg_mdb_backend_t * b, gavl_array_t * arr)
     {
     if((dict = gavl_value_get_dictionary(&arr->entries[i])))
       {
-      fprintf(stderr, "export_dirs_init\n");
-      gavl_dictionary_dump(dict, 2);
+      //      fprintf(stderr, "export_dirs_init\n");
+      //      gavl_dictionary_dump(dict, 2);
       
       if(gavl_track_get_src(dict, GAVL_META_SRC, 0, NULL, &location) && location)
         bg_mdb_export_media_directory(b->ctrl.evt_sink, location);
@@ -1801,5 +1828,11 @@ void bg_mdb_create_filesystem(bg_mdb_backend_t * b)
 
   priv->timer = gavl_timer_create();
   gavl_timer_start(priv->timer);
-  
+
+  /* Create cache */
+
+  tmp_string = gavl_sprintf("%s/fs_cache.sqlite", b->db->path);
+  bg_mdb_fs_cache_init(&priv->c, tmp_string);
+
+  free(tmp_string);
   }
