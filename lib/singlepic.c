@@ -539,7 +539,7 @@ static gavl_source_status_t read_video_packet_input(void * priv, gavl_packet_t *
 
   gavl_buffer_reset(&(*p)->buf);
 
-  if(!bg_read_file(filename, &(*p)->buf))
+  if(!gavl_read_file(filename, &(*p)->buf))
     return GAVL_SOURCE_EOF;
   
   if(inp->do_still)
