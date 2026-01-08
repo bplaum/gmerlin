@@ -182,7 +182,7 @@ xmlDocPtr bg_xml_parse_file(const char * filename, int lock)
              filename, strerror(errno));
     }
 
-  if(bg_file_size(f))
+  if(gavl_file_size(f))
     ret = bg_xml_load_FILE(f);
   
   if(lock)
