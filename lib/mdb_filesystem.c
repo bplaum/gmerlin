@@ -232,7 +232,7 @@ static void load_directory_contents(bg_mdb_backend_t * be, const char * path, ga
 
   fs_t * fs = be->priv;
 
-  fprintf(stderr, "load_directory_contents %s\n", path);
+  //  fprintf(stderr, "load_directory_contents %s\n", path);
   
   if(!ret)
     {
