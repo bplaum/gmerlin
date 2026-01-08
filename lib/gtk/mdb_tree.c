@@ -1393,7 +1393,7 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
             type = gavl_msg_get_arg_int(msg, 1);
             str = bg_tracks_to_string(selected, type, 1);
             gavl_dictionary_destroy(selected);
-            bg_write_file(filename, str, strlen(str));
+            gavl_write_file(filename, str, strlen(str));
             free(str);
             }
           else if(!strcmp(ctx, MSG_SAVE_ALBUM))
@@ -1411,7 +1411,7 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
             gavl_dictionary_destroy(a);
             
 
-            bg_write_file(filename, str, strlen(str));
+            gavl_write_file(filename, str, strlen(str));
             free(str);
             }
           
