@@ -77,15 +77,6 @@ void bg_http_header_set_empty_var(gavl_dictionary_t * h, const char * name)
   gavl_dictionary_set_string(h, name, META_EMPTY);
   }
 
-void bg_http_header_set_date(gavl_dictionary_t * h, const char * name)
-  {
-  char date[30];
-  time_t curtime = time(NULL);
-  struct tm tm;
-  
-  strftime(date, 30,"%a, %d %b %Y %H:%M:%S GMT", gmtime_r(&curtime, &tm));
-  gavl_dictionary_set_string(h, name, date);
-  }
 
 int bg_http_response_check_keepalive(gavl_dictionary_t * res)
   {

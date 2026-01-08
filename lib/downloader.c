@@ -25,6 +25,7 @@
 
 #include <gmerlin/downloader.h>
 #include <gavl/http.h>
+#include <gmerlin/http.h>
 #include <gmerlin/utils.h>
 #include <gavl/log.h>
 #include <gmerlin/pluginregistry.h>
@@ -34,6 +35,8 @@
 
 #define STATE_ACTIVE  (1<<0)
 #define STATE_STARTED (1<<1)
+
+#define USE_CACHE
 
 typedef struct
   {
@@ -68,8 +71,6 @@ struct bg_downloader_s
   int queue_alloc;
   
   gavl_timer_t * timer;
-
-  char * cache_dir;
   };
 
 static void remove_queue_item(bg_downloader_t * d, int j)
@@ -164,29 +165,6 @@ static void init_download(bg_downloader_t * d, int i, const char * uri)
   d->num_downloads++;
   }
 
-#if 0
-/* Disk cache */
-static int load_cache_item(bg_downloader_t * d,
-                           const char * uri,
-                           gavl_dictionary_t * metadata,
-                           gavl_buffer_t * buf)
-  {
-  char md5[33];
-  bg_get_filename_hash(uri, md5);
-  return bg_load_cache_item(d->cache_dir, md5, metadata, buf);
-  }
-
-static int save_cache_item(bg_downloader_t * d,
-                           const char * uri,
-                           const gavl_dictionary_t * metadata,
-                           const gavl_buffer_t * buf)
-  {
-  char md5[33];
-  bg_get_filename_hash(uri, md5);
-  bg_save_cache_item(d->cache_dir, md5, metadata, buf);
-  return 1;
-  }
-#endif
 
 void bg_downloader_update(bg_downloader_t * d)
   {
@@ -214,7 +192,7 @@ void bg_downloader_update(bg_downloader_t * d)
           {
           gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Loading local file: %s", d->downloads[i].uri);
 
-          if(!bg_read_file(d->downloads[i].uri, &d->downloads[i].buf))
+          if(!gavl_read_file(d->downloads[i].uri, &d->downloads[i].buf))
             finish_error(d, i);         /* Error */
           else
             finish_success(d, bg_url_to_mimetype(d->downloads[i].uri), i);
@@ -235,15 +213,16 @@ void bg_downloader_update(bg_downloader_t * d)
           }
         else
           {
-          /* TODO: Load from http cache */
-
-
           /* Download */
           if(!d->downloads[i].io)
             {
             d->downloads[i].io = gavl_http_client_create();
             gavl_http_client_set_response_body(d->downloads[i].io, &d->downloads[i].buf);
             }
+
+#ifdef USE_CACHE
+          bg_http_cache_get(d->downloads[i].uri, gavl_http_client_get_cache_info(d->downloads[i].io));
+#endif
           
           gavl_buffer_reset(&d->downloads[i].buf);
           gavl_http_client_run_async(d->downloads[i].io,
@@ -281,12 +260,14 @@ void bg_downloader_update(bg_downloader_t * d)
           
         if(mimetype && (pos = strchr(mimetype, ';')))
           *pos = '\0';
-
-        //   save_cache_item(d, d->downloads[i].uri, mimetype, &d->downloads[i].buf);
+        
         gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Finished download %s", d->downloads[i].uri);
         finish_success(d, mimetype, i);
         if(mimetype)
           free(mimetype);
+#ifdef USE_CACHE
+        bg_http_cache_put(gavl_http_client_get_cache_info(d->downloads[i].io));
+#endif
         }
       }
     } // Check running downloads
@@ -334,8 +315,6 @@ bg_downloader_t * bg_downloader_create(int max_downloads)
   ret->timer = gavl_timer_create();
   gavl_timer_start(ret->timer);
 
-  ret->cache_dir = gavl_search_cache_dir(PACKAGE, "http");
-  
   return ret;
   }
 
@@ -368,7 +347,6 @@ void bg_downloader_destroy(bg_downloader_t * d)
     free(d->downloads);
     }
   
-  free(d->cache_dir);
   gavl_timer_destroy(d->timer);
   free(d);
   }

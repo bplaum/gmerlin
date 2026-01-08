@@ -186,6 +186,8 @@ int main(int argc, char ** argv)
   srand(time(NULL));
   
   gavl_dictionary_init(&state);
+
+  bg_http_cache_init();
   
 #ifdef MTRACE
   mtrace();

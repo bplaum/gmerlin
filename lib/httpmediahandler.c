@@ -57,6 +57,8 @@
 
 /* id3 and flac tag handling */
 
+#define CACHE_AGE (60*60)
+
 typedef struct
   {
   char * filename;
@@ -208,6 +210,9 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     bg_http_connection_init_res(conn, "HTTP/1.1", 401, "Forbidden");
     goto go_on;
     }
+
+  if(bg_http_connection_not_modified(conn, st.st_mtime))
+    goto go_on;
   
   /* Load media info */
   mi = bg_plugin_registry_load_media_info(bg_plugin_reg, local_path, 0);
@@ -339,14 +344,17 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
     gavl_buffer_copy(&mh.h.buf, &h->buf);
     mh.h.offset = h->offset;
     }
+
   
   /* Send response header */
-
+  
   if(range)
     bg_http_connection_init_res(conn, "HTTP/1.1", 206, "Partial Content");
   else
     bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
 
+    
+  
   /* dlna content features */
   
   if(metadata && (var = gavl_dictionary_get_string(&conn->req, "getcontentFeatures.dlna.org")) &&
@@ -373,9 +381,16 @@ static int handle_http_mediafile(bg_http_connection_t * conn, void * data)
                                       gavl_sprintf("%f", gavl_time_to_seconds(duration)));
   
   gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
-  bg_http_header_set_date(&conn->res, "Date");
+  gavl_http_header_set_date(&conn->res, "Date");
   gavl_dictionary_set_string(&conn->res, "Accept-Ranges", "bytes");
   gavl_dictionary_set_string(&conn->res, "Content-Type", mimetype);
+
+  /* mtime (for caching) */
+  
+  gavl_http_header_set_time(&conn->res, "Last-Modified", st.st_mtime);
+  gavl_dictionary_set_string_nocopy(&conn->res, "Cache-Control",
+                                    gavl_sprintf("max-age=%d", BG_HTTP_CACHE_AGE));
+  
   
   if(range)
     {

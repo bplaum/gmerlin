@@ -133,6 +133,7 @@ gl_color.c \
 gl_coords.c \
 gl_shader.c \
 http.c \
+httpcache.c \
 httpconnection.c \
 httpcoverhandler.c \
 httplpcmhandler.c \

@@ -237,6 +237,29 @@ void bg_http_connection_init_res(bg_http_connection_t * conn,
   conn->flags |= BG_HTTP_REQ_HAS_STATUS;
   }
 
+int bg_http_connection_not_modified(bg_http_connection_t * conn,
+                                    time_t mtime)
+  {
+  time_t last_mtime;
+  
+  /* Check for caching */
+  if((last_mtime = gavl_http_header_get_time(&conn->req, "If-Modified-Since")) &&
+     (mtime <= last_mtime))
+    {
+    bg_http_connection_init_res(conn, "HTTP/1.1", 304, "Not Modified");
+
+    gavl_http_header_set_date(&conn->res, "Date");
+    
+    gavl_http_header_set_time(&conn->res, "Last-Modified", mtime);
+    gavl_dictionary_set_string_nocopy(&conn->res, "Cache-Control",
+                                      gavl_sprintf("max-age=%d", BG_HTTP_CACHE_AGE));
+    
+    bg_http_connection_check_keepalive(conn);
+    return 1;
+    }
+  return 0;
+  }
+
 void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real_file)
   {
   struct stat st;
@@ -290,12 +313,20 @@ void bg_http_connection_send_file(bg_http_connection_t * conn, const char * real
                           401, "Forbidden");
     goto go_on;
     }
+
+  if(bg_http_connection_not_modified(conn, st.st_mtime))
+    goto go_on;
+  
   
   bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
 
   bg_http_connection_check_keepalive(conn);
   gavl_dictionary_set_long(&conn->res, "Content-Length", st.st_size);
 
+  gavl_http_header_set_time(&conn->res, "Last-Modified", st.st_mtime);
+  gavl_dictionary_set_string_nocopy(&conn->res, "Cache-Control",
+                                    gavl_sprintf("max-age=%d", BG_HTTP_CACHE_AGE));
+  
   ext = strrchr(real_file, '.');
   if(ext)
     {

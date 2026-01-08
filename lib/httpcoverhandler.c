@@ -125,7 +125,7 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
   
   int64_t off = 0;
   int64_t len = 0;
-
+  
   char * basename;
   
   gavl_buffer_t buf;
@@ -173,6 +173,9 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
     bg_http_connection_init_res(conn, "HTTP/1.1", 401, "Forbidden");
     goto go_on;
     }
+
+  if(bg_http_connection_not_modified(conn, st.st_mtime))
+    goto go_on;
   
   if(!bg_plugin_registry_extract_embedded_cover(local_path, &buf, &dict))
     {
@@ -236,7 +239,7 @@ static int handle_http_cover(bg_http_connection_t * conn, void * data)
     bg_http_connection_init_res(conn, "HTTP/1.1", 200, "OK");
   
   gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
-  bg_http_header_set_date(&conn->res, "Date");
+  gavl_http_header_set_date(&conn->res, "Date");
   gavl_dictionary_set_string(&conn->res, "Accept-Ranges", "bytes");
   gavl_dictionary_set_string(&conn->res, "Content-Type", mimetype);
   
