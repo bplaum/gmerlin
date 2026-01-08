@@ -78,7 +78,7 @@ struct bg_mdb_cache_s
 
 static void container_free(container_t * cnt)
   {
-  fprintf(stderr, "Freeing container: %s\n", cnt->id);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Freeing container: %s", cnt->id);
   
   if(cnt->id)
     free(cnt->id);
