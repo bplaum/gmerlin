@@ -266,7 +266,8 @@ typedef struct
   sqlite3_stmt *insert;
   sqlite3_stmt *scan_dir;
   sqlite3_stmt *delete_entry;
-
+  sqlite3_stmt *delete_children;
+  
   char * current_path;
   gavl_array_t current_dir;
   int current_mask;
