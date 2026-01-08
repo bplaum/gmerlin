@@ -87,8 +87,11 @@ static void finalize_func(bg_mdb_backend_t * be, gavl_dictionary_t * track, cons
   bg_mdb_add_http_uris(be->db, track);
   
   if((var = gavl_dictionary_get_string(m, GAVL_META_ID)))
+    {
+    //    fprintf(stderr, "Finalize func: %s + %s ", id_prefix, var);
     gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s/%s", id_prefix, var));
-  
+    //    fprintf(stderr, "= %s\n", gavl_dictionary_get_string(m, GAVL_META_ID));
+    }
   if((var = gavl_dictionary_get_string(m, GAVL_META_PREVIOUS_ID)))
     gavl_dictionary_set_string_nocopy(m, GAVL_META_PREVIOUS_ID, gavl_sprintf("%s/%s", id_prefix, var));
   
@@ -240,9 +243,13 @@ static int browse_object(bg_mdb_backend_t * be, gavl_msg_t * msg)
   gavl_msg_t * res;
   gavl_dictionary_t dict;
   fs_root_t * root;
+  const char * ctx_id_orig = NULL;
+  fs_t * p = be->priv;
   const char * ctx_id =
     gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
 
+  ctx_id_orig = ctx_id;
+  
   if(!(root = get_root(be, ctx_id)))
     return 0;
   
@@ -271,7 +278,36 @@ static int browse_object(bg_mdb_backend_t * be, gavl_msg_t * msg)
     }
   else
     {
-    /* TODO: Browse object below root child */
+    /* Browse object below root child */
+    gavl_dictionary_t dict;
+    char * path;
+    char * parent_id;
+    
+    gavl_dictionary_init(&dict);
+    
+    if(!(path = path_from_id(root, ctx_id)))
+      {
+      return 1;
+      }
+    
+    //    fprintf(stderr, "Browse object: %s [%s] -> %s\n", ctx_id, ctx_id_orig, path);
+
+    bg_mdb_fs_browse_object(&p->c, path, &dict, root->flags);
+    
+    //    gavl_dictionary_dump(&dict, 2);
+
+    parent_id = bg_mdb_get_parent_id(ctx_id_orig);
+    finalize_func(be, &dict, parent_id);
+    free(parent_id);
+    
+    //    gavl_dictionary_dump(&dict, 2);
+    
+    res = bg_msg_sink_get(be->ctrl.evt_sink);
+    bg_mdb_set_browse_obj_response(res, &dict, msg, -1, -1);
+    bg_msg_sink_put(be->ctrl.evt_sink);
+    
+    free(path);
+    
     }
 
   gavl_dictionary_free(&dict);
