@@ -174,6 +174,9 @@ void bg_gtk_init(int * argc, char *** argv)
   /* No, we don't like commas as decimal separators */
   setlocale(LC_NUMERIC, "C");
 
+  /* And strptime should also work as expected */
+  setlocale(LC_TIME, "C");
+  
   /* Set the default window icon */
   set_default_window_icon();
 
@@ -606,10 +609,8 @@ bg_gtk_pixbuf_from_uri_async(bg_gtk_pixbuf_from_uri_callback cb,
   if(!pixbuf_downloader)
     {
     pixbuf_downloader = bg_downloader_create(5);
-//    g_idle_add(image_downloader_idle_callback, NULL);
     g_timeout_add(100, image_downloader_idle_callback, NULL);
     }
-  
   
   d->max_width = max_width;
   d->max_height = max_height;
@@ -633,12 +634,6 @@ static void cleanup_images()
   }
 
 #endif
-
-
-/* 
-   typedef void (*bg_gtk_pixbuf_from_uri_callback)(void * data, GtkPixbuf * pb);
-*/
-
 
 GdkPixbuf * bg_gtk_load_track_image(const gavl_dictionary_t * dict, int max_width, int max_height)
   {
