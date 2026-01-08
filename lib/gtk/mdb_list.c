@@ -51,7 +51,7 @@
 #include "mdb_private.h"
 
 /* Make the display of the track info use the browse_object function */
-// #define TEST_BROWSE_OBJECT
+#define TEST_BROWSE_OBJECT
 
 /* Forward declarations */
 
