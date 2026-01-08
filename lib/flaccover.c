@@ -46,7 +46,7 @@ int bg_flac_cover_tag_write(gavl_io_t * output, const gavl_dictionary_t * image_
      !(mimetype = gavl_dictionary_get_string(image_uri, GAVL_META_MIMETYPE)) ||
      !gavl_dictionary_get_int(image_uri, GAVL_META_WIDTH, &width) ||
      !gavl_dictionary_get_int(image_uri, GAVL_META_HEIGHT, &height) ||
-     !bg_read_file(uri, &b))
+     !gavl_read_file(uri, &b))
     goto fail;
 
   start_pos = gavl_io_position(output);
