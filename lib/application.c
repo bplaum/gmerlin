@@ -35,7 +35,7 @@
 
 /* Application support */
 
-gavl_dictionary_t bg_app_vars = { 0, };;
+gavl_dictionary_t bg_app_vars = { 0 };
 
 void bg_app_init(const char * app_name,
                  const char * app_label,
