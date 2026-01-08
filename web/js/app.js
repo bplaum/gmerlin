@@ -396,7 +396,7 @@ function my_get_children(obj, start, num)
       {
       let res = set_browse_children_response(msg, playqueue_children);
 
-      console.log("set_browse_children_response " + JSON.stringify(playqueue_children));
+//      console.log("set_browse_children_response " + JSON.stringify(playqueue_children));
 	
 
       widgets.browser.handle_msg(res);
@@ -655,13 +655,13 @@ function popstate_cb(evt)
       window.history.go(-2);
       return;
       }
-    console.log("History Backward");
+//    console.log("History Backward");
     window.history.go(1);
     my_history_go(-1);
     }
   else if(evt.state.delta > 0)
     {
-    console.log("History Forward");
+//    console.log("History Forward");
     window.history.go(-1);
     my_history_go(1);
     }
@@ -1070,7 +1070,7 @@ function handle_global_keys(evt)
       done = true;
       break;
     case "f":
-      console.log("Copy to favorites " + JSON.stringify(app_state));
+//      console.log("Copy to favorites " + JSON.stringify(app_state));
       copy_to_favorites();
       break;
     case "b":
@@ -1686,7 +1686,7 @@ function _key_event(evt)
 function init_key_events()
   {
   var key_hdlr;
-  console.log("init_key_events");
+//  console.log("init_key_events");
 
   key_event_hub = new Object();
   key_event_hub.connect = function(cb)
@@ -2694,7 +2694,7 @@ function create_browser()
        (parent_id = get_parent_id(id)))
       {
       /* Check if the new ID is the last entry in the history */
-      console.log("Change up " + my_history_pos + " " + parent_id);
+//      console.log("Change up " + my_history_pos + " " + parent_id);
       if((my_history_pos > 0) && (my_history[my_history_pos-1].id == parent_id))
         {
         my_history_go(-1);
@@ -2852,7 +2852,7 @@ function create_browser()
     child_div = append_dom_element(div, "div");
     child_div.setAttribute("class", "tile-image");
 
-    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
+//    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
       
     make_icon(child_div, obj, this.use_image(klass), 600);
       
@@ -2898,7 +2898,7 @@ function create_browser()
     td.setAttribute("class", "listicon");
   
       
-    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
+//    console.log("have image " + klass + " " + this.have_container_image + " " + this.use_image(klass));
     make_icon(td, obj, this.use_image(klass), 256);
     
     td = append_dom_element(tr, "td");
@@ -3190,7 +3190,7 @@ function create_browser()
                 if(!this.ancestor.found)
                   {
                   /* Change to parent */
-                  console.log("Ancestor deleted " + this.ancestor.id);
+//                  console.log("Ancestor deleted " + this.ancestor.id);
                   widgets.browser.jump_to(this.ancestor.id);
 		  }
                     
@@ -3408,7 +3408,7 @@ function create_browser()
 	}
       else if(obj_get_string(obj, GAVL_META_CLASS).startsWith(GAVL_META_CLASS_IMAGE))
 	{
-        console.log("Showing image " + obj_get_id(obj));
+//        console.log("Showing image " + obj_get_id(obj));
         app_state.image_id =  obj_get_id(obj);
         app_state.widget = "imageviewer";
         app_state_apply();
@@ -4025,7 +4025,7 @@ function create_player_control()
               }
             else if(id == cur_id)
 	      {
-              console.log("BG_MSG_DB_OBJECT_CHANGED " + " " + JSON.stringify(msg.args[0].v));
+//              console.log("BG_MSG_DB_OBJECT_CHANGED " + " " + JSON.stringify(msg.args[0].v));
               set_header(obj);
               if(widgets.browser == current_widget)
                 adjust_header_footer(widgets.browser.div);
@@ -4468,7 +4468,7 @@ function image_viewer_timeout(iv)
   d = new Date();
   if(d.getTime() > iv.off_time)
     {
-    console.log("Hide controls");
+//    console.log("Hide controls");
     iv.div.dataset.controls = false;
     clearInterval(iv.timeout_tag);
     delete iv.timeout_tag;
@@ -4537,7 +4537,7 @@ function create_image_viewer()
 	
     if(!is_object(obj))
       {
-      console.log("set_image_internal " + obj);
+//      console.log("set_image_internal " + obj);
 
       if(obj == this.next_id)
         {
@@ -4738,7 +4738,7 @@ function create_help_screen()
     this.div.style.display = "none";
     this.visible = false;
     current_menu = null;
-    console.log("Hide help screen");
+//    console.log("Hide help screen");
     };
 
       
@@ -4796,7 +4796,7 @@ function create_iteminfo()
     switch(evt.key)
       {
       case "ArrowLeft":
-        console.log("ArrowLeft " + obj_get_prev_sibling(this.info.obj));
+//        console.log("ArrowLeft " + obj_get_prev_sibling(this.info.obj));
 
         if(evt.altKey)
           {
@@ -4894,7 +4894,7 @@ function create_iteminfo()
           a.dataset.id = id_arr[i].v;
           a.onclick = function(evt)
 	   {
-	   console.log("Jump to " + this.dataset.id);
+//	   console.log("Jump to " + this.dataset.id);
 	   widgets.browser.jump_to(this.dataset.id);
 	   stop_propagate(evt);
 	   };
@@ -5175,13 +5175,13 @@ function global_init()
     cfg = loaded_cfg;
     have_cfg = true;
     init_complete();
-    console.log("Got config");
+//    console.log("Got config");
     };
 
   cb.fail = function()
     {
     have_cfg = true;
-    console.log("loading cfg failed");
+//    console.log("loading cfg failed");
     init_complete();
     };
       
