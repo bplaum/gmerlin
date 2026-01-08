@@ -227,7 +227,7 @@ void * bg_server_storage_get(bg_server_storage_t * s,
   if(!path)
     return NULL;
 
-  if(!bg_read_file(path, &buf))
+  if(!gavl_read_file(path, &buf))
     return NULL;
   
   free(path);
@@ -247,7 +247,7 @@ int bg_server_storage_put(bg_server_storage_t * s,
   if(!path)
     return 0;
 
-  bg_write_file(path, data, len);
+  gavl_write_file(path, data, len);
 
   free(path);
   return 1;
