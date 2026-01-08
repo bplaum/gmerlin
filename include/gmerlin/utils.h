@@ -414,9 +414,6 @@ void bg_diprintf(int indent, const char * format, ...) __attribute__ ((format (p
  *  \returns A buffer containing the entire file
  */
 
-int bg_read_file(const char * filename, gavl_buffer_t * buf);
-
-int bg_read_file_range(const char * filename, gavl_buffer_t * buf, int64_t start, int64_t len);
 
 int bg_read_location(const char * location,
                      gavl_buffer_t * ret,
@@ -431,7 +428,7 @@ int bg_read_location(const char * location,
  *  \returns 1 on success, 0 on failure
  */
 
-int bg_write_file(const char * filename, void * data, int len);
+// int bg_write_file(const char * filename, void * data, int len);
 
 /** \brief Lock a file for exclusive access
  *  \param f An open file
@@ -467,27 +464,10 @@ void bg_unlock_directory(FILE * lockfile, const char * directory);
  *  \returns File size in bytes
  */
 
-size_t bg_file_size(FILE * f);
+// size_t bg_file_size(FILE * f);
 
 /**
  */
-
-int bg_cache_directory_cleanup(const char * cache_dir);
-
-/* int bg_load_cache_item(const char * cache_dir,
-                       const char * md5,
-                       gavl_dictionary_t * metadata,
-                       gavl_buffer_t * buf); */
-
-void bg_save_cache_item(const char * cache_dir,
-                        const char * md5,
-                        const gavl_dictionary_t * metadata,
-                        const gavl_buffer_t * buf);
-
-gavl_io_t * bg_cache_item_load_metadata(const char * cache_dir,
-                                        const char * md5,
-                                        gavl_dictionary_t * metadata);
-int bg_cache_item_load_data(gavl_io_t * io, gavl_buffer_t * buf);
 
 int bg_scan_directory(const char * path,
                       gavl_array_t * ret);

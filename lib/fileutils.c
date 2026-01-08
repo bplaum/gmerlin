@@ -128,69 +128,7 @@ void bg_unlock_directory(FILE * lockfile, const char * directory)
   free(tmp_string);
   }
 
-size_t bg_file_size(FILE * f)
-  {
-  size_t ret;
-  size_t oldpos;
 
-  oldpos = ftell(f);
-
-  fseek(f, 0, SEEK_END);
-  ret = ftell(f);
-  fseek(f, oldpos, SEEK_SET);
-  return ret;
-  }
-
-int bg_read_file_range(const char * filename, gavl_buffer_t * buf, int64_t start, int64_t len)
-  {
-  FILE * file;
-  
-  file = fopen(filename, "r");
-  if(!file)
-    return 0;
-
-  if(len < 1)
-    len = bg_file_size(file) - start;
-
-  gavl_buffer_alloc(buf, len + 1);
-  
-  if(start > 0)
-    fseek(file, start, SEEK_SET);
-  
-  if(fread(buf->buf, 1, len, file) < len)
-    {
-    fclose(file);
-    gavl_buffer_free(buf);
-    return 0;
-    }
-  buf->len = len;
-  buf->buf[buf->len] = '\0';
-  fclose(file);
-  return 1;
-  }
-
-
-int bg_read_file(const char * filename, gavl_buffer_t * buf)
-  {
-  return bg_read_file_range(filename, buf, 0, 0);
-  }
-
-int bg_write_file(const char * filename, void * data, int len)
-  {
-  FILE * file;
-  
-  file = fopen(filename, "w");
-  if(!file)
-    return 0;
-  
-  if(fwrite(data, 1, len, file) < len)
-    {
-    fclose(file);
-    return 0;
-    }
-  fclose(file);
-  return 1;
-  }
 
 #if 1
 int bg_read_location(const char * location_orig,
@@ -240,7 +178,7 @@ int bg_read_location(const char * location_orig,
   else
     {
     const char * pos;
-    result =  bg_read_file_range(location, ret, start, size);
+    result =  gavl_read_file_range(location, ret, start, size);
     
     if(dict && (pos = strrchr(location, '.')))
       {
@@ -317,7 +255,7 @@ int bg_read_desktop_file(const char * file, gavl_dictionary_t * ret)
   
   gavl_buffer_init(&buf);
 
-  if(!bg_read_file(file, &buf))
+  if(!gavl_read_file(file, &buf))
     return 0;
   
   lines = gavl_strbreak((const char*)buf.buf, '\n');
@@ -381,204 +319,7 @@ int bg_read_desktop_file(const char * file, gavl_dictionary_t * ret)
 #define MAX_CACHE_AGE (3600*24)
 
 
-#define LASTCLEANUP_NAME "lastcleanup"
 
-#define CLEANUP_INTERVAL (3600*24)
-
-/* Call this regularly */
-
-int bg_cache_directory_cleanup(const char * cache_dir)
-  {
-  glob_t g;
-  int i;
-  int ret = 0;
-  struct stat st;
-  FILE * f = NULL;
-  char * tmp_string;
-  int locked = 0;
-  time_t cur;
-  
-  tmp_string = gavl_sprintf("%s/" LASTCLEANUP_NAME, cache_dir);
-  
-  if(!stat(tmp_string, &st))
-    {
-    double diff;
-    /* If lastcleanup file exists and the MTIME is less than CLEANUP_INTERVAL ago, return */
-    
-    if((diff = difftime(time(NULL), st.st_mtime)) < CLEANUP_INTERVAL)
-      goto fail;
-    }
-
-  f = fopen(tmp_string, "w");
-  free(tmp_string);
-  tmp_string = NULL;
-  
-  if(!bg_lock_file_nowait(f, 1))
-    goto fail;
-
-  locked = 1;
-
-  tmp_string = gavl_sprintf("%s/*.*", cache_dir);
-  glob(tmp_string, 0, NULL /* errfunc */, &g);
-
-  free(tmp_string);
-  tmp_string = NULL;
-
-  cur = time(NULL);
-  
-  for(i = 0; i < g.gl_pathc; i++)
-    {
-    if(stat(g.gl_pathv[i], &st))
-      continue;
-
-    if(difftime(cur, st.st_mtime) > MAX_CACHE_AGE)
-      {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Removing expired cache item: %s", g.gl_pathv[i]);
-      remove(g.gl_pathv[i]);
-      }
-    
-    }
-
-  ret = 1;
-  
-  fail:
-
-  if(f)
-    {
-    if(locked)
-      bg_unlock_file(f);
-    
-    fclose(f);
-    }
-  
-  if(tmp_string)
-    free(tmp_string);
-  
-  return ret;
-  
-  
-  }
-
-gavl_io_t * bg_cache_item_load_metadata(const char * cache_dir,
-                                        const char * md5,
-                                        gavl_dictionary_t * metadata)
-  {
-  int done = 0;
-  
-  gavl_buffer_t buf;
-  
-  gavl_io_t * io = NULL;
-  char * filename = gavl_sprintf("%s/%s", cache_dir, md5);
-  
-  if(access(filename, R_OK))
-    goto fail;
-
-  if(!(io = gavl_io_from_filename(filename, 0)))
-    goto fail;
-  
-  if(!gavl_io_read_buffer(io, &buf))
-    goto fail;
-  
-  if(!bg_dictionary_load_xml_string(metadata, (const char*)buf.buf, -1, GAVL_META_METADATA))
-    goto fail;
-  
-  done = 1;
-
-  fail:
-
-  if(!done)
-    {
-    gavl_io_destroy(io);
-    io = NULL;
-    }
-
-  free(filename);
-  
-  return io;
-  }
-
-int bg_cache_item_load_data(gavl_io_t * io, gavl_buffer_t * buf)
-  {
-  int ret;
-  ret = gavl_io_read_buffer(io, buf);
-  gavl_io_destroy(io);
-  return ret;
-  }
-
-#if 0
-int bg_load_cache_item(const char * cache_dir,
-                       const char * md5,
-                       gavl_dictionary_t * metadata,
-                       gavl_buffer_t * buf)
-  {
-  int ret = 0;
-  glob_t g;
-  int i;
-  char * template;
-  struct stat st;
-  
-  
-  template = gavl_sprintf("%s/%s.*", cache_dir, md5);
-
-  glob(template, 0, NULL /* errfunc */, &g);
-
-  for(i = 0; i < g.gl_pathc; i++)
-    {
-    if(stat(g.gl_pathv[i], &st))
-      continue;
-
-    if(difftime(time(NULL), st.st_mtime) > MAX_CACHE_AGE)
-      break;
-    
-    if(!bg_read_file(g.gl_pathv[i], buf))
-      continue;
-
-    if(metadata)
-      {
-      
-      } 
-    
-    ret = 1;
-    break;
-    }
-  
-  globfree(&g);
-  free(template);
-  
-  return ret;
-
-  }
-#endif
-
-void bg_save_cache_item(const char * cache_dir,
-                        const char * md5,
-                        const gavl_dictionary_t * metadata,
-                        const gavl_buffer_t * buf)
-  {
-  char * xml;
-  char * filename;
-  gavl_io_t * io;
-  gavl_buffer_t header;
-  
-  filename = gavl_sprintf("%s/%s", cache_dir, md5);
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving cache item: %s", filename);
-  
-  xml = bg_dictionary_save_xml_string(metadata, "metadata");
-  
-  io = gavl_io_from_filename(filename, 1);
-
-  gavl_buffer_init_static(&header, (uint8_t*)xml, strlen(xml)+1);
-  gavl_io_write_buffer(io, &header);
-  gavl_buffer_free(&header);
-  
-  gavl_io_write_buffer(io, buf);
-
-  /* Cleanup */
-  free(filename);
-  free(xml);
-  gavl_io_destroy(io);
-  
-  }
 
 static int compare_func(const void * p1, const void * p2, void * data)
   {
@@ -610,7 +351,7 @@ int bg_scan_directory(const char * path,
   glob_t g;
   char * pattern;
 
-  fprintf(stderr, "load_directory_contents %s\n", path);
+  //  fprintf(stderr, "load_directory_contents %s\n", path);
     
   pattern = gavl_sprintf("%s/*", path);
   pattern = gavl_escape_string(pattern, "[]?");
