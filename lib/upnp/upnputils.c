@@ -92,7 +92,7 @@ void bg_upnp_send_description(bg_http_connection_t * conn,
   gavl_dictionary_set_int(&conn->res, "Content-Length", len);
   gavl_dictionary_set_string(&conn->res, "Content-Type", "text/xml; charset=UTF-8");
   gavl_dictionary_set_string_nocopy(&conn->res, "Server", bg_upnp_make_server_string());
-  bg_http_header_set_date(&conn->res, "Date");
+  gavl_http_header_set_date(&conn->res, "Date");
 
 #if 0
   fprintf(stderr, "Send description\n");

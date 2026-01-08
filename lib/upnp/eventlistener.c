@@ -110,7 +110,7 @@ static int subscribe(bg_upnp_event_listener_t * l)
   
   gavl_dictionary_set_string(&req, "TIMEOUT", "Second-1800"); // 30 min as recommended
   //  gavl_dictionary_set_string(&req, "CONNECTION", "close");
-  bg_http_header_set_date(&req, "Date");
+  gavl_http_header_set_date(&req, "Date");
   gavl_dictionary_set_string(&req, "Content-Length", "0");
 
 #ifdef DUMP_SUBSCRIPTON

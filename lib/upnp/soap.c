@@ -305,7 +305,7 @@ int bg_soap_request_write_res(gavl_dictionary_t * s, bg_http_connection_t * conn
   gavl_dictionary_set_string(&conn->res, "CONTENT-TYPE", "text/xml; charset=\"utf-8\"");
   
   bg_http_connection_check_keepalive(conn);
-  bg_http_header_set_date(&conn->res, "DATE");
+  gavl_http_header_set_date(&conn->res, "DATE");
   bg_http_header_set_empty_var(&conn->res, "EXT");
   gavl_dictionary_set_string_nocopy(&conn->res, "SERVER", bg_upnp_make_server_string());
 
