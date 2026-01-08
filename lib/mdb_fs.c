@@ -348,18 +348,11 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
       }
     
     res = bg_msg_sink_get(be->ctrl.evt_sink);
-
-    
-
     bg_mdb_set_browse_children_response(res, &arr, msg, &start, 1, total_entries);
     bg_msg_sink_put(be->ctrl.evt_sink);
-
-    //    gavl_array_dump(&arr, 2);
     
     free(path);
     }
-  
-  
   return 1;
   }
 
@@ -381,7 +374,6 @@ static int ping_fs(bg_mdb_backend_t * be)
   
   return ret;
   }
-
 
 static int handle_msg_fs(void * priv, gavl_msg_t * msg)
   {
@@ -411,7 +403,6 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
           const gavl_dictionary_t * dict;
           const char * dir = NULL;
           fs_root_t * root;
-
           
           gavl_value_init(&add);
           
@@ -422,8 +413,6 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
           if(!(root = get_root(be, ctx_id)))
             return 0;
           
-          //          fprintf(stderr, "Splice_children %s\n", ctx_id);
-
           if(idx < 0)
             idx = root->dirs->num_entries;
 
@@ -435,7 +424,6 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
             gavl_array_splice_val(root->dirs, idx, del, NULL);
             changed = 1;
             }
-
           
           if((dict = gavl_value_get_dictionary(&add)) &&
              (dict = gavl_track_get_metadata(dict)) &&
@@ -483,9 +471,6 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
               
               set_root_child(be, root, idx, dict);
 
-              //  fprintf(stderr, "Added dir\n");
-              //  gavl_dictionary_dump(dict, 2);
-              
               gavl_msg_set_splice_children(evt, BG_MSG_NS_DB,
                                            BG_MSG_DB_SPLICE_CHILDREN,
                                            id, 1, idx, 0, &val);
@@ -500,9 +485,6 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
             gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
             gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, id);
             gavl_msg_set_arg_dictionary(evt, 0, root->container);
-
-            //  fprintf(stderr, "Set changed event\n");
-            //  gavl_msg_dump(evt, 2);
 
             bg_msg_sink_put(be->ctrl.evt_sink);
             
