@@ -72,7 +72,7 @@ int main(int argc, char ** argv)
       break;
     }
   
-  if(!bg_read_file(argv[arg_index], &buf))
+  if(!gavl_read_file(argv[arg_index], &buf))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Album file %s could not be opened",
            argv[1]);
