@@ -1,7 +1,7 @@
 plugindir=$(pkglibdir)/plugins
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
-AM_CFLAGS = @WAYLAND_CFLAGS@ \
+AM_CFLAGS = @WAYLAND_CFLAGS@ @WAYLAND_CURSOR_CFLAGS@ \
 @WAYLAND_EGL_CFLAGS@ @XKB_CFLAGS@ \
 -DLOCALE_DIR=\"$(localedir)\" \
 -DPLUGIN_DIR=\"$(plugindir)\" \
@@ -18,4 +18,4 @@ plugin_LTLIBRARIES = \
 ov_wayland.la
 
 ov_wayland_la_SOURCES = ov_wayland.c xdg-shell-client-protocol.c xdg-decoration.c
-ov_wayland_la_LIBADD =  @WAYLAND_LIBS@ @WAYLAND_EGL_LIBS@ @XKB_LIBS@ @MODULE_LIBADD@
+ov_wayland_la_LIBADD =  @WAYLAND_LIBS@ @WAYLAND_CURSOR_LIBS@ @WAYLAND_EGL_LIBS@ @XKB_LIBS@ @MODULE_LIBADD@

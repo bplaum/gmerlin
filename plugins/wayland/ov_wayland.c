@@ -26,6 +26,7 @@
 
 #include <wayland-client.h>
 #include <wayland-egl.h>
+#include <wayland-cursor.h>
 
 #include "xdg-shell-client-protocol.h"
 #include "xdg-decoration.h"
@@ -67,10 +68,18 @@ typedef struct
   struct wl_seat *seat;
   struct wl_pointer *pointer;
   struct wl_keyboard *keyboard;
+
+  /* Cursor configuration */
+  struct wl_shm * shm;
+  struct wl_cursor_theme *cursor_theme;
+  struct wl_surface *cursor_surface;
+  /* */
   
   struct wl_surface *surface;
   struct wl_egl_window *egl_window;
 
+  
+  
   /* Window management stuff */
   struct xdg_wm_base *xdg_wm_base;
   struct xdg_surface *xdg_surface;
@@ -119,23 +128,43 @@ static void handle_events_internal(wayland_t * wayland,
 static int keysym_to_keycode(int keysym);
 
 
-static void show_cursor(wayland_t * wayland)
+static void show_cursor(wayland_t * wayland, int force)
   {
+  struct wl_cursor *cursor;
+  struct wl_cursor_image *image;
+  struct wl_buffer *buffer;
   
-  if(!(wayland->flags & FLAG_CURSOR_HIDDEN))
+  if(!(wayland->flags & FLAG_CURSOR_HIDDEN) && !force)
     return;
 
-  wayland->flags &= ~FLAG_CURSOR_HIDDEN;
+  cursor = wl_cursor_theme_get_cursor(wayland->cursor_theme, "left_ptr");
+
+  if(!cursor || cursor->image_count < 1)
+    {
+    return;
+    }
+
+  image = cursor->images[0];
+  buffer = wl_cursor_image_get_buffer(image);
+
+  wl_surface_attach(wayland->cursor_surface, buffer, 0, 0);
+  wl_surface_damage(wayland->cursor_surface, 0, 0, image->width, image->height);
+  wl_surface_commit(wayland->cursor_surface);
   
+  wl_pointer_set_cursor(wayland->pointer, 0, wayland->cursor_surface, 
+                        image->hotspot_x, image->hotspot_y);
+  
+  wayland->flags &= ~FLAG_CURSOR_HIDDEN;
   }
 
 static void hide_cursor(wayland_t * wayland)
   {
   if(wayland->flags & FLAG_CURSOR_HIDDEN)
     return;
-  
-  wayland->flags |= FLAG_CURSOR_HIDDEN;
 
+  if(wayland->pointer)
+    wl_pointer_set_cursor(wayland->pointer, 0, NULL, 0, 0);
+  wayland->flags |= FLAG_CURSOR_HIDDEN;
   }
 
 static void registry_handler(void *data, struct wl_registry *registry,
@@ -145,21 +174,25 @@ static void registry_handler(void *data, struct wl_registry *registry,
 
   //  fprintf(stderr, "registry_handler %s\n", interface);
   
-  if(strcmp(interface, "wl_compositor") == 0)
+  if(!strcmp(interface, "wl_compositor"))
     {
     wayland->compositor = wl_registry_bind(registry, id, &wl_compositor_interface, 1);
     }
-  else if (strcmp(interface, "wl_seat") == 0)
+  else if(!strcmp(interface, "wl_seat"))
     {
     wayland->seat = wl_registry_bind(registry, id, &wl_seat_interface, 1);
     }
-  else if(strcmp(interface, "xdg_wm_base") == 0)
+  else if(!strcmp(interface, "xdg_wm_base"))
     {
     wayland->xdg_wm_base = wl_registry_bind(registry, id, &xdg_wm_base_interface, 1);
     }
-  else if(strcmp(interface, "zxdg_decoration_manager_v1") == 0)
+  else if(!strcmp(interface, "zxdg_decoration_manager_v1"))
     {
     wayland->decoration_manager = wl_registry_bind(registry, id, &zxdg_decoration_manager_v1_interface, 1);
+    }
+  else if(!strcmp(interface, wl_shm_interface.name))
+    {
+    wayland->shm = wl_registry_bind(registry, id, &wl_shm_interface, 1);
     }
   
   }
@@ -255,7 +288,7 @@ static void pointer_enter(void *data, struct wl_pointer *pointer,
                          wl_fixed_t surface_x, wl_fixed_t surface_y)
   {
   //  fprintf(stderr, "pointer_enter\n");
-
+  show_cursor(data, 1);
   }
 
 static void pointer_leave(void *data, struct wl_pointer *pointer,
@@ -271,7 +304,7 @@ static void pointer_motion(void *data, struct wl_pointer *pointer,
   wayland_t * wayland = data;
   //  fprintf(stderr, "pointer_motion\n");
 
-  show_cursor(wayland);
+  show_cursor(wayland, 0);
   wayland->last_active_time = gavl_timer_get(wayland->timer);
   
   wayland->mouse_x = wl_fixed_to_int(surface_x);
@@ -629,6 +662,13 @@ static int ensure_window(void * priv)
     return 0;
     }
 
+  if(!(wayland->shm))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No SHM found");
+    return 0;
+    }
+
+  
   xdg_wm_base_add_listener(wayland->xdg_wm_base, &xdg_wm_base_listener, wayland);
   
   if(!(wayland->surface = wl_compositor_create_surface(wayland->compositor)))
@@ -638,11 +678,18 @@ static int ensure_window(void * priv)
     }
 
   
-  
   map_window(wayland);
     
   while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)))
     handle_events_internal(wayland, 100);
+
+  if(!(wayland->cursor_surface = wl_compositor_create_surface(wayland->compositor)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cursor surface creation failed");
+    return 0;
+    }
+
+  wayland->cursor_theme = wl_cursor_theme_load(NULL, 24, wayland->shm);
   
   if(!(wayland->egl_window = wl_egl_window_create(wayland->surface,
                                                   800, 600)))
@@ -771,7 +818,6 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
                 return 1;
 
               gavl_value_get_int(&val, &visible);
-              fprintf(stderr, "wayland set state %s %s %d\n", ctx, var, visible);
               
               if((wayland->flags & FLAG_MAPPED))
                 {
@@ -829,50 +875,62 @@ static void destroy_wayland(void * priv)
   
   if(wayland->g)
     bg_glvideo_destroy(wayland->g);
+
+  if(wayland->cursor_theme)
+    wl_cursor_theme_destroy(wayland->cursor_theme);
+
+  if(wayland->pointer)
+    wl_pointer_destroy(wayland->pointer);
   
+  if(wayland->seat)
+    wl_seat_destroy(wayland->seat);
+  
+  // XDG Shell cleanup
+  if (wayland->xdg_toplevel)
+    {
+    xdg_toplevel_destroy(wayland->xdg_toplevel);
+    }
+    
+  if(wayland->xdg_surface)
+    {
+    xdg_surface_destroy(wayland->xdg_surface);
+    }
+    
+  if(wayland->xdg_wm_base)
+    {
+    xdg_wm_base_destroy(wayland->xdg_wm_base);
+    }
+
+  if(wayland->egl_window)
+    {
+    wl_egl_window_destroy(wayland->egl_window);
+    }
+
+  if(wayland->shm)
+    {
+    wl_shm_destroy(wayland->shm);
+    }
+
+  if(wayland->surface)
+    {
+    wl_surface_destroy(wayland->surface);
+    }
+  if(wayland->cursor_surface)
+    {
+    wl_surface_destroy(wayland->cursor_surface);
+    }
+    
+  if(wayland->compositor)
+    {
+    wl_compositor_destroy(wayland->compositor);
+    }
+    
   if(wayland->display)
     {
-    if(wayland->seat)
-      {
-      wl_seat_destroy(wayland->seat);
-      }
-    
-    // XDG Shell cleanup
-    if (wayland->xdg_toplevel)
-      {
-      xdg_toplevel_destroy(wayland->xdg_toplevel);
-      }
-    
-    if(wayland->xdg_surface)
-      {
-      xdg_surface_destroy(wayland->xdg_surface);
-      }
-    
-    if(wayland->xdg_wm_base)
-      {
-      xdg_wm_base_destroy(wayland->xdg_wm_base);
-      }
-
-    if(wayland->egl_window)
-      {
-      wl_egl_window_destroy(wayland->egl_window);
-      }
-    if(wayland->surface)
-      {
-      wl_surface_destroy(wayland->surface);
-      }
-    
-    if(wayland->compositor)
-      {
-      wl_compositor_destroy(wayland->compositor);
-      }
-    
-    if(wayland->display)
-      {
-      wl_display_disconnect(wayland->display);
-      }
+    wl_display_disconnect(wayland->display);
     }
   
+    
   bg_controllable_cleanup(&wayland->ctrl);
   
   free(wayland);
@@ -1156,7 +1214,7 @@ static int open_wayland(void * priv, const char * uri,
   wayland->sink = 
     bg_glvideo_open(wayland->g, format, src_flags);
 
-  show_cursor(wayland);
+  show_cursor(wayland, 0);
   wayland->last_active_time = gavl_timer_get(wayland->timer);
   
   return 1;

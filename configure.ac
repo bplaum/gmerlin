@@ -211,6 +211,8 @@ have_wayland_egl=false
 have_xkb=false
 
 PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=true, have_wayland=false)
+PKG_CHECK_MODULES(WAYLAND_CURSOR, wayland-cursor, have_wayland_cursor=true, have_wayland=false)
+
 PKG_CHECK_MODULES(WAYLAND_EGL, wayland-egl, have_wayland_egl=true, have_wayland=false)
 
 PKG_CHECK_MODULES(XKB, xkbcommon, have_xkb=true, have_wayland=false)
