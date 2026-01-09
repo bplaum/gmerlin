@@ -57,39 +57,83 @@ typedef struct
 
 typedef struct
   {
-  bg_mdb_fs_cache_t c;
+  bg_mdb_fs_cache_t * c;
   gavl_dictionary_t config;
   fs_root_t root[NUM_ROOT];
   } fs_t;
 
-static void finalize_func(bg_mdb_backend_t * be, gavl_dictionary_t * track, const char * id_prefix)
+static void finalize_func(bg_mdb_backend_t * be, gavl_dictionary_t * track, const char * id_prefix, const char * path_prefix)
   {
   const char * var;
   const char * klass;
   const char * uri = NULL;
-
+  const char * id;
+  fs_t * fs;
   gavl_dictionary_t * m;
 
+  fs = be->priv;
+  
   m = gavl_track_get_metadata_nc(track);
+
+  id = gavl_dictionary_get_string(m, GAVL_META_ID);
   
   /* Create thumbnails */
   if((klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
     {
+    if(gavl_string_starts_with(id_prefix, BG_MDB_ID_PHOTOS))
+      {
+      if(!strcmp(klass, GAVL_META_CLASS_DIRECTORY))
+        {
+        if((gavl_track_get_num_item_children(track) > 0) &&
+           !gavl_track_get_num_container_children(track))
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_PHOTOALBUM);
+        else
+          gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+        klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
+        }
+      }
+    
     if(!strcmp(klass, GAVL_META_CLASS_IMAGE) &&
        gavl_track_get_src(track, GAVL_META_SRC, 0, NULL, &uri))
       bg_mdb_make_thumbnails(be->db, uri);
-    
-    if(!strcmp(klass, GAVL_META_CLASS_PHOTOALBUM) &&
-       gavl_track_get_src(track, GAVL_META_ICON_URL, 0, NULL, &uri))
-      bg_mdb_make_thumbnails(be->db, uri);
+
+    /* Photoalbums take their icon from the first image */
+    if(!strcmp(klass, GAVL_META_CLASS_PHOTOALBUM))
+      {
+      const gavl_dictionary_t * first_src;
+      char * path;
+      gavl_dictionary_t first;
+      gavl_dictionary_init(&first);
+
+      path = gavl_sprintf("%s/%s", path_prefix, id);
+      
+      if(bg_mdb_fs_get_first_child(fs->c, path,
+                                   &first,
+                                   BG_MDB_FS_MASK_IMAGE |
+                                   BG_MDB_FS_MASK_DIRECTORY) &&
+         (first_src = gavl_track_get_src(&first, GAVL_META_SRC, 0, NULL, &uri)))
+        {
+        bg_mdb_make_thumbnails(be->db, uri);
+        gavl_dictionary_set_dictionary(m, GAVL_META_ICON_URL, first_src);
+        }
+      else
+        {
+        fprintf(stderr, "Couldn't get first child (%s, %s)\n", path, path_prefix);
+        }
+      
+      
+      free(path);
+      gavl_dictionary_free(&first);
+      }
+
     }
   
   bg_mdb_add_http_uris(be->db, track);
   
-  if((var = gavl_dictionary_get_string(m, GAVL_META_ID)))
+  if(id)
     {
     //    fprintf(stderr, "Finalize func: %s + %s ", id_prefix, var);
-    gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s/%s", id_prefix, var));
+    gavl_dictionary_set_string_nocopy(m, GAVL_META_ID, gavl_sprintf("%s/%s", id_prefix, id));
     //    fprintf(stderr, "= %s\n", gavl_dictionary_get_string(m, GAVL_META_ID));
     }
   if((var = gavl_dictionary_get_string(m, GAVL_META_PREVIOUS_ID)))
@@ -193,7 +237,7 @@ static void set_root_child_internal(bg_mdb_backend_t * be,
 
   gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_DIRECTORY);
 
-  bg_mdb_fs_count_children(&p->c, path, root->flags,
+  bg_mdb_fs_count_children(p->c, path, root->flags,
                            &num_containers, &num_items);
   gavl_track_set_num_children(ret, num_containers, num_items);
 
@@ -281,8 +325,9 @@ static int browse_object(bg_mdb_backend_t * be, gavl_msg_t * msg)
     /* Browse object below root child */
     gavl_dictionary_t dict;
     char * path;
+    char * parent_path;
     char * parent_id;
-    
+    const char * pos;
     gavl_dictionary_init(&dict);
     
     if(!(path = path_from_id(root, ctx_id)))
@@ -292,13 +337,20 @@ static int browse_object(bg_mdb_backend_t * be, gavl_msg_t * msg)
     
     //    fprintf(stderr, "Browse object: %s [%s] -> %s\n", ctx_id, ctx_id_orig, path);
 
-    bg_mdb_fs_browse_object(&p->c, path, &dict, root->flags);
+    bg_mdb_fs_browse_object(p->c, path, &dict, root->flags);
     
     //    gavl_dictionary_dump(&dict, 2);
 
     parent_id = bg_mdb_get_parent_id(ctx_id_orig);
-    finalize_func(be, &dict, parent_id);
+
+    if((pos = strrchr(path, '/')))
+      parent_path = gavl_strndup(path, pos);
+    else
+      parent_path = gavl_strdup(path);
+    
+    finalize_func(be, &dict, parent_id, parent_path);
     free(parent_id);
+    free(parent_path);
     
     //    gavl_dictionary_dump(&dict, 2);
     
@@ -374,13 +426,13 @@ static int browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg)
     
     // fprintf(stderr, "Browse children: %s -> %s\n", ctx_id, path);
 
-    bg_mdb_fs_browse_children(&p->c, path, &arr, 
+    bg_mdb_fs_browse_children(p->c, path, &arr, 
                               start, num, root->flags, &total_entries);
 
     for(i = 0; i < arr.num_entries; i++)
       {
       finalize_func(be, gavl_value_get_dictionary_nc(&arr.entries[i]),
-                    ctx_id_orig);
+                    ctx_id_orig, path);
       }
     
     res = bg_msg_sink_get(be->ctrl.evt_sink);
@@ -557,7 +609,7 @@ static void destroy_fs(bg_mdb_backend_t * b)
   fs_t * fs = b->priv;
   
   gavl_dictionary_free(&fs->config);
-  bg_mdb_fs_cache_cleanup(&fs->c);
+  bg_mdb_fs_cache_destroy(fs->c);
 
   for(i = 0; i < NUM_ROOT; i++)
     {
@@ -585,7 +637,7 @@ void bg_mdb_create_fs(bg_mdb_backend_t * b)
   /* Create cache */
 
   tmp_string = gavl_sprintf("%s/fs_cache.sqlite", b->db->path);
-  bg_mdb_fs_cache_init(&priv->c, tmp_string);
+  priv->c = bg_mdb_fs_cache_create(tmp_string);
   free(tmp_string);
   
   /* Load dirs */

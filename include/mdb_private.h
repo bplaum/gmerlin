@@ -257,22 +257,6 @@ struct bg_mdb_s
 /* Cleanup object for saving to file */
 void bg_mdb_object_cleanup(gavl_dictionary_t * dict);
 
-typedef struct
-  {
-  sqlite3 * db;
-  sqlite3_stmt *select_object;
-  sqlite3_stmt *select_children;
-  sqlite3_stmt *count_children;
-  sqlite3_stmt *insert;
-  sqlite3_stmt *scan_dir;
-  sqlite3_stmt *delete_entry;
-  sqlite3_stmt *delete_children;
-  
-  char * current_path;
-  gavl_array_t current_dir;
-  int current_mask;
-  
-  } bg_mdb_fs_cache_t;
 
 #define BG_MDB_FS_MASK_AUDIO      (1<<0)
 #define BG_MDB_FS_MASK_VIDEO      (1<<1)
@@ -290,14 +274,19 @@ typedef struct
 #define BG_MDB_FS_ITEM_MASK          0x00ff
 #define BG_MDB_FS_CONTAINER_MASK     0xff00
 
+typedef struct bg_mdb_fs_cache_s bg_mdb_fs_cache_t;
 
+bg_mdb_fs_cache_t * bg_mdb_fs_cache_create(const char * path);
 
-int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path);
-void bg_mdb_fs_cache_cleanup(bg_mdb_fs_cache_t * c);
+void bg_mdb_fs_cache_destroy(bg_mdb_fs_cache_t * c);
 
 int bg_mdb_fs_browse_object(bg_mdb_fs_cache_t * c, const char * path,
                             gavl_dictionary_t * ret,
                             int type_mask);
+
+int bg_mdb_fs_get_first_child(bg_mdb_fs_cache_t * c, const char * path,
+                              gavl_dictionary_t * dict,
+                              int type_mask);
 
 int bg_mdb_fs_browse_children(bg_mdb_fs_cache_t * c, const char * path,
                               gavl_array_t * ret, int start, int num, int type_mask, int * total_entries);

@@ -39,19 +39,43 @@
 
 #include <mdb_private.h>
 
+struct bg_mdb_fs_cache_s
+  {
+  sqlite3 * db;
+  sqlite3_stmt *select_object;
+  sqlite3_stmt *select_children;
+  sqlite3_stmt *select_first_child;
+  sqlite3_stmt *count_children;
+  sqlite3_stmt *insert;
+  sqlite3_stmt *scan_dir;
+  sqlite3_stmt *delete_entry;
+  sqlite3_stmt *delete_children;
+  
+  char * current_path;
+  gavl_array_t current_dir;
+  int current_mask;
+  
+  };
+
+
 #define META_NAME   "name"
 #define META_PARENT "parent"
 #define META_TYPE   "type"
 #define META_FLAGS  "flags"
 
 
-int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path)
+bg_mdb_fs_cache_t * bg_mdb_fs_cache_create(const char * path)
   {
+  bg_mdb_fs_cache_t * c;
+  
   const char *select_object_sql =
     "SELECT "GAVL_META_METADATA" FROM files WHERE "META_PARENT" = :"META_PARENT" AND "META_NAME" = :"META_NAME" AND "GAVL_META_MTIME" = :"GAVL_META_MTIME";";
   
-  const char *select_children_sql = "SELECT "META_NAME", "GAVL_META_MTIME", "GAVL_META_METADATA" FROM "
+  const char *select_children_sql = "SELECT "META_NAME", "GAVL_META_METADATA" FROM "
     "files WHERE "META_PARENT" = :"META_PARENT" AND "META_FLAGS" & :"META_FLAGS" order by "META_TYPE", "META_NAME" COLLATE strcoll;";
+
+  const char *select_first_child_sql = "SELECT "META_NAME", "GAVL_META_METADATA" FROM "
+    "files WHERE "META_PARENT" = :"META_PARENT" AND "META_FLAGS" & :"META_FLAGS" order by "META_TYPE", "META_NAME" COLLATE strcoll LIMIT 1;";
 
   const char *scan_dir_sql = "SELECT "META_NAME", "GAVL_META_MTIME" FROM "
     "files WHERE "META_PARENT" = :"META_PARENT" order by "META_NAME" COLLATE strcoll;";
@@ -66,14 +90,14 @@ int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path)
     "INSERT OR REPLACE INTO files ("META_PARENT", "META_NAME", "META_TYPE", "META_FLAGS", "GAVL_META_MTIME", "GAVL_META_METADATA") "
     "VALUES (:"META_PARENT", :"META_NAME", :"META_TYPE", :"META_FLAGS", :"GAVL_META_MTIME", :"GAVL_META_METADATA");";
 
+  c = calloc(1, sizeof(*c));
   
   if(sqlite3_open(path, &c->db))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Cannot open database %s: %s", path,
              sqlite3_errmsg(c->db));
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
   
   bg_sqlite_init_strcoll(c->db);
@@ -92,17 +116,25 @@ int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path)
              "Setting up select object statement failed: %s",
              sqlite3_errmsg(c->db));
     
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
+
   if(sqlite3_prepare_v2(c->db, select_children_sql, -1, &c->select_children, NULL) != SQLITE_OK)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Setting up select children statement failed: %s (%s)",
              sqlite3_errmsg(c->db), select_children_sql);
     
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
+    }
+
+  if(sqlite3_prepare_v2(c->db, select_first_child_sql, -1, &c->select_first_child, NULL) != SQLITE_OK)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+             "Setting up select first child statement failed: %s (%s)",
+             sqlite3_errmsg(c->db), select_first_child_sql);
+    
+    goto fail;
     }
   if(sqlite3_prepare_v2(c->db, count_children_sql, -1, &c->count_children, NULL) != SQLITE_OK)
     {
@@ -110,17 +142,14 @@ int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path)
              "Setting up count children statement failed: %s (%s)",
              sqlite3_errmsg(c->db), count_children_sql);
     
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
   if(sqlite3_prepare_v2(c->db, insert_sql, -1, &c->insert, NULL) != SQLITE_OK)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Setting up insert statement failed: %s",
              sqlite3_errmsg(c->db));
-    
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
   if(sqlite3_prepare_v2(c->db, delete_entry_sql, -1, &c->delete_entry, NULL) != SQLITE_OK)
     {
@@ -128,40 +157,56 @@ int bg_mdb_fs_cache_init(bg_mdb_fs_cache_t * c, const char * path)
              "Setting up delete_entry statement failed: %s",
              sqlite3_errmsg(c->db));
     
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
   if(sqlite3_prepare_v2(c->db, delete_children_sql, -1, &c->delete_children, NULL) != SQLITE_OK)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Setting up delete_children statement failed: %s",
              sqlite3_errmsg(c->db));
-    
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
   if(sqlite3_prepare_v2(c->db, scan_dir_sql, -1, &c->scan_dir, NULL) != SQLITE_OK)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
              "Setting up scan_dir statement failed: %s",
              sqlite3_errmsg(c->db));
-    
-    sqlite3_close(c->db);
-    return 0;
+    goto fail;
     }
-  return 1;
+  
+  return c;
+
+  fail:
+  bg_mdb_fs_cache_destroy(c);
+  return NULL;
+
   }
 
 
-void bg_mdb_fs_cache_cleanup(bg_mdb_fs_cache_t * c)
+void bg_mdb_fs_cache_destroy(bg_mdb_fs_cache_t * c)
   {
-  sqlite3_finalize(c->select_object);
-  sqlite3_finalize(c->select_children);
-  sqlite3_finalize(c->count_children);
-  sqlite3_finalize(c->insert);
-  sqlite3_finalize(c->delete_entry);
-  sqlite3_finalize(c->delete_children);
-  sqlite3_close(c->db);
+  if(c->select_object)
+    sqlite3_finalize(c->select_object);
+  if(c->select_children)
+    sqlite3_finalize(c->select_children);
+  if(c->select_first_child)
+    sqlite3_finalize(c->select_first_child);
+  
+  if(c->count_children)
+    sqlite3_finalize(c->count_children);
+
+  if(c->insert)
+    sqlite3_finalize(c->insert);
+
+  if(c->delete_entry)
+    sqlite3_finalize(c->delete_entry);
+
+  if(c->delete_children)
+    sqlite3_finalize(c->delete_children);
+
+  if(c->db)
+    sqlite3_close(c->db);
+  free(c);
   }
 
 int bg_mdb_fs_cache_get(bg_mdb_fs_cache_t * c,
@@ -603,6 +648,7 @@ static int scan_directory(bg_mdb_fs_cache_t * c, const char * path)
   return 1;
   }
 
+
 /* Make sure we have the directory loaded */
 static int ensure_directory(bg_mdb_fs_cache_t * c, const char * path,
                             int type_mask)
@@ -630,7 +676,7 @@ static int ensure_directory(bg_mdb_fs_cache_t * c, const char * path,
     gavl_dictionary_t * dict;
     gavl_dictionary_t * m;
     
-    const char *json = (const char*)sqlite3_column_text(c->select_children, 2);
+    const char *json = (const char*)sqlite3_column_text(c->select_children, 1);
     
     dict = gavl_array_append_dictionary(&c->current_dir);
     m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
@@ -719,6 +765,33 @@ static void finalize(bg_mdb_fs_cache_t * c, const char * parent, int idx, int fl
     }
 
   }
+
+int bg_mdb_fs_get_first_child(bg_mdb_fs_cache_t * c, const char * path,
+                              gavl_dictionary_t * dict,
+                              int type_mask)
+  {
+  int result;
+  int ret = 0;
+  
+  sqlite3_bind_text(c->select_first_child,  sqlite3_bind_parameter_index(c->select_first_child, ":"META_PARENT), path, -1, SQLITE_STATIC);
+  sqlite3_bind_int64(c->select_first_child, sqlite3_bind_parameter_index(c->select_first_child, ":"META_FLAGS), type_mask);
+  
+  if((result = sqlite3_step(c->select_first_child)) == SQLITE_ROW)
+    {
+    gavl_dictionary_t * m;
+    const char *json = (const char*)sqlite3_column_text(c->select_first_child, 1);
+    
+    m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
+    gavl_dictionary_set_string(m, GAVL_META_ID, (const char*)sqlite3_column_text(c->select_first_child, 0));
+    bg_dictionary_from_json_string(m, json);
+    ret = 1;
+    }
+  
+  sqlite3_reset(c->select_first_child);
+  sqlite3_clear_bindings(c->select_first_child);
+  return ret;
+  }
+
 
 int bg_mdb_fs_browse_object(bg_mdb_fs_cache_t * c, const char * path,
                             gavl_dictionary_t * ret,

@@ -60,8 +60,23 @@ static int make_thumbnail(bg_mdb_t * mdb, int64_t image_id,
   char * sql;
   int result = 0;
   const char * mimetype = "image/jpeg";
+
+  /* Load the file if necessary */
+
+  if(!(*f))
+    {
+    *f = bg_plugin_registry_load_image(bg_plugin_reg,
+                                           filename,
+                                           format, metadata);
+    
+    if(!(*f))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", filename);
+      goto end;
+      }
+    }
   
-  /* Next upscale images */
+  /* Don't upscale images */
   if((format->image_width <= width) ||
      (format->image_height <= height))
     goto end;
@@ -87,20 +102,6 @@ static int make_thumbnail(bg_mdb_t * mdb, int64_t image_id,
   if(!access(tn_path, R_OK))
     goto end;
 
-  /* Load the file if necessary */
-
-  if(!(*f))
-    {
-    *f = bg_plugin_registry_load_image(bg_plugin_reg,
-                                           filename,
-                                           format, metadata);
-    
-    if(!(*f))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Loading %s failed", filename);
-      goto end;
-      }
-    }
   
   real_path = bg_make_thumbnail(*f,
                                 format,
@@ -151,6 +152,8 @@ void bg_mdb_make_thumbnails(bg_mdb_t * mdb, const char * filename)
   gavl_video_format_t in_format;
   gavl_dictionary_t metadata;
 
+  memset(&in_format, 0, sizeof(in_format));
+  
   gavl_dictionary_init(&metadata);
 
   if(!strncasecmp(filename, "file://", 7))
@@ -188,7 +191,8 @@ void bg_mdb_make_thumbnails(bg_mdb_t * mdb, const char * filename)
     bg_sqlite_exec(mdb->thumbnail_db, sql, NULL, NULL);
     sqlite3_free(sql);
     }
-    
+
+  
   if(!make_thumbnail(mdb, image_id,
                      filename,
                      &in_format, // const gavl_video_format_t * format,
