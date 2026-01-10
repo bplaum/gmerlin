@@ -238,7 +238,7 @@ void bg_http_connection_init_res(bg_http_connection_t * conn,
   }
 
 int bg_http_connection_not_modified(bg_http_connection_t * conn,
-                                    time_t mtime)
+                                    int64_t mtime)
   {
   time_t last_mtime;
   

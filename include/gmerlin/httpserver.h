@@ -23,8 +23,6 @@
 #ifndef BG_HTTPSERVER_H_INCLUDED
 #define BG_HTTPSERVER_H_INCLUDED
 
-#define _GNU_SOURCE
-#include <time.h>
 
 #include <gavl/gavlsocket.h>
 
@@ -99,7 +97,7 @@ int bg_http_connection_check_keepalive(bg_http_connection_t * c);
 void bg_http_connection_clear_keepalive(bg_http_connection_t * c);
 
 int bg_http_connection_not_modified(bg_http_connection_t * conn,
-                                    time_t mtime);
+                                    int64_t mtime);
 
 void bg_http_connection_to_dict_nocopy(bg_http_connection_t * c,
                                        gavl_dictionary_t * dict);
