@@ -687,8 +687,8 @@ get_multipart_edl(const gavl_dictionary_t * track, gavl_dictionary_t * edl)
       }
     }
 
-  fprintf(stderr, "Got multipart EDL:\n");
-  gavl_dictionary_dump(edl, 2);
+  //  fprintf(stderr, "Got multipart EDL:\n");
+  //  gavl_dictionary_dump(edl, 2);
   
   return 1;
   }
