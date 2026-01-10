@@ -152,7 +152,7 @@ typedef struct
   /* Window */
   GtkWidget * window;
   
-  const char * klass;
+  char * klass;
   
   int drag_pos;
   guint drop_time;

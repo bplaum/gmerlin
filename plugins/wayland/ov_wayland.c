@@ -556,12 +556,25 @@ static const struct zxdg_toplevel_decoration_v1_listener decoration_listener =
     .configure = toplevel_decoration_configure,
   };
 
-
-
 static int map_window(wayland_t * wayland)
   {
-  if(wayland->xdg_surface)
+  if(wayland->surface)
     return 1;
+  
+  if(!(wayland->surface = wl_compositor_create_surface(wayland->compositor)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Surface creation failed");
+    return 0;
+    }
+  
+  if(!(wayland->egl_window = wl_egl_window_create(wayland->surface, 800, 600)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EGL window creation failed");
+    return 0;
+    }
+
+  wayland->g = bg_glvideo_create(EGL_PLATFORM_WAYLAND_KHR,
+                                 wayland->display, wayland->egl_window);
   
   if(!(wayland->xdg_surface =
        xdg_wm_base_get_xdg_surface(wayland->xdg_wm_base, wayland->surface)))
@@ -570,6 +583,7 @@ static int map_window(wayland_t * wayland)
     return 0;
     }
   xdg_surface_add_listener(wayland->xdg_surface, &xdg_surface_listener, wayland);
+
   
   if(!(wayland->xdg_toplevel = xdg_surface_get_toplevel(wayland->xdg_surface)))
     {
@@ -591,13 +605,24 @@ static int map_window(wayland_t * wayland)
     zxdg_toplevel_decoration_v1_add_listener(wayland->decoration, &decoration_listener, NULL);
     
     }
-
+  
   wl_surface_commit(wayland->surface);
+  wl_display_roundtrip(wayland->display);
+
+  while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)))
+    handle_events_internal(wayland, 100);
+  
   return 1;
   }
 
 static void unmap_window(wayland_t * wayland)
   {
+  if(wayland->decoration)
+    {
+    zxdg_toplevel_decoration_v1_destroy(wayland->decoration);
+    wayland->decoration = NULL;
+    }
+  
   if(wayland->xdg_toplevel)
     {
     xdg_toplevel_destroy(wayland->xdg_toplevel);
@@ -609,12 +634,25 @@ static void unmap_window(wayland_t * wayland)
     xdg_surface_destroy(wayland->xdg_surface);
     wayland->xdg_surface = NULL;
     }
-  
-  if(wayland->decoration)
+
+  if(wayland->surface)
     {
-    zxdg_toplevel_decoration_v1_destroy(wayland->decoration);
-    wayland->decoration = NULL;
+    wl_surface_destroy(wayland->surface);
+    wayland->surface = NULL;
     }
+  
+  if(wayland->g)
+    {
+    bg_glvideo_destroy(wayland->g);
+    wayland->g = NULL;
+    }
+  
+  if(wayland->egl_window)
+    {
+    wl_egl_window_destroy(wayland->egl_window);
+    wayland->egl_window = NULL;
+    }
+  
   }
   
 static int ensure_window(void * priv)
@@ -622,99 +660,76 @@ static int ensure_window(void * priv)
   wayland_t * wayland = priv;
   struct wl_registry *registry;
 
-  if(wayland->display)
-    return 1;
+  if(!wayland->display)
+    {
+    wayland->xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
   
-  wayland->xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    if(!wayland->xkb_context)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Failed to create XKB context");
+      return 0;
+      }
   
-  if(!wayland->xkb_context)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Failed to create XKB context");
-    return 0;
-    }
+    if(!(wayland->display = wl_display_connect(NULL)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't connect to wayland");
+      return 0;
+      }
+
+    registry = wl_display_get_registry(wayland->display);
+    wl_registry_add_listener(registry, &registry_listener, wayland);
+
+    wl_display_roundtrip(wayland->display);
+
+    if(!wayland->compositor)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No compositor found");
+      return 0;
+      }
+
+    if(!wayland->seat)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No seat found");
+      return 0;
+      }
+
+    if(!(wayland->xdg_wm_base))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No XDG window manager found");
+      return 0;
+      }
+
+    if(!(wayland->shm))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No SHM found");
+      return 0;
+      }
+
+    if(!(wayland->cursor_surface = wl_compositor_create_surface(wayland->compositor)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cursor surface creation failed");
+      return 0;
+      }
+
+    wayland->cursor_theme = wl_cursor_theme_load(NULL, 24, wayland->shm);
+    
+    xdg_wm_base_add_listener(wayland->xdg_wm_base, &xdg_wm_base_listener, wayland);
+
+    wayland->pointer = wl_seat_get_pointer(wayland->seat);
+    wl_pointer_add_listener(wayland->pointer, &pointer_listener, wayland);
   
-  if(!(wayland->display = wl_display_connect(NULL)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't connect to wayland");
-    return 0;
+    wayland->keyboard = wl_seat_get_keyboard(wayland->seat);
+    wl_keyboard_add_listener(wayland->keyboard, &keyboard_listener, wayland);
     }
-
-  registry = wl_display_get_registry(wayland->display);
-  wl_registry_add_listener(registry, &registry_listener, wayland);
-
-  wl_display_roundtrip(wayland->display);
-
-  if(!wayland->compositor)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No compositor found");
-    return 0;
-    }
-
-  if(!wayland->seat)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No seat found");
-    return 0;
-    }
-
-  if(!(wayland->xdg_wm_base))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No XDG window manager found");
-    return 0;
-    }
-
-  if(!(wayland->shm))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No SHM found");
-    return 0;
-    }
-
-  
-  xdg_wm_base_add_listener(wayland->xdg_wm_base, &xdg_wm_base_listener, wayland);
-  
-  if(!(wayland->surface = wl_compositor_create_surface(wayland->compositor)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Surface creation failed");
-    return 0;
-    }
-
   
   map_window(wayland);
     
-  while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)))
-    handle_events_internal(wayland, 100);
-
-  if(!(wayland->cursor_surface = wl_compositor_create_surface(wayland->compositor)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cursor surface creation failed");
-    return 0;
-    }
-
-  wayland->cursor_theme = wl_cursor_theme_load(NULL, 24, wayland->shm);
-  
-  if(!(wayland->egl_window = wl_egl_window_create(wayland->surface,
-                                                  800, 600)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EGL window creation failed");
-    return 0;
-    }
-
-  wayland->g = bg_glvideo_create(EGL_PLATFORM_WAYLAND_KHR,
-                                 wayland->display, wayland->egl_window);
   
   //  wl_egl_window_resize(wayland->egl_window, 320, 240, 0, 0);
-  wl_surface_commit(wayland->surface);
   
   //  xdg_toplevel_set_min_size(wayland->xdg_toplevel, 320, 240);
   //  xdg_toplevel_set_max_size(wayland->xdg_toplevel, 0, 0);
-  
-  wayland->pointer = wl_seat_get_pointer(wayland->seat);
-  wl_pointer_add_listener(wayland->pointer, &pointer_listener, wayland);
-  
-  wayland->keyboard = wl_seat_get_keyboard(wayland->seat);
-  wl_keyboard_add_listener(wayland->keyboard, &keyboard_listener, wayland);
-  
-  
-  wl_surface_commit(wayland->surface);
+  //  wl_surface_commit(wayland->surface);
   return 1;
   }
 
@@ -1224,7 +1239,8 @@ static int open_wayland(void * priv, const char * uri,
 static void close_wayland(void * priv)
   {
   wayland_t * wayland = priv;
-  bg_glvideo_close(wayland->g);
+  if(wayland->g)
+    bg_glvideo_close(wayland->g);
   }
 
 static bg_controllable_t * get_controllable_wayland(void * data)

@@ -363,6 +363,8 @@ static port_t * append_port(bg_glvideo_t * g)
   {
   port_t * ret;
 
+  //  fprintf(stderr, "Append port 1: %d\n", g->num_ports);
+  
   if(g->num_ports == g->ports_alloc)
     {
     g->ports_alloc += 4;
@@ -376,8 +378,11 @@ static port_t * append_port(bg_glvideo_t * g)
   ret->g = g;
   ret->idx = g->num_ports;
   
-  
   g->num_ports++;
+
+  //  if(g->num_ports == 1)
+  //    fprintf(stderr, "Append port 2: %d\n", g->num_ports);
+  
   return ret;
   }
 

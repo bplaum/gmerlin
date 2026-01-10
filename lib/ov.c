@@ -250,6 +250,9 @@ void bg_ov_close(bg_ov_t * ov)
 
 void bg_ov_show_window(bg_ov_t * ov, int show)
   {
+  if(!show)
+    bg_ov_close(ov);
+  
   //  fprintf(stderr, "bg_ov_show_window %d\n", show);
   
   bg_ov_plugin_set_visible(ov->h, show);

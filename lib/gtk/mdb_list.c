@@ -476,7 +476,7 @@ void bg_gdk_mdb_list_set_obj(list_t * l, const gavl_dictionary_t * dict)
 
   l->klass = NULL;
   
-  if((l->klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)) &&
+  if((l->klass = gavl_strrep(l->klass, gavl_dictionary_get_string(m, GAVL_META_CLASS))) &&
      (icon = bg_get_type_icon(l->klass)))
     {
     markup = g_markup_printf_escaped("<span size=\"large\" font_family=\"%s\" weight=\"normal\">%s</span> %s",
@@ -647,6 +647,9 @@ void bg_gtk_mdb_list_destroy(list_t * l)
     gtk_tree_path_free(l->last_path);
 
   free(l->id);
+
+  if(l->klass)
+    free(l->klass);
   
   /* widgets are destroyed when they are removed from the notebook */
   //  else if(l->widget)

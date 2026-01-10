@@ -141,8 +141,6 @@ static int ensure_window(void * priv)
                                  BlackPixel(x11->dpy, screen),
                                  BlackPixel(x11->dpy, screen));
 
-  //  XStoreName(display, window, "Xlib Vollbild-Demo");
-  
   // Select events
   XSelectInput(x11->dpy, x11->win, KeyPressMask | ExposureMask | StructureNotifyMask | PointerMotionMask);
   
