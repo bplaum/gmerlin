@@ -2080,7 +2080,7 @@ void bg_mdb_add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict)
        gavl_metadata_get_src(m, GAVL_META_SRC, 1, NULL, &base_uri) &&
        gavl_string_starts_with(base_uri, "http://"))
       {
-      char * cover_uri;
+      char * cover_uri = NULL;
       const char * pos;
       //      fprintf(stderr, "Add embedded cover uri %s\n", base_uri);
 

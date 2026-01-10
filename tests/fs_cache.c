@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
   {
   gavl_array_t arr;
   int total_entries = 0;
-  bg_mdb_fs_cache_t c;
+  bg_mdb_fs_cache_t * c;
 
   int flags = BG_MDB_FS_MASK_AUDIO | \
     BG_MDB_FS_MASK_VIDEO | \
@@ -46,10 +46,9 @@ int main(int argc, char ** argv)
   bg_plugins_init();
   memset(&c, 0, sizeof(c));
 
-  if(!bg_mdb_fs_cache_init(&c, "./cache.db"))
-    return 0;
+  c = bg_mdb_fs_cache_create("./cache.db");
 
-  if(!bg_mdb_fs_browse_children(&c, argv[1], &arr, 0, 0, flags, &total_entries))
+  if(!bg_mdb_fs_browse_children(c, argv[1], &arr, 0, 0, flags, &total_entries))
     {
     fprintf(stderr, "Browsing failed\n");
     return EXIT_FAILURE;

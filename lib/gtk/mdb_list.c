@@ -1307,7 +1307,9 @@ static void list_menu_callback(GtkWidget * item, gpointer data)
       id = tree->menu_ctx.list->id;
     else if(tree->menu_ctx.id)
       id = tree->menu_ctx.id;
-      
+    else
+      return;
+    
     sink = tree->ctrl.cmd_sink;
 
     if(!strcmp(id, BG_PLAYQUEUE_ID))

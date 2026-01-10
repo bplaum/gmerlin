@@ -528,7 +528,7 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
   char * core_id = NULL;
 
   char * json;
-  struct json_object *obj;
+  struct json_object *obj = NULL;
   struct json_object *episodes;
   struct json_object *episode;
 

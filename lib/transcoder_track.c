@@ -52,7 +52,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
 
   const gavl_value_t * val;
   const gavl_dictionary_t * enc = NULL;
-  const gavl_dictionary_t * dict;
+  const gavl_dictionary_t * dict = NULL;
   const gavl_dictionary_t * video_dict;
   const char * name;
   gavl_dictionary_t * track_encoder_section;

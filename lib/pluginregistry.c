@@ -4302,7 +4302,7 @@ void bg_tracks_resolve_locations(const gavl_value_t * src, gavl_array_t * dst, i
 
   const char * klass;
   const char * last_klass;
-  gavl_dictionary_t * last_m;
+  gavl_dictionary_t * last_m = NULL;
   
   if(src->type == GAVL_TYPE_DICTIONARY)
     gavl_array_splice_val(dst, -1, 0, src);
