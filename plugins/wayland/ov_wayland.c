@@ -777,7 +777,7 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
               {
               int fs = 0;
               if(!gavl_value_get_int(&val, &fs) ||
-                 !wayland->display)
+                 !wayland->display  || !wayland->xdg_toplevel)
                 return 1;
 
               /*
