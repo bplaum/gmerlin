@@ -18,6 +18,7 @@ encoder.h \
 filters.h \
 frametimer.h \
 frontend.h \
+glvideo.h \
 http.h \
 httpserver.h \
 iconfont.h \
