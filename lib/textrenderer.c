@@ -245,8 +245,6 @@ struct bg_text_renderer_s
   char * font;
   char * font_file;
   
-  double font_size;
-  
   float color[4];
   float border_color[4];
   float border_width;
@@ -361,14 +359,6 @@ void bg_text_renderer_set_parameter(void * data, const char * name,
     if(!r->font || strcmp(val->v.str, r->font))
       {
       r->font = gavl_strrep(r->font, val->v.str);
-      r->font_changed = 1;
-      }
-    }
-  else if(!strcmp(name, "font_size"))
-    {
-    if(r->font_size != val->v.d)
-      {
-      r->font_size = val->v.d;
       r->font_changed = 1;
       }
     }
@@ -595,7 +585,7 @@ void init_nolock(bg_text_renderer_t * r)
   size_is_absolute = pango_font_description_get_size_is_absolute(desc);
   size = pango_font_description_get_size(desc);
   
-  size *= img_h / 480.0;
+  size *= hypot(img_h, img_w) / 800.0;
   
   r->tab_array = pango_tab_array_new_with_positions(1, (size_is_absolute ? TRUE : FALSE),
                                                     PANGO_TAB_LEFT, (size * 2));
@@ -637,21 +627,16 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   int image_h;
   int transposed;
 
-  //  pango_matrix_t pm;
-  
   /* Create orientation matrix */
   gavl_set_orient_matrix(r->fmt.orientation, matrix);
-      
   
-  /* Flip y axis */
-  //  cairo_scale(r->cr, 1.0, -1.0);
-  
-  
-  //  fprintf(stderr, "bg_text_renderer_render\n");
-
   transposed = gavl_image_orientation_is_transposed(r->fmt.orientation);
+
+  //  fprintf(stderr, "Render:\n");
+  //  gavl_video_format_dump(&r->fmt);
   
   if(transposed)
+    //    if(0)
     {
     image_h = r->fmt.image_width;
     image_w = r->fmt.image_height;
@@ -662,9 +647,6 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
     image_h = r->fmt.image_height;
     }
 
-  // cairo_translate(r->cr, -image_w/2, -image_h/2);
-
-  
   pthread_mutex_lock(&r->config_mutex);
   
   if(r->config_changed)
@@ -673,6 +655,7 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   cairo_save(r->cr);
   cairo_translate(r->cr, r->fmt.image_width/2, r->fmt.image_height/2);
 
+#if 1
   cairo_scale(r->cr, 1.0, -1.0);
   
   /* Apply orientation */
@@ -683,7 +666,8 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   cairo_transform(r->cr, &cairo_matrix);
 
   cairo_scale(r->cr, 1.0, -1.0);
-
+#endif
+  
   /* */
   
   ovl = r->frame; // Maybe changed by init_nolock()
@@ -709,7 +693,7 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   box.h = pango_rect.h + 2 * r->box_padding;
   box.w = pango_rect.w  + 2 * r->box_padding;
   
-#if 1 
+#if 1
   switch(r->justify_box_h)
     {
     case JUSTIFY_LEFT:
@@ -826,7 +810,7 @@ gavl_video_frame_t * bg_text_renderer_render(bg_text_renderer_t * r, const char 
   fprintf(stderr, "Got Overlay: dst: %d,%d\n", ovl->dst_x, ovl->dst_y);
   gavl_rectangle_i_dump(&ovl->src_rect);
   fprintf(stderr, "\n");
-  if(0)
+  if(1)
     {
     float color[4] = { 1.0, 1.0, 1.0, 0.5};
     gavl_video_frame_fill(ovl, &r->overlay_format, color);
