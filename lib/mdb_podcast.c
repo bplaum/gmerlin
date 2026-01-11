@@ -524,7 +524,7 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
   int num;
   const char * start;
   const char * end;
-  const char * podcast;
+  char * podcast = NULL;
   char * core_id = NULL;
 
   char * json;
@@ -564,8 +564,8 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
     goto fail;
 
   
-  podcast = bg_json_dict_get_string(result, "title");
-  
+  podcast = gavl_strdup(bg_json_dict_get_string(result, "title"));
+    
   //  fprintf(stderr, "Title: %s\n", podcast);
   //  fprintf(stderr, "Description: %s\n", bg_json_dict_get_string(result, "description"));
 
@@ -713,6 +713,9 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
 
   if(core_id)
     free(core_id);
+
+  if(podcast)
+    free(podcast);
   
   if(obj)
     json_object_put(obj);
