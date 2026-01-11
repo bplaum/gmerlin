@@ -21,5 +21,5 @@ ov_x11_la_LIBADD =  @X_LIBS@ @MODULE_LIBADD@
 i_x11_la_SOURCES = i_x11.c grab.c
 i_x11_la_LIBADD =  @X_LIBS@ @XFIXES_LIBS@ @MODULE_LIBADD@
 
-noinst_HEADERS = 
+noinst_HEADERS = grab.h
 
