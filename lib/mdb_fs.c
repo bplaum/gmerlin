@@ -551,7 +551,10 @@ static int handle_msg_fs(void * priv, gavl_msg_t * msg)
             if(dir)
               {
               gavl_value_t val;
-              gavl_dictionary_t * dict = gavl_value_set_dictionary(&val);
+              gavl_dictionary_t * dict;
+
+              gavl_value_init(&val);
+              dict = gavl_value_set_dictionary(&val);
 
               evt = bg_msg_sink_get(be->ctrl.evt_sink);
 
