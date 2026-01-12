@@ -295,191 +295,6 @@ static int server_handle_manifest(bg_http_connection_t * conn, void * data)
   return 0;
   }
 
-/* First run stuff */
-
-typedef struct
-  {
-  GtkWidget * window;
-  GtkWidget * ok_button;
-  GtkWidget * cancel_button;
-
-  GtkWidget * label;
-  GtkWidget * spinner;
-  
-  pthread_t th;
-  pthread_mutex_t mutex;
-  bg_mdb_t * mdb;
-  const char * dbpath;
-  gmerlin_t * g;
-
-  int main_running;
-
-  } firstrun_window_t;
-
-static void * firstrun_thread_func(void * data)
-  {
-  bg_mdb_t * mdb;
-  firstrun_window_t * win = data;
-
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creating initial database");
-  
-  mdb = bg_mdb_create(win->dbpath, 1, NULL);
-
-#if 0
-  bg_mdb_stop(mdb);
-  bg_mdb_destroy(mdb);
-  
-  mdb = bg_mdb_create(win->dbpath, 0, win->g->srv, NULL);
-#endif
-  
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created initial database");
-  
-  pthread_mutex_lock(&win->mutex);
-  win->mdb = mdb;
-  pthread_mutex_unlock(&win->mutex);
-  return NULL;
-  }
-
-static gboolean firstrun_timeout(gpointer data)
-  {
-  int done = 0;
-  
-  /* Check if mdb is created */
-  firstrun_window_t * win = data;
-
-  pthread_mutex_lock(&win->mutex);
-  if(win->mdb)
-    done = 1;
-  pthread_mutex_unlock(&win->mutex);
-  
-  if(done)
-    {
-    pthread_join(win->th, NULL);
-    gtk_main_quit();
-    gtk_widget_hide(win->window);
-    return FALSE;
-    }
-  else
-    {
-    return TRUE;
-    }
-  
-  }
-
-
-static void firstrun_button_callback(GtkWidget *w, gpointer data)
-  {
-  firstrun_window_t * win = data;
-
-  if(w == win->ok_button)
-    {
-    gtk_spinner_start(GTK_SPINNER(win->spinner));
-    gtk_label_set_text(GTK_LABEL(win->label), "Creating initial database, please wait");
-    gtk_widget_set_sensitive(win->ok_button, 0);
-    gtk_widget_set_sensitive(win->cancel_button, 0);
-    pthread_create(&win->th, NULL, firstrun_thread_func, win);
-    g_timeout_add(50, firstrun_timeout, win);
-    }
-  else if(w == win->cancel_button)
-    {
-    // gtk_window_close(GTK_WINDOW(win->window));
-    gtk_main_quit();
-    gtk_widget_hide(win->window);
-    }
-
-  }
-
-static gboolean firstrun_delete_callback(GtkWidget *w, GdkEventAny * evt, gpointer data)
-  {
-#if 0
-  firstrun_window_t * win = data;
-  if(win->main_running)
-    {
-    fprintf(stderr, "Delete callback\n");
-    gtk_main_quit();
-    win->main_running = 0;
-    }
-#endif
-  return TRUE;
-  }
-
-static int firstrun(gmerlin_t * g, const char * db_path)
-  {
-  firstrun_window_t win;
-  GtkWidget * buttonbox;
-  GtkWidget * mainbox;
-  GtkWidget * labelbox;
-
-  memset(&win, 0, sizeof(win));
-  
-  win.dbpath = db_path;
-  win.g = g;
-
-  pthread_mutex_init(&win.mutex, NULL);
-  
-  win.ok_button = gtk_button_new_with_label("Ok");
-  win.cancel_button = gtk_button_new_with_label("Cancel");
-  
-  g_signal_connect(G_OBJECT(win.ok_button), "clicked", G_CALLBACK(firstrun_button_callback), &win);
-  g_signal_connect(G_OBJECT(win.cancel_button), "clicked", G_CALLBACK(firstrun_button_callback), &win);
-  
-  win.label = gtk_label_new(TR("Create initial media database? This might take some minutes."));
-  win.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
-  g_signal_connect(G_OBJECT(win.window), DELETE_EVENT, G_CALLBACK(firstrun_delete_callback), &win);
-
-  
-  gtk_window_set_position(GTK_WINDOW(win.window), GTK_WIN_POS_CENTER);
-  
-  win.spinner = gtk_spinner_new();
-
-
-  mainbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-  gtk_container_set_border_width(GTK_CONTAINER(mainbox),
-                                 10);
-  
-  buttonbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
-  gtk_container_add(GTK_CONTAINER(buttonbox), win.ok_button);
-  gtk_container_add(GTK_CONTAINER(buttonbox), win.cancel_button);
-  
-  labelbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  bg_gtk_box_pack_start(labelbox, win.label, 1);
-  bg_gtk_box_pack_start(labelbox, win.spinner, 0);
-  
-  bg_gtk_box_pack_start(mainbox, labelbox, 1);
-  
-  bg_gtk_box_pack_start(mainbox, buttonbox, 0);
-
-  gtk_widget_show_all(mainbox);
-  //  gtk_widget_
-  
-  gtk_container_add(GTK_CONTAINER(win.window), mainbox);
-
-  gtk_widget_show(win.window);
-
-  win.main_running = 1;
-  gtk_main();
-
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "After gtk_main()");
-  
-  gtk_window_close(GTK_WINDOW(win.window));
-  //  g_object_unref(win.window);
-
-  pthread_mutex_destroy(&win.mutex);
-  
-  if(win.mdb)
-    {
-    g->mdb = win.mdb;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Firstrun succeeded");
-
-    return 1;
-    }
-  else
-    {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Firstrun failed");
-    return 0;
-    }
-  }
 
 gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * db_path)
   {
@@ -535,7 +350,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   /* Media DB */
   
-  if(!(ret->mdb = bg_mdb_create(db_path, 0, &locked)))
+  if(!(ret->mdb = bg_mdb_create(db_path, 1, &locked)))
     {
     if(locked)
       {
@@ -549,8 +364,6 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
       gtk_widget_destroy (dialog);
       goto fail;
       }
-    else if(!firstrun(ret, db_path))
-      goto fail;
     }
      
   
