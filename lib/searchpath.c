@@ -39,7 +39,7 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "utils"
 
-char * bg_search_var_dir(const char * directory)
+static char * search_var_dir(const char * directory, int create)
   {
   char * home_dir;
   char * testdir;
@@ -48,14 +48,31 @@ char * bg_search_var_dir(const char * directory)
     return NULL;
   
   testdir  = gavl_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
-  if(!gavl_ensure_directory(testdir, 1))
+  
+  if(create)
     {
-    free(testdir);
-    return NULL;
+    if(!gavl_ensure_directory(testdir, 1))
+      {
+      free(testdir);
+      return NULL;
+      }
     }
+  else
+    {
+    if(access(testdir, R_OK | W_OK))
+      {
+      free(testdir);
+      return NULL;
+      }
+    }
+    
   return testdir;
   }
 
+char * bg_search_var_dir(const char * directory)
+  {
+  return search_var_dir(directory, 1);
+  }
 
 
 char * bg_search_file_read(const char * directory, const char * file)
@@ -107,6 +124,13 @@ static char * search_file_write(const char * directory, const char * file, int d
   //    return NULL;
   
   /* Try to open the file */
+
+  if(!file && !do_create)
+    {
+    /* Check for the existence of dir */
+    if(!(testdir = search_var_dir(directory, 0)))
+      return NULL;
+    }
 
   testdir = bg_search_var_dir(directory);
   
