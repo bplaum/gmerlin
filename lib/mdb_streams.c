@@ -2668,12 +2668,13 @@ static int ping_streams(bg_mdb_backend_t * be)
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Creating default database");
   
   bg_sqlite_start_transaction(priv->db);
+
+  /* These take too long to load */
+  //  add_source_str(be, "radio-browser.info", "radiobrowser://");
+  //  add_source_str(be, "iptv-org",           "iptv-org://");
   
-  add_source_str(be, "radio-browser.info", "radiobrowser://");
-  add_source_str(be, "iptv-org",           "iptv-org://");
-  
-  //  add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
-  //  add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
+  add_source_str(be, "Kodinerds IPTV",  "http://bit.ly/kn-kodi-tv");
+  add_source_str(be, "Kodinerds Radio", "http://bit.ly/kn-kodi-radio");
   
   bg_sqlite_end_transaction(priv->db);
 
