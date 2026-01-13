@@ -488,7 +488,7 @@ static int handle_gui_message(void * data, gavl_msg_t * msg)
         case BG_CMD_DB_CACHE_CONTAINER_OPEN:
           {
           gavl_msg_t * evt;
-          
+          gavl_dictionary_t * dict;
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           cnt = get_container(c, id);
 
@@ -497,12 +497,18 @@ static int handle_gui_message(void * data, gavl_msg_t * msg)
           if(cnt->state == STATE_UNUSED)
             cnt->state = STATE_OPEN;
 
+          dict = bg_mdb_cache_get_object(c, cnt->id);
+          
           /* Send container info */
           evt = bg_msg_sink_get(c->ctrl.evt_sink);
           gavl_msg_set_id_ns(evt, BG_MSG_DB_CACHE_CONTAINER_INFO, BG_MSG_NS_DB_CACHE);
           gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, cnt->id);
-          gavl_msg_set_arg_dictionary(evt, 0, bg_mdb_cache_get_object(c, cnt->id));
+          gavl_msg_set_arg_dictionary(evt, 0, dict);
           bg_msg_sink_put(c->ctrl.evt_sink);
+
+          /* No children -> Container is already complete */
+          if(!gavl_track_get_num_children(dict))
+            cnt->flags |= CONTAINER_COMPLETE;
           
           if(cnt->state == STATE_INIT)
             {
