@@ -789,7 +789,9 @@ void bg_gtk_mdb_popup_menu(bg_gtk_mdb_tree_t * t, const GdkEvent *trigger_event)
       gtk_widget_show(t->menu.album_menu.add_directory_item);
     if(edit_flags & ALBUM_CAN_ADD_CONTAINER)
       gtk_widget_show(t->menu.album_menu.new_container_item);
-
+    if(edit_flags & ALBUM_CAN_ADD_URL)
+      gtk_widget_show(t->menu.album_menu.load_url_item);
+    
     if(edit_flags & ALBUM_EDITABLE)
       gtk_widget_show(t->menu.album_menu.sort_item);
     }

@@ -1239,7 +1239,7 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
       }
     else
       {
-      if(!(ret->path     = bg_search_file_write_nocreate(MDB_DIR, NULL)))
+      if(!(ret->path = bg_search_file_write_nocreate(MDB_DIR, NULL)))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Database not found");
         goto fail;

@@ -350,7 +350,7 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
 
   /* Media DB */
   
-  if(!(ret->mdb = bg_mdb_create(db_path, 1, &locked)))
+  if(!(ret->mdb = bg_mdb_create(db_path, 0, &locked)))
     {
     if(locked)
       {
@@ -363,6 +363,22 @@ gmerlin_t * gmerlin_create(const gavl_dictionary_t * saved_state, const char * d
       gtk_dialog_run (GTK_DIALOG (dialog));
       gtk_widget_destroy (dialog);
       goto fail;
+      }
+    else
+      {
+#if 0
+      char * msg = gavl_sprintf("Creating new database in %s", db_path);
+      GtkWidget * dialog =
+        gtk_message_dialog_new(NULL,
+                               0,
+                               GTK_MESSAGE_ERROR,
+                               GTK_BUTTONS_CLOSE,
+                               msg);
+      gtk_dialog_run (GTK_DIALOG (dialog));
+      gtk_widget_destroy (dialog);
+      free(msg);
+#endif
+      ret->mdb = bg_mdb_create(db_path, 1, &locked);
       }
     }
      
