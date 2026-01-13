@@ -488,7 +488,7 @@ static int handle_gui_message(void * data, gavl_msg_t * msg)
         case BG_CMD_DB_CACHE_CONTAINER_OPEN:
           {
           gavl_msg_t * evt;
-          gavl_dictionary_t * dict;
+          const gavl_dictionary_t * dict;
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
           cnt = get_container(c, id);
 
@@ -554,8 +554,8 @@ static int handle_gui_message(void * data, gavl_msg_t * msg)
             gavl_msg_get_arg_array(msg, 0, &arr);
           
             /* Translate indices and pass to backend */
-            fprintf(stderr, "Delete Items %s\n", id);
-            gavl_array_dump(&arr, 2);
+            //            fprintf(stderr, "Delete Items %s\n", id);
+            //            gavl_array_dump(&arr, 2);
 
             delete_map = calloc(cnt->children.num_entries, 1);
 

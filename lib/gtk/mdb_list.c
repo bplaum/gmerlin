@@ -2242,8 +2242,6 @@ int bg_gtk_mdb_get_edit_flags(const gavl_dictionary_t * track)
 
   ret |= ALBUM_EDITABLE;
 
-  if(!strcmp(klass, GAVL_META_CLASS_ROOT_STREAMS))
-    ret |= ALBUM_CAN_ADD_STREAM_SOURCE;
 
   if(bg_mdb_can_add(track, GAVL_META_CLASS_SONG))
     ret |= ALBUM_CAN_ADD_SONG;
@@ -2259,6 +2257,12 @@ int bg_gtk_mdb_get_edit_flags(const gavl_dictionary_t * track)
      bg_mdb_can_add(track, GAVL_META_CLASS_LOCATION))
     ret |= ALBUM_CAN_ADD_URL;
 
+  /* Must be last */
+  if(!strcmp(klass, GAVL_META_CLASS_ROOT_STREAMS))
+    {
+    ret = (ALBUM_CAN_ADD_STREAM_SOURCE | ALBUM_EDITABLE);
+    }
+  
   return ret;
   }
 
