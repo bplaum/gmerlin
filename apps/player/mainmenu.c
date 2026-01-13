@@ -497,10 +497,19 @@ static void stream_menu_set_index(stream_menu_t * s, int index)
   
   }
 
-static void chapter_menu_set_num(gmerlin_t * g, chapter_menu_t * s,
+static void chapter_menu_set_num(main_menu_t * m,
                                  int num, int timescale)
   {
   int i;
+
+  chapter_menu_t * s = &m->chapter_menu;
+  
+  if(!num)
+    gtk_widget_hide(m->chapter_item);
+  else
+    gtk_widget_show(m->chapter_item);
+    
+
   if(num > s->chapters_alloc)
     {
     s->chapter_items = realloc(s->chapter_items,
@@ -508,7 +517,7 @@ static void chapter_menu_set_num(gmerlin_t * g, chapter_menu_t * s,
     s->ids = realloc(s->ids, num * sizeof(*s->ids));
 
     for(i = s->chapters_alloc; i < num; i++)
-      s->chapter_items[i] = create_chapter_item(g, s, &s->ids[i]);
+      s->chapter_items[i] = create_chapter_item(m->g, s, &s->ids[i]);
     s->chapters_alloc = num;
     }
   s->timescale = timescale;
@@ -570,18 +579,22 @@ void main_menu_set_chapters(main_menu_t * m, const gavl_dictionary_t * list)
   char * label;
   GtkWidget * w;
   
-  if(!gavl_chapter_list_is_valid(list))
+  if(!list || !gavl_chapter_list_is_valid(list))
     {
-    gtk_widget_set_sensitive(m->chapter_item, 0);
+    gtk_widget_hide(m->chapter_item);
     return;
     }
   else
     {
+    gtk_widget_show(m->chapter_item);
+
     num = gavl_chapter_list_get_num(list);
+    
+
     timescale = gavl_chapter_list_get_timescale(list);
 
     gtk_widget_set_sensitive(m->chapter_item, 1);
-    chapter_menu_set_num(m->g, &m->chapter_menu,
+    chapter_menu_set_num(m,
                          num,
                          timescale);
 
@@ -929,7 +942,10 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
   ret->chapter_item = create_submenu_item(TR("Chapters..."),BG_ICON_CHAPTERS,
                                           ret->chapter_menu.menu,
                                           ret->menu);
-
+  /* Don't crash on empty menus */
+  gtk_widget_hide(ret->chapter_item);
+  
+  
   ret->preferences_item =
     create_item(TR("Preferences..."), BG_ICON_CONFIG, gmerlin, ret->menu);
 

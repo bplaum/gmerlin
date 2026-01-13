@@ -712,7 +712,6 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
               char * markup;
               const gavl_dictionary_t * dict;
               const gavl_dictionary_t * m;
-              const gavl_dictionary_t * cl;
               GdkPixbuf * pbuf;
               int num_audio_streams;
               int num_video_streams;
@@ -798,9 +797,7 @@ static int handle_player_message_gmerlin(void * data, gavl_msg_t * msg)
                 main_menu_set_subtitle_info(w->g->main_menu, i + num_text_streams,
                                             gavl_track_get_overlay_metadata(dict, i));
 
-              if((cl = gavl_dictionary_get_chapter_list(m)))
-                main_menu_set_chapters(w->g->main_menu, cl);
-              
+              main_menu_set_chapters(w->g->main_menu, gavl_dictionary_get_chapter_list(m));
               
               }
             else if(!strcmp(var, BG_PLAYER_STATE_MUTE))         // int
