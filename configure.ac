@@ -1,5 +1,5 @@
 
-AC_INIT([gmerlin], [2.0.0pre1])
+AC_INIT([gmerlin], [2.0.0])
 AC_CONFIG_SRCDIR([include/gmerlin/player.h])
 
 AM_INIT_AUTOMAKE
