@@ -39,6 +39,7 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "utils"
 
+
 static char * search_var_dir(const char * directory, int create)
   {
   char * home_dir;
@@ -113,76 +114,6 @@ char * bg_search_file_read(const char * directory, const char * file)
   return NULL;
   }
 
-static char * search_file_write(const char * directory, const char * file, int do_create)
-  {
-  char * testpath;
-  char * testdir;
-  
-  FILE * testfile;
-
-  //  if(!file)
-  //    return NULL;
-  
-  /* Try to open the file */
-
-  if(!file && !do_create)
-    {
-    /* Check for the existence of dir */
-    if(!(testdir = search_var_dir(directory, 0)))
-      return NULL;
-    }
-
-  testdir = bg_search_var_dir(directory);
-  
-  //   gavl_sprintf("%s/.%s/%s", home_dir, PACKAGE, directory);
-
-  if(!do_create && access(testdir, R_OK|W_OK|X_OK))
-    {
-    free(testdir);
-    return NULL;
-    }
-  
-  if(!gavl_ensure_directory(testdir, 1))
-    {
-    free(testdir);
-    return NULL;
-    }
-  
-  if(!file)
-    {
-    /* Make sure it's writable */
-    if(!access(testdir, R_OK|W_OK|X_OK))
-      return testdir;
-    else
-      return NULL;
-    }
-  
-  testpath = gavl_sprintf("%s/%s", testdir, file);
-  
-  testfile = fopen(testpath, "a");
-  if(testfile)
-    {
-    fclose(testfile);
-    free(testdir);
-    return testpath;
-    }
-  else
-    {
-    free(testpath);
-    free(testdir);
-    return NULL;
-    }
-  }
-
-char * bg_search_file_write_nocreate(const char * directory, const char * file)
-  {
-  return search_file_write(directory, file, 0);
-  }
-
-char * bg_search_file_write(const char * directory, const char * file)
-  {
-  return search_file_write(directory, file, 1);
-  }
 
 // S_IRUSR|S_IWUSR|S_IXUSR
 // S_IRUSR|S_IWUSR|S_IXUSR|

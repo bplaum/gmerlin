@@ -84,7 +84,7 @@ int main(int argc, char ** argv)
   
   bg_iconfont_init();
 
-  bg_cfg_registry_init("transcoder");
+  bg_cfg_registry_init();
   bg_plugins_init();
   
 
@@ -103,6 +103,9 @@ int main(int argc, char ** argv)
   transcoder_window_destroy(win);
 
   bg_plugins_cleanup();
+
+  bg_cfg_registry_save();
+  
   bg_cfg_registry_cleanup();
   
   return 0;

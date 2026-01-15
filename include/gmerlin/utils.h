@@ -82,22 +82,6 @@ char * bg_search_var_dir(const char * directory);
 
 char * bg_search_file_read(const char * directory, const char * file);
 
-/** \brief Search for a file for writing
- *  \param directory Directory
- *  \param file Filename
- *  \returns A filename or NULL
- *
- *  This function first seeks in the in $HOME/.gmerlin for the
- *  specified file, which must be writable. If the file doesn't
- *  exist, an empty file is created. If the directory doesn't exist,
- *  it's created as well. The directory can also contain
- *  subdirectories e.g. "player/tree".
- */
-
-char * bg_search_file_write(const char * directory, const char * file);
-
-char * bg_search_file_write_nocreate(const char * directory, const char * file);
-
 /** \brief Search for an executable
  *  \param file Name of the file (without dirtectory)
  *  \param path If non NULL, the complete path to the exectuable will be returned

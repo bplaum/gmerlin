@@ -32,15 +32,13 @@
 bg_cfg_registry_t * bg_cfg_registry = NULL;
 #define SAVE_CONFIG_KEY "$SAVE_CONFIG"
 
-void bg_cfg_registry_init(const char * dir)
+void bg_cfg_registry_init(void)
   {
   char * tmp_path;
 
   bg_cfg_registry = gavl_dictionary_create();
-
-  bg_app_set_config_dir(dir);
   
-  if((tmp_path = bg_search_file_read(dir, "cfg.xml")))
+  if((tmp_path = bg_app_get_config_file_name()))
     {
     bg_cfg_registry_load(bg_cfg_registry, tmp_path);
     free(tmp_path);

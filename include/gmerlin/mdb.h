@@ -261,6 +261,7 @@ int bg_mdb_get_group_size(gavl_array_t * arr, const char * id);
 
 int bg_mdb_adjust_num(int start, int * num, int total);
 
+
 /*
  *  Client side cache. Also acts as a intermediary between the GUI and the
  *  backends

@@ -651,11 +651,10 @@ void bg_plugin_registry_save(bg_plugin_info_t * info)
   xmlNodePtr xml_registry;
   char * filename;
 
-  filename = bg_search_file_write("", "plugins.xml");
+  filename = bg_plugin_registry_get_cache_file_name();
+
   if(!filename)
-    {
     return;
-    }
   
   xml_doc = xmlNewDoc((xmlChar*)"1.0");
   xml_registry = xmlNewDocRawNode(xml_doc, NULL, (xmlChar*)plugin_registry_key, NULL);

@@ -976,11 +976,8 @@ void transcoder_window_destroy(transcoder_window_t* w)
   
   track_list_destroy(w->tracklist);
   
-  bg_cfg_registry_save();
-  
   /* Destroy after saving the logwindow state */
   bg_gtk_log_window_destroy(w->logwindow);
-  
   
   bg_msg_sink_destroy(w->msg_sink);
 

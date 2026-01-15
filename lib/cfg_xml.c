@@ -58,15 +58,13 @@ void bg_cfg_registry_save_to(const bg_cfg_registry_t * r, const char * filename)
 
 void bg_cfg_registry_save()
   {
-  char * tmp_string;
-  const char * dir = bg_app_get_config_dir();
+  char * file;
 
-  if((tmp_string = bg_search_file_write(dir, "cfg.xml")))
+  if((file = bg_app_get_config_file_name()))
     {
-    bg_cfg_registry_save_to(bg_cfg_registry, tmp_string);
-    free(tmp_string);
+    bg_cfg_registry_save_to(bg_cfg_registry, file);
+    free(file);
     }
-  
   }
 
 void bg_cfg_section_dump(gavl_dictionary_t * section, const char * filename)

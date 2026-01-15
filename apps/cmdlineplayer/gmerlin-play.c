@@ -285,7 +285,7 @@ int main(int argc, char ** argv)
   gavl_array_init(&fe_arr);
   bg_frontend_set_option(&fe_arr, "console");
   
-  bg_app_init("gmerlin_play", TRS("Gmerlin commandline player"), "renderer");
+  bg_app_init("gmerlin-play", TRS("Gmerlin commandline player"), "renderer");
   
   
   bg_iconfont_init();

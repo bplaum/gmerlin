@@ -27,80 +27,15 @@
 
 #include "cdaudio.h"
 
+#define XML_ROOT "CD"
+
 int bg_cdaudio_load(gavl_dictionary_t * mi, const char * filename)
   {
-  int index;
-  xmlDocPtr xml_doc;
-  xmlNodePtr node;
-  
-  gavl_dictionary_t * m;
-  
-  xml_doc = xmlParseFile(filename);
-  if(!xml_doc)
-    return 0;
-
-  node = xml_doc->children;
-
-  if(BG_XML_STRCMP(node->name, "CD"))
-    {
-    xmlFreeDoc(xml_doc);
-    return 0;
-    }
-
-  node = node->children;
-
-  index = 0;
-
-  while(node)
-    {
-    if(!node->name)
-      {
-      node = node->next;
-      continue;
-      }
-    
-    if(!BG_XML_STRCMP(node->name, "METADATA"))
-      bg_xml_2_dictionary(node, gavl_track_get_metadata_nc(mi));
-    else if(!BG_XML_STRCMP(node->name, "TRACK"))
-      {
-      m = gavl_get_track_nc(mi, index);
-      bg_xml_2_dictionary(node, gavl_track_get_metadata_nc(m));
-      index++;
-      }
-    node = node->next;
-    }
-  return 1;
+  return bg_dictionary_load_xml(mi, filename, "CD");
   }
 
 void bg_cdaudio_save(gavl_dictionary_t * mi,
                      const char * filename)
   {
-  xmlDocPtr  xml_doc;
-  int i;
-
-  xmlNodePtr xml_cd, child;
-
-  int num_tracks = gavl_get_num_tracks(mi);
-  
-  xml_doc = xmlNewDoc((xmlChar*)"1.0");
-  xml_cd = xmlNewDocRawNode(xml_doc, NULL, (xmlChar*)"CD", NULL);
-  xmlDocSetRootElement(xml_doc, xml_cd);
-  xmlAddChild(xml_cd, BG_XML_NEW_TEXT("\n"));
-
-  child = xmlNewTextChild(xml_cd, NULL, (xmlChar*)"METADATA", NULL);
-  xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
-  bg_dictionary_2_xml(child, gavl_track_get_metadata(mi), 0);
-  
-  for(i = 0; i < num_tracks; i++)
-    {
-    child = xmlNewTextChild(xml_cd, NULL, (xmlChar*)"TRACK", NULL);
-    xmlAddChild(child, BG_XML_NEW_TEXT("\n"));
-
-    bg_dictionary_2_xml(child, gavl_track_get_metadata(gavl_get_track(mi, i)), 1);
-    
-    xmlAddChild(xml_cd, BG_XML_NEW_TEXT("\n"));
-    }
-
-  xmlSaveFile(filename, xml_doc);
-  xmlFreeDoc(xml_doc);
+  return bg_dictionary_save_xml(mi, filename, "CD");
   }

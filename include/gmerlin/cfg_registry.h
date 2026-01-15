@@ -448,7 +448,7 @@ bg_parameter_init_value(const gavl_dictionary_t * param,
 
 extern bg_cfg_registry_t * bg_cfg_registry;
 
-void bg_cfg_registry_init(const char * dir);
+void bg_cfg_registry_init(void);
 
 void bg_cfg_registry_cleanup(void);
 

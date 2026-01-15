@@ -1198,14 +1198,12 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
   
   if(path)
     {
-    char * pos;
     ret->path     = gavl_sprintf("%s/%s", path, MDB_DIR);
 
     /* Remove trailing /  */
-    pos = ret->path + (strlen(ret->path) - 1);
-    
-    if(*pos == '/')
-      *pos = '\0';
+
+    if(gavl_string_ends_with(ret->path, "/"))
+      ret->path[strlen(ret->path) - 1] = '\0';
     
     /* Check if path already exists */
     
@@ -1221,25 +1219,35 @@ bg_mdb_t * bg_mdb_create(const char * path, int do_create, int * locked)
       gavl_ensure_directory(ret->path, 0);
       }
     }
-  else
+  else /* No path given: Use gavl_search_data_dir */
     {
+    const char * app = bg_app_get_name();
+    
     if(do_create)
       {
       char * tmp_string;
-      if((tmp_string = bg_search_file_write_nocreate(MDB_DIR, NULL)))
+
+      tmp_string = gavl_search_data_dir_nocreate(PACKAGE, app, MDB_DIR);
+      
+      if(tmp_string)
         {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-                 "Won't create database: Directory %s already exists",
-                 tmp_string);
+        if(!access(ret->path, R_OK | W_OK))
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+                   "Won't create database: Directory %s already exists",
+                   tmp_string);
+          free(tmp_string);
+          goto fail;
+          }
         free(tmp_string);
-        goto fail;
         }
       
-      ret->path     = bg_search_file_write(MDB_DIR, NULL);
+      ret->path = gavl_search_data_dir(PACKAGE, app, MDB_DIR);
       }
     else
       {
-      if(!(ret->path = bg_search_file_write_nocreate(MDB_DIR, NULL)))
+      ret->path = gavl_search_data_dir_nocreate(PACKAGE, app, MDB_DIR);
+      if(access(ret->path, R_OK | W_OK))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Database not found");
         goto fail;

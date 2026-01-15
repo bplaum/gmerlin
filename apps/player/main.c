@@ -166,6 +166,18 @@ const bg_cmdline_app_data_t app_data =
     },
   };
 
+static char * get_state_file(void)
+  {
+  char * ret;
+  char * dir = gavl_search_state_dir(PACKAGE, bg_app_get_name(), NULL);
+  if(!dir)
+    return NULL;
+
+  ret = gavl_sprintf("%s/state.xml", dir);
+  free(dir);
+  return ret;
+  }
+
 int main(int argc, char ** argv)
   {
   gmerlin_t * gmerlin;
@@ -203,18 +215,19 @@ int main(int argc, char ** argv)
   
   bg_translation_init();
   bg_gtk_init(&argc, &argv);
-
-  bg_cfg_registry_init("player");
+  
+  bg_cfg_registry_init();
   bg_plugins_init();
   
   /* Load state if available */
-  if((tmp_path = bg_search_file_read("player", "state.xml")))
+  if((tmp_path = get_state_file()))
     {
-    if(bg_dictionary_load_xml(&state, tmp_path, STATE_XML_NODE))
+    if(!access(tmp_path, R_OK) &&
+       bg_dictionary_load_xml(&state, tmp_path, STATE_XML_NODE))
       have_state = 1;
     free(tmp_path);
     }
-
+  
   /* Restore plugin states */
 
   /* Fire up the actual player */
@@ -235,15 +248,16 @@ int main(int argc, char ** argv)
 
   /* Save plugin state */
   
-  tmp_path =  bg_search_file_write("player", "state.xml");
+  tmp_path = get_state_file();
+  
   if(tmp_path)
     {
     bg_player_state_reset(&gmerlin->state);
     
-    
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving state to %s", tmp_path);
     //    fprintf(stderr, "Saving state to %s\n", tmp_path);
     bg_dictionary_save_xml(&gmerlin->state, tmp_path, STATE_XML_NODE);
+    free(tmp_path);
     }
   
   gmerlin_destroy(gmerlin);

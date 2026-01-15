@@ -91,7 +91,7 @@ char * bg_app_get_icon_file()
   return ret;
   }
 
-
+#if 0
 const char * config_dir_default = "generic";
 
 const char * bg_app_get_config_dir()
@@ -106,6 +106,21 @@ const char * bg_app_get_config_dir()
 void bg_app_set_config_dir(const char * p)
   {
   gavl_dictionary_set_string(&bg_app_vars, BG_APP_CFG_DIR, p);
+  }
+#endif
+
+char * bg_app_get_config_file_name(void)
+  {
+  const char * app;
+  char * ret;
+
+  if(!(app = bg_app_get_name()))
+    app = "generic";
+  
+  if(!(ret = gavl_search_config_dir(PACKAGE, app, NULL)))
+    return NULL;
+
+  return gavl_strcat(ret, "/config.xml");
   }
 
 static void add_application_icon(gavl_array_t * arr,

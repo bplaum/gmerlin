@@ -112,6 +112,21 @@ typedef struct
 static int set_track_cdaudio(void * data, int track);
 static int start_cdaudio(void * priv);
 
+static char * get_cache_file(const char * disk_id)
+  {
+  char * ret;
+  char * dir = gavl_search_cache_dir(PACKAGE, NULL, "cdaudio");
+
+  if(!dir)
+    return NULL;
+
+  ret = gavl_sprintf("%s/%s", dir, disk_id);
+  
+  free(dir);
+  
+  return ret;
+  }
+
 static void destroy_cd_data(cdaudio_t* cd)
   {
   gavl_dictionary_free(&cd->mi);
@@ -397,7 +412,8 @@ static int open_cdaudio(void * data, const char * arg)
 
   if(!have_metadata && cd->use_local)
     {
-    tmp_filename = bg_search_file_read("cdaudio", cd->disc_id);
+    tmp_filename = get_cache_file(cd->disc_id);
+    
     if(tmp_filename)
       {
       if(bg_cdaudio_load(&cd->mi, tmp_filename))
@@ -451,7 +467,7 @@ static int open_cdaudio(void * data, const char * arg)
   
   if(have_metadata && !have_local_metadata)
     {
-    tmp_filename = bg_search_file_write("cdaudio", cd->disc_id);
+    tmp_filename = get_cache_file(cd->disc_id);
     if(tmp_filename)
       {
       bg_cdaudio_save(&cd->mi, tmp_filename);
@@ -893,7 +909,7 @@ const bg_input_plugin_t the_plugin =
       BG_LOCALE,
       .name =          "i_cdaudio",
       .long_name =     TRS("Audio CD player/ripper"),
-      .description =   TRS("Plugin for audio CDs. Supports both playing with direct connection from the CD-drive to the souncard and ripping with cdparanoia. Metadata are obtained from Musicbrainz, freedb or CD-text. Metadata are cached in $HOME/.gmerlin/cdaudio."),
+      .description =   TRS("Plugin for audio CDs. Supports both playing with direct connection from the CD-drive to the souncard and ripping with cdparanoia. Metadata are obtained from Musicbrainz, freedb or CD-text."),
       .type =          BG_PLUGIN_INPUT,
 
       .flags =         0,      

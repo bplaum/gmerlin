@@ -32,6 +32,7 @@
 
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/utils.h>
+#include <gmerlin/application.h>
 
 #include <gmerlin/iconfont.h>
 #include <gmerlin/bggavl.h>
@@ -1029,13 +1030,11 @@ static void button_callback(GtkWidget * w, gpointer data)
 
 static GtkWidget *
 create_item(track_list_t * w, GtkWidget * parent,
-            const char * label, const char * pixmap)
+            const char * label)
   {
   GtkWidget * ret;
   char * path = NULL;
   
-  if(pixmap)
-    path = bg_search_file_read("icons", pixmap);
 
   ret = bg_gtk_image_menu_item_new(label, path);
   
@@ -1091,13 +1090,13 @@ static void init_menu(track_list_t * t)
   t->menu.selected_menu.configure_item =
     create_icon_item(t, t->menu.selected_menu.menu, TR("Configure..."), BG_ICON_CONFIG);
   t->menu.selected_menu.mass_tag_item =
-    create_item(t, t->menu.selected_menu.menu, TR("Mass tag..."), NULL);
+    create_item(t, t->menu.selected_menu.menu, TR("Mass tag..."));
   t->menu.selected_menu.split_at_chapters_item =
-    create_item(t, t->menu.selected_menu.menu, TR("Split at chapters"), NULL);
+    create_item(t, t->menu.selected_menu.menu, TR("Split at chapters"));
   t->menu.selected_menu.auto_number_item =
-    create_item(t, t->menu.selected_menu.menu, TR("Auto numbering"), NULL);
+    create_item(t, t->menu.selected_menu.menu, TR("Auto numbering"));
   t->menu.selected_menu.auto_rename_item =
-    create_item(t, t->menu.selected_menu.menu, TR("Auto rename..."), NULL);
+    create_item(t, t->menu.selected_menu.menu, TR("Auto rename..."));
 
   t->menu.selected_menu.encoder_item =
     create_icon_item(t, t->menu.selected_menu.menu, TR("Change encoders..."), BG_ICON_PLUGIN);
@@ -1127,19 +1126,19 @@ static void init_menu(track_list_t * t)
   t->menu.menu = gtk_menu_new();
   
   t->menu.add_item =
-    create_item(t, t->menu.menu, TR("Add..."), NULL);
+    create_item(t, t->menu.menu, TR("Add..."));
   
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(t->menu.add_item),
                             t->menu.add_menu.menu);
 
   t->menu.selected_item =
-    create_item(t, t->menu.menu, TR("Selected..."), NULL);
+    create_item(t, t->menu.menu, TR("Selected..."));
 
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(t->menu.selected_item),
                             t->menu.selected_menu.menu);
 
   t->menu.edit_item =
-    create_item(t, t->menu.menu, TR("Edit..."), NULL);
+    create_item(t, t->menu.menu, TR("Edit..."));
 
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(t->menu.edit_item),
                             t->menu.edit_menu.menu);
@@ -1282,8 +1281,7 @@ static GtkWidget * create_icon_button(track_list_t * l,
   ret = gtk_button_new();
   gtk_container_add(GTK_CONTAINER(ret), label);
   
-  g_signal_connect(G_OBJECT(ret), "clicked", G_CALLBACK(button_callback),
-                   l);
+  g_signal_connect(G_OBJECT(ret), "clicked", G_CALLBACK(button_callback), l);
   gtk_widget_show(ret);
 
   bg_gtk_tooltips_set_tip(ret, tooltip, PACKAGE);
@@ -1291,6 +1289,19 @@ static GtkWidget * create_icon_button(track_list_t * l,
   return ret;
   }
 
+static char * get_tracklist_file(void)
+  {
+  char * ret;
+  char * dir = gavl_search_cache_dir(PACKAGE, bg_app_get_name(), NULL);
+
+  if(!dir)
+    return NULL;
+
+  ret = gavl_sprintf("%s/tracklist.xml", dir);
+  
+  free(dir);
+  return ret;
+  }
 
 track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
                                  const bg_parameter_info_t * encoder_parameters,
@@ -1542,14 +1553,17 @@ track_list_t * track_list_create(gavl_dictionary_t * track_defaults_section,
   
   /* Load tracks */
 
-  tmp_path = bg_search_file_read("transcoder", "tracklist.xml");
+  tmp_path = get_tracklist_file();
   
-  if(tmp_path)
+  if(!access(tmp_path, R_OK))
     {
     bg_dictionary_load_xml(&ret->t, tmp_path, BG_TRANSCODER_TRACK_XML_ROOT);
-    free(tmp_path);
     track_list_update(ret);
     }
+  
+  if(tmp_path)
+    free(tmp_path);
+  
   return ret;
   }
 
@@ -1557,8 +1571,8 @@ void track_list_destroy(track_list_t * t)
   {
   char * tmp_path;
 
-  tmp_path = bg_search_file_write("transcoder", "tracklist.xml");
-
+  tmp_path = get_tracklist_file();
+  
   if(tmp_path)
     {
     bg_dictionary_save_xml(&t->t, tmp_path, BG_TRANSCODER_TRACK_XML_ROOT);

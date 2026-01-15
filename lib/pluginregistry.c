@@ -1478,9 +1478,11 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   /* Load registry file */
 
   file_info = NULL; 
+
   
-  filename = bg_search_file_read("", "plugins.xml");
-  if(filename)
+  filename = bg_plugin_registry_get_cache_file_name();
+
+  if(!access(filename, R_OK))
     {
     file_info = bg_plugin_registry_load(filename);
     free(filename);
@@ -4664,8 +4666,7 @@ void bg_plugins_init()
   if(bg_plugin_reg)
     return;
   
-  if(!bg_cfg_registry)
-    bg_cfg_registry_init("generic");
+  bg_cfg_registry_init();
 
   cfg_section = bg_cfg_registry_find_section(bg_cfg_registry, "plugins");
   
@@ -5383,4 +5384,14 @@ bg_plugin_registry_extract_embedded_cover(const char * uri,
     gavl_dictionary_destroy(mi);
   
   return ret;
+  }
+
+char * bg_plugin_registry_get_cache_file_name(void)
+  {
+  char * dir = gavl_search_cache_dir(PACKAGE, NULL, NULL);
+
+  if(!dir)
+    return NULL;
+  
+  return gavl_sprintf("%s/plugins.xml", dir);
   }

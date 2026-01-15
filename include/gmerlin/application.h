@@ -40,8 +40,9 @@ extern gavl_dictionary_t bg_app_vars;
 
 #define BG_APP_NAME      "Name"
 #define BG_APP_LABEL     GAVL_META_LABEL
-#define BG_APP_CFG_DIR   "configdir"
+// #define BG_APP_CFG_DIR   "configdir"
 #define BG_APP_ICON_NAME "IconName"
+#define BG_APP_CFG_FILE  "configfile"
 
 
 void bg_app_init(const char * name,
@@ -56,9 +57,11 @@ const char * bg_app_get_icon_name(void);
 
 char * bg_app_get_icon_file(void);
 
+char * bg_app_get_config_file_name(void);
 
-const char * bg_app_get_config_dir(void);
-void bg_app_set_config_dir(const char * p);
+
+//const char * bg_app_get_config_dir(void);
+// void bg_app_set_config_dir(const char * p);
 // void bg_app_set_window_icon(const char * icon);
 
 

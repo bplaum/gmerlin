@@ -1014,6 +1014,7 @@ bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type);
 
 const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type);
 
+char * bg_plugin_registry_get_cache_file_name();
 
 #endif // BG_PLUGINREGISTRY_H_INCLUDED
 
