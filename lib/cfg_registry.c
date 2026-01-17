@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <gmerlin/cfg_registry.h>
 #include <registry_priv.h>
@@ -38,7 +39,8 @@ void bg_cfg_registry_init(void)
 
   bg_cfg_registry = gavl_dictionary_create();
   
-  if((tmp_path = bg_app_get_config_file_name()))
+  if((tmp_path = bg_app_get_config_file_name()) &&
+     !access(tmp_path, R_OK))
     {
     bg_cfg_registry_load(bg_cfg_registry, tmp_path);
     free(tmp_path);
