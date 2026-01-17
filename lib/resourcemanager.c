@@ -21,6 +21,9 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <fnmatch.h>
+
+
 
 #include <gavl/gavltime.h>
 #include <gavl/log.h>
@@ -782,7 +785,7 @@ void bg_resource_get_by_class(const char * klass, int full_match, gavl_time_t ti
       {
       if(full_match)
         {
-        if(!strcmp(test_klass, klass))
+        if(!fnmatch(klass, test_klass, 0))
           gavl_array_splice_val(arr, -1, 0, &resman->remote.entries[i]);
         }
       else
@@ -875,19 +878,19 @@ void bg_resource_list_by_protocol(const char * protocol, int full_match, gavl_ti
 void bg_opt_list_recording_sources(void * data, int * argc,
                                    char *** _argv, int arg)
   {
-  bg_resource_list_by_class("item.recorder.", 0, 5 * GAVL_TIME_SCALE /* 1 sec */ );
+  bg_resource_list_by_class("item.*.recorder", 1, 5 * GAVL_TIME_SCALE /* 5 sec */ );
   }
 
 void bg_opt_list_audio_sinks(void * data, int * argc,
                             char *** _argv, int arg)
   {
-  bg_resource_list_by_class(GAVL_META_CLASS_SINK_AUDIO, 1, 5 * GAVL_TIME_SCALE /* 1 sec */ );
+  bg_resource_list_by_class(GAVL_META_CLASS_SINK_AUDIO, 1, 5 * GAVL_TIME_SCALE /* 5 sec */ );
   }
 
 void bg_opt_list_video_sinks(void * data, int * argc,
                              char *** _argv, int arg)
   {
-  bg_resource_list_by_class(GAVL_META_CLASS_SINK_VIDEO, 1, 5 * GAVL_TIME_SCALE /* 1 sec */ );
+  bg_resource_list_by_class(GAVL_META_CLASS_SINK_VIDEO, 1, 5 * GAVL_TIME_SCALE /* 5 sec */ );
   }
 
 void bg_resourcemanager_cleanup()
