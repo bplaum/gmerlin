@@ -88,6 +88,13 @@ void bg_media_source_reset(bg_media_source_t * src)
   int i;
   for(i = 0; i < src->num_streams; i++)
     {
+    if(src->streams[i]->asrc)
+      gavl_audio_source_reset(src->streams[i]->asrc);
+    if(src->streams[i]->vsrc)
+      gavl_video_source_reset(src->streams[i]->vsrc);
+    if(src->streams[i]->psrc)
+      gavl_packet_source_reset(src->streams[i]->psrc);
+
     if(src->streams[i]->codec_handle)
       {
       bg_codec_plugin_t * plugin =
@@ -96,12 +103,6 @@ void bg_media_source_reset(bg_media_source_t * src)
         plugin->reset(src->streams[i]->codec_handle->priv);
       }
 
-    if(src->streams[i]->asrc)
-      gavl_audio_source_reset(src->streams[i]->asrc);
-    if(src->streams[i]->vsrc)
-      gavl_video_source_reset(src->streams[i]->vsrc);
-    if(src->streams[i]->psrc)
-      gavl_packet_source_reset(src->streams[i]->psrc);
     
     }
   }
