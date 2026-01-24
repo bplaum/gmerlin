@@ -247,10 +247,8 @@ static void plugin_config_init()
   init_plugin_config(&bg_plugin_reg->cfg_vis, TR("Visualizations"),
                      GAVL_PARAMETER_MULTI_LIST, BG_PLUGIN_VISUALIZATION);
 
-  fprintf(stderr, "Initialized plugin config\n");
-  gavl_dictionary_dump(bg_plugin_reg->cfg_vis.s, 2);
-  
-  
+  //  fprintf(stderr, "Initialized plugin config\n");
+  //  gavl_dictionary_dump(bg_plugin_reg->cfg_vis.s, 2);
   }
 
 bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type)
