@@ -218,6 +218,9 @@ static void init_plugin_config(bg_cfg_ctx_t * ctx,
   ctx->parameters = ctx->parameters_priv;
   
   ctx->sink = bg_plugin_reg->cfg_sink;
+
+  if(type == GAVL_PARAMETER_MULTI_LIST)
+    bg_cfg_section_create_items(ctx->s, ctx->parameters);
   }
 
 static void plugin_config_init()
@@ -243,9 +246,12 @@ static void plugin_config_init()
 
   init_plugin_config(&bg_plugin_reg->cfg_vis, TR("Visualizations"),
                      GAVL_PARAMETER_MULTI_LIST, BG_PLUGIN_VISUALIZATION);
+
+  fprintf(stderr, "Initialized plugin config\n");
+  gavl_dictionary_dump(bg_plugin_reg->cfg_vis.s, 2);
+  
   
   }
-
 
 bg_cfg_ctx_t * bg_plugin_config_get_ctx(bg_plugin_type_t type)
   {
@@ -3635,6 +3641,8 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
     
     ret->multi_names_nc[start_entries+i] = gavl_strdup(bg_plugin_info_get_name(info));
 
+    fprintf(stderr, "set_parameter_info: %d %d %s\n", i, num_plugins, bg_plugin_info_get_name(info));
+    
     bg_bindtextdomain(gettext_domain, gettext_directory);
     
 

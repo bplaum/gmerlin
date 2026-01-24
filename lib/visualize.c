@@ -44,6 +44,9 @@
 #include <gmerlin/state.h>
 #include <gmerlin/ov.h>
 
+#include <gavl/log.h>
+#define LOG_DOMAIN "visualize"
+
 #define FLAG_RUNNING          (1<<0)
 #define FLAG_VIS_INIT         (1<<1)
 #define FLAG_VIS_CONNECTED    (1<<2)
@@ -193,12 +196,13 @@ void bg_visualizer_destroy(bg_visualizer_t * v)
   free(v);
   }
 
-static void load_plugin(bg_visualizer_t * v, int plugin)
+static int load_plugin(bg_visualizer_t * v, int plugin)
   {
-  //  fprintf(stderr, "load_plugin: %d\n", plugin);
 
   const gavl_array_t * arr;
   const gavl_dictionary_t * dict;
+
+  fprintf(stderr, "load_plugin: %d\n", plugin);
 
   if(!(dict = bg_plugin_config_get_section(BG_PLUGIN_VISUALIZATION)) ||
      !(arr = gavl_dictionary_get_array(dict, BG_PLUGIN_CONFIG_PLUGIN)) ||
@@ -206,13 +210,15 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
     {
     if(dict)
       {
-      fprintf(stderr, "load_plugin failed\n");
-      gavl_dictionary_dump(dict, 2);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No plugins available");
+      //      fprintf(stderr, "load_plugin failed\n");
+      //      gavl_dictionary_dump(dict, 2);
+      
       }
     
     /* Error */
     bg_ov_show_window(v->ov, 0);
-    return;
+    return 0;
     }
   
   if(v->plugin_ctrl)
@@ -247,7 +253,7 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
   if(!(v->h = bg_plugin_load_with_options(dict)))
     {
     bg_ov_show_window(v->ov, 0);
-    return;
+    return 0;
     }
 
   v->plugin = (bg_visualization_plugin_t*)v->h->plugin;
@@ -256,6 +262,8 @@ static void load_plugin(bg_visualizer_t * v, int plugin)
     v->plugin_ctrl = v->h->plugin->get_controllable(v->h->priv);
   else
     v->plugin_ctrl = NULL;
+  
+  return 1;
   }
 
 void bg_visualizer_set_parameter(void * priv, const char * name, const gavl_value_t * val)
@@ -402,7 +410,7 @@ static void * visualize_thread(void * priv)
     
     aframe = NULL;
     
-    while((st = gavl_audio_source_read_frame(v->asrc, &aframe) == GAVL_SOURCE_OK))
+    while((st = gavl_audio_source_read_frame(v->asrc, &aframe) == GAVL_SOURCE_OK) && aframe)
       {
       /* Resync after pause */
       if(v->sample_counter < 0)
@@ -711,8 +719,8 @@ static void init_visualization(bg_visualizer_t * v)
 
 static void visualizer_init_nolock(bg_visualizer_t * v, const gavl_audio_format_t * fmt)
   {
-  //  fprintf(stderr, "bg_visualizer_init_nolock\n");
-  //  gavl_audio_format_dump(fmt);
+  fprintf(stderr, "visualizer_init_nolock\n");
+  gavl_audio_format_dump(fmt);
 
   /* Close down earlier visualization */
   cleanup_audio(v);
