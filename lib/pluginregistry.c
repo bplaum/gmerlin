@@ -3639,7 +3639,7 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
     
     ret->multi_names_nc[start_entries+i] = gavl_strdup(bg_plugin_info_get_name(info));
 
-    fprintf(stderr, "set_parameter_info: %d %d %s\n", i, num_plugins, bg_plugin_info_get_name(info));
+    //    fprintf(stderr, "set_parameter_info: %d %d %s\n", i, num_plugins, bg_plugin_info_get_name(info));
     
     bg_bindtextdomain(gettext_domain, gettext_directory);
     
