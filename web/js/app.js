@@ -208,6 +208,7 @@ function next_visualization()
   {
   var msg = msg_create(BG_PLAYER_CMD_NEXT_VISUALIZATION, BG_MSG_NS_PLAYER);
   player.handle_command(msg);
+  set_fullscreen(1);
   }
 
 function play_by_id(obj)
