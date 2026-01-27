@@ -1054,12 +1054,11 @@ static void port_destroy(port_t * port)
   free(port);
   }
   
-bg_glvideo_t * bg_glvideo_create(GLenum platform, void * native_display, void * native_window)
+bg_glvideo_t * bg_glvideo_create(GLenum platform, void * native_display)
   {
   bg_glvideo_t * g = calloc(1, sizeof(*g));
 
   g->native_display = native_display;
-  g->native_window = native_window;
   
   g->zoom_factor = 1.0;
   g->squeeze_factor = 0.0;
@@ -1152,9 +1151,11 @@ static void init_gl(bg_glvideo_t * g)
 gavl_video_sink_t *
 bg_glvideo_open(bg_glvideo_t * g,
                 gavl_video_format_t * fmt,
-                int src_flags)
+                int src_flags, EGLSurface window_surface)
   {
   port_t * port;
+
+  g->native_window = window_surface;
   
   port = append_port(g);
   if(!port_init(port, fmt, src_flags))

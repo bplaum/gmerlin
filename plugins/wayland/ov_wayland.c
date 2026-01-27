@@ -57,6 +57,8 @@
 #define FLAG_CURSOR_HIDDEN (1<<1)
 #define FLAG_CONFIGURED    (1<<2)
 #define FLAG_CLOSED        (1<<3)
+#define FLAG_FULLSCREEN    (1<<4)
+#define FLAG_GOT_SIZE      (1<<5)
 
 typedef struct
   {
@@ -250,24 +252,29 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
                        int32_t w, int32_t h, struct wl_array *states)
   {
   wayland_t * wayland = data;
-  struct wl_region *region = wl_compositor_create_region(wayland->compositor);
-  //  fprintf(stderr, "xdg_toplevel_configure %d %d\n", w, h);
+  struct wl_region *region;
 
   if(!w && !h)
     return;
 
-  if(!wayland->g)
-    return;
+  wayland->width = w;
+  wayland->height = h;
+
+  region = wl_compositor_create_region(wayland->compositor);
   
   bg_glvideo_set_window_size(wayland->g, w, h);
 
   wl_region_add(region, 0, 0, w, h);
   wl_surface_set_opaque_region(wayland->surface, region);
+
   
-  
-  wl_egl_window_resize(wayland->egl_window, w, h, 0, 0);
   wl_surface_commit(wayland->surface);
   wl_region_destroy(region);
+
+  /* wayland->egl_window might not exist yet */
+  if(wayland->egl_window)
+    wl_egl_window_resize(wayland->egl_window, w, h, 0, 0);
+  
   }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
@@ -560,31 +567,22 @@ static int map_window(wayland_t * wayland)
   {
   if(wayland->surface)
     return 1;
-  
+
   if(!(wayland->surface = wl_compositor_create_surface(wayland->compositor)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Surface creation failed");
     return 0;
     }
-  
-  if(!(wayland->egl_window = wl_egl_window_create(wayland->surface, 800, 600)))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EGL window creation failed");
-    return 0;
-    }
 
-  wayland->g = bg_glvideo_create(EGL_PLATFORM_WAYLAND_KHR,
-                                 wayland->display, wayland->egl_window);
-  
   if(!(wayland->xdg_surface =
        xdg_wm_base_get_xdg_surface(wayland->xdg_wm_base, wayland->surface)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "XDG surface creation failed");
     return 0;
     }
+
   xdg_surface_add_listener(wayland->xdg_surface, &xdg_surface_listener, wayland);
 
-  
   if(!(wayland->xdg_toplevel = xdg_surface_get_toplevel(wayland->xdg_surface)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Toplevel creation failed");
@@ -593,25 +591,36 @@ static int map_window(wayland_t * wayland)
   xdg_toplevel_add_listener(wayland->xdg_toplevel, &xdg_toplevel_listener, wayland);
 
   if(wayland->title)
-    {
     xdg_toplevel_set_title(wayland->xdg_toplevel, wayland->title);
-    }
-
+  
   if(wayland->decoration_manager)
     {
     wayland->decoration =
-      zxdg_decoration_manager_v1_get_toplevel_decoration(wayland->decoration_manager, wayland->xdg_toplevel);
+      zxdg_decoration_manager_v1_get_toplevel_decoration(wayland->decoration_manager,
+                                                         wayland->xdg_toplevel);
 
-    zxdg_toplevel_decoration_v1_add_listener(wayland->decoration, &decoration_listener, NULL);
-    
+    zxdg_toplevel_decoration_v1_add_listener(wayland->decoration,
+                                             &decoration_listener, NULL);
     }
   
   wl_surface_commit(wayland->surface);
   wl_display_roundtrip(wayland->display);
-
-  while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)))
-    handle_events_internal(wayland, 100);
   
+  if(wayland->flags & FLAG_FULLSCREEN)
+    xdg_toplevel_set_fullscreen(wayland->xdg_toplevel, NULL);
+
+  do{
+  handle_events_internal(wayland, 100);
+  } while(!(wayland->flags & (FLAG_CLOSED|FLAG_CONFIGURED)));
+  
+  if(!(wayland->egl_window = wl_egl_window_create(wayland->surface,
+                                                  wayland->width,
+                                                  wayland->height)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EGL window creation failed");
+    return 0;
+    }
+
   return 1;
   }
 
@@ -639,12 +648,6 @@ static void unmap_window(wayland_t * wayland)
     {
     wl_surface_destroy(wayland->surface);
     wayland->surface = NULL;
-    }
-  
-  if(wayland->g)
-    {
-    bg_glvideo_destroy(wayland->g);
-    wayland->g = NULL;
     }
   
   if(wayland->egl_window)
@@ -720,11 +723,11 @@ static int ensure_window(void * priv)
   
     wayland->keyboard = wl_seat_get_keyboard(wayland->seat);
     wl_keyboard_add_listener(wayland->keyboard, &keyboard_listener, wayland);
+    
+    wayland->g = bg_glvideo_create(EGL_PLATFORM_WAYLAND_KHR, wayland->display);
     }
   
-  map_window(wayland);
-    
-  
+  //  map_window(wayland);
   //  wl_egl_window_resize(wayland->egl_window, 320, 240, 0, 0);
   
   //  xdg_toplevel_set_min_size(wayland->xdg_toplevel, 320, 240);
@@ -732,24 +735,6 @@ static int ensure_window(void * priv)
   //  wl_surface_commit(wayland->surface);
   return 1;
   }
-
-
-
-#if 0
-static void map_sync(wayland_t * wayland)
-  {
-  fprintf(stderr, "map_sync...\n");
-#if 0  
-  wl_surface_commit(wayland->surface); 
-  
-  while(!(wayland->flags & FLAG_MAPPED))
-    {
-    handle_events_internal(wayland, 100);
-    }
-#endif
-  fprintf(stderr, "map_sync done\n");
-  }
-#endif
 
 static int handle_cmd(void * priv, gavl_msg_t * cmd)
   {
@@ -791,10 +776,17 @@ static int handle_cmd(void * priv, gavl_msg_t * cmd)
             if(!strcmp(var, BG_STATE_OV_FULLSCREEN))
               {
               int fs = 0;
-              if(!gavl_value_get_int(&val, &fs) ||
-                 !wayland->display  || !wayland->xdg_toplevel)
+              if(!gavl_value_get_int(&val, &fs))
                 return 1;
 
+              if(fs)
+                wayland->flags |= FLAG_FULLSCREEN;
+              else
+                wayland->flags &= ~FLAG_FULLSCREEN;
+              
+              if(!wayland->display  || !wayland->xdg_toplevel)
+                return 1;
+              
               /*
                *  val = 1: Set fullscreen
                *  val = 0: Unset fullscreen
@@ -874,6 +866,9 @@ static void * create_wayland()
   {
   wayland_t * wayland = calloc(1, sizeof(*wayland));
 
+  wayland->width = 640;
+  wayland->height = 480;
+  
   bg_controllable_init(&wayland->ctrl,
                        bg_msg_sink_create(handle_cmd, wayland, 1),
                        bg_msg_hub_create(1));
@@ -1113,74 +1108,6 @@ static int keysym_to_keycode(int keysym)
   return GAVL_KEY_NONE;
   }
 
-#if 0
-static void handle_events_x11(void * priv)
-  {
-  XEvent evt;
-  x11_t * x11 = priv;
-  gavl_time_t current_time;
-  
-  /* Check whether to hide the cursor */
-  current_time = gavl_timer_get(x11->timer);
-
-  while(XPending(x11->dpy))
-    {
-    XNextEvent(x11->dpy, &evt);
-
-    switch(evt.type)
-      {
-      case KeyPress:
-        {
-        int gavl_code;
-        int gavl_mask;
-
-        KeySym keysym;
-
-        evt.xkey.state &= STATE_IGNORE;
-        
-        keysym = XLookupKeysym(&evt.xkey, 0);
-        
-        if((gavl_code = keysym_to_key_code(keysym)) == GAVL_KEY_NONE)
-          gavl_code = x11_keycode_to_bg(evt.xkey.keycode);
-
-        if(gavl_code != GAVL_KEY_NONE)
-          {
-          double pos[2];
-          gavl_msg_t * msg = bg_msg_sink_get(x11->ctrl.evt_sink);
-
-          gavl_mask = x11_to_key_mask(evt.xkey.state);
-
-          bg_glvideo_window_coords_to_position(x11->g, evt.xkey.x, evt.xkey.y, pos);
-          
-          gavl_msg_set_gui_key_press(msg, gavl_code, gavl_mask,
-                                     evt.xkey.x, evt.xkey.y, pos);
-          bg_msg_sink_put(x11->ctrl.evt_sink);
-          }
-        
-        show_cursor(x11);
-        x11->last_active_time = current_time;
-        }
-        break;
-      case ConfigureNotify:
-        {
-        //        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Window size changed %d %d", evt.xconfigure.width, evt.xconfigure.height);
-  
-        if(x11->g)
-          bg_glvideo_set_window_size(x11->g, evt.xconfigure.width, evt.xconfigure.height);
-        }
-      case MotionNotify:
-        show_cursor(x11);
-        x11->last_active_time = current_time;
-        break;
-      }
-    
-    }
-
-  if(current_time - x11->last_active_time > 3 * GAVL_TIME_SCALE)
-    hide_cursor(x11);
-  
-  }
-#endif
 
 static void handle_events_internal(wayland_t * wayland,
                                    int timeout)
@@ -1210,10 +1137,7 @@ static void handle_events_wayland(void * priv)
   if(gavl_timer_get(wayland->timer) -
      wayland->last_active_time > 3 * GAVL_TIME_SCALE)
     hide_cursor(wayland);
-  
   }
-
-
 
 static int open_wayland(void * priv, const char * uri,
                     gavl_video_format_t * format,
@@ -1224,11 +1148,11 @@ static int open_wayland(void * priv, const char * uri,
   if(!ensure_window(priv))
     return 0;
 
-  //  map_sync(wayland);
+  map_window(wayland);
   
   wayland->sink = 
-    bg_glvideo_open(wayland->g, format, src_flags);
-
+    bg_glvideo_open(wayland->g, format, src_flags, wayland->egl_window);
+  
   show_cursor(wayland, 0);
   wayland->last_active_time = gavl_timer_get(wayland->timer);
   

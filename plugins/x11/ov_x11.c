@@ -145,7 +145,7 @@ static int ensure_window(void * priv)
   XSelectInput(x11->dpy, x11->win, KeyPressMask | ExposureMask | StructureNotifyMask | PointerMotionMask);
   
   x11->g = bg_glvideo_create(EGL_PLATFORM_X11_KHR,
-                             x11->dpy, &x11->win);
+                             x11->dpy);
   
   return 1;
   }
@@ -607,7 +607,7 @@ static int open_x11(void * priv, const char * uri,
   map_sync(x11);
   
   x11->sink = 
-    bg_glvideo_open(x11->g, format, src_flags);
+    bg_glvideo_open(x11->g, format, src_flags, &x11->win);
 
   show_cursor(x11);
   x11->last_active_time = gavl_timer_get(x11->timer);

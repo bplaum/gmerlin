@@ -202,7 +202,7 @@ static int load_plugin(bg_visualizer_t * v, int plugin)
   const gavl_array_t * arr;
   const gavl_dictionary_t * dict;
 
-  fprintf(stderr, "load_plugin: %d\n", plugin);
+  //  fprintf(stderr, "load_plugin: %d\n", plugin);
 
   if(!(dict = bg_plugin_config_get_section(BG_PLUGIN_VISUALIZATION)) ||
      !(arr = gavl_dictionary_get_array(dict, BG_PLUGIN_CONFIG_PLUGIN)) ||
@@ -719,8 +719,8 @@ static void init_visualization(bg_visualizer_t * v)
 
 static void visualizer_init_nolock(bg_visualizer_t * v, const gavl_audio_format_t * fmt)
   {
-  fprintf(stderr, "visualizer_init_nolock\n");
-  gavl_audio_format_dump(fmt);
+  //  fprintf(stderr, "visualizer_init_nolock\n");
+  //  gavl_audio_format_dump(fmt);
 
   /* Close down earlier visualization */
   cleanup_audio(v);

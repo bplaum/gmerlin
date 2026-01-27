@@ -32,10 +32,10 @@
 
 typedef struct bg_glvideo_s bg_glvideo_t;
 
-bg_glvideo_t * bg_glvideo_create(EGLenum platform, void * native_display, EGLSurface window_surface);
+bg_glvideo_t * bg_glvideo_create(EGLenum platform, void * native_display);
 void bg_glvideo_destroy(bg_glvideo_t *);
 
-gavl_video_sink_t * bg_glvideo_open(bg_glvideo_t *, gavl_video_format_t * fmt, int src_flags);
+gavl_video_sink_t * bg_glvideo_open(bg_glvideo_t *, gavl_video_format_t * fmt, int src_flags, EGLSurface window_surface);
 gavl_video_sink_t * bg_glvideo_add_overlay_stream(bg_glvideo_t *, gavl_video_format_t * fmt, int src_flags);
 
 bg_controllable_t * bg_glvideo_get_controllable(bg_glvideo_t *);
