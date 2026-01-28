@@ -111,7 +111,9 @@ static void start_multi(void * priv)
     if(pts_to_clock_time == GAVL_TIME_UNDEFINED)
       {
       pts_to_clock_time = gavl_track_get_pts_to_clock_time(track);
-      clock_time_start = gavl_track_get_start_time(track) + pts_to_clock_time;
+
+      if(pts_to_clock_time != GAVL_TIME_UNDEFINED)
+        clock_time_start = gavl_track_get_start_time(track) + pts_to_clock_time;
       }
     }
   

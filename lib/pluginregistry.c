@@ -3357,6 +3357,7 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   gavl_dictionary_set(vars, GAVL_URL_VAR_VARIANT, NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_PLUGIN,  NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
+  gavl_dictionary_set(vars, GAVL_URL_VAR_CLOCK_TIME, NULL);
   }
 
 static void set_locations(gavl_dictionary_t * dict, const char * location)
