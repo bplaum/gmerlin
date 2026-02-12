@@ -30,6 +30,8 @@
 #include <libxml/xmlsave.h>
 
 #include <gavl/gavl.h>
+#include <gavl/buffer.h>
+#include <gavl/io.h>
 
 /*  Macro, which calls strcmp, but casts the first argument to char*
  *  This is needed because libxml strings are uint8_t*

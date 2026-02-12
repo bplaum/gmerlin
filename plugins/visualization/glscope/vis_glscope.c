@@ -1802,7 +1802,7 @@ static int open_glscope(void * priv, gavl_audio_format_t * audio_format,
   gavl_peak_detector_set_format(s->pd, &s->afmt);
   
   /* Generate frame buffer */
-  gavl_hw_ctx_set_video(s->hwctx, &s->vfmt, GAVL_HW_FRAME_MODE_TRANSFER);
+  gavl_hw_ctx_set_video_creator(s->hwctx, &s->vfmt, GAVL_HW_FRAME_MODE_TRANSFER);
   
   s->vframe_1 = gavl_hw_video_frame_create(s->hwctx, 1);
   s->vframe_1->buf_idx = 0;

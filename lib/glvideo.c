@@ -560,6 +560,8 @@ static gavl_sink_status_t func_import(port_t * port, gavl_video_frame_t * f)
      If this changes, we probably need to adapt the following */
   if(f)
     {
+    fprintf(stderr, "func_import: %p %p %d\n", f, f->hwctx, f->buf_idx);
+    
     bg_glvideo_init_colormatrix_dmabuf(port, f);
   
     if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
@@ -596,7 +598,7 @@ static gavl_sink_status_t func_import_dmabuf(port_t * port, gavl_video_frame_t *
 static gavl_sink_status_t func_dmabuf_transfer(port_t * port, gavl_video_frame_t * f)
   {
   gavl_sink_status_t st = GAVL_SINK_ERROR;
-  gavl_video_frame_t * dma_frame = gavl_hw_video_frame_get(port->hwctx_dma);
+  gavl_video_frame_t * dma_frame = gavl_hw_video_frame_get_write(port->hwctx_dma);
 
   bg_glvideo_init_colormatrix_unity(port);
   
@@ -861,8 +863,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       }
     else 
 #endif
-    if(gavl_hw_ctx_can_import(port->g->hwctx_gles, fmt->hwctx) ||
-            gavl_hw_ctx_can_export(fmt->hwctx, port->g->hwctx_gles))
+    if(gavl_hw_ctx_can_transfer(fmt->hwctx, port->g->hwctx_gles))
       {
       port->mode = MODE_IMPORT;
       port->set_frame = func_import;
@@ -872,7 +873,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       if(!port->idx)
         {
         port->g->hwctx = port->g->hwctx_gles;
-        gavl_hw_ctx_set_video(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_IMPORT);
+        gavl_hw_ctx_set_video_importer(port->g->hwctx, fmt->hwctx, fmt);
         }
       goto found;
       }
@@ -881,8 +882,8 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
     /* Import frames from other APIs via DMA-buf. This implictly assumes that the pixelformat is supported
        for EGL import */
 #ifdef HAVE_DRM  
-    else if(gavl_hw_ctx_can_import(port->g->hwctx_gles, port->g->hwctx_dma) &&
-            gavl_hw_ctx_can_export(fmt->hwctx,          port->g->hwctx_dma))
+    else if(gavl_hw_ctx_can_transfer(fmt->hwctx, port->g->hwctx_dma) &&
+            gavl_hw_ctx_can_transfer(port->g->hwctx_dma, port->g->hwctx_gles))
       {
       port->mode = MODE_IMPORT_DMABUF;
       port->set_frame = func_import_dmabuf;
@@ -893,7 +894,9 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
         port->g->hwctx = port->g->hwctx_gles;
 
       port_init_dma(port);
-      gavl_hw_ctx_set_video(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_IMPORT);
+
+      gavl_hw_ctx_set_video_importer(port->hwctx_dma, fmt->hwctx, fmt);
+      gavl_hw_ctx_set_video_importer(port->g->hwctx_gles, port->g->hwctx_dma, NULL);
  
       goto found;
       }
@@ -937,13 +940,13 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
       
       port->g->hwctx = port->g->hwctx_gles;
       port_init_dma(port);
+
+      gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_MAP);
       
       if(!port->idx)
-        gavl_hw_ctx_set_video(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_IMPORT);
-      
-      gavl_hw_ctx_set_video(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_MAP);
-      
-      port->dma_frame = gavl_hw_video_frame_get(port->hwctx_dma);
+        gavl_hw_ctx_set_video_importer(port->g->hwctx, port->hwctx_dma, fmt);
+            
+      port->dma_frame = gavl_hw_video_frame_get_write(port->hwctx_dma);
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Rendering into DMA buffers", port->idx);
       
       goto found;
@@ -978,7 +981,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
         port->set_frame = func_texture_transfer;
 
         if(!port->idx)
-          gavl_hw_ctx_set_video(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
+          gavl_hw_ctx_set_video_creator(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
         }
       else
         {
@@ -987,7 +990,7 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
         port->g->hwctx = port->g->hwctx_gles;
 
         port_init_dma(port);
-        gavl_hw_ctx_set_video(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
+        gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
 
         port->mode = MODE_DMABUF_TRANSFER;
         port->set_frame = func_dmabuf_transfer;

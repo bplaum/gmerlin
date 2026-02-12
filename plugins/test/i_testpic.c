@@ -28,6 +28,9 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "testpic"
 
+#include <gavl/hw.h>
+
+
 
 #define FLAG_ALLOC (1<<0)
 #define FLAG_HW    (1<<1)
@@ -656,8 +659,8 @@ static int handle_cmd_input(void * data, gavl_msg_t * msg)
                 {
                 if(fmts[i] == inp->fmt->pixelformat)
                   {
-                  gavl_hw_ctx_set_video(inp->hwctx, inp->fmt, GAVL_HW_FRAME_MODE_MAP);
-                  inp->frame = gavl_hw_video_frame_get(inp->hwctx);
+                  gavl_hw_ctx_set_video_creator(inp->hwctx, inp->fmt, GAVL_HW_FRAME_MODE_MAP);
+                  inp->frame = gavl_hw_video_frame_get_write(inp->hwctx);
                   break;
                   }
                 i++;

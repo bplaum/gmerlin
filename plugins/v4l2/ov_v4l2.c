@@ -43,7 +43,6 @@
 typedef struct
   {
   gavl_v4l2_device_t * dev;
-  gavl_hw_context_t * hwctx;
   
   bg_parameter_info_t * parameters;
   gavl_video_format_t gavl_fmt;
@@ -184,8 +183,7 @@ static int open_v4l2(void * priv, const char * uri,
   if(!gavl_v4l2_get_device_info(path, &dev))
     return 0;
 
-  v4l->hwctx = gavl_hw_ctx_create_v4l2(&dev);
-  v4l->dev = gavl_hw_ctx_v4l2_get_device(v4l->hwctx);
+  v4l->dev = gavl_v4l2_device_open(&dev);
   
   //  gavl_video_format_dump(format);
 

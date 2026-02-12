@@ -47,7 +47,6 @@
 
 typedef struct
   {
-  gavl_hw_context_t * hwctx;
   gavl_v4l2_device_t * dev;
   
   gavl_dictionary_t mi;  // Media info
@@ -61,10 +60,10 @@ static void close_v4l(void * priv)
   {
   v4l2_t * v4l = priv;
   
-  if(v4l->hwctx)
+  if(v4l->dev)
     {
-    gavl_hw_ctx_destroy(v4l->hwctx);
-    v4l->hwctx = NULL;
+    gavl_v4l2_device_close(v4l->dev);
+    v4l->dev = NULL;
     }
   gavl_dictionary_reset(&v4l->mi);
   bg_media_source_cleanup(&v4l->src);
@@ -82,7 +81,7 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
         {
         case GAVL_CMD_SRC_START:
           {
-          gavl_v4l_device_start_capture(v4l->dev);
+          gavl_v4l2_device_start_capture(v4l->dev);
           /* Load decoder */
           bg_media_source_load_decoders(&v4l->src);
           }
@@ -207,10 +206,8 @@ static int open_v4l(void * priv, const char * location)
   if(!gavl_v4l2_get_device_info(path, &dev))
     goto fail;
 
-  if(!(v4l->hwctx = gavl_hw_ctx_create_v4l2(&dev)))
+  if(!(v4l->dev = gavl_v4l2_device_open(&dev)))
     goto fail;
-
-  v4l->dev = gavl_hw_ctx_v4l2_get_device(v4l->hwctx);
   
   t = gavl_append_track(&v4l->mi, NULL);
   m = gavl_track_get_metadata_nc(t);
@@ -219,7 +216,7 @@ static int open_v4l(void * priv, const char * location)
   
   v4l->s = gavl_track_append_video_stream(t);
 
-  if(!gavl_v4l_device_init_capture(v4l->dev, v4l->s))
+  if(!gavl_v4l2_device_init_capture(v4l->dev, v4l->s))
     goto fail;
 
   bg_media_source_set_from_track(&v4l->src, t);

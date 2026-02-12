@@ -29,6 +29,7 @@
 #include <gavl/gavl.h>
 #include <gavl/metadata.h>
 #include <gavl/utils.h>
+#include <gavl/io.h>
 
 /** \defgroup utils Utilities
  *  \brief Utility functions
