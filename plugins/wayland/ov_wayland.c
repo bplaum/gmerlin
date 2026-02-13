@@ -63,6 +63,8 @@
 typedef struct
   {
   struct wl_display *display;
+  struct wl_registry *registry;
+  
   struct wl_compositor *compositor;
   //  struct wl_shell *shell;
 
@@ -428,14 +430,14 @@ static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
   munmap(keymap_string, size);
   close(fd);
   
-  if (!kb->xkb_keymap)
+  if(!kb->xkb_keymap)
     {
-    fprintf(stderr, "Failed to compile keymap\n");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Failed to compile keymap");
     return;
     }
   
-  // XKB-State für diese Keymap erstellen
-  if (kb->xkb_state)
+  // Generate XKB-State for this Keymap
+  if(kb->xkb_state)
     xkb_state_unref(kb->xkb_state);
   
   kb->xkb_state = xkb_state_new(kb->xkb_keymap);
@@ -661,7 +663,6 @@ static void unmap_window(wayland_t * wayland)
 static int ensure_window(void * priv)
   {
   wayland_t * wayland = priv;
-  struct wl_registry *registry;
 
   if(!wayland->display)
     {
@@ -678,9 +679,9 @@ static int ensure_window(void * priv)
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't connect to wayland");
       return 0;
       }
-
-    registry = wl_display_get_registry(wayland->display);
-    wl_registry_add_listener(registry, &registry_listener, wayland);
+    
+    wayland->registry = wl_display_get_registry(wayland->display);
+    wl_registry_add_listener(wayland->registry, &registry_listener, wayland);
 
     wl_display_roundtrip(wayland->display);
 
@@ -891,9 +892,22 @@ static void destroy_wayland(void * priv)
 
   if(wayland->pointer)
     wl_pointer_destroy(wayland->pointer);
+
+  if(wayland->keyboard)
+    wl_keyboard_destroy(wayland->keyboard);
   
   if(wayland->seat)
     wl_seat_destroy(wayland->seat);
+
+  if(wayland->xkb_keymap)
+    xkb_keymap_unref(wayland->xkb_keymap);
+
+  if(wayland->xkb_state)
+    xkb_state_unref(wayland->xkb_state);
+
+  if(wayland->xkb_context)
+    xkb_context_unref(wayland->xkb_context);
+
   
   // XDG Shell cleanup
   if (wayland->xdg_toplevel)
@@ -929,18 +943,30 @@ static void destroy_wayland(void * priv)
     {
     wl_surface_destroy(wayland->cursor_surface);
     }
-    
+
+  
+  
   if(wayland->compositor)
     {
     wl_compositor_destroy(wayland->compositor);
     }
-    
+
+  if(wayland->registry)
+    {
+    wl_registry_destroy(wayland->registry);
+    }
+
   if(wayland->display)
     {
     wl_display_disconnect(wayland->display);
     }
+
+  if(wayland->timer)
+    gavl_timer_destroy(wayland->timer);
+
+  if(wayland->title)
+    gavl_timer_destroy(wayland->title);
   
-    
   bg_controllable_cleanup(&wayland->ctrl);
   
   free(wayland);
