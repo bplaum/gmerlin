@@ -181,13 +181,22 @@ void bg_mdb_set_browse_obj_response(gavl_msg_t * res, const gavl_dictionary_t * 
   
   }
 
+void bg_mdb_tracks_finalize(gavl_array_t * arr, int idx, int total)
+  {
+  int i;
+  gavl_dictionary_t * dict;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary_nc(&arr->entries[i])))
+      finalize(dict, i + idx, total);
+    }
+  }
+
 void bg_mdb_set_browse_children_response(gavl_msg_t * res, const gavl_array_t * children,
                                          const gavl_msg_t * cmd, int * idx, int last, int total)
   {
-  int i;
   gavl_value_t val;
   gavl_array_t * arr;
-  gavl_dictionary_t * dict;
   
   gavl_value_init(&val);
   arr = gavl_value_set_array(&val);
@@ -195,7 +204,10 @@ void bg_mdb_set_browse_children_response(gavl_msg_t * res, const gavl_array_t * 
 
   //  fprintf(stderr, "bg_mdb_set_browse_children_response %d\n", total);
   //  gavl_array_dump(children, 2);
-  
+
+  bg_mdb_tracks_finalize(arr, *idx, total);
+
+#if 0
   for(i = 0; i < arr->num_entries; i++)
     {
     if((dict = gavl_value_get_dictionary_nc(&arr->entries[i])))
@@ -203,7 +215,8 @@ void bg_mdb_set_browse_children_response(gavl_msg_t * res, const gavl_array_t * 
       finalize(dict, i + (*idx), total);
       }
     }
-
+#endif
+  
   gavl_msg_set_splice_children_nocopy(res, BG_MSG_NS_DB, BG_RESP_DB_BROWSE_CHILDREN,
                                       NULL,
                                       last, *idx, 0, &val);
