@@ -1208,6 +1208,8 @@ static int check_update(bg_mdb_backend_t * b)
     
     /* Update channel items */
 
+    bg_mdb_tracks_finalize(&items_new, 0, items_new.num_entries);
+    
     evt = bg_msg_sink_get(b->ctrl.evt_sink);
 
     gavl_msg_set_id_ns(evt, BG_MSG_DB_SPLICE_CHILDREN, BG_MSG_NS_DB);

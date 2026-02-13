@@ -176,9 +176,10 @@ void bg_mdb_delete_http_uris(gavl_dictionary_t * dict);
 
 
 
-
 void bg_mdb_set_next_previous(gavl_array_t * arr);
 void bg_mdb_set_idx_total(gavl_array_t * arr, int idx, int total);
+void bg_mdb_tracks_finalize(gavl_array_t * arr, int idx, int total);
+
 
 void bg_mdb_tracks_sort(gavl_array_t * arr);
 
