@@ -35,6 +35,10 @@
 #include <gmerlin/player.h>
 #include <gmerlin/playermsg.h>
 
+/* We assume that this is accesses when no other threads
+   are active */
+static int initialized = 0;
+
 void bg_iconfont_init(void)
   {
   char * icon_font;
@@ -47,6 +51,7 @@ void bg_iconfont_init(void)
     FcConfigAppFontAddFile(NULL, (FcChar8*)icon_font);
     free(icon_font);
     }
+  initialized = 1;
   }
 
 static const struct
@@ -75,6 +80,12 @@ const char * bg_play_mode_to_icon(int play_mode)
     i++;
     }
   return NULL;
+  }
+
+void bg_iconfont_cleanup(void)
+  {
+  if(initialized)
+    FcFini();
   }
 
 #if 0 // Keeps valgrind happy but causes weird crashes

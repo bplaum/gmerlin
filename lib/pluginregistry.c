@@ -1469,7 +1469,7 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   bg_plugin_info_t * file_info;
   bg_plugin_info_t * tmp_info;
   bg_plugin_info_t * tmp_info_next;
-  char * filename;
+  char * filename = NULL;
   char * env;
   char * path;
   int changed;
@@ -1487,12 +1487,10 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   filename = bg_plugin_registry_get_cache_file_name();
 
   if(!access(filename, R_OK))
-    {
     file_info = bg_plugin_registry_load(filename);
-    free(filename);
-    }
   else
     ret->flags |= FLAG_CHANGED;
+
   
   /* Native plugins */
   env = getenv("GMERLIN_PLUGIN_PATH");
@@ -1604,6 +1602,10 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
     tmp_info = tmp_info_next;
     }
 #endif
+
+  if(filename)
+    free(filename);
+  
   }
 
 
@@ -2439,6 +2441,7 @@ static void apply_parameters(bg_plugin_handle_t * ret, const gavl_dictionary_t *
                        ret->priv);
   
   gavl_dictionary_free(&tmp_section);
+  gavl_dictionary_free(&params);
   }
 
 bg_plugin_handle_t * bg_plugin_load(const bg_plugin_info_t * info)

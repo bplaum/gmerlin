@@ -463,7 +463,7 @@ void bg_cfg_section_set_from_params(gavl_dictionary_t * section,
     gavl_value_init(&val);
     
     if(bg_parameter_init_value(param, &val))
-      gavl_dictionary_set(section, name, &val);
+      gavl_dictionary_set_nocopy(section, name, &val);
     
     }
   
