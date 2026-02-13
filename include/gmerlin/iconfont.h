@@ -155,9 +155,5 @@ void bg_iconfont_init(void);
 const char * bg_play_mode_to_icon(int play_mode);
 
 
-/* Called automatically by the global deinit function */
-void bg_iconfont_cleanup(void);
-
-
 #endif // BG_ICONFONT_H_INCLUDED
  
