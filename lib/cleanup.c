@@ -25,7 +25,6 @@
 #include <gmerlin/resourcemanager.h>
 #include <gmerlin/pluginregistry.h>
 #include <gmerlin/log.h>
-#include <gmerlin/iconfont.h>
 
 #ifdef HAVE_DBUS
 #include <gmerlin/bgdbus.h>
@@ -43,7 +42,5 @@ void bg_global_cleanup()
 #endif  
 
   bg_log_cleanup();
-
-  bg_iconfont_cleanup();
   
   }
