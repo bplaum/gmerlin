@@ -29,11 +29,17 @@
 #define LOG_DOMAIN "testpic"
 
 #include <gavl/hw.h>
+#include <gavl/hw_memfd.h>
+#include <gavl/hw_dmabuf.h>
 
 
 
 #define FLAG_ALLOC (1<<0)
-#define FLAG_HW    (1<<1)
+
+#define HW_AUTO   0
+#define HW_OFF    1
+#define HW_MEMFD  2
+#define HW_DMABUF 3
 
 typedef struct
   {
@@ -51,8 +57,13 @@ typedef struct
 
   int flags;
   int frames_displayed;
+
+  gavl_array_t buffer_formats;
+
+  int hw_mode;
+
+  gavl_hw_context_t * hw_ctx;
   
-  gavl_hw_context_t * hwctx;  
   } input_t;
 
 static bg_media_source_t * get_src_input(void * priv)
@@ -108,12 +119,6 @@ read_video_func_nonalloc(void * data, gavl_video_frame_t ** fp)
   return GAVL_SOURCE_OK;
   }
 
-static void set_video_hw_context_input(void * priv, gavl_hw_context_t * hwctx)
-  {
-  input_t * inp = priv;
-  inp->hwctx = hwctx;
-  }
-
 
 
 static int set_track_input(void * priv)
@@ -134,13 +139,33 @@ static bg_controllable_t * get_controllable_input(void * priv)
   return &inp->controllable;
   }
 
+static void close_input(void * priv)
+  {
+  input_t * inp = priv;
+
+  bg_media_source_cleanup(&inp->ms);
+  bg_media_source_init(&inp->ms);
+  gavl_dictionary_reset(&inp->mi);
+  if(inp->hw_ctx)
+    {
+    gavl_hw_ctx_destroy(inp->hw_ctx);
+    inp->hw_ctx = NULL;
+    }
+  }
+
+
 static void destroy_input(void* priv)
   {
   input_t * inp = priv;
+
+  close_input(inp);
+  
   bg_controllable_cleanup(&inp->controllable);
 
   if(inp->frame_priv)
     gavl_video_frame_destroy(inp->frame_priv);
+
+  gavl_array_free(&inp->buffer_formats);
   
   free(priv);
   }
@@ -644,45 +669,77 @@ static int handle_cmd_input(void * data, gavl_msg_t * msg)
     case GAVL_MSG_NS_SRC:
       switch(msg->ID)
         {
+        case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
+          {
+          int arg_i;
+
+          if((arg_i = gavl_msg_get_arg_int(msg, 0)) == GAVL_STREAM_VIDEO)
+            {
+            /* Get buffer formats */
+            gavl_array_reset(&inp->buffer_formats);
+            gavl_msg_get_arg_array(msg, 1, &inp->buffer_formats);
+
+            fprintf(stderr, "Got buffer formats:\n");
+            gavl_hw_buffer_formats_dump(&inp->buffer_formats);
+            
+            }
+          }
+          break;
         case GAVL_CMD_SRC_START:
           {
           bg_media_source_stream_t * s;
 
-          if(inp->flags & FLAG_HW)
+          switch(inp->hw_mode)
             {
-            if(inp->hwctx)
+            case HW_AUTO:
               {
-              int i = 0;
-              const gavl_pixelformat_t * fmts = gavl_hw_ctx_get_image_formats(inp->hwctx, GAVL_HW_FRAME_MODE_MAP);
+              const gavl_dictionary_t * hw =
+                gavl_hw_buf_desc_supports_video_format(&inp->buffer_formats,
+                                                       inp->fmt);
 
-              while(fmts[i] != GAVL_PIXELFORMAT_NONE)
+              if(hw)
                 {
-                if(fmts[i] == inp->fmt->pixelformat)
-                  {
-                  gavl_hw_ctx_set_video_creator(inp->hwctx, inp->fmt, GAVL_HW_FRAME_MODE_MAP);
-                  inp->frame = gavl_hw_video_frame_get_write(inp->hwctx);
-                  break;
-                  }
-                i++;
+                inp->hw_ctx = gavl_hw_ctx_create_from_buffer_format(hw);
+                gavl_hw_ctx_set_video_creator(inp->hw_ctx, inp->fmt,
+                                              GAVL_HW_FRAME_MODE_MAP);
                 }
-              if(!inp->frame)
-                gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Hardware surface not supported for %s",
-                         gavl_pixelformat_to_string(inp->fmt->pixelformat));
-      
+              
               }
-            else
-              gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Hardware surface requested but no hardware context available");
+              break;
+            case HW_OFF:
+              break;
+              break;
+            case HW_MEMFD:
+              inp->hw_ctx = gavl_hw_ctx_create_memfd();
+              gavl_hw_ctx_set_video_creator(inp->hw_ctx, inp->fmt,
+                                            GAVL_HW_FRAME_MODE_MAP);
+
+              break;
+            case HW_DMABUF:
+              inp->hw_ctx = gavl_hw_ctx_create_dma();
+              gavl_hw_ctx_set_video_creator(inp->hw_ctx, inp->fmt,
+                                            GAVL_HW_FRAME_MODE_MAP);
+              break;
             }
 
+          if(inp->hw_ctx)
+            inp->flags |= FLAG_ALLOC;
+          
           if(!inp->frame)
             {
-            inp->frame_priv = gavl_video_frame_create(inp->fmt);
-            inp->frame = inp->frame_priv;
+            if(inp->hw_ctx)
+              {
+              inp->frame = gavl_hw_video_frame_get_write(inp->hw_ctx);
+              }
+            else
+              {
+              inp->frame_priv = gavl_video_frame_create(inp->fmt);
+              inp->frame = inp->frame_priv;
+              }
             }
   
           paint_frame(inp);
-
-  
+          
           s = bg_media_source_get_video_stream(&inp->ms, 0);
 
           if(inp->flags & FLAG_ALLOC)
@@ -691,10 +748,7 @@ static int handle_cmd_input(void * data, gavl_msg_t * msg)
             s->vsrc_priv = gavl_video_source_create(read_video_func_nonalloc, inp, 0, inp->fmt);
 
           s->vsrc = s->vsrc_priv;
-  
-
-
-          
+                    
           }
           break;
         case GAVL_CMD_SRC_SELECT_TRACK:
@@ -719,8 +773,6 @@ static void * create_input()
                        bg_msg_sink_create(handle_cmd_input, inp, 1),
                        bg_msg_hub_create(1));
 
-  inp->track_info = gavl_append_track(&inp->mi, NULL);
-  
   return inp;
   }
 
@@ -740,6 +792,8 @@ static int open_input(void * priv, const char * filename)
   
   /* Create stream (must be first) */
 
+  inp->track_info = gavl_append_track(&inp->mi, NULL);
+  
   s = gavl_track_append_video_stream(inp->track_info);
   tm = gavl_track_get_metadata_nc(inp->track_info);
   inp->fmt = gavl_stream_get_video_format_nc(s);
@@ -764,8 +818,6 @@ static int open_input(void * priv, const char * filename)
     inp->fmt->pixelformat = gavl_short_string_to_pixelformat(var);
   if((var = gavl_dictionary_get_string(&vars, "alloc")) && atoi(var))
     inp->flags |= FLAG_ALLOC;
-  if((var = gavl_dictionary_get_string(&vars, "hw")) && atoi(var))
-    inp->flags |= (FLAG_ALLOC|FLAG_HW);
   
   gavl_video_format_set_frame_size(inp->fmt, 16, 16);
 
@@ -781,6 +833,8 @@ static int open_input(void * priv, const char * filename)
 
   fprintf(stderr, "Test picture format:\n");
   gavl_video_format_dump(inp->fmt);
+
+  gavl_dictionary_free(&vars);
   
   //  input_t * inp = priv;
   return 1;
@@ -792,10 +846,6 @@ static gavl_dictionary_t * get_media_info_input(void * priv)
   return &inp->mi;
   }
 
-static void close_input(void * priv)
-  {
-  
-  }
 
 static char const * const protocols = "testpic";
 
@@ -803,13 +853,6 @@ static const char * get_protocols_input(void * priv)
   {
   return protocols;
   }
-
-static void set_video_hw_context(void * priv, gavl_hw_context_t * hwctx)
-  {
-  input_t * inp = priv;
-  inp->hwctx = hwctx;
-  }
-
 
 const bg_input_plugin_t the_plugin =
   {
@@ -833,10 +876,6 @@ const bg_input_plugin_t the_plugin =
     //    .get_num_tracks = bg_avdec_get_num_tracks,
     .get_media_info = get_media_info_input,
 
-    .set_video_hw_context = set_video_hw_context_input,
-    
-    .set_video_hw_context = set_video_hw_context,
-    
     .get_src              = get_src_input,
 
     

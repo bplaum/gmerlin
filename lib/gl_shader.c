@@ -221,7 +221,6 @@ int bg_glvideo_create_shader(port_t * port, int cm)
         shader[1] = cm ? fragment_shader_noplanar : fragment_shader_noplanar_nocm;
       break;
     case MODE_IMPORT:            // Import directly
-    case MODE_IMPORT_DMABUF:     // Import via DMA-Buffers
     case MODE_DMABUF_GETFRAME:   // Let the client render into a dma buffer
     case MODE_DMABUF_TRANSFER:   // Client supplies RAM buffers and we transfer
       shader[0] = cm ? fragment_shader_ext : fragment_shader_ext_nocm;

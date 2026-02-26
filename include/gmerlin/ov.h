@@ -35,7 +35,7 @@ bg_plugin_handle_t * bg_ov_get_plugin(bg_ov_t *);
 
 void bg_ov_destroy(bg_ov_t * ov);
 
-gavl_hw_context_t * bg_ov_get_hwctx(bg_ov_t * ov);
+const gavl_array_t * bg_ov_get_import_formats(bg_ov_t * ov);
 
 void bg_ov_set_window_title(bg_ov_t * ov, const char * title);
 

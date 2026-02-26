@@ -30,7 +30,6 @@ typedef enum
   {
     MODE_TEXTURE_TRANSFER = 1, // Copy frames from RAM to OpenGL Texture
     MODE_IMPORT           = 2, // Import directly
-    MODE_IMPORT_DMABUF    = 3, // Import via DMA-Buffers
     MODE_DMABUF_GETFRAME  = 4, // Let the client render into a dma buffer
     MODE_DMABUF_TRANSFER  = 5, // Client supplies RAM buffers and we transfer
                                // them (with shuffling) to a DMA buffer
@@ -50,20 +49,6 @@ typedef enum
 #define PORT_USE_COLORMATRIX     (1<<1)
 #define PORT_OVERLAY_CHANGED     (1<<2)
 #define PORT_COLORMATRIX_INIT    (1<<3)
-
-/* Image format */
-
-typedef struct
-  {
-  gavl_pixelformat_t pfmt;
-  gavl_hw_type_t type_mask;
-  gavl_hw_frame_mode_t mode; /* Transfer or map */
-
-  uint32_t dma_fourcc;
-  int      dma_flags;
-  int max_dim;
-
-  } image_format_t;
 
 /* Shader program */
 
@@ -93,7 +78,6 @@ typedef struct port_s
   video_mode_t mode;
 
   gavl_hw_context_t * hwctx_dma;
-  gavl_hw_context_t * hwctx_dma_priv;
   
   /* Currently displayed frame */
   gavl_video_frame_t * cur;
@@ -101,8 +85,6 @@ typedef struct port_s
   /* DMA frame (can be passed to sink) */
   gavl_video_frame_t * dma_frame;
 
-  int fmt_idx;
-  
   /* Texture (for uploading) */
   gavl_video_frame_t * texture;
   
@@ -122,10 +104,10 @@ typedef struct port_s
   GLuint vao; /* Array buffer */
   
   int flags;
-  double cmat[4][5]; // Pixelformat coversion matrix (or unity matrix)
+  double cmat[4][5]; // Pixelformat conversion matrix (or unity matrix)
 
   vertex vertices[4];
-  
+
   } port_t;
 
 struct bg_glvideo_s 
@@ -145,7 +127,6 @@ struct bg_glvideo_s
   /* EGL contexts */
   gavl_hw_context_t * hwctx_gl;
   gavl_hw_context_t * hwctx_gles;
-  gavl_hw_context_t * hwctx_dma;
   
   /* hwctx_gl or hwctx_gles */
   gavl_hw_context_t * hwctx;
@@ -155,8 +136,6 @@ struct bg_glvideo_s
   /* Pointer to the format of the first port */
   const gavl_video_format_t * vfmt;
   
-  image_format_t * image_formats;
-  int num_image_formats;
 
   float zoom_factor;
   float squeeze_factor;
@@ -170,13 +149,23 @@ struct bg_glvideo_s
   /* *uncropped* rectangles used for coordinate transform */
   gavl_rectangle_f_t src_rect;
   gavl_rectangle_f_t dst_rect;
-
+  
   int orientation;
-  /* Supported DMA import formats */
-  uint32_t * dma_fourccs;
 
   EGLenum platform;
-    
+
+  /* Pixel/buffer formats we support */
+  
+  /* Best option: Mappable DMA buffers, used for direct rendering */
+  gavl_array_t import_map_formats;
+
+  /* Second best options: Transfer user buffers into GL textures */
+  gavl_array_t transfer_formats;
+  
+  /* Byte shuffled formats for DMA buffers */
+  gavl_array_t import_transfer_formats;
+  
+  
   };
 
 int bg_glvideo_port_has_dma(port_t * port);

@@ -255,7 +255,7 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
   {
   wayland_t * wayland = data;
   struct wl_region *region;
-
+  
   if(!w && !h)
     return;
 
@@ -268,7 +268,6 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
 
   wl_region_add(region, 0, 0, w, h);
   wl_surface_set_opaque_region(wayland->surface, region);
-
   
   wl_surface_commit(wayland->surface);
   wl_region_destroy(region);
@@ -276,12 +275,14 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
   /* wayland->egl_window might not exist yet */
   if(wayland->egl_window)
     wl_egl_window_resize(wayland->egl_window, w, h, 0, 0);
+
+  wayland->flags |= FLAG_GOT_SIZE;
   
   }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
   {
-  fprintf(stderr, "xdg_toplevel_close\n");
+  //  fprintf(stderr, "xdg_toplevel_close\n");
   }
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener =
@@ -623,6 +624,15 @@ static int map_window(wayland_t * wayland)
     return 0;
     }
 
+  wl_surface_commit(wayland->surface);
+  wl_display_flush(wayland->display);
+
+#if 0  
+  do{
+  handle_events_internal(wayland, 100);
+  } while(!(wayland->flags & (FLAG_GOT_SIZE)));
+#endif
+  
   return 1;
   }
 
@@ -965,7 +975,7 @@ static void destroy_wayland(void * priv)
     gavl_timer_destroy(wayland->timer);
 
   if(wayland->title)
-    gavl_timer_destroy(wayland->title);
+    free(wayland->title);
   
   bg_controllable_cleanup(&wayland->ctrl);
   
@@ -973,12 +983,12 @@ static void destroy_wayland(void * priv)
   
   }
 
-static gavl_hw_context_t * get_hw_context_wayland(void * priv)
+static const gavl_array_t * get_import_formats_wayland(void * priv)
   {
   wayland_t * wayland = priv;
   if(!ensure_window(wayland))
     return NULL;
-  return bg_glvideo_get_hwctx(wayland->g);
+  return bg_glvideo_get_import_formats(wayland->g);
   }
 
 
@@ -1157,7 +1167,7 @@ static void handle_events_internal(wayland_t * wayland,
 static void handle_events_wayland(void * priv)
   {
   wayland_t * wayland = priv;
-  
+  //  fprintf(stderr, "handle_events_wayland\n");
   handle_events_internal(wayland, 0);
   
   if(gavl_timer_get(wayland->timer) -
@@ -1165,9 +1175,26 @@ static void handle_events_wayland(void * priv)
     hide_cursor(wayland);
   }
 
+#if 0
+static gavl_video_frame_t * get_video_frame(void * priv)
+  {
+  wayland_t * wayland = priv;
+  return gavl_video_sink_get(wayland->sink_int);
+  }
+
+static gavl_sink_status_t put_video_func(void * priv, gavl_video_frame_t * f)
+  {
+  wayland_t * wayland = priv;
+  gavl_sink_status_t ret;
+  ret = gavl_video_sink_get(wayland->sink_int, f);
+  
+  return ret;
+  }
+#endif
+
 static int open_wayland(void * priv, const char * uri,
-                    gavl_video_format_t * format,
-                    int src_flags)
+                        gavl_video_format_t * format,
+                        int src_flags)
   {
   wayland_t * wayland = priv;
 
@@ -1175,9 +1202,8 @@ static int open_wayland(void * priv, const char * uri,
     return 0;
 
   map_window(wayland);
-  
-  wayland->sink = 
-    bg_glvideo_open(wayland->g, format, src_flags, wayland->egl_window);
+
+  wayland->sink = bg_glvideo_open(wayland->g, format, src_flags, wayland->egl_window);
   
   show_cursor(wayland, 0);
   wayland->last_active_time = gavl_timer_get(wayland->timer);
@@ -1191,6 +1217,7 @@ static void close_wayland(void * priv)
   wayland_t * wayland = priv;
   if(wayland->g)
     bg_glvideo_close(wayland->g);
+  // wayland->sink
   }
 
 static bg_controllable_t * get_controllable_wayland(void * data)
@@ -1227,7 +1254,7 @@ const bg_ov_plugin_t the_plugin =
       .get_protocols = get_protocols_wayland,
     },
 
-    .get_hw_context     = get_hw_context_wayland,
+    .get_import_formats     = get_import_formats_wayland,
     .open               = open_wayland,
     .get_sink           = get_sink_wayland,
     

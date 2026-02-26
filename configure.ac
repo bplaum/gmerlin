@@ -1,5 +1,5 @@
 
-AC_INIT([gmerlin], [2.0.0])
+AC_INIT([gmerlin], [2.1.0])
 AC_CONFIG_SRCDIR([include/gmerlin/player.h])
 
 AM_INIT_AUTOMAKE
@@ -14,7 +14,7 @@ BG_VERSION_MICRO=`echo $VERSION | cut -d . -f 3 | cut -d p -f 1`
 
 BUILD_ID=`date +%Y-%m-%d-%H-%M`
 
-LTVERSION_CURRENT="3"
+LTVERSION_CURRENT="4"
 LTVERSION_REVISION="0"
 LTVERSION_AGE="0"
 
@@ -125,7 +125,7 @@ XML2_REQUIRED="2.4.0"
 PKG_CHECK_MODULES(XML2, libxml-2.0 >= $XML2_REQUIRED, , AC_MSG_ERROR("libxml2 not found"))
 AC_SUBST(XML2_REQUIRED)
 
-GAVL_REQUIRED="2.0.0"
+GAVL_REQUIRED="2.1.0"
 PKG_CHECK_MODULES(GAVL, gavl >= $GAVL_REQUIRED, , AC_MSG_ERROR("gavl not found"))
 AC_SUBST(GAVL_REQUIRED)
 

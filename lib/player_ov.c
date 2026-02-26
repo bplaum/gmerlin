@@ -411,11 +411,6 @@ void bg_player_set_ov_uri(bg_player_t * player, const char * uri)
   
   if(handle)
     {
-    bg_ov_plugin_t * plugin = (bg_ov_plugin_t*)handle->plugin;
-
-    if(plugin->get_hw_context)
-      ctx->hwctx = plugin->get_hw_context(handle->priv);
-    
     if(handle->plugin && handle->plugin->get_controllable && 
        (ctx->ov_ctrl = handle->plugin->get_controllable(handle->priv)))
       bg_msg_hub_connect_sink(ctx->ov_ctrl->evt_hub, ctx->ov_evt_sink);

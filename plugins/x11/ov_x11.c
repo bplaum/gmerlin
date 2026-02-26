@@ -305,18 +305,21 @@ static void destroy_x11(void * priv)
     XCloseDisplay(x11->dpy);
     }
 
+  if(x11->timer)
+    gavl_timer_destroy(x11->timer);
+
   bg_controllable_cleanup(&x11->ctrl);
   
   free(x11);
   
   }
 
-static gavl_hw_context_t * get_hw_context_x11(void * priv)
+static const gavl_array_t * get_import_formats_x11(void * priv)
   {
   x11_t * x11 = priv;
   if(!ensure_window(x11))
     return NULL;
-  return bg_glvideo_get_hwctx(x11->g);
+  return bg_glvideo_get_import_formats(x11->g);
   }
 
 
@@ -656,7 +659,7 @@ const bg_ov_plugin_t the_plugin =
       .get_protocols = get_protocols_x11,
     },
 
-    .get_hw_context     = get_hw_context_x11,
+    .get_import_formats = get_import_formats_x11,
     .open               = open_x11,
     .get_sink           = get_sink_x11,
     

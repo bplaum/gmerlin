@@ -385,51 +385,6 @@ void bg_glvideo_init_colormatrix_gl(port_t * port)
   
   }
 
-#if 0
-void bg_glvideo_init_colormatrix(port_t * port, uint32_t fourcc)
-  {
-  double tmp[4][5];
-
-  if(port->flags & PORT_COLORMATRIX_INIT)
-    return;
-  
-  port->flags |= PORT_COLORMATRIX_INIT;
-  
-#ifdef HAVE_DRM
-
-  if(bg_glvideo_port_has_dma(port))
-    {
-    matrix_init(port->cmat);
-    
-    /* Direct import: We don't need YUV2RGB in the colormatrix because
-       the GPU will do this for us. On the other hand, some fourccs need a special
-       treatment */
-
-    if(port->fmt_idx >= 0)
-      {
-      /* Do color shuffling: For DMA formats, which have a different chanel order,
-         we can re-shuffle the colors. This is, however, only possible for RGB formats */
-      
-      if((port->g->image_formats[port->fmt_idx].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE) &&
-         (port->mode != MODE_DMABUF_TRANSFER))
-        {
-        int i;
-        int indices[4];
-        gavl_drm_pixelformat_from_fourcc(port->g->image_formats[port->fmt_idx].dma_fourcc, NULL, indices);
-
-        memset(port->cmat, 0, sizeof(port->cmat));
-      
-        for(i = 0; i < 4; i++)
-          port->cmat[i][indices[i]] = 1.0;
-        }
-        
-      }
-    }
-  #endif
-  
-  }
-#endif
-
 
 void bg_glvideo_update_colormatrix(port_t * port)
   {

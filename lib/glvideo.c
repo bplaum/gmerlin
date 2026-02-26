@@ -54,297 +54,6 @@ void enable_debug();
 
 static void init_gl(bg_glvideo_t * g);
 
-
-static image_format_t * add_image_format(bg_glvideo_t * g, int * formats_alloc)
-  {
-  image_format_t * ret;
-  if(g->num_image_formats == *formats_alloc)
-    {
-    *formats_alloc += 32;
-    g->image_formats = realloc(g->image_formats,
-                               *formats_alloc * sizeof(*g->image_formats));
-    memset(g->image_formats + g->num_image_formats, 0,
-           (*formats_alloc - g->num_image_formats) *
-           sizeof(*g->image_formats));
-    }
-  ret = g->image_formats + g->num_image_formats;
-  g->num_image_formats++;
-  return ret;
-  }
-
-
-static int need_scaling(image_format_t * imgfmt, const gavl_video_format_t * fmt)
-  {
-  if((imgfmt->max_dim > 0) &&
-     ((fmt->image_width > imgfmt->max_dim) ||
-      (fmt->image_height > imgfmt->max_dim)))
-    return 1;
-  else
-    return 0;
-  }
-
-static int choose_image_format(port_t * port, const gavl_video_format_t * fmt, int src_flags)
-  {
-  int i;
-  int penalty;
-  int min_penalty = -1;
-  int min_index = -1;
-
-  gavl_hw_type_t type;
-  if(port->idx) // Use the API, which got selected by port 0 
-    type = gavl_hw_ctx_get_type(port->g->hwctx);
-  else // Choose any of the supported APIs
-    type = GAVL_HW_EGL_GL | GAVL_HW_EGL_GLES;
-  
-  /* Check for direct rendering */
-  if(!(src_flags & GAVL_SOURCE_SRC_ALLOC) && (type == GAVL_HW_EGL_GLES))
-    {
-    for(i = 0; i < port->g->num_image_formats; i++)
-      {
-      if((port->g->image_formats[i].pfmt == fmt->pixelformat) &&
-         (port->g->image_formats[i].mode == GAVL_HW_FRAME_MODE_MAP))
-        return i;
-      }
-    }
-
-  /* 2nd best option: glTexSubImage2D */
-  
-  for(i = 0; i < port->g->num_image_formats; i++)
-    {
-    if(need_scaling(&port->g->image_formats[i], fmt))
-      continue;
-
-    if(port->g->image_formats[i].pfmt != fmt->pixelformat)
-      continue;
-    
-    if(!(port->g->image_formats[i].type_mask & type))
-      continue;
-
-    return i;
-    
-    }
-
-  if(type == GAVL_HW_EGL_GLES)
-    {
-    /* 3rd best option: Copy to mmapped dma frame */
-    for(i = 0; i < port->g->num_image_formats; i++)
-      {
-      if(port->g->image_formats[i].type_mask != GAVL_HW_DMABUFFER)
-        continue;
-
-      if(port->g->image_formats[i].pfmt != fmt->pixelformat)
-        continue;
-
-      if(gavl_hw_ctx_dma_get_frame_mode(port->g->image_formats[i].dma_fourcc) == GAVL_HW_FRAME_MODE_TRANSFER)
-        continue;
-      
-#ifndef IGNORE_SHUFFLE
-      if(port->g->image_formats[i].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
-        continue;
-#endif
-      return i;
-      }
-    
-    /* 4th best option: Shuffle to mmapped dma frame */
-    for(i = 0; i < port->g->num_image_formats; i++)
-      {
-      if(port->g->image_formats[i].type_mask != GAVL_HW_DMABUFFER)
-        continue;
-
-      if(port->g->image_formats[i].pfmt != fmt->pixelformat)
-        continue;
-      
-      return i;
-      }
-    }
-  
-  /* From here on we need either scale or do pixelformat conversion. We prefer the latter */  
-
-  for(i = 0; i < port->g->num_image_formats; i++)
-    {
-    if(need_scaling(&port->g->image_formats[i], fmt))
-      continue;
-
-    penalty = gavl_pixelformat_conversion_penalty(fmt->pixelformat,
-                                                  port->g->image_formats[i].pfmt);
-
-
-    penalty <<= 1;
-    if(port->g->image_formats[i].mode == GAVL_HW_FRAME_MODE_TRANSFER)
-      penalty += 1;
-
-#ifndef IGNORE_SHUFFLE
-    penalty <<= 1;
-    if(port->g->image_formats[i].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
-      penalty += 1;
-#endif    
-    
-    if((min_index < 0) || (min_penalty > penalty))
-      {
-      min_penalty = penalty;
-      min_index = i;
-      }
-
-
-    
-    }
-  if(min_index >= 0)
-    return min_index;
-
-  else
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Image format selection failed");
-    return -1;
-    }
-
-  }
-
-static void append_dma_format(bg_glvideo_t * g, gavl_pixelformat_t pfmt,
-                              int dma_fourcc, int dma_flags, int * formats_alloc)
-  {
-  image_format_t * fmt;
-  fmt = add_image_format(g, formats_alloc);
-  fmt->pfmt = pfmt;
-  fmt->dma_fourcc = dma_fourcc;
-  fmt->dma_flags = dma_flags;
-  fmt->type_mask = GAVL_HW_DMABUFFER;
-#ifndef IGNORE_SHUFFLE
-  if(fmt->dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
-    fmt->mode = GAVL_HW_FRAME_MODE_TRANSFER;
-  else
-#endif
-    fmt->mode = GAVL_HW_FRAME_MODE_MAP;
-
-  fmt->mode = gavl_hw_ctx_dma_get_frame_mode(dma_fourcc);
-  }
-
-#ifdef DUMP_IMAGE_FORMATS
-static void dump_image_formats(image_format_t * fmts, int num)
-  {
-  int i;
-  fprintf(stderr, "Got image formats\n");
-  
-  for(i = 0; i < num; i++)
-    {
-    fprintf(stderr, "  gavl: %s type: %s, mode: %s",
-            gavl_pixelformat_to_string(fmts[i].pfmt),
-            gavl_hw_type_to_string(fmts[i].type_mask),
-            (fmts[i].mode == GAVL_HW_FRAME_MODE_MAP) ? "map" : "transfer"
-            );
-    if(fmts[i].dma_flags & GAVL_DMABUF_FLAG_SHUFFLE)
-      fprintf(stderr, " shuffle");
-    if(fmts[i].dma_fourcc)
-      fprintf(stderr, " drm_fourcc: %c%c%c%c",
-              (fmts[i].dma_fourcc) & 0xff,
-              (fmts[i].dma_fourcc >> 8) & 0xff,
-              (fmts[i].dma_fourcc >> 16) & 0xff,
-              (fmts[i].dma_fourcc >> 24) & 0xff
-              );
-    if(fmts[i].max_dim)
-      fprintf(stderr, " max_dim: %d", fmts[i].max_dim);
-    fprintf(stderr, " Type: %s", gavl_hw_type_to_string(fmts[i].type_mask));
-    fprintf(stderr, "\n");
-    }
-  }
-#endif
-
-
-
-static void get_image_formats(bg_glvideo_t * g)
-  {
-  int i = 0;
-  gavl_pixelformat_t * pixelformats = NULL;
-  uint32_t * dma_formats;
-  
-  int num = 0;
-  
-  image_format_t * fmt;
-  int formats_alloc = 0;
-  /*
-   *  Standard openGL textures: We support
-   *  the OpenGL RGB(A) formats as well as planar YUV formats
-   *  (converted to RGB via the colormatrix)
-   */
-
-  pixelformats = gavl_gl_get_image_formats(g->hwctx_gl, &num);
-  
-  while(pixelformats[i] != GAVL_PIXELFORMAT_NONE)
-    {
-    GLenum type;
-    
-    if(gavl_get_gl_format(pixelformats[i], NULL, NULL, &type))
-      {
-      fmt = add_image_format(g, &formats_alloc);
-      fmt->pfmt = pixelformats[i];
-      /* GL ES supports only 8 bit/channel */
-      
-      if(type == GL_UNSIGNED_BYTE)
-        {
-        /* TODO Use GL or GL ES depending on whether we are
-           on an embedded platform or not */
-        fmt->type_mask = GAVL_HW_EGL_GLES|GAVL_HW_EGL_GL;
-        fmt->max_dim = gavl_hw_egl_get_max_texture_size(g->hwctx_gles);
-
-        }
-      else
-        {
-        /* > 8 bytes per channel is only supported by GL */
-        fmt->type_mask = GAVL_HW_EGL_GL;
-        fmt->max_dim = gavl_hw_egl_get_max_texture_size(g->hwctx_gl);
-        }
-      fmt->mode = GAVL_HW_FRAME_MODE_TRANSFER;
-      }
-    
-    i++;
-    }
-  free(pixelformats);
-
-  if(gavl_hw_ctx_get_support_flags(g->hwctx_dma) & GAVL_HW_SUPPORTS_VIDEO_POOL)
-    {
-    dma_formats = gavl_hw_ctx_egl_get_dma_import_formats(g->hwctx_gles);
-    i = 0;
-    while(dma_formats[i])
-      {
-      gavl_pixelformat_t pfmt;
-      int dma_flags;
-    
-      pfmt = gavl_drm_pixelformat_from_fourcc(dma_formats[i], &dma_flags, NULL);
-      switch(pfmt)
-        {
-        case GAVL_YUV_420_P:
-          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-          append_dma_format(g, GAVL_YUVJ_420_P, dma_formats[i], dma_flags, &formats_alloc);
-          break;
-        case GAVL_YUV_422_P:
-          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-          append_dma_format(g, GAVL_YUVJ_422_P, dma_formats[i], dma_flags, &formats_alloc);
-          break;
-        case GAVL_YUV_444_P:
-          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-          append_dma_format(g, GAVL_YUVJ_444_P, dma_formats[i], dma_flags, &formats_alloc);
-          break;
-      
-        case GAVL_PIXELFORMAT_NONE:
-          break;
-        default:
-          append_dma_format(g, pfmt, dma_formats[i], dma_flags, &formats_alloc);
-          break;
-        }
-      i++;
-      }
-    free(dma_formats);
-    }
-  else
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
-             "Allocating DMA frames not possible, consider recompiling with libdrm support");
-    }
-  
-#ifdef DUMP_IMAGE_FORMATS
-  dump_image_formats(g->image_formats, g->num_image_formats);
-#endif
-  }
-
 void bg_glvideo_set_gl(bg_glvideo_t * g)
   {
   //  fprintf(stderr, "set GL... %p\n", g->hwctx);
@@ -560,10 +269,10 @@ static gavl_sink_status_t func_import(port_t * port, gavl_video_frame_t * f)
      If this changes, we probably need to adapt the following */
   if(f)
     {
-    fprintf(stderr, "func_import: %p %p %d\n", f, f->hwctx, f->buf_idx);
+    //    fprintf(stderr, "func_import: %p %p %d\n", f, f->hwctx, f->buf_idx);
     
     bg_glvideo_init_colormatrix_dmabuf(port, f);
-  
+    
     if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
                                         &port->fmt))
       return GAVL_SINK_OK;
@@ -574,26 +283,6 @@ static gavl_sink_status_t func_import(port_t * port, gavl_video_frame_t * f)
     return GAVL_SINK_OK;
   }
 
-static gavl_sink_status_t func_import_dmabuf(port_t * port, gavl_video_frame_t * f)
-  {
-  gavl_video_frame_t * dma_frame = NULL;
-
-  port->cur =  NULL;
-  
-  if(!gavl_hw_ctx_transfer_video_frame(f, port->hwctx_dma, &dma_frame,
-                                       &port->fmt))
-    return GAVL_SINK_ERROR;
-
-  bg_glvideo_init_colormatrix_dmabuf(port, dma_frame);
-
-  
-  
-  if(!gavl_hw_ctx_transfer_video_frame(dma_frame, port->g->hwctx, &port->cur,
-                                      &port->fmt))
-    return GAVL_SINK_ERROR;
-  
-  return GAVL_SINK_OK;
-  }
 
 static gavl_sink_status_t func_dmabuf_transfer(port_t * port, gavl_video_frame_t * f)
   {
@@ -638,46 +327,13 @@ static gavl_sink_status_t func_dmabuf_transfer(port_t * port, gavl_video_frame_t
 static gavl_sink_status_t func_dmabuf_getframe(port_t * port, gavl_video_frame_t * f)
   {
   bg_glvideo_init_colormatrix_dmabuf(port, f);
-
-  /*
-  if(port->idx)
-    fprintf(stderr, "func_dmabuf_getframe %d %d %p %p %p %p\n", port->idx, f->buf_idx, f,
-            port->dma_frame, port->cur, port->texture);
-  */
   
-  if(port->idx > 0)
+  if(f)
     {
-    if(!port->texture)
-      {
-      port->texture = gavl_hw_video_frame_create(port->g->hwctx, 0);
-      port->cur = port->texture;
-      if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
-                                          &port->fmt))
-        return GAVL_SINK_OK;
-      else
-        return GAVL_SINK_ERROR;
-      }
-    else
-      {
-      if(f)
-        {
-        port->cur = port->texture;
-        gavl_video_frame_copy_metadata(port->cur, f);
-        }
-      return GAVL_SINK_OK;
-      }
+    port->cur = port->texture;
+    gavl_video_frame_copy_metadata(port->cur, f);
     }
-  else
-    {
-    port->cur = NULL;
-    if(gavl_hw_ctx_transfer_video_frame(f, port->g->hwctx, &port->cur,
-                                        &port->fmt))
-      return GAVL_SINK_OK;
-    else
-      return GAVL_SINK_ERROR;
-    }
-  
-  
+  return GAVL_SINK_OK;
   
   //  fprintf(stderr, "func_dmabuf_getframe %d %p %p %p\n", port->idx, f, port->dma_frame, port->cur);
   
@@ -707,14 +363,11 @@ static void draw(bg_glvideo_t * g)
   //  glClearColor(0.0, 1.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
 
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  
   for(i = 0; i < g->num_ports; i++)
     {
-    //    if(i == 1)
-      {
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      }
-
     draw_port(g->ports[i]);
     }
 
@@ -803,37 +456,22 @@ static gavl_sink_status_t sink_put_func_ovl(void * priv, gavl_video_frame_t * f)
 
 static void port_init_dma(port_t * port)
   {
-  if(!port->idx)
-    {
-    port->hwctx_dma = port->g->hwctx_dma;
-    }
-  else
-    {
-    port->hwctx_dma_priv = gavl_hw_ctx_create_dma();
-    port->hwctx_dma = port->hwctx_dma_priv;
-    gavl_hw_ctx_dma_set_supported_formats(port->hwctx_dma, port->g->dma_fourccs);
-    }
-  
-  }
+  port->hwctx_dma = gavl_hw_ctx_create_dma();
 
+  }
 
 static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
   {
-
+  int penalty = -1;
+  const gavl_dictionary_t * hw = NULL;
+  const gavl_dictionary_t * hw_test = NULL;
+  gavl_pixelformat_t pfmt = GAVL_PIXELFORMAT_NONE;
   port->flags |= PORT_COLORMATRIX_CHANGED;
   
-  //  bg_glvideo_init_colormatrix(port);
-  
-  //  gavl_video_sink_get_func get_func = NULL;
-  //  gavl_video_sink_put_func put_func = NULL;
-  
-  //  int planar = 0;
-  
+  /* Default for overlays */
   if(port->idx && (fmt->pixelformat == GAVL_PIXELFORMAT_NONE))
     fmt->pixelformat = GAVL_RGBA_32;
 
-  port->fmt_idx = -1;
-  
   if(fmt->hwctx)
     {
     //    gavl_hw_type_t src_type;
@@ -841,66 +479,23 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
     if(port->idx)
       {
       /* Error */
+
+      /* Importing hardware surfaces works only for port zero because the rendering
+         context can import only from one source context and that's hopefully the one from
+         port zero */
+      
       gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
                "Importing HW frames is not supported for overlay streams. Downloading to RAM");
       fmt->hwctx = NULL;
       goto nohw;
       }
-    
-#if 0    
-    /* Use GL frames directly */
-    src_type = gavl_hw_ctx_get_type(fmt->hwctx);
-    if(src_type & (GAVL_HW_EGL_GL | GAVL_HW_EGL_GLES))
-      {
-      port->g->hwctx = fmt->hwctx;
-      port->mode = MODE_TEXTURE_DIRECT;
-      port->set_frame = func_texture_direct;
-      
-      //      planar = gavl_pixelformat_num_planes(fmt->pixelformat) > 1 ? 1 : 0;
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Got GL textures from source", port->idx);
-      
-      goto found;
-      }
-    else 
-#endif
-    if(gavl_hw_ctx_can_transfer(fmt->hwctx, port->g->hwctx_gles))
+
+    if(gavl_hw_ctx_can_import(port->g->hwctx_gles, fmt->hwctx))
       {
       port->mode = MODE_IMPORT;
-      port->set_frame = func_import;
-
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Importing hardware surfaces", port->idx);
-
-      if(!port->idx)
-        {
-        port->g->hwctx = port->g->hwctx_gles;
-        gavl_hw_ctx_set_video_importer(port->g->hwctx, fmt->hwctx, fmt);
-        }
+      port->g->hwctx = port->g->hwctx_gles;
       goto found;
       }
-
-    
-    /* Import frames from other APIs via DMA-buf. This implictly assumes that the pixelformat is supported
-       for EGL import */
-#ifdef HAVE_DRM  
-    else if(gavl_hw_ctx_can_transfer(fmt->hwctx, port->g->hwctx_dma) &&
-            gavl_hw_ctx_can_transfer(port->g->hwctx_dma, port->g->hwctx_gles))
-      {
-      port->mode = MODE_IMPORT_DMABUF;
-      port->set_frame = func_import_dmabuf;
-
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Importing hardware surfaces via DMA", port->idx);
-      
-      if(!port->idx)
-        port->g->hwctx = port->g->hwctx_gles;
-
-      port_init_dma(port);
-
-      gavl_hw_ctx_set_video_importer(port->hwctx_dma, fmt->hwctx, fmt);
-      gavl_hw_ctx_set_video_importer(port->g->hwctx_gles, port->g->hwctx_dma, NULL);
- 
-      goto found;
-      }
-#endif
     
     /* Don't know what to do */
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cannot use hardware frames of type %s, downloading to RAM",
@@ -911,106 +506,134 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
     }
 
   nohw:
-  
-  /* Find closest format */
 
-  port->fmt_idx = choose_image_format(port, fmt, src_flags);
+  if(port->idx && (port->g->hwctx == port->g->hwctx_gl))
+    {
+    if((hw = gavl_hw_buf_desc_supports_video_format(gavl_hw_ctx_get_transfer_formats(port->g->hwctx_gl), fmt)))
+      {
+      port->mode = MODE_TEXTURE_TRANSFER;
+      goto found;
+      }
+    
+    hw = gavl_hw_buf_desc_get_pixelformat_conversion(gavl_hw_ctx_get_transfer_formats(port->g->hwctx_gl),
+                                                     fmt, &pfmt, &penalty);
+    port->mode = MODE_TEXTURE_TRANSFER;
+    }
+  else
+    {
+    if((hw = gavl_hw_buf_desc_supports_video_format(&port->g->import_map_formats, fmt)))
+      {
+      port->mode = MODE_DMABUF_GETFRAME;
+      goto found;
+      }
+    else if(!port->idx && (hw = gavl_hw_buf_desc_supports_video_format(&port->g->transfer_formats, fmt)))
+      {
+      port->mode = MODE_TEXTURE_TRANSFER;
+      goto found;
+      }
+    else if(port->idx && (hw = gavl_hw_buf_desc_supports_video_format(gavl_hw_ctx_get_transfer_formats(port->g->hwctx), fmt)))
+      {
+      port->mode = MODE_TEXTURE_TRANSFER;
+      goto found;
+      }
+    else if(!port->idx && (hw = gavl_hw_buf_desc_supports_video_format(&port->g->import_transfer_formats, fmt)))
+      {
+      port->mode = MODE_DMABUF_TRANSFER;
+      goto found;
+      }
+    
+    /* Seems the pixelformat is not supported directly */
+    hw = gavl_hw_buf_desc_get_pixelformat_conversion(&port->g->import_map_formats,
+                                                     fmt, &pfmt, &penalty);
+    port->mode = MODE_DMABUF_GETFRAME;
+    
+    if(!port->idx && (hw_test = gavl_hw_buf_desc_get_pixelformat_conversion(&port->g->transfer_formats,
+                                                                            fmt, &pfmt, &penalty)))
+      {
+      port->mode = MODE_TEXTURE_TRANSFER;
+      hw = hw_test;
+      }
 
-  if(port->g->image_formats[port->fmt_idx].pfmt != fmt->pixelformat)
+    if(port->idx && (hw_test = gavl_hw_buf_desc_get_pixelformat_conversion(gavl_hw_ctx_get_transfer_formats(port->g->hwctx),
+                                                                           fmt, &pfmt, &penalty)))
+      {
+      port->mode = MODE_TEXTURE_TRANSFER;
+      hw = hw_test;
+      }
+    
+    }
+
+  if(pfmt != fmt->pixelformat)
     {
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Doing pixelformat conversion (%s -> %s) for port %d",
              gavl_pixelformat_to_short_string(fmt->pixelformat),
-             gavl_pixelformat_to_short_string(port->g->image_formats[port->fmt_idx].pfmt), 
+             gavl_pixelformat_to_short_string(pfmt), 
              port->idx);
     
     src_flags &= ~GAVL_SOURCE_SRC_ALLOC;
-    fmt->pixelformat = port->g->image_formats[port->fmt_idx].pfmt;
+    fmt->pixelformat = pfmt;
     }
-
-  /* TODO: Apply scaling */
-  
-  switch(port->g->image_formats[port->fmt_idx].mode)
-    {
-    case GAVL_HW_FRAME_MODE_MAP:
-      {
-      
-      port->mode = MODE_DMABUF_GETFRAME;
-
-      port->set_frame = func_dmabuf_getframe;
-      
-      port->g->hwctx = port->g->hwctx_gles;
-      port_init_dma(port);
-
-      gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_MAP);
-      
-      if(!port->idx)
-        gavl_hw_ctx_set_video_importer(port->g->hwctx, port->hwctx_dma, fmt);
-            
-      port->dma_frame = gavl_hw_video_frame_get_write(port->hwctx_dma);
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Rendering into DMA buffers", port->idx);
-      
-      goto found;
-      
-      }
-      break;
-    case GAVL_HW_FRAME_MODE_TRANSFER:
-      {
-      if(port->g->image_formats[port->fmt_idx].type_mask & (GAVL_HW_EGL_GL | GAVL_HW_EGL_GLES))
-        {
-        /* GL Texture (indirect) */
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into textures", port->idx);
-        
-        /* TODO: Prefer GL or GL ES (if both are supported) depending on platform */
-#if 0
-        if(port->g->image_formats[port->fmt_idx].type & GAVL_HW_EGL_GLES)
-          port->g->hwctx = port->g->hwctx_gles;
-        else
-          port->g->hwctx = port->g->hwctx_gl;
-#else
-        if(!port->idx)
-          {
-          if(port->g->image_formats[port->fmt_idx].type_mask & GAVL_HW_EGL_GL)
-            port->g->hwctx = port->g->hwctx_gl;
-          else
-            port->g->hwctx = port->g->hwctx_gles;
-          }
-#endif
-        
-        port->mode = MODE_TEXTURE_TRANSFER;
-
-        port->set_frame = func_texture_transfer;
-
-        if(!port->idx)
-          gavl_hw_ctx_set_video_creator(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
-        }
-      else
-        {
-        /* Transfer to DMA frames */
-        //        fprintf(stderr, "Transfer to DMA frames\n");
-        port->g->hwctx = port->g->hwctx_gles;
-
-        port_init_dma(port);
-        gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
-
-        port->mode = MODE_DMABUF_TRANSFER;
-        port->set_frame = func_dmabuf_transfer;
-
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into DMA buffers", port->idx);
-        
-        }
-      
-      break;
-      } 
-    case GAVL_HW_FRAME_MODE_IMPORT:
-      break;
-    }
-
-  
-  //  bg_glvideo_set_gl(port->g);
-  //  bg_glvideo_unset_gl(port->g);
   
   found:
 
+  if(!port->idx && hw)
+    {
+    int hwtype = 0;
+    gavl_dictionary_get_int(hw, GAVL_HW_BUF_TYPE, &hwtype);
+    if(hwtype == GAVL_HW_EGL_GL)
+      port->g->hwctx = port->g->hwctx_gl;
+    else
+      port->g->hwctx = port->g->hwctx_gles;
+    }
+  
+  switch(port->mode)
+    {
+    case MODE_DMABUF_GETFRAME:
+      port->set_frame = func_dmabuf_getframe;
+      port_init_dma(port);
+      gavl_hw_ctx_set_map_formats(port->hwctx_dma, &port->g->import_map_formats);
+      
+      gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_MAP);
+      
+      port->dma_frame = gavl_hw_video_frame_get_write(port->hwctx_dma);
+      
+      port->texture = gavl_hw_video_frame_create(port->g->hwctx, 0);
+
+      if(!gavl_hw_ctx_transfer_video_frame(port->dma_frame, port->g->hwctx, &port->texture, fmt))
+        return 0;
+      
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Rendering into DMA buffers", port->idx);
+      break;
+    case MODE_DMABUF_TRANSFER:
+
+      port_init_dma(port);
+      gavl_hw_ctx_set_map_formats(port->hwctx_dma, &port->g->import_transfer_formats);
+      gavl_hw_ctx_set_video_creator(port->hwctx_dma, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
+      
+      port->set_frame = func_dmabuf_transfer;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into DMA buffers", port->idx);
+      
+      break;
+    case MODE_TEXTURE_TRANSFER:
+      /* GL Texture (indirect) */
+      port->set_frame = func_texture_transfer;
+#if 0
+      if(!port->idx)
+        gavl_hw_ctx_set_video_creator(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
+#endif
+      
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into textures", port->idx);
+      break;
+    case MODE_IMPORT:
+      port->set_frame = func_import;
+      
+      port->g->hwctx = port->g->hwctx_gles;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Importing %s surfaces",
+               port->idx, gavl_hw_type_to_string(gavl_hw_ctx_get_type(fmt->hwctx)));
+      gavl_hw_ctx_set_video_importer(port->g->hwctx, fmt->hwctx, fmt);
+      break;
+    }
+  
   gavl_video_format_copy(&port->fmt, fmt);
 
   if(!port->idx && (port->fmt.framerate_mode == GAVL_FRAMERATE_STILL))
@@ -1048,8 +671,8 @@ static void port_destroy(port_t * port)
   if(port->texture)
     gavl_video_frame_destroy(port->texture);
   
-  if(port->hwctx_dma_priv)
-    gavl_hw_ctx_destroy(port->hwctx_dma_priv);
+  if(port->hwctx_dma)
+    gavl_hw_ctx_destroy(port->hwctx_dma);
 
   glDeleteBuffers(1, &port->vbo);
   glDeleteVertexArrays(1, &port->vao);
@@ -1065,7 +688,6 @@ bg_glvideo_t * bg_glvideo_create(GLenum platform, void * native_display)
   
   g->zoom_factor = 1.0;
   g->squeeze_factor = 0.0;
-  g->hwctx_dma = gavl_hw_ctx_create_dma();
   g->platform = platform;
   
   init_gl(g);
@@ -1084,6 +706,7 @@ void bg_glvideo_set_window_size(bg_glvideo_t * g, int w, int h)
 
   g->flags |= FLAG_COORDS_CHANGED;
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Window size changed %d %d", w, h);
+  bg_glvideo_redraw(g);
   }
 
 void bg_glvideo_destroy(bg_glvideo_t * g)
@@ -1094,14 +717,10 @@ void bg_glvideo_destroy(bg_glvideo_t * g)
     gavl_hw_ctx_destroy(g->hwctx_gl);
   if(g->hwctx_gles)
     gavl_hw_ctx_destroy(g->hwctx_gles);
-  if(g->hwctx_dma)
-    gavl_hw_ctx_destroy(g->hwctx_dma);
 
-  if(g->image_formats)
-    free(g->image_formats);
-
-  if(g->dma_fourccs)
-    free(g->dma_fourccs);
+  gavl_array_free(&g->import_map_formats);
+  gavl_array_free(&g->transfer_formats);
+  gavl_array_free(&g->import_transfer_formats);
   
   free(g);
   }
@@ -1125,8 +744,74 @@ static const int default_attributes_gl[] =
     EGL_NONE
   };
 
+static void get_buffer_formats(bg_glvideo_t * g)
+  {
+  const gavl_array_t * arr;
+
+  const gavl_array_t * arr_fourcc;
+  const gavl_dictionary_t * dict_src;
+
+  
+  /* Gather supported pixelformats */
+  
+  arr = gavl_hw_ctx_get_import_formats(g->hwctx_gles);
+  if(arr &&
+     (arr->num_entries == 1) &&
+     (dict_src = gavl_value_get_dictionary(&arr->entries[0])) &&
+     (arr_fourcc = gavl_dictionary_get_array(dict_src, GAVL_HW_BUF_DMA_FOURCC)))
+    {
+    int fourcc = 0;
+    int i;
+    gavl_dictionary_t * dict_map = gavl_hw_buf_desc_append(&g->import_map_formats, GAVL_HW_DMABUFFER);
+    gavl_dictionary_t * dict_transfer = gavl_hw_buf_desc_append(&g->import_transfer_formats, GAVL_HW_DMABUFFER);
+    
+    for(i = 0; i < arr_fourcc->num_entries; i++)
+      {
+      if(gavl_value_get_int(&arr_fourcc->entries[i], &fourcc))
+        {
+        int flags;
+        int pfmt = 0;
+
+        if((pfmt = gavl_drm_pixelformat_from_fourcc(fourcc, &flags, NULL)) != GAVL_PIXELFORMAT_NONE)
+          {
+          if((flags & GAVL_DMABUF_FLAG_SHUFFLE) && !gavl_pixelformat_is_rgb(pfmt))
+            {
+            /* Transfer to DMA buffers */
+            gavl_hw_buf_desc_append_format(dict_transfer, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+            gavl_hw_buf_desc_append_format(dict_transfer, GAVL_HW_BUF_DMA_FOURCC,  fourcc);
+            
+            }
+          else
+            {
+            /* Direct rendering DMA buffers */
+            gavl_hw_buf_desc_append_format(dict_map, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+            gavl_hw_buf_desc_append_format(dict_map, GAVL_HW_BUF_DMA_FOURCC,  fourcc);
+            }
+          }
+        }
+      }
+    }
+
+  gavl_array_splice_array(&g->transfer_formats, -1, 0, gavl_hw_ctx_get_transfer_formats(g->hwctx_gles));
+  gavl_array_splice_array(&g->transfer_formats, -1, 0, gavl_hw_ctx_get_transfer_formats(g->hwctx_gl));
+
+#if 0
+  fprintf(stderr, "Got pixelformats (import)\n");
+  gavl_hw_buffer_formats_dump(&g->import_map_formats);
+
+  fprintf(stderr, "Got pixelformats (transfer to texture)\n");
+  gavl_hw_buffer_formats_dump(&g->transfer_formats);
+  
+  fprintf(stderr, "Got pixelformats (transfer to DMA buffer)\n");
+  gavl_hw_buffer_formats_dump(&g->import_transfer_formats);
+  
+#endif
+  }
+
+  
 static void init_gl(bg_glvideo_t * g)
   {
+  
   if(g->hwctx_gl)
     return;
   
@@ -1142,13 +827,7 @@ static void init_gl(bg_glvideo_t * g)
                            GAVL_HW_EGL_GL,
                            g->native_display);
 
-  /* Get supported video formats */
-  get_image_formats(g);
-
-  /* Set the supported fourccs */
-
-  g->dma_fourccs = gavl_hw_ctx_egl_get_dma_import_formats(g->hwctx_gles);
-  gavl_hw_ctx_dma_set_supported_formats(g->hwctx_dma, g->dma_fourccs);
+  get_buffer_formats(g);
   }
 
 gavl_video_sink_t *
@@ -1220,16 +899,14 @@ void bg_glvideo_close(bg_glvideo_t * g)
     gavl_hw_ctx_reset(g->hwctx_gl);
   if(g->hwctx_gles)
     gavl_hw_ctx_reset(g->hwctx_gles);
-  if(g->hwctx_dma)
-    gavl_hw_ctx_reset(g->hwctx_dma);
 
   g->flags &= ~FLAG_OPEN;
 
   }
 
-gavl_hw_context_t * bg_glvideo_get_hwctx(bg_glvideo_t * g)
+const gavl_array_t * bg_glvideo_get_import_formats(bg_glvideo_t * g)
   {
-  return g->hwctx_dma;
+  return &g->import_map_formats;
   }
 
 
@@ -1360,7 +1037,6 @@ int bg_glvideo_port_has_dma(port_t * port)
       return 0;
       break;
     case MODE_IMPORT: // Import directly
-    case MODE_IMPORT_DMABUF: // Import via DMA-Buffers
     case MODE_DMABUF_GETFRAME: // Let the client render into a dma buffer
     case MODE_DMABUF_TRANSFER: // Client supplies RAM buffers and we transfer
       return 1;
@@ -1374,9 +1050,6 @@ void bg_glvideo_resync(bg_glvideo_t * g)
   int i;
   if(g->hwctx)
     gavl_hw_ctx_resync(g->hwctx);
-
-  if(g->hwctx_dma)
-    gavl_hw_ctx_resync(g->hwctx_dma);
 
   for(i = 0; i < g->num_ports; i++)
     {

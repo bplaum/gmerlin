@@ -3458,6 +3458,8 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
     goto end;
     }
   end:
+
+  gavl_dictionary_free(&vars);
   
   if(location)
     free(location);
@@ -3870,14 +3872,30 @@ int bg_input_plugin_get_track(bg_plugin_handle_t * h)
   return gavl_get_current_track(mi);
   }
 
-void bg_input_plugin_set_video_hw_context(bg_plugin_handle_t * h,
-                                          gavl_hw_context_t * ctx)
+static void set_buffer_params(bg_plugin_handle_t * h, gavl_stream_type_t type,
+                              const gavl_array_t * arr)
   {
-  bg_input_plugin_t * p = (bg_input_plugin_t *)h->plugin;
+  gavl_msg_t * cmd; 
 
-  if(p->set_video_hw_context)
-    p->set_video_hw_context(h->priv, ctx);
+  cmd = bg_msg_sink_get(h->control.cmd_sink);
+  gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SET_BUFFER_FORMATS, GAVL_MSG_NS_SRC);
+  gavl_msg_set_arg_int(cmd, 0, type);
+  gavl_msg_set_arg_array(cmd, 1, arr);
+  bg_msg_sink_put(h->control.cmd_sink);
   }
+
+void bg_input_plugin_set_audio_buffer_formats(bg_plugin_handle_t * h, 
+                                              const gavl_array_t * arr)
+  {
+  set_buffer_params(h, GAVL_STREAM_AUDIO, arr);
+  }
+
+void bg_input_plugin_set_video_buffer_formats(bg_plugin_handle_t * h, 
+                                              const gavl_array_t * arr)
+  {
+  set_buffer_params(h, GAVL_STREAM_VIDEO, arr);
+  }
+
 
 void bg_input_plugin_seek(bg_plugin_handle_t * h, int64_t time, int scale)
   {
@@ -5402,6 +5420,6 @@ char * bg_plugin_registry_get_cache_file_name(void)
 
   if(!dir)
     return NULL;
-  
-  return gavl_sprintf("%s/plugins.xml", dir);
+
+  return gavl_strcat(dir, "/plugins.xml");
   }

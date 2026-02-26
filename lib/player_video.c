@@ -1,4 +1,4 @@
-/*****************************************************************
+ /*****************************************************************
  * gmerlin - a general purpose multimedia framework and applications
  *
  * Copyright (c) 2001 - 2024 Members of the Gmerlin project
@@ -101,6 +101,15 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Initializing video filters failed");
     return 0;
     }
+
+  /* Export video */
+  if(s->src == s->in_src_int)
+    {
+    const gavl_array_t * arr = bg_ov_get_import_formats(s->ov);
+    /* Set input formats */
+    if(arr && (s->src_export = gavl_video_source_set_exporter(s->src, arr)))
+      s->src = s->src_export;
+    }
   
   if(!bg_player_ov_init(&player->video_stream))
     return 0;
@@ -131,7 +140,8 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
 
 void bg_player_video_cleanup(bg_player_t * player)
   {
-  
+  if(player->video_stream.src_export)
+    gavl_video_source_destroy(player->video_stream.src_export);
   //  s->vi = NULL;
   }
 

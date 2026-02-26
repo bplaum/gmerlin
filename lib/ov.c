@@ -81,10 +81,10 @@ bg_plugin_handle_t * bg_ov_get_plugin(bg_ov_t * ov)
   return ov->h;
   }
 
-gavl_hw_context_t * bg_ov_get_hwctx(bg_ov_t * ov)
+const gavl_array_t * bg_ov_get_import_formats(bg_ov_t * ov)
   {
-  if(ov->plugin && ov->plugin->get_hw_context)
-    return ov->plugin->get_hw_context(ov->h->priv);
+  if(ov->plugin && ov->plugin->get_import_formats)
+    return ov->plugin->get_import_formats(ov->h->priv);
   else
     return NULL;
   }

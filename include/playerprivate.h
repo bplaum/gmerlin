@@ -202,6 +202,11 @@ typedef struct
   int do_skip;
   
   gavl_video_source_t * in_src_int;
+
+  /* Export video frames to something, the ov plugin can import
+     (most probably DMA buffer) */
+  
+  gavl_video_source_t * src_export;
   gavl_video_source_t * src;
   
 
@@ -216,7 +221,7 @@ typedef struct
 
   char * sink_uri;
 
-  gavl_hw_context_t * hwctx;
+  //  gavl_hw_context_t * hwctx;
   
   } bg_player_video_stream_t;
 

@@ -79,6 +79,7 @@ struct bg_visualizer_s
 
   gavl_video_sink_t * vsink;
   gavl_video_source_t * vsrc;
+  gavl_video_source_t * vsrc_export;
   
   bg_msg_sink_t * msink;
   bg_msg_hub_t * mhub;
@@ -188,6 +189,10 @@ void bg_visualizer_destroy(bg_visualizer_t * v)
 
   if(v->asrc)
     gavl_audio_source_destroy(v->asrc);
+
+  if(v->vsrc_export)
+    gavl_video_source_destroy(v->vsrc_export);
+  
   
   pthread_mutex_destroy(&v->audio_mutex);
 
@@ -248,6 +253,12 @@ static int load_plugin(bg_visualizer_t * v, int plugin)
     v->asink_int = NULL;
     v->plugin_ctrl = NULL;
     v->vsrc = NULL;
+
+    if(v->vsrc_export)
+      {
+      gavl_video_source_destroy(v->vsrc_export);
+      v->vsrc_export = NULL;
+      }
     }
 
   if(!(v->h = bg_plugin_load_with_options(dict)))
@@ -635,6 +646,8 @@ static gavl_source_status_t get_audio(void * priv, gavl_audio_frame_t ** frame)
 
 static void init_visualization(bg_visualizer_t * v)
   {
+  const gavl_array_t * arr;
+  
   gavl_audio_format_copy(&v->afmt_int, &v->afmt_ext);
   gavl_video_format_copy(&v->vfmt_vis, &v->vfmt_default);
 
@@ -648,12 +661,22 @@ static void init_visualization(bg_visualizer_t * v)
 
   v->vsrc = v->plugin->get_source(v->h->priv);
   
-  //  fprintf(stderr, "init_visualization 2\n");
-  //  gavl_audio_format_dump(&v->afmt_int);
-
+  arr = bg_ov_get_import_formats(v->ov);
   
-  v->asink_int = v->plugin->get_sink(v->h->priv);
+  if(arr && (v->vsrc_export = gavl_video_source_set_exporter(v->vsrc, arr)))
+    {
+    v->vsrc = v->vsrc_export;
+    gavl_video_format_copy(&v->vfmt_vis, gavl_video_source_get_src_format(v->vsrc));
+    }
 
+  gavl_video_source_support_hw(v->vsrc);
+  
+  //  fprintf(stderr, "init_visualization 2\n");
+  //  gavl_video_format_dump();
+    
+  gavl_video_format_copy(&v->vfmt_vis,
+                         gavl_video_source_get_src_format(v->vsrc));
+  
   gavl_video_format_copy(&v->vfmt_ov, &v->vfmt_vis);
     
   if(bg_ov_open(v->ov, NULL, &v->vfmt_ov,
@@ -669,7 +692,10 @@ static void init_visualization(bg_visualizer_t * v)
     v->vsink = bg_ov_get_sink(v->ov);
     bg_ov_show_window(v->ov, 1);
     }
-    
+
+  v->asink_int = v->plugin->get_sink(v->h->priv);
+  
+  
   if(v->osd)
     {
     gavl_video_sink_t * osd_sink; 

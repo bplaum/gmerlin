@@ -54,7 +54,6 @@ void bg_glvideo_close(bg_glvideo_t * g);
 
 void bg_glvideo_resync(bg_glvideo_t * g);
 
-
-gavl_hw_context_t * bg_glvideo_get_hwctx(bg_glvideo_t * g);
+const gavl_array_t * bg_glvideo_get_import_formats(bg_glvideo_t * g);
 
 #endif // BG_GLVIDEO_H_INCLUDED

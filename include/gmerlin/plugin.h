@@ -100,7 +100,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 44
+#define BG_PLUGIN_API_VERSION 45
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -282,12 +282,10 @@ typedef struct bg_input_plugin_s bg_input_plugin_t;
  *
  */
 
+
 struct bg_input_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
-
-  /* Set preferred hardware context for allocating frames */
-  void (*set_video_hw_context)(void * priv, gavl_hw_context_t * ctx);
   
   /** \brief Get supported mimetypes
    *  \param priv The handle returned by the create() method
@@ -472,7 +470,7 @@ struct bg_ov_plugin_s
    *   
    */
   
-  gavl_hw_context_t * (*get_hw_context)(void * priv);
+  const gavl_array_t * (*get_import_formats)(void * priv);
   
   /** \brief Set callbacks
    *  \param priv The handle returned by the create() method

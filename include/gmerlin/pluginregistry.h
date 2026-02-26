@@ -738,9 +738,10 @@ void bg_input_plugin_start(bg_plugin_handle_t * h);
 void bg_input_plugin_pause(bg_plugin_handle_t * h);
 void bg_input_plugin_resume(bg_plugin_handle_t * h);
 
-void bg_input_plugin_set_video_hw_context(bg_plugin_handle_t * h,
-                                          gavl_hw_context_t * ctx);
-
+void bg_input_plugin_set_audio_buffer_formats(bg_plugin_handle_t * h, 
+                                              const gavl_array_t * arr);
+void bg_input_plugin_set_video_buffer_formats(bg_plugin_handle_t * h, 
+                                              const gavl_array_t * arr);
 
 gavl_audio_source_t * bg_input_plugin_get_audio_source(bg_plugin_handle_t * h, int stream);
 gavl_video_source_t * bg_input_plugin_get_video_source(bg_plugin_handle_t * h, int stream);

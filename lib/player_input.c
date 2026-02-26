@@ -706,9 +706,10 @@ int bg_player_source_start(bg_player_t * player, bg_player_source_t * src)
   
   if((src->video_stream >= 0) && (src->video_stream < num_video_streams))
     {
-    gavl_hw_context_t * ctx = bg_ov_get_hwctx(player->video_stream.ov);
-    /* Set hardware context */
-    bg_input_plugin_set_video_hw_context(src->input_handle, ctx);
+    const gavl_array_t * arr = bg_ov_get_import_formats(player->video_stream.ov);
+    /* Set input formats */
+    if(arr)
+      bg_input_plugin_set_video_buffer_formats(src->input_handle, arr);
     }
   
   bg_input_plugin_start(src->input_handle);
