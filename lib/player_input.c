@@ -348,6 +348,10 @@ void bg_player_input_seek(bg_player_t * p,
 
   as->send_silence = 0;
   vs->skip = 0;
+
+  if(vs->src_export)
+    gavl_video_source_reset(vs->src_export);
+  
   }
 
 

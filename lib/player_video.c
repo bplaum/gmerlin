@@ -141,7 +141,10 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
 void bg_player_video_cleanup(bg_player_t * player)
   {
   if(player->video_stream.src_export)
+    {
     gavl_video_source_destroy(player->video_stream.src_export);
+    player->video_stream.src_export = NULL;
+    }
   //  s->vi = NULL;
   }
 

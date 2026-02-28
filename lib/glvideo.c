@@ -788,6 +788,12 @@ static void get_buffer_formats(bg_glvideo_t * g)
             gavl_hw_buf_desc_append_format(dict_map, GAVL_HW_BUF_DMA_FOURCC,  fourcc);
             }
           }
+        else
+          {
+          /* Direct rendering DMA buffers */
+          gavl_hw_buf_desc_append_format(dict_map, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+          gavl_hw_buf_desc_append_format(dict_map, GAVL_HW_BUF_DMA_FOURCC,  fourcc);
+          }
         }
       }
     }
