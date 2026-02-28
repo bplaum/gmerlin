@@ -468,9 +468,11 @@ static int load_ard_episode(struct json_object *episode, gavl_array_t * items, c
                                     gavl_sprintf("%s/%s/%s", BG_MDB_ID_PODCASTS, md5,
                                                  var));
   
-  if((var = bg_json_dict_get_string(episode, "summary")))
+  if((var = bg_json_dict_get_string(episode, "description")))
     gavl_dictionary_set_string(it_m, GAVL_META_DESCRIPTION, var);
-
+  else if((var = bg_json_dict_get_string(episode, "summary")))
+    gavl_dictionary_set_string(it_m, GAVL_META_DESCRIPTION, var);
+  
   if((var = bg_json_dict_get_string(episode, "publishDate")))
     {
     gavl_time_t t;
@@ -610,7 +612,8 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
      !json_object_object_get_ex(episodes, "nodes", &episodes) ||
      ((num = json_object_array_length(episodes)) <= 0))
     goto fail;
-  
+
+#if 0 /* Load all episodes through the API */
   for(i = 0; i < num; i++)
     {
     
@@ -621,7 +624,8 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
       goto fail;
     
     }
-
+#endif
+  
   total = bg_json_dict_get_int(result, "numberOfElements");
   
   if(total > 0)
@@ -632,7 +636,7 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
     char * vars;
     
     const char * query = "query ProgramSetEpisodesQuery($id:ID!,$offset:Int!,$count:Int!)"
-      "{result:programSet(id:$id){items(offset:$offset first:$count filter:{isPublished:{equalTo:true},itemType:{notEqualTo:EVENT_LIVESTREAM}}){pageInfo{hasNextPage endCursor}nodes{id coreType coreId title isPublished tracking publishDate summary duration path image{url url1X1 description attribution}programSet{id coreId title path publicationService{title genre path organizationName}}audios{url mimeType downloadUrl allowDownload}}}}}";
+      "{result:programSet(id:$id){items(offset:$offset first:$count filter:{isPublished:{equalTo:true},itemType:{notEqualTo:EVENT_LIVESTREAM}}){pageInfo{hasNextPage endCursor}nodes{id coreType coreId title isPublished tracking publishDate description duration path image{url url1X1 description attribution}programSet{id coreId title path publicationService{title genre path organizationName}}audios{url mimeType downloadUrl allowDownload}}}}}";
 
     if(obj)
       {
@@ -657,7 +661,7 @@ static int load_items_ard(bg_mdb_backend_t * b, const char * uri, char * md5,
       json_uri = gavl_sprintf("https://api.ardaudiothek.de/graphql?query=%s&variables=%s",
                               query_enc, vars_enc);
 
-      //      fprintf(stderr, "JSON URI: %s\n", json_uri);
+      // fprintf(stderr, "JSON URI: %s\n", json_uri);
 
       if(!bg_http_get(json_uri, &buf, NULL))
         goto fail;
