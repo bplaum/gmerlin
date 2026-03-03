@@ -139,8 +139,11 @@ static int resource_supported(gavl_dictionary_t * dict)
     plugin_type = BG_PLUGIN_OUTPUT_AUDIO;
   else if(!strcmp(klass, GAVL_META_CLASS_SINK_VIDEO))
     plugin_type = BG_PLUGIN_OUTPUT_VIDEO;
-  else if(gavl_string_starts_with(klass, "item.audio.recorder") ||
-          gavl_string_starts_with(klass, "item.video.recorder") ||
+  else if(gavl_string_starts_with(klass, GAVL_META_CLASS_AUDIO_RECORDER) ||
+          gavl_string_starts_with(klass, GAVL_META_CLASS_VIDEO_RECORDER) ||
+          gavl_string_starts_with(klass, GAVL_META_CLASS_AUDIO_BROADCAST) ||
+          gavl_string_starts_with(klass, GAVL_META_CLASS_VIDEO_BROADCAST) ||
+          gavl_string_starts_with(klass, GAVL_META_CLASS_BROADCAST) ||
           gavl_string_starts_with(klass, "container.root.removable.cd") ||
           gavl_string_starts_with(klass, "container.root.removable.dvd"))
     plugin_type = BG_PLUGIN_INPUT;

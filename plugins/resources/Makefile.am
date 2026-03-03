@@ -17,6 +17,7 @@ endif
 
 plugin_LTLIBRARIES = \
 res_ssdp.la \
+res_sap.la \
 $(dbus_modules)
 
 res_udisks2_la_CFLAGS = @DBUS_CFLAGS@ $(AM_CFLAGS)
@@ -29,4 +30,7 @@ res_avahi_la_LIBS = @DBUS_LIBS@
 
 res_ssdp_la_CFLAGS = $(AM_CFLAGS)
 res_ssdp_la_SOURCES = res_ssdp.c
+
+res_sap_la_CFLAGS = $(AM_CFLAGS)
+res_sap_la_SOURCES = res_sap.c
 

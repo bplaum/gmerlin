@@ -167,9 +167,6 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
         }
       break;
     }
-  
-  
-
   return 1;
   }
 
@@ -1068,8 +1065,6 @@ static int update_ssdp(void * priv)
   
   return ret;
   }
-
-
 
 static bg_controllable_t * get_controllable_ssdp(void * priv)
   {
