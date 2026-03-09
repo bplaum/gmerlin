@@ -96,6 +96,9 @@
 #define BROWSE_BY_LANGUAGE 4
 #define BROWSE_BY_CATEGORY 5
 
+#define LOCAL_ID BG_MDB_ID_STREAMS"/$local"
+
+#define NUM_LOCAL 1
 
 /*
   tables:
@@ -148,8 +151,10 @@ typedef struct
   int64_t next_id;
   
   gavl_dictionary_t * root_container;
-
+  
   gavl_array_t sources;
+  gavl_array_t local_streams;
+  
   int new_file;
   
   } streams_t;
@@ -885,6 +890,26 @@ static void create_tables(bg_mdb_backend_t * be)
   
   }
 
+static void create_local(bg_mdb_backend_t * be)
+  {
+  gavl_value_t val;
+  gavl_dictionary_t * dict;
+  gavl_dictionary_t * m;
+  
+  streams_t * p = be->priv;
+
+  gavl_value_init(&val);
+  dict = gavl_value_set_dictionary(&val);
+
+  m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
+
+  gavl_dictionary_set_string(m, GAVL_META_LABEL, TR("Local Network"));
+  
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_CONTAINER);
+  gavl_dictionary_set_string(m, GAVL_META_ID, LOCAL_ID);
+  gavl_array_splice_val_nocopy(&p->sources, -1, 0, &val);
+  }
+
 static int get_source_callback(void * data, int argc, char **argv, char **azColName)
   {
   int i;
@@ -899,7 +924,6 @@ static int get_source_callback(void * data, int argc, char **argv, char **azColN
   int64_t id = 0;
   bg_mdb_backend_t * be = data;
   streams_t * p = be->priv;
-  
   
   gavl_value_init(&val);
   dict = gavl_value_set_dictionary(&val);
@@ -1060,7 +1084,6 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   int browse_mode = 0;
   gavl_array_t siblings;
   bg_sqlite_id_tab_t sibling_ids;
-  //  const char * group = NULL;
   gavl_dictionary_t * m = NULL;
   int i;
   int num_items = 0;
@@ -1079,6 +1102,24 @@ static int browse_object(bg_mdb_backend_t * be, const char * id, gavl_dictionary
   
   if(!path[path_idx])
     goto end;
+
+  if(!strcmp(id, LOCAL_ID))
+    {
+    const gavl_dictionary_t * src = gavl_value_get_dictionary(&p->sources.entries[0]);
+    
+    gavl_dictionary_copy(ret, src);
+    gavl_track_set_num_children(ret, 0, p->local_streams.num_entries);
+    
+    result = 1;
+    goto end;
+    }
+  else if(gavl_string_starts_with(id, LOCAL_ID))
+    {
+    const gavl_dictionary_t * src = gavl_get_track_by_id_arr(&p->local_streams, id);
+    gavl_dictionary_copy(ret, src);
+    result = 1;
+    goto end;
+    }
   
   source_id = strtoll(path[path_idx], NULL, 10);
 
@@ -1897,7 +1938,7 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
   int browse_mode = 0;
   const char * group = NULL;
   const char * attr_table = NULL;
-  char ** path;
+  char ** path = NULL;
   int path_idx;
 
   int num_items = 0;
@@ -1908,14 +1949,26 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
   const gavl_array_t * browse_modes;
   
   priv = be->priv;
-
+  gavl_array_init(&arr);
   bg_sqlite_id_tab_init(&tab);
+
+  if(gavl_string_starts_with(ctx_id, LOCAL_ID))
+    {
+    if(!bg_mdb_adjust_num(start, &num, priv->local_streams.num_entries))
+      goto fail;
+
+    for(i = 0; i < num; i++)
+      {
+      gavl_array_splice_val(&arr, -1, 0, &priv->local_streams.entries[i+start]);
+      }
+    total = priv->local_streams.num_entries;
+    goto end;
+    }
   
   // fprintf(stderr, "Streams: browse_children %s\n", ctx_id);
   
   path = gavl_strbreak(ctx_id+1, '/');
   
-  gavl_array_init(&arr);
 
   path_idx = 1;
   if(!path[path_idx]) // /streams
@@ -2235,8 +2288,10 @@ static void browse_children(bg_mdb_backend_t * be, gavl_msg_t * msg, const char 
   fail:
   gavl_array_free(&arr);
   bg_sqlite_id_tab_free(&tab);
-  gavl_strbreak_free(path);
-    
+
+  if(path)
+    gavl_strbreak_free(path);
+  
   return;
   
   }
@@ -2344,6 +2399,126 @@ static int add_source_str(bg_mdb_backend_t * be, const char * label, const char 
   return ret;
   }
 
+static int get_local_index(streams_t * s, const gavl_dictionary_t * resource)
+  {
+  int i;
+  const char * resource_label;
+  const char * arr_label;
+  const gavl_dictionary_t * dict;
+  
+  if(!s->local_streams.num_entries)
+    return 0;
+
+  resource_label = gavl_dictionary_get_string(resource, GAVL_META_LABEL);
+  
+  for(i = 0; i < s->local_streams.num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&s->local_streams.entries[i])) &&
+       (dict = gavl_track_get_metadata(dict)) &&
+       (arr_label = gavl_dictionary_get_string(dict, GAVL_META_LABEL)) &&
+       strcoll(resource_label, arr_label) < 0)
+      {
+      return i;
+      }
+    }
+  return s->local_streams.num_entries;
+  }
+
+static void add_local_stream(bg_mdb_backend_t * be, const gavl_dictionary_t * resource)
+  {
+  int idx;
+  gavl_value_t add_val;
+  gavl_dictionary_t * add_track;
+  gavl_dictionary_t * add_metadata;
+  gavl_dictionary_t * parent;
+  const char * var;
+  const char * id;
+
+  gavl_msg_t * evt;
+  streams_t * s = be->priv;
+  
+  if(!(id = gavl_dictionary_get_string(resource, GAVL_META_ID)))
+    return;
+  
+  idx = get_local_index(s, resource);
+
+  gavl_value_init(&add_val);
+  add_track = gavl_value_set_dictionary(&add_val);
+
+  add_metadata = gavl_dictionary_get_dictionary_create(add_track, GAVL_META_METADATA);
+
+  gavl_dictionary_set(add_metadata, GAVL_META_STATION,
+                      gavl_dictionary_get(resource, GAVL_META_LABEL));
+
+  gavl_dictionary_copy_value(add_metadata,
+                             resource, GAVL_META_CLASS);
+
+  var = gavl_dictionary_get_string(resource, GAVL_META_URI);
+  if(gavl_string_starts_with(var, "sdp://"))
+    gavl_metadata_add_src(add_metadata, GAVL_META_SRC, "application/sdp", var);
+  else
+    gavl_metadata_add_src(add_metadata, GAVL_META_SRC, NULL, var);
+
+  gavl_dictionary_set_string_nocopy(add_metadata, GAVL_META_ID,
+                                    gavl_sprintf(LOCAL_ID"/%s", id));
+  
+  //  fprintf(stderr, "Got local stream:\n");
+  //  gavl_dictionary_dump(add_track, 2);
+
+  evt = bg_msg_sink_get(be->ctrl.evt_sink);
+  bg_msg_set_splice_children(evt, BG_MSG_DB_SPLICE_CHILDREN,
+                             LOCAL_ID, 1, idx, 0, &add_val);
+  bg_msg_sink_put(be->ctrl.evt_sink);
+  
+  gavl_array_splice_val_nocopy(&s->local_streams, idx, 0, &add_val);
+  
+  /* Update parent */
+  parent = gavl_value_get_dictionary_nc(&s->sources.entries[0]);
+
+  gavl_track_set_num_children(parent, 0, s->local_streams.num_entries);
+  
+  evt = bg_msg_sink_get(be->ctrl.evt_sink);
+  gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+  gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, LOCAL_ID);
+  gavl_msg_set_arg_dictionary(evt, 0, parent);
+  bg_msg_sink_put(be->ctrl.evt_sink);
+  }
+
+static void delete_local_stream(bg_mdb_backend_t * be, const char * resource_id)
+  {
+  gavl_msg_t * evt;
+  char * id;
+  streams_t * s = be->priv;
+  int idx;
+  gavl_dictionary_t * parent;
+  
+  id = gavl_sprintf(LOCAL_ID"/%s", resource_id);
+
+  idx = gavl_get_track_idx_by_id_arr(&s->local_streams, id);
+  if(idx >= 0)
+    {
+
+    evt = bg_msg_sink_get(be->ctrl.evt_sink);
+    bg_msg_set_splice_children(evt, BG_MSG_DB_SPLICE_CHILDREN,
+                               LOCAL_ID, 1, idx, 1, NULL);
+    bg_msg_sink_put(be->ctrl.evt_sink);
+  
+    gavl_array_splice_val_nocopy(&s->local_streams, idx, 1, NULL);
+    
+    /* Update parent */
+    parent = gavl_value_get_dictionary_nc(&s->sources.entries[0]);
+
+    gavl_track_set_num_children(parent, 0, s->local_streams.num_entries);
+  
+    evt = bg_msg_sink_get(be->ctrl.evt_sink);
+    gavl_msg_set_id_ns(evt, BG_MSG_DB_OBJECT_CHANGED, BG_MSG_NS_DB);
+    gavl_dictionary_set_string(&evt->header, GAVL_MSG_CONTEXT_ID, LOCAL_ID);
+    gavl_msg_set_arg_dictionary(evt, 0, parent);
+    bg_msg_sink_put(be->ctrl.evt_sink);
+    }
+  
+  free(id);
+  }
 
 static int handle_msg_streams(void * priv, gavl_msg_t * msg)
   {
@@ -2487,6 +2662,49 @@ static int handle_msg_streams(void * priv, gavl_msg_t * msg)
         }
       break;
       }
+    case GAVL_MSG_NS_GENERIC:
+      switch(msg->ID)
+        {
+        case GAVL_CMD_QUIT:
+          return 0;
+          break;
+        case GAVL_MSG_RESOURCE_ADDED:
+          {
+          const char * klass;
+          gavl_dictionary_t stream;
+          
+          gavl_dictionary_init(&stream);
+          
+          if(!gavl_msg_get_arg_dictionary(msg, 0, &stream))
+            return 1;
+
+          //          fprintf(stderr, "Resources added\n");
+          
+          if(!(klass = gavl_dictionary_get_string(&stream, GAVL_META_CLASS)))
+            {
+            return 1;
+            }
+          if(strcmp(klass, GAVL_META_CLASS_BROADCAST) &&
+             strcmp(klass, GAVL_META_CLASS_AUDIO_BROADCAST) &&
+             strcmp(klass, GAVL_META_CLASS_VIDEO_BROADCAST))
+            return 1;
+          
+          //          fprintf(stderr, "Resources added\n");
+          //          gavl_dictionary_dump(&stream, 2);
+
+          add_local_stream(be, &stream);
+                    
+          gavl_dictionary_free(&stream);
+          }
+          break;
+        case GAVL_MSG_RESOURCE_DELETED:
+          {
+          //          fprintf(stderr, "Resources deleted\n");
+          delete_local_stream(be, gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID));          
+          }
+          break;
+        }
+      break;
     }
   return 1;
   }
@@ -2502,9 +2720,11 @@ static void init_sources(bg_mdb_backend_t * b)
   
   /* Initialize sources */
   gavl_array_reset(&priv->sources);
-  
+
+  create_local(b);
+    
   if((result = bg_sqlite_get_int(priv->db, "SELECT count("META_DB_ID") from sources;" )) > 0)
-    gavl_track_set_num_children(priv->root_container, result, 0);
+    gavl_track_set_num_children(priv->root_container, result+NUM_LOCAL, 0);
   else
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no sources");
@@ -2519,7 +2739,8 @@ static void init_sources(bg_mdb_backend_t * b)
 
   /* next/previous, idx, total */
 
-  for(i = 0; i < priv->sources.num_entries; i++)
+  /* First is local */
+  for(i = NUM_LOCAL; i < priv->sources.num_entries; i++)
     {
     int num_stations = 0;
     int num_tags = 0, num_languages = 0, num_categories = 0, num_countries = 0;
@@ -2709,7 +2930,7 @@ void bg_mdb_create_streams(bg_mdb_backend_t * b)
   priv = calloc(1, sizeof(*priv));
   b->priv = priv;
 
-  b->flags |= BE_FLAG_RESCAN;
+  b->flags |= (BE_FLAG_RESCAN | BE_FLAG_RESOURCES);
   
   filename = gavl_sprintf("%s/streams.sqlite", b->db->path);
 

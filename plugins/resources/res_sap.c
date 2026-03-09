@@ -32,6 +32,7 @@
 
 #include <gavl/gavlsocket.h>
 #include <gavl/utils.h>
+#include <gavl/sap.h>
 
 #define UDP_BUFFER_SIZE 8192
 
@@ -42,7 +43,9 @@ typedef struct
   bg_controllable_t ctrl;
   
   int mcast_fd;
-  uint8_t buf[UDP_BUFFER_SIZE];
+
+  gavl_buffer_t buf;
+  
   }  sap_t;
 
 static int handle_msg(void * priv, gavl_msg_t * msg)
@@ -57,14 +60,18 @@ static void * create_sap()
 
   gavl_socket_address_t * addr = gavl_socket_address_create();
 
-  gavl_socket_address_set(addr, "224.2.127.254", 9875, SOCK_DGRAM);
+  gavl_socket_address_set(addr, "239.255.255.255", 9875, SOCK_DGRAM);
+
+  gavl_buffer_alloc(&ret->buf, UDP_BUFFER_SIZE);
   
   ret->mcast_fd =
     gavl_udp_socket_create_multicast(addr, NULL);
 
+#if 0
+  gavl_socket_address_set(addr, "224.2.127.254", 9875, SOCK_DGRAM);
   /* Join second group */
-  gavl_socket_address_set(addr, "239.255.255.255", 9875, SOCK_DGRAM);
   gavl_udp_socket_join_multicast(ret->mcast_fd, addr, NULL);
+#endif
   
   bg_controllable_init(&ret->ctrl,
                        bg_msg_sink_create(handle_msg, ret, 1),
@@ -79,7 +86,9 @@ static bg_controllable_t * get_controllable_sap(void * priv)
   return &s->ctrl;
   }
 
-static int parse_sap_header(const uint8_t * data, int len, int *del, char ** sdp, char ** id)
+#if 0
+static int parse_sap_header(gavl_buffer_t * buf, int *del,
+                            char ** sdp, char ** id)
   {
   int flags;
   int auth_len;
@@ -87,6 +96,7 @@ static int parse_sap_header(const uint8_t * data, int len, int *del, char ** sdp
   const char * str;
   const char * end;
   const char * pos;
+  const uint8_t * data = buf->buf;
   
   flags = data[0];
 
@@ -121,9 +131,9 @@ static int parse_sap_header(const uint8_t * data, int len, int *del, char ** sdp
   auth_len = data[1] * 4;
   
   str = (const char*)(data + (4 + addr_len + auth_len));
-  end = (const char*)(data + len);
+  end = (const char*)(data + buf->len);
 
-  fprintf(stderr, "Got str: %s\n", str);
+  //  fprintf(stderr, "Got str: %s\n", str);
 
   if((pos = memchr(str, '\0', end - str)) &&
      (pos != end) &&
@@ -138,41 +148,45 @@ static int parse_sap_header(const uint8_t * data, int len, int *del, char ** sdp
     }
   return 0;
   }
+#endif
 
 static int update_sap(void * priv)
   {
-  int len;
   int ret = 0;
   sap_t * s = priv;
   int del;
 
-  char * id = NULL;
-  char * sdp = NULL;
+  const char * id;
+  const char * sdp;
   gavl_msg_t * msg;
   gavl_value_t val_new;
   gavl_dictionary_t * dict;
   const char * pos;
   const char * end;
+  gavl_dictionary_t sap_packet;
   
   gavl_value_init(&val_new);
+  gavl_dictionary_init(&sap_packet);
   
   while(gavl_fd_can_read(s->mcast_fd, 0))
     {
-    len = gavl_udp_socket_receive(s->mcast_fd, s->buf, UDP_BUFFER_SIZE-1, NULL);
-    if(len <= 0)
+    s->buf.len = gavl_udp_socket_receive(s->mcast_fd, s->buf.buf, UDP_BUFFER_SIZE-1, NULL);
+    if(s->buf.len <= 0)
       continue;
-    s->buf[len] = '\0';
+    s->buf.buf[s->buf.len] = '\0';
     ret++;
-
+    
     //    fprintf(stderr, "Got SAP:\n");
     //    gavl_hexdump(s->buf, len, 16);
 
     /* Parse SAP packet */
-    if(parse_sap_header(s->buf, len, &del, &sdp, &id))
+    if(gavl_sap_decode(&s->buf, &del, &sap_packet) &&
+       (id = gavl_dictionary_get_string(&sap_packet, GAVL_META_ID)) &&
+       (sdp = gavl_dictionary_get_string(&sap_packet, GAVL_SAP_SDP)))
       {
       dict = bg_resource_get_by_id(0, id);
       
-      fprintf(stderr, "Got id: %s, sdp:\n%s\n", id, sdp);
+      //      fprintf(stderr, "Got id: %s, sdp:\n%s\n", id, sdp);
 
       if(del)
         {
@@ -193,21 +207,21 @@ static int update_sap(void * priv)
             gavl_dictionary_set_string(dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_BROADCAST);
           else
             gavl_dictionary_set_string(dict, GAVL_META_CLASS, GAVL_META_CLASS_BROADCAST);
-
+          
           if((pos = strstr(sdp, "s=")))
             {
             pos += 2;
             if((end = strchr(pos, '\r')) || (end = strchr(pos, '\n')))
               gavl_dictionary_set_string(dict, GAVL_META_LABEL, gavl_strndup(pos, end));
             }
-
+          
           gavl_dictionary_set_long(dict, BG_RESOURCE_EXPIRE_TIME,
                                    gavl_time_get_monotonic() + MAX_AGE);
-
+          
           gavl_dictionary_set_string_nocopy(dict, GAVL_META_URI, gavl_sdp_to_uri(sdp));
 
-          fprintf(stderr, "Got source:\n");
-          gavl_dictionary_dump(dict, 2);
+          //          fprintf(stderr, "Got source:\n");
+          //          gavl_dictionary_dump(dict, 2);
           
           msg = bg_msg_sink_get(s->ctrl.evt_sink);
           gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
@@ -220,12 +234,9 @@ static int update_sap(void * priv)
           gavl_dictionary_set_long(dict, BG_RESOURCE_EXPIRE_TIME,
                                    gavl_time_get_monotonic() + MAX_AGE);
           }
-        
         }
-      
-      free(id);
-      free(sdp);
       }
+    gavl_dictionary_reset(&sap_packet);
     }
   
   return ret;
