@@ -41,7 +41,7 @@
 
 #define LOG_DOMAIN "playertracks"
 
-static int * create_shuffle_list(int num_entries)
+int * bg_create_shuffle_list(int num_entries)
   {
   int i;
   int idx;
@@ -68,8 +68,6 @@ static int * create_shuffle_list(int num_entries)
       }
 
     }
-  
-  
   return ret;
   }
 
@@ -145,7 +143,7 @@ static int next_track(bg_player_tracklist_t * tl, int advance, int wrap)
     case BG_PLAYER_MODE_SHUFFLE: //!< Shuffle (implies repeat)
 
       if(!tl->shuffle_list)
-        tl->shuffle_list = create_shuffle_list(list->num_entries);
+        tl->shuffle_list = bg_create_shuffle_list(list->num_entries);
       
       if(idx < 0)
         {
@@ -216,7 +214,7 @@ static int prev_track(int num_tracks, int mode, int * idx_p, int ** shuffle_list
         idx = num_tracks - 1;
 
       if(!(*shuffle_list))
-        *shuffle_list = create_shuffle_list(num_tracks);
+        *shuffle_list = bg_create_shuffle_list(num_tracks);
       
       real_idx = (*shuffle_list)[idx];
       
@@ -637,7 +635,7 @@ void bg_player_tracklist_set_current_by_idx(bg_player_tracklist_t * l, int idx)
     {
     int i;
     if(!l->shuffle_list)
-      l->shuffle_list = create_shuffle_list(list->num_entries);
+      l->shuffle_list = bg_create_shuffle_list(list->num_entries);
             
     for(i = 0; i < list->num_entries; i++)
       {
@@ -962,7 +960,7 @@ bg_player_tracklist_get_current_track(bg_player_tracklist_t * l)
     if(l->mode == BG_PLAYER_MODE_SHUFFLE)
       {
       if(!l->shuffle_list)
-        l->shuffle_list = create_shuffle_list(list->num_entries);
+        l->shuffle_list = bg_create_shuffle_list(list->num_entries);
 
       /* Start with random track */
       l->idx_real = l->shuffle_list[l->idx];

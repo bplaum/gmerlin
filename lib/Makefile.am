@@ -182,6 +182,7 @@ player_time.c \
 player_tracklist.c \
 player_video.c \
 playercmd.c \
+plstream.c \
 pluginfuncs.c \
 pluginregistry.c \
 pluginreg_xml.c \

@@ -1017,5 +1017,13 @@ const gavl_dictionary_t * bg_plugin_config_get_section(bg_plugin_type_t type);
 
 char * bg_plugin_registry_get_cache_file_name();
 
+/* plstream */
+
+#define bg_plstream_name "i_plstream"
+const bg_plugin_common_t* bg_plstream_get(void);
+bg_plugin_info_t * bg_plstream_get_info(void);
+void * bg_plstream_create(void);
+
+
 #endif // BG_PLUGINREGISTRY_H_INCLUDED
 

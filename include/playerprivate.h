@@ -809,5 +809,8 @@ void bg_player_speed_up(bg_player_t * p);
 #define BG_PLAYER_CMD_EOF          1
 #define BG_PLAYER_CMD_SPEED_UP     2
 
+int * bg_create_shuffle_list(int num_entries);
+
+
 #endif // PLAYERPRIVATE_H_INCLUDED
 

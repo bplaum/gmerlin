@@ -130,6 +130,12 @@ meta_plugins[] =
       bg_rb_plugin_get,
       bg_rb_plugin_create,
     },
+    {
+      "i_plstream",
+      bg_plstream_get_info,
+      bg_plstream_get,
+      bg_plstream_create,
+    },
     { /* End */ }
   };
 
@@ -1554,12 +1560,6 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   tmp_info = bg_multi_input_get_info();
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
-
-#if 0  
-  tmp_info = bg_plug_input_get_info();
-  if(tmp_info)
-    ret->entries = append_to_list(ret->entries, tmp_info);
-#endif
   
   if(ret->entries)
     {
