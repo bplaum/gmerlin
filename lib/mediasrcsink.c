@@ -456,10 +456,10 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
           }
         break;
       case GAVL_STREAM_VIDEO:
-        if((src->streams[i]->action == BG_STREAM_ACTION_DECODE) &&
-           (!src->streams[i]->vsrc && src->streams[i]->psrc))
+        if((s->action == BG_STREAM_ACTION_DECODE) &&
+           (!s->vsrc && s->psrc))
           {
-          if((src->streams[i]->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+          if((s->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
             {
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->vsrc = plugin->open_decode_video(s->codec_handle->priv, s->psrc, s->s);
@@ -467,10 +467,10 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
           }
         break;
       case GAVL_STREAM_OVERLAY:
-        if((src->streams[i]->action == BG_STREAM_ACTION_DECODE) &&
-           (!src->streams[i]->vsrc && src->streams[i]->psrc))
+        if((s->action == BG_STREAM_ACTION_DECODE) &&
+           (!s->vsrc && s->psrc))
           {
-          if((src->streams[i]->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
+          if((s->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
             {
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->vsrc = plugin->open_decode_overlay(s->codec_handle->priv, s->psrc, s->s);
