@@ -364,6 +364,7 @@ static void close_plstream(void * priv)
     }
 
   gavl_dictionary_reset(&p->mi);
+  gavl_array_reset(&p->tracks);
   
   bg_media_source_cleanup(&p->src);
   bg_media_source_init(&p->src);
@@ -431,16 +432,6 @@ static const bg_input_plugin_t plstream_plugin =
     .get_src           = get_src_plstream,
     
     /* Read one video frame (returns FALSE on EOF) */
-    
-    /*
-     *  Do percentage seeking (can be NULL)
-     *  Media streams are supposed to be seekable, if this
-     *  function is non-NULL AND the duration field of the track info
-     *  is > 0
-     */
-    //    .seek = seek_edl,
-    /* Stop playback, close all decoders */
-    //    .stop = stop_edl,
     .close = close_plstream,
   };
 
