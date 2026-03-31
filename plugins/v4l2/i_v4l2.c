@@ -54,6 +54,7 @@ typedef struct
 
   bg_media_source_t src;
   bg_controllable_t ctrl;
+    
   } v4l2_t;
 
 static void close_v4l(void * priv)
@@ -84,6 +85,20 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           gavl_v4l2_device_start_capture(v4l->dev);
           /* Load decoder */
           bg_media_source_load_decoders(&v4l->src);
+          }
+          break;
+        case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
+          {
+          gavl_array_t arr;
+          int type = gavl_msg_get_arg_int(msg, 0);
+          
+          if(type == GAVL_STREAM_VIDEO)
+            {
+            gavl_array_init(&arr);
+            gavl_msg_get_arg_array(msg, 1, &arr);
+            gavl_v4l2_device_set_buffer_formats(v4l->dev, &arr);
+            gavl_array_free(&arr);
+            }
           }
           break;
         case GAVL_CMD_SRC_PAUSE:

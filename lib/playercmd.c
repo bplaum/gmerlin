@@ -319,8 +319,6 @@ void bg_player_set_current_track(bg_player_t * player, const gavl_dictionary_t *
   const gavl_dictionary_t * m;
   const gavl_value_t * vp;
   
-  //  fprintf(stderr, "bg_player_set_current_track\n");
-  
   gavl_value_init(&val);
   d = gavl_value_set_dictionary(&val);
   memcpy(d, dict, sizeof(*d));

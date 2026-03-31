@@ -285,7 +285,7 @@ void bg_glvideo_init_colormatrix_dmabuf(port_t * port, const gavl_video_frame_t 
 
   /* Grey and grey + alpha need special handling because
      we (ab)use the "R" and "RG" formats for this */
-  switch(f->fourcc)
+  switch(f->frame_info.fourcc)
     {
     case DRM_FORMAT_R8:     // GAVL_GRAY_8
     case DRM_FORMAT_R16:    // GAVL_GRAY_16
@@ -325,7 +325,7 @@ void bg_glvideo_init_colormatrix_dmabuf(port_t * port, const gavl_video_frame_t 
     {
     int flags;
     int drm_indices[4];
-    if((gavl_drm_pixelformat_from_fourcc(f->fourcc, &flags, drm_indices) != GAVL_PIXELFORMAT_NONE) &&
+    if((gavl_drm_pixelformat_from_fourcc(f->frame_info.fourcc, &flags, drm_indices) != GAVL_PIXELFORMAT_NONE) &&
        (flags & GAVL_DMABUF_FLAG_SHUFFLE))
       {
       int i;

@@ -31,7 +31,7 @@ typedef struct bg_frontend_s bg_frontend_t;
 void bg_frontend_destroy(bg_frontend_t *);
 int bg_frontend_ping(bg_frontend_t *);
 
-int bg_frontend_set_option(gavl_array_t * frontends, const char * opt);
+int bg_frontend_set_option(gavl_array_t * frontends, const char * opt, int plugin_type);
 
 bg_frontend_t ** bg_frontends_create(bg_controllable_t * ctrl,
                                      int type_mask, gavl_array_t * frontends, int * num);

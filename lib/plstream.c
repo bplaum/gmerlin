@@ -27,7 +27,9 @@
 #include <gavl/metatags.h>
 #include <gavl/trackinfo.h>
 #include <gavl/utils.h>
-
+#include <gavl/hw.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "plstream"
 #include <gmerlin/translation.h>
 
 
@@ -63,6 +65,15 @@ typedef struct
   int flags;
 
   int64_t pts;
+
+  gavl_array_t buffer_formats;
+
+  /* Direct rendering */
+  gavl_hw_context_t * hwctx;
+  gavl_audio_frame_t * in_frame;
+  int in_pos;
+  
+  gavl_audio_frame_t * out_frame;
   
   } plstream_t;
 
@@ -74,7 +85,8 @@ static int load_file(plstream_t * p)
   gavl_dictionary_t track;
   int num_variants = 0;
   int first_idx = p->idx;
-
+  const char * uri;
+  
   if(p->h)
     {
     bg_plugin_unref(p->h);
@@ -85,7 +97,11 @@ static int load_file(plstream_t * p)
 
   while(1)
     {
-    gavl_track_from_location(&track, gavl_string_array_get(&p->tracks, p->idx));
+    uri = gavl_string_array_get(&p->tracks, p->idx);
+
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s", uri);
+    
+    gavl_track_from_location(&track, uri);
     
     if((p->h = bg_load_track(&track, 0, &num_variants)) &&
        (mi = bg_input_plugin_get_media_info(p->h)) &&
@@ -104,9 +120,15 @@ static int load_file(plstream_t * p)
       p->idx = 0;
 
     if(p->idx == first_idx)
+      {
+      gavl_dictionary_free(&track);
       return 0;
-    
+      }
+    gavl_dictionary_reset(&track);
     }
+
+  gavl_dictionary_free(&track);
+  
   
   if(!bg_input_plugin_set_track(p->h, 0))
     return 0;
@@ -221,6 +243,9 @@ static int open_plstream(void * priv, const char * file)
     p->fmt->sample_format = gavl_short_string_to_sample_format(val_s);
     
   s = gavl_track_append_msg_stream(track, GAVL_META_STREAM_ID_MSG_PROGRAM);
+
+  if(mi)
+    gavl_dictionary_destroy(mi);
   
   return 1;
   }
@@ -237,6 +262,7 @@ static void flush_metadata(plstream_t * p)
     {
     gavl_value_t val;
     gavl_dictionary_t * dst;
+    gavl_value_init(&val);
     
     st = bg_media_source_get_msg_stream_by_id(&p->src, GAVL_META_STREAM_ID_MSG_PROGRAM);
 
@@ -274,29 +300,69 @@ static gavl_source_status_t read_audio(void * priv,
   {
   gavl_source_status_t ret;
   plstream_t * p = priv;
-
+  int samples_read = 0;
+  int samples_copied;
+  
   if(!p->pts)
     flush_metadata(p);
   
-  ret = gavl_audio_source_read_frame(p->src_int, frame);
-
-  if(ret != GAVL_SOURCE_OK)
+  if(p->hwctx)
     {
-    if(!advance(p))
-      return GAVL_SOURCE_EOF;
+    /* Unref previous frame  */
+    if(p->out_frame)
+      gavl_hw_audio_frame_unref(p->out_frame);
+    p->out_frame = gavl_hw_audio_frame_get_write(p->hwctx);
+    //    fprintf(stderr, "Got frame: buf_idx: %d\n", p->out_frame->buf_idx);
+    *frame = p->out_frame;
+    }
 
-    flush_metadata(p);
+  (*frame)->valid_samples = 0;
+  
+  while(samples_read < p->fmt->samples_per_frame)
+    {
+    if(!p->in_frame)
+      {
+      ret = gavl_audio_source_read_frame(p->src_int, &p->in_frame);
+
+      if(ret != GAVL_SOURCE_OK)
+        {
+        if(!advance(p))
+          break;
+
+        flush_metadata(p);
     
-    if((ret = gavl_audio_source_read_frame(p->src_int, frame)) != GAVL_SOURCE_OK)
-      return GAVL_SOURCE_EOF;
+        if((ret = gavl_audio_source_read_frame(p->src_int, &p->in_frame)) != GAVL_SOURCE_OK)
+          break;
+        }
+      p->in_pos = 0;
+      }
+
+    samples_copied = gavl_audio_frame_copy(p->fmt,
+                                           p->out_frame,
+                                           p->in_frame,
+                                           samples_read,
+                                           p->in_pos,
+                                           p->fmt->samples_per_frame - samples_read,
+                                           p->in_frame->valid_samples - p->in_pos);
+
+    samples_read += samples_copied;
+    p->in_pos += samples_copied;
+    p->out_frame->valid_samples += samples_copied;
+    
+    if(p->in_pos == p->in_frame->valid_samples)
+      p->in_frame = NULL;
     }
   
   if(frame)
+    {
     p->pts += (*frame)->valid_samples;
-  
-  return GAVL_SOURCE_OK;
-  }
 
+    if(p->hwctx && p->out_frame)
+      gavl_hw_audio_frame_unmap(p->out_frame);
+    
+    }
+  return samples_read ? GAVL_SOURCE_OK : GAVL_SOURCE_EOF;
+  }
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
   {
@@ -317,8 +383,10 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           {
           gavl_audio_format_t fmt;
           bg_media_source_stream_t * st;
+          const gavl_dictionary_t * buf_fmt;
+          //          int src_flags = GAVL_SOURCE_SRC_FRAMESIZE_MAX;
+          int src_flags = 0;
           
-          fprintf(stderr, "Start plstreams\n");
           if(!load_file(p))
             {
             fprintf(stderr, "Loading file failed\n");
@@ -332,18 +400,39 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
             fmt.num_channels = p->fmt->num_channels;
             gavl_set_channel_setup(&fmt);
             }
-          gavl_audio_format_copy(p->fmt, &fmt);
 
+          if((buf_fmt = gavl_hw_buf_desc_supports_audio_format(&p->buffer_formats, &fmt)))
+            {
+            p->hwctx = gavl_hw_ctx_create_from_buffer_format(buf_fmt);
+            src_flags |= GAVL_SOURCE_SRC_ALLOC;
+            gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using shared buffers");
+            gavl_hw_ctx_set_audio_creator(p->hwctx, &fmt, GAVL_HW_FRAME_MODE_MAP);
+            }
+          
+          gavl_audio_format_copy(p->fmt, &fmt);
+#if 0          
           fprintf(stderr, "Got format:\n");
           gavl_audio_format_dump(p->fmt);
-
+          if(p->fmt->hwctx)
+            fprintf(stderr, "Got shared buffer: %s\n", gavl_hw_type_to_string(gavl_hw_ctx_get_type(p->fmt->hwctx)));
+#endif     
           st = bg_media_source_get_audio_stream(&p->src, 0);
-          st->asrc_priv = gavl_audio_source_create(read_audio, p, GAVL_SOURCE_SRC_FRAMESIZE_MAX, p->fmt);
+          st->asrc_priv = gavl_audio_source_create(read_audio, p, src_flags, p->fmt);
           st->asrc = st->asrc_priv;
 
           st = bg_media_source_get_msg_stream_by_id(&p->src, GAVL_META_STREAM_ID_MSG_PROGRAM);
           st->msghub_priv = bg_msg_hub_create(1);
           st->msghub = st->msghub_priv;
+          }
+          break;
+        case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
+          {
+          int type = gavl_msg_get_arg_int(msg, 0);
+
+          if(type == GAVL_STREAM_AUDIO)
+            {
+            gavl_msg_get_arg_array(msg, 1, &p->buffer_formats);
+            }
           }
           break;
         }
@@ -365,9 +454,16 @@ static void close_plstream(void * priv)
 
   gavl_dictionary_reset(&p->mi);
   gavl_array_reset(&p->tracks);
+  gavl_array_reset(&p->buffer_formats);
   
   bg_media_source_cleanup(&p->src);
   bg_media_source_init(&p->src);
+
+  if(p->hwctx)
+    {
+    gavl_hw_ctx_destroy(p->hwctx);
+    p->hwctx = NULL;
+    }
   
   }
 
@@ -377,7 +473,7 @@ static void destroy_plstream(void * priv)
   plstream_t * p = priv;
   close_plstream(priv);
   bg_controllable_cleanup(&p->ctrl);
-
+  
   free(priv);
   }
 

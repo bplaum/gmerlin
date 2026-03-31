@@ -1116,7 +1116,7 @@ bg_frontend_plugin_t the_plugin =
     .common =
     {
       BG_LOCALE,
-      .name =      "fe_mpris",
+      .name =      "fe_rederer_mpris",
       .long_name = TRS("Mpris2 frontend"),
       .description = TRS("Makes gmerlin controllable via Mpris2"),
       .type =     BG_PLUGIN_FRONTEND_RENDERER,

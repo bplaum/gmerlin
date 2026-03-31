@@ -452,6 +452,7 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
             {
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->asrc = plugin->open_decode_audio(s->codec_handle->priv, s->psrc, s->s);
+            gavl_stream_set_compression_info(s->s, NULL);
             }
           }
         break;
@@ -463,6 +464,7 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
             {
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->vsrc = plugin->open_decode_video(s->codec_handle->priv, s->psrc, s->s);
+            gavl_stream_set_compression_info(s->s, NULL);
             }
           }
         break;
@@ -474,6 +476,7 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
             {
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->vsrc = plugin->open_decode_overlay(s->codec_handle->priv, s->psrc, s->s);
+            gavl_stream_set_compression_info(s->s, NULL);
             }
           }
         break;

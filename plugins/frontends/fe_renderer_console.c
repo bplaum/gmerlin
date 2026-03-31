@@ -79,7 +79,7 @@ static int handle_player_message_console(void * data,
                            &ctx,
                            &var,
                            &val, NULL);
-
+          
           if(!strcmp(ctx, BG_PLAYER_STATE_CTX))
             {
             if(!strcmp(var, BG_PLAYER_STATE_TIME))          // long
@@ -124,7 +124,7 @@ static int handle_player_message_console(void * data,
               {
               const gavl_dictionary_t * m;
               const gavl_dictionary_t * track;
-              
+
               if(!(track = gavl_value_get_dictionary(&val)) ||
                  !(m = gavl_track_get_metadata(track)))
                 return 1;

@@ -49,7 +49,7 @@ static void opt_fe(void * data, int * argc, char *** argv, int arg)
     exit(-1);
     }
 
-  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_frontend_set_option(&fe_arr, (*argv)[arg], BG_PLUGIN_FRONTEND_MDB);
   bg_cmdline_remove_arg(argc, argv, arg);
   }
 
@@ -96,7 +96,7 @@ int main(int argc, char ** argv)
   server_t s;
 
   gavl_array_init(&fe_arr);
-  bg_frontend_set_option(&fe_arr, "mdb_gmerlin,mdb_upnp");
+  bg_frontend_set_option(&fe_arr, "gmerlin,upnp", BG_PLUGIN_FRONTEND_MDB);
 
   bg_app_init("gmerlin-server", TRS("Gmerlin media server"), "server");
   

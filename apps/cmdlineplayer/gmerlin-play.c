@@ -126,7 +126,7 @@ static void opt_fe(void * data, int * argc, char *** argv, int arg)
     exit(-1);
     }
 
-  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_frontend_set_option(&fe_arr, (*argv)[arg], BG_PLUGIN_FRONTEND_RENDERER);
   bg_cmdline_remove_arg(argc, argv, arg);
   }
 
@@ -283,7 +283,7 @@ int main(int argc, char ** argv)
   gavl_dictionary_t * cfg_section;
   
   gavl_array_init(&fe_arr);
-  bg_frontend_set_option(&fe_arr, "console");
+  bg_frontend_set_option(&fe_arr, "console", BG_PLUGIN_FRONTEND_RENDERER);
   
   bg_app_init("gmerlin-play", TRS("Gmerlin commandline player"), "renderer");
   
@@ -362,7 +362,7 @@ int main(int argc, char ** argv)
       break;
     
     result = bg_frontends_ping(frontends, num_frontends);
-
+    
     
     if(!result)
       gavl_time_delay(&delay_time);

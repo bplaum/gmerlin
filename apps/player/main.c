@@ -69,7 +69,7 @@ static void opt_fe_renderer(void * data, int * argc, char *** argv, int arg)
     exit(-1);
     }
 
-  bg_frontend_set_option(&fe_arr_renderer, (*argv)[arg]);
+  bg_frontend_set_option(&fe_arr_renderer, (*argv)[arg], BG_PLUGIN_FRONTEND_RENDERER);
   bg_cmdline_remove_arg(argc, argv, arg);
   }
 
@@ -81,7 +81,7 @@ static void opt_fe_mdb(void * data, int * argc, char *** argv, int arg)
     exit(-1);
     }
 
-  bg_frontend_set_option(&fe_arr_mdb, (*argv)[arg]);
+  bg_frontend_set_option(&fe_arr_mdb, (*argv)[arg], BG_PLUGIN_FRONTEND_MDB);
   bg_cmdline_remove_arg(argc, argv, arg);
   }
 
@@ -188,10 +188,10 @@ int main(int argc, char ** argv)
   gavl_dictionary_t state;
 
   gavl_array_init(&fe_arr_mdb);
-  bg_frontend_set_option(&fe_arr_mdb, "mdb_gmerlin,mdb_upnp");
+  bg_frontend_set_option(&fe_arr_mdb, "gmerlin,upnp", BG_PLUGIN_FRONTEND_MDB);
     
   gavl_array_init(&fe_arr_renderer);
-  bg_frontend_set_option(&fe_arr_renderer, "renderer_gmerlin,renderer_upnp,mpris");
+  bg_frontend_set_option(&fe_arr_renderer, "gmerlin,upnp,mpris", BG_PLUGIN_FRONTEND_RENDERER);
   
   bg_app_init("gmerlin", TRS("Gmerlin Player"), "player");
 

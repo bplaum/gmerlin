@@ -48,7 +48,7 @@ static void opt_fe(void * data, int * argc, char *** argv, int arg)
     exit(-1);
     }
 
-  bg_frontend_set_option(&fe_arr, (*argv)[arg]);
+  bg_frontend_set_option(&fe_arr, (*argv)[arg], BG_PLUGIN_FRONTEND_RENDERER);
   bg_cmdline_remove_arg(argc, argv, arg);
   }
 
@@ -131,7 +131,7 @@ int main(int argc, char ** argv)
   renderer_t s;
 
   gavl_array_init(&fe_arr);
-  bg_frontend_set_option(&fe_arr, "renderer_gmerlin,renderer_upnp,mpris");
+  bg_frontend_set_option(&fe_arr, "gmerlin,upnp,mpris", BG_PLUGIN_FRONTEND_RENDERER);
   
   bg_app_init("gmerlin-renderer", TRS("Gmerlin renderer"), "renderer");
   

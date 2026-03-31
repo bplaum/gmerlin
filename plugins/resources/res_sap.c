@@ -76,6 +76,8 @@ static void * create_sap()
   bg_controllable_init(&ret->ctrl,
                        bg_msg_sink_create(handle_msg, ret, 1),
                        bg_msg_hub_create(1));
+
+  gavl_socket_address_destroy(addr);
   
   return ret;
   }
@@ -86,69 +88,6 @@ static bg_controllable_t * get_controllable_sap(void * priv)
   return &s->ctrl;
   }
 
-#if 0
-static int parse_sap_header(gavl_buffer_t * buf, int *del,
-                            char ** sdp, char ** id)
-  {
-  int flags;
-  int auth_len;
-  int addr_len;
-  const char * str;
-  const char * end;
-  const char * pos;
-  const uint8_t * data = buf->buf;
-  
-  flags = data[0];
-
-  if(((flags >> 5) & 0x07) != 1) // Version
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Version mismatch");
-    return 0;
-    }
-  
-  if(flags & (1<<4)) // Originating address IPV4 or IPV6?
-    addr_len = 16;
-  else
-    addr_len = 4;
-
-  if(flags & (1<<2))
-    *del = 1;
-  else
-    *del = 0;
-
-  if(flags & (1<<1))
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got encrypted SAP packet");
-    return 0;
-    }
-
-  if(flags & (1<<0))
-    {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Got compressed SAP packet");
-    return 0;
-    }
-  
-  auth_len = data[1] * 4;
-  
-  str = (const char*)(data + (4 + addr_len + auth_len));
-  end = (const char*)(data + buf->len);
-
-  //  fprintf(stderr, "Got str: %s\n", str);
-
-  if((pos = memchr(str, '\0', end - str)) &&
-     (pos != end) &&
-     !strcasecmp(str, "application/sdp"))
-    {
-    pos++;
-    *sdp = gavl_strdup(pos);
-
-    *id = malloc(GAVL_MD5_LENGTH);
-    gavl_md5_buffer_str(data + 2, 2 + addr_len, *id);
-    return 1;
-    }
-  return 0;
-  }
-#endif
 
 static int update_sap(void * priv)
   {
@@ -248,6 +187,8 @@ static void destroy_sap(void * priv)
   if(s->mcast_fd > 0)
     gavl_socket_close(s->mcast_fd);
 
+  gavl_buffer_free(&s->buf);
+  
   bg_controllable_cleanup(&s->ctrl);
   free(s);
   }

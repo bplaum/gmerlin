@@ -145,14 +145,14 @@ bg_frontend_t ** bg_frontends_create(bg_controllable_t * ctrl,
   return ret;
   }
 
-int bg_frontend_set_option(gavl_array_t * frontends, const char * opt)
+int bg_frontend_set_option(gavl_array_t * frontends, const char * opt, int plugin_type)
   {
   int idx = 0;
   int ret = 0;
   char * real_opt = NULL;
 
   char ** str;
-
+  
   gavl_array_reset(frontends);
 
   if(!strcmp(opt, "none"))
@@ -163,8 +163,23 @@ int bg_frontend_set_option(gavl_array_t * frontends, const char * opt)
 
   while(str[idx])
     {
-    gavl_string_array_add(frontends, str[idx]);
+    switch(plugin_type)
+      {
+      case BG_PLUGIN_FRONTEND_MDB:
+        real_opt = gavl_sprintf("fe_mdb_%s", str[idx]);
+        break;
+      case BG_PLUGIN_FRONTEND_RENDERER:
+        real_opt = gavl_sprintf("fe_renderer_%s", str[idx]);
+        break;
+      default:
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set frontend: Invalid plugin type");
+        break;
+        
+      }
+    
+    gavl_string_array_add(frontends, real_opt);
     idx++;
+    free(real_opt);
     }
   
   ret = 1;
@@ -174,8 +189,7 @@ int bg_frontend_set_option(gavl_array_t * frontends, const char * opt)
   if(str)
     gavl_strbreak_free(str);
   
-  if(real_opt)
-    free(real_opt);
+  
   return ret;
   }
 
