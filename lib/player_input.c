@@ -708,7 +708,8 @@ int bg_player_source_start(bg_player_t * player, bg_player_source_t * src)
   num_overlay_streams = gavl_track_get_num_overlay_streams(src->track_info);
 
   
-  if((src->video_stream >= 0) && (src->video_stream < num_video_streams))
+  if((src->video_stream >= 0) && (src->video_stream < num_video_streams) &&
+     !bg_video_filter_chain_num_filters(player->video_stream.fc))
     {
     const gavl_array_t * arr = bg_ov_get_import_formats(player->video_stream.ov);
     /* Set input formats */

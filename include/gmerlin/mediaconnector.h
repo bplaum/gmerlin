@@ -74,6 +74,11 @@ typedef struct
 
   gavl_audio_source_t  * asrc_priv;
   gavl_video_source_t  * vsrc_priv;
+
+  /* Used for exporting frame (most likely to DMA buffers) */
+  gavl_audio_source_t  * asrc_export;
+  gavl_video_source_t  * vsrc_export;
+  
   gavl_packet_source_t * psrc_priv;
   bg_msg_hub_t         * msghub_priv;
 
@@ -174,6 +179,8 @@ int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_t
 /* Load implicit decoders */
 int bg_media_source_load_decoders(bg_media_source_t * src);
 
+int bg_media_source_set_export(bg_media_source_t * src,
+                               const gavl_array_t * abuf, const gavl_array_t * vbuf);
 
 
 #endif // BG_MEDIACONNECTOR_H_INCLUDED

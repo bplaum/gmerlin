@@ -61,6 +61,11 @@ void bg_media_source_cleanup(bg_media_source_t * src)
       gavl_audio_source_destroy(src->streams[i]->asrc_priv);
     if(src->streams[i]->vsrc_priv)
       gavl_video_source_destroy(src->streams[i]->vsrc_priv);
+    if(src->streams[i]->asrc_export)
+      gavl_audio_source_destroy(src->streams[i]->asrc_export);
+    if(src->streams[i]->vsrc_export)
+      gavl_video_source_destroy(src->streams[i]->vsrc_export);
+    
     if(src->streams[i]->psrc_priv)
       gavl_packet_source_destroy(src->streams[i]->psrc_priv);
     if(src->streams[i]->msghub_priv)
@@ -484,6 +489,44 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
         break;
       }
     
+    }
+  return 1;
+  }
+
+int bg_media_source_set_export(bg_media_source_t * src,
+                               const gavl_array_t * abuf, const gavl_array_t * vbuf)
+  {
+  int i;
+  bg_media_source_stream_t * s;
+  
+  for(i = 0; i < src->num_streams; i++)
+    {
+    s = src->streams[i];
+    switch(s->type)
+      {
+      case GAVL_STREAM_AUDIO:
+#if 0
+        if(abuf &&
+           (s->action == BG_STREAM_ACTION_DECODE) &&
+           s->asrc)
+          {
+          if((s->asrc_export = gavl_audio_source_set_exporter(s->asrc, abuf)))
+            s->asrc = s->asrc_export;
+          }
+#endif
+        break;
+      case GAVL_STREAM_VIDEO:
+        if(vbuf &&
+           (s->action == BG_STREAM_ACTION_DECODE) &&
+           s->vsrc)
+          {
+          if((s->vsrc_export = gavl_video_source_set_exporter(s->vsrc, vbuf)))
+            s->vsrc = s->vsrc_export;
+          }
+        break;
+      default:
+        break;
+      }
     }
   return 1;
   }

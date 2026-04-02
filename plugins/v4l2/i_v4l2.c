@@ -54,7 +54,9 @@ typedef struct
 
   bg_media_source_t src;
   bg_controllable_t ctrl;
-    
+
+  gavl_array_t buf_fmts;
+  
   } v4l2_t;
 
 static void close_v4l(void * priv)
@@ -69,6 +71,8 @@ static void close_v4l(void * priv)
   gavl_dictionary_reset(&v4l->mi);
   bg_media_source_cleanup(&v4l->src);
   bg_media_source_init(&v4l->src);
+  gavl_array_reset(&v4l->buf_fmts);
+  
   }
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
@@ -85,6 +89,8 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           gavl_v4l2_device_start_capture(v4l->dev);
           /* Load decoder */
           bg_media_source_load_decoders(&v4l->src);
+
+          bg_media_source_set_export(&v4l->src, NULL, &v4l->buf_fmts);
           }
           break;
         case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
@@ -94,9 +100,9 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           
           if(type == GAVL_STREAM_VIDEO)
             {
-            gavl_array_init(&arr);
-            gavl_msg_get_arg_array(msg, 1, &arr);
-            gavl_v4l2_device_set_buffer_formats(v4l->dev, &arr);
+            gavl_array_reset(&v4l->buf_fmts);
+            gavl_msg_get_arg_array(msg, 1, &v4l->buf_fmts);
+            gavl_v4l2_device_set_buffer_formats(v4l->dev, &v4l->buf_fmts);
             gavl_array_free(&arr);
             }
           }

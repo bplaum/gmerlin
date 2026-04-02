@@ -352,3 +352,9 @@ bg_msg_sink_t * bg_video_filter_chain_get_cmd_sink(bg_video_filter_chain_t * ch)
   {
   return ch->cmd_sink;
   }
+
+int bg_video_filter_chain_num_filters(const bg_video_filter_chain_t * ch)
+  {
+  return ch->filter_arr.num_entries;
+  }
+  

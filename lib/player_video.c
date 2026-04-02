@@ -102,6 +102,7 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
     return 0;
     }
 
+#if 0  
   /* Export video */
   if(s->src == s->in_src_int)
     {
@@ -110,6 +111,7 @@ int bg_player_video_init(bg_player_t * player, int video_stream)
     if(arr && (s->src_export = gavl_video_source_set_exporter(s->src, arr)))
       s->src = s->src_export;
     }
+#endif
   
   if(!bg_player_ov_init(&player->video_stream))
     return 0;

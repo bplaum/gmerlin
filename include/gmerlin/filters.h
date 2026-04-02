@@ -151,6 +151,9 @@ bg_audio_filter_chain_connect(bg_audio_filter_chain_t * ch,
 
 bg_msg_sink_t * bg_audio_filter_chain_get_cmd_sink(bg_audio_filter_chain_t * ch);
 
+int bg_audio_filter_chain_num_filters(const bg_audio_filter_chain_t * ch);
+
+
 /* Video */
 
 /** \brief Create a video filter chain
@@ -245,6 +248,9 @@ void bg_video_filter_chain_unlock(void * ch);
 void bg_video_filter_chain_reset(bg_video_filter_chain_t * ch);
 
 bg_msg_sink_t * bg_video_filter_chain_get_cmd_sink(bg_video_filter_chain_t * ch);
+
+int bg_video_filter_chain_num_filters(const bg_video_filter_chain_t * ch);
+
 
 /**
  * @}
