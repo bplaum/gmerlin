@@ -93,13 +93,18 @@ void bg_media_source_reset(bg_media_source_t * src)
   int i;
   for(i = 0; i < src->num_streams; i++)
     {
-    if(src->streams[i]->asrc)
-      gavl_audio_source_reset(src->streams[i]->asrc);
-    if(src->streams[i]->vsrc)
-      gavl_video_source_reset(src->streams[i]->vsrc);
-    if(src->streams[i]->psrc)
-      gavl_packet_source_reset(src->streams[i]->psrc);
+    if(src->streams[i]->asrc_priv)
+      gavl_audio_source_reset(src->streams[i]->asrc_priv);
+    if(src->streams[i]->vsrc_priv)
+      gavl_video_source_reset(src->streams[i]->vsrc_priv);
+    if(src->streams[i]->psrc_priv)
+      gavl_packet_source_reset(src->streams[i]->psrc_priv);
 
+    if(src->streams[i]->asrc_export)
+      gavl_audio_source_reset(src->streams[i]->asrc_export);
+    if(src->streams[i]->vsrc_export)
+      gavl_video_source_reset(src->streams[i]->vsrc_export);
+    
     if(src->streams[i]->codec_handle)
       {
       bg_codec_plugin_t * plugin =
@@ -234,6 +239,10 @@ void bg_media_source_set_from_source(bg_media_source_t * dst,
     dst->streams[i]->vsrc_priv   = NULL;
     dst->streams[i]->psrc_priv   = NULL;
     dst->streams[i]->msghub_priv = NULL;
+
+    dst->streams[i]->asrc_export = NULL;
+    dst->streams[i]->vsrc_export = NULL;
+    //    dst->streams[i]->psrc_export = NULL;
     }
   
   }
