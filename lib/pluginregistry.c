@@ -984,10 +984,11 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin)
     {
     bg_encoder_plugin_t * encoder;
     encoder = (bg_encoder_plugin_t*)plugin;
-    new_info->max_audio_streams = encoder->max_audio_streams;
-    new_info->max_video_streams = encoder->max_video_streams;
-    new_info->max_text_streams = encoder->max_text_streams;
-    new_info->max_overlay_streams = encoder->max_overlay_streams;
+    
+    bg_plugin_info_set_max_audio_streams(new_info,   encoder->max_audio_streams);
+    bg_plugin_info_set_max_video_streams(new_info,   encoder->max_video_streams);
+    bg_plugin_info_set_max_text_streams(new_info,    encoder->max_text_streams);
+    bg_plugin_info_set_max_overlay_streams(new_info, encoder->max_overlay_streams);
     }
   
   return new_info;
@@ -5422,4 +5423,66 @@ char * bg_plugin_registry_get_cache_file_name(void)
     return NULL;
 
   return gavl_strcat(dir, "/plugins.xml");
+  }
+
+int bg_plugin_info_get_max_audio_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MAX_AUDIO_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  }
+
+int bg_plugin_info_get_max_video_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MAX_VIDEO_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  
+  }
+
+int bg_plugin_info_get_max_text_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MAX_TEXT_STREAMS, &val))
+    return val;
+  else
+    return 0;
+
+  }
+
+int bg_plugin_info_get_max_overlay_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MAX_OVERLAY_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  
+  }
+
+void bg_plugin_info_set_max_audio_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MAX_AUDIO_STREAMS, i);
+  }
+
+void bg_plugin_info_set_max_video_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MAX_VIDEO_STREAMS, i);
+  
+  }
+
+void bg_plugin_info_set_max_text_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MAX_TEXT_STREAMS, i);
+  
+  }
+
+void bg_plugin_info_set_max_overlay_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MAX_OVERLAY_STREAMS, i);
+  
   }

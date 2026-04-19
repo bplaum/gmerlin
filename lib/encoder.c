@@ -396,21 +396,34 @@ static bg_plugin_handle_t * load_encoder(bg_encoder_t * enc,
 
 static int check_separate(bg_encoder_t * enc)
   {
+  int max_audio_streams = 0;
+  int max_video_streams = 0;
+  int max_text_streams = 0;
+  int max_overlay_streams = 0;
+
+  if(enc->video_plugin.info)
+    {
+    max_audio_streams   = bg_plugin_info_get_max_audio_streams(enc->video_plugin.info);
+    max_video_streams   = bg_plugin_info_get_max_video_streams(enc->video_plugin.info);
+    max_text_streams    = bg_plugin_info_get_max_text_streams(enc->video_plugin.info);
+    max_overlay_streams = bg_plugin_info_get_max_overlay_streams(enc->video_plugin.info);
+    
+    }
+  
   /* Check for separate audio streams */
 
   if(enc->num_audio_streams)
     {
     if(!enc->audio_plugin.info &&
-       (!enc->video_plugin.info ||
-        (enc->video_plugin.info->max_audio_streams < enc->num_audio_streams)))
+       (max_audio_streams < enc->num_audio_streams))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid plugin setup");
       return 0;
       }
 
     if((enc->audio_plugin.info) ||
-       ((enc->video_plugin.info->max_audio_streams > 0) &&
-        (enc->num_audio_streams > enc->video_plugin.info->max_audio_streams)))
+       ((max_audio_streams > 0) &&
+        (enc->num_audio_streams > max_audio_streams)))
       enc->separate |= GAVL_STREAM_AUDIO;
     }
   
@@ -418,8 +431,8 @@ static int check_separate(bg_encoder_t * enc)
   if(enc->num_text_streams)
     {
     if((enc->text_plugin.info) ||
-       ((enc->video_plugin.info->max_text_streams > 0) &&
-        (enc->num_text_streams > enc->video_plugin.info->max_text_streams)))
+       ((max_text_streams > 0) &&
+        (enc->num_text_streams > max_text_streams)))
       enc->separate |= GAVL_STREAM_TEXT;
     }
 
@@ -427,18 +440,16 @@ static int check_separate(bg_encoder_t * enc)
   if(enc->num_overlay_streams)
     {
     if((enc->overlay_plugin.info) ||
-       ((enc->video_plugin.info->max_overlay_streams > 0) &&
-        (enc->num_overlay_streams >
-         enc->video_plugin.info->max_overlay_streams)))
+       ((max_overlay_streams > 0) &&
+        (enc->num_overlay_streams > max_overlay_streams)))
       enc->separate |= GAVL_STREAM_OVERLAY;
     }
   
   /* Check for separate video streams */
   if(enc->num_video_streams)
     {
-    if((enc->video_plugin.info->max_video_streams > 0) &&
-       (enc->num_video_streams >
-        enc->video_plugin.info->max_video_streams))
+    if((max_video_streams > 0) &&
+       (enc->num_video_streams > max_video_streams))
       enc->separate |= GAVL_STREAM_VIDEO;
     }
 
