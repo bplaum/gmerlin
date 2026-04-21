@@ -100,7 +100,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 45
+#define BG_PLUGIN_API_VERSION 46
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -803,7 +803,7 @@ struct bg_encoder_plugin_s
                                        const gavl_video_format_t * format,
                                        const gavl_compression_info_t * ci);
   
-  /** \brief Add a text subtitle stream
+  /** \brief Add an overlay subtitle stream
    *  \param priv The handle returned by the create() method
    *  \param language as ISO 639-2 code (3 characters+'\\0') or NULL
    *  \param format Format of the source
@@ -818,6 +818,14 @@ struct bg_encoder_plugin_s
   int (*add_overlay_stream)(void * priv,
                             const gavl_dictionary_t * m,
                             const gavl_video_format_t * format);
+
+  /** \brief Add a message stream
+   *  \param priv The handle returned by the create() method
+   *  \param stream_id Stream ID (should always be GAVL_META_STREAM_ID_MSG_PROGRAM for now) 
+   *  \returns Message sink
+   */
+
+  bg_msg_sink_t * (*add_msg_stream)(void * priv, int stream_id);
   
   /* Set parameters for the streams */
 
