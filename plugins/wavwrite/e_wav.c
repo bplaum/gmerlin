@@ -371,7 +371,7 @@ static const bg_parameter_info_t parameters[] =
       .name =        "format",
       .long_name =   TRS("Format"),
       .type =        BG_PARAMETER_STRINGLIST,
-      .val_default = GAVL_VALUE_INIT_STRING("waw"),
+      .val_default = GAVL_VALUE_INIT_STRING("wav"),
       .multi_names = (char const*[]){ "wav", "raw", NULL},
       .multi_labels = (char const*[]){ "WAV", "Raw", NULL},
     },
@@ -782,7 +782,7 @@ const bg_encoder_plugin_t the_plugin =
       .name =              "e_wav", /* Unique short name */
       .long_name =         TRS("WAV"),
       .description =       TRS("Simple writer for wave files, supports 8, 16, 24 and 32 bit PCM"),
-      .type =              BG_PLUGIN_ENCODER_AUDIO,
+      .type =              BG_PLUGIN_ENCODER,
       .flags =             BG_PLUGIN_FILE | BG_PLUGIN_PIPE | BG_PLUGIN_GAVF_IO,
       .priority =          BG_PLUGIN_PRIORITY_MAX,
       .create =            create_wav,
@@ -791,6 +791,7 @@ const bg_encoder_plugin_t the_plugin =
       .set_parameter =     set_parameter_wav,
       .get_extensions =    get_extensions_wav,
     },
+    .min_audio_streams =   1,
     .max_audio_streams =   1,
     .max_video_streams =   0,
     
