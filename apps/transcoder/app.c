@@ -677,18 +677,16 @@ static int load_streams(gavl_array_t * arr)
 
 static void add_gmerlin_tracks(app_data_t * ad, gavl_array_t * arr)
   {
-  
-  /* Add encoder specific stuff */
-  add_transcoder_config(arr);
-
   if(!load_streams(arr))
     return;
+
+  /* Add encoder specific stuff */
+  add_transcoder_config(arr);
   
   fprintf(stderr, "Add tracks\n");
   gavl_array_dump(arr, 2);
   fprintf(stderr, "\n");
-
-
+  
   splice(ad, -1, 0, arr);
   
   

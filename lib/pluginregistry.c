@@ -2461,6 +2461,9 @@ bg_plugin_handle_t * bg_plugin_load_with_options(const gavl_dictionary_t * dict)
     }
   ret = load_plugin(info);
 
+  if(info->type == BG_PLUGIN_ENCODER)
+    dict = bg_cfg_section_find_subsection_c(dict, "$general");
+  
   if(ret && ret->plugin->set_parameter)
     apply_parameters(ret, dict);
   

@@ -242,6 +242,9 @@ static int transcoder_init(transcoder_t * t, const gavl_dictionary_t * track)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no encoding plugin");
     return 0;
     }
+  fprintf(stderr, "Load encoder:\n");
+  gavl_dictionary_dump(cfg, 2);
+  fprintf(stderr, "\n");
   
   t->encoder = bg_plugin_load_with_options(cfg);
 
