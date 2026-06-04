@@ -214,10 +214,21 @@ void bg_gavl_audio_options_init(bg_gavl_audio_options_t *opt)
   opt->opt = gavl_audio_options_create();
   }
 
+
+
 void bg_gavl_audio_options_free(bg_gavl_audio_options_t * opt)
   {
   if(opt->opt)
     gavl_audio_options_destroy(opt->opt);
+  }
+
+void bg_gavl_audio_options_copy(bg_gavl_audio_options_t * dst,
+                                const bg_gavl_audio_options_t * src)
+  {
+  gavl_audio_options_t * sav = dst->opt;
+  memcpy(dst, src, sizeof(*dst));
+  dst->opt = sav;
+  gavl_audio_options_copy(dst->opt, src->opt);
   }
 
 
@@ -668,6 +679,15 @@ void bg_gavl_video_options_free(bg_gavl_video_options_t * opt)
     gavl_video_options_destroy(opt->opt);
   if(opt->thread_pool)
     gavl_thread_pool_destroy(opt->thread_pool);
+  }
+
+void bg_gavl_video_options_copy(bg_gavl_video_options_t * dst,
+                                const bg_gavl_video_options_t * src)
+  {
+  gavl_video_options_t * sav = dst->opt;
+  memcpy(dst, src, sizeof(*dst));
+  dst->opt = sav;
+  gavl_video_options_copy(dst->opt, src->opt);
   }
 
 
@@ -1881,3 +1901,22 @@ char * bg_string_array_to_string(const gavl_array_t * arr)
   return ret;
   }
 
+
+const gavl_dictionary_t * bg_track_get_config(const gavl_dictionary_t * track, const char * tag)
+  {
+  const gavl_dictionary_t * ret;
+
+  if((ret = gavl_dictionary_get_dictionary(track, BG_TRACK_CONFIG_TAG)))
+    ret = gavl_dictionary_get_dictionary(ret, tag);
+
+  return ret;
+  }
+
+gavl_dictionary_t * bg_track_get_config_nc(gavl_dictionary_t * track, const char * tag)
+  {
+  gavl_dictionary_t * ret;
+  
+  ret = gavl_dictionary_get_dictionary_create(track, BG_TRACK_CONFIG_TAG);
+  ret = gavl_dictionary_get_dictionary_create(ret, tag);
+  return ret;
+  }

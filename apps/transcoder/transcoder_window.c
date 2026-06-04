@@ -62,12 +62,6 @@
 
 #include "tracklist.h"
 
-static const uint32_t stream_flags = GAVL_STREAM_AUDIO |
-GAVL_STREAM_VIDEO |
-GAVL_STREAM_TEXT |
-GAVL_STREAM_OVERLAY;
-
-static const uint32_t plugin_flags = BG_PLUGIN_FILE;
 
 #define CTX_TRACKLIST "tracklist"
 #define CTX_PROFILE   "profile"
@@ -760,6 +754,14 @@ static void logwindow_close_callback(GtkWidget * w, void*data)
                           "show_logwindow", 0);
   }
 
+static const bg_parameter_info_t encoder_param =
+  {
+    .name       = "encoder",
+    .long_name = TRS("Encoder"),
+    .type      = BG_PARAMETER_MULTI_MENU,
+  };
+
+
 transcoder_window_t * transcoder_window_create()
   {
   GtkWidget * menuitem;
@@ -791,9 +793,12 @@ transcoder_window_t * transcoder_window_create()
 
   /* Create encoding parameters */
 
-  ret->encoder_parameters =
-    bg_plugin_registry_create_encoder_parameters(bg_plugin_reg,
-                                                 stream_flags, plugin_flags, 1);
+  ret->encoder_parameters = calloc(2, sizeof(*ret->encoder_parameters));
+  
+  bg_parameter_info_copy(ret->encoder_parameters, &encoder_param);
+    bg_plugin_registry_set_parameter_info(bg_plugin_reg, 
+                                          BG_PLUGIN_ENCODER, BG_PLUGIN_FILE,
+                                          ret->encoder_parameters);
 
   gavl_parameter_info_append_static(&ret->encoder_params,
                                     ret->encoder_parameters);

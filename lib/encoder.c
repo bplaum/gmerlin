@@ -65,10 +65,6 @@ typedef struct
   
   gavl_video_format_t format;
   
-  int pass;
-  int total_passes;
-  char * stats_file;
-  
   //  int64_t last_timestamp;
   gavl_video_sink_t * sink;
   } video_stream_t;
@@ -655,19 +651,6 @@ static int start_video(bg_encoder_t * enc, int stream)
                            &st);
       }
     
-    /* Set pass */
-    
-    if(s->total_passes)
-      {
-      if(!s->com.plugin->set_video_pass ||
-         !s->com.plugin->set_video_pass(s->com.priv, s->com.out_index, s->pass, s->total_passes,
-                                    s->stats_file))
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-               "Multipass encoding not supported by encoder plugin");
-        return 0;
-        }
-      }
     }
   
   return 1;
@@ -891,57 +874,6 @@ int bg_encoder_start(bg_encoder_t * enc)
   return 1;
   }
 
-int bg_encoder_write_audio_frame(bg_encoder_t * enc, gavl_audio_frame_t * f,
-                                 int stream)
-  {
-  audio_stream_t * as = &enc->audio_streams[stream];
-  return (gavl_audio_sink_put_frame(as->sink, f) == GAVL_SINK_OK);
-  }
-
-int bg_encoder_write_video_frame(bg_encoder_t * enc, gavl_video_frame_t * f,
-                                 int stream)
-  {
-  video_stream_t * vs = &enc->video_streams[stream];
-  return (gavl_video_sink_put_frame(vs->sink, f) == GAVL_SINK_OK);
-  }
-
-int bg_encoder_write_audio_packet(bg_encoder_t * enc,
-                                  gavl_packet_t * p, int stream)
-  {
-  audio_stream_t * s = &enc->audio_streams[stream];
-  return (gavl_packet_sink_put_packet(s->com.psink, p) == GAVL_SINK_OK);
-  }
-
-int bg_encoder_write_video_packet(bg_encoder_t * enc,
-                                  gavl_packet_t * p, int stream)
-  {
-  video_stream_t * s = &enc->video_streams[stream];
-  return (gavl_packet_sink_put_packet(s->com.psink, p) == GAVL_SINK_OK);
-  }
-
-int bg_encoder_write_text(bg_encoder_t * enc,
-                                   const char * text,
-                                   int64_t start,
-                                   int64_t duration, int stream)
-  {
-  gavl_packet_t p;
-  text_stream_t * s = &enc->text_streams[stream];
-
-  gavl_packet_init(&p);
-  p.buf.buf = (uint8_t*)text;
-  p.buf.len = strlen(text);
-  p.pts = start;
-  p.duration = duration;
-  return (gavl_packet_sink_put_packet(s->com.psink, &p) == GAVL_SINK_OK);
-  }
-
-int bg_encoder_write_overlay(bg_encoder_t * enc,
-                                      gavl_overlay_t * ovl, int stream)
-  {
-  overlay_stream_t * os = &enc->overlay_streams[stream];
-  return (gavl_video_sink_put_frame(os->sink, ovl) == GAVL_SINK_OK);
-  }
-
 /* Add streams */
 
 #define REALLOC_STREAM(streams, num) \
@@ -949,31 +881,6 @@ int bg_encoder_write_overlay(bg_encoder_t * enc,
   s = &streams[num]; \
   memset(s, 0, sizeof(*s));
 
-/* Obtain sections */
-
-const gavl_dictionary_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
-                                                       gavl_stream_type_t type)
-  {
-  switch(type)
-    {
-    case GAVL_STREAM_AUDIO:
-      return enc->audio_stream.section;
-      break;
-    case GAVL_STREAM_VIDEO:
-      return enc->video_stream.section;
-      break;
-    case GAVL_STREAM_TEXT:
-      return enc->text_stream.section;
-      break;
-    case GAVL_STREAM_OVERLAY:
-      return enc->overlay_stream.section;
-      break;
-    case GAVL_STREAM_NONE:
-    case GAVL_STREAM_MSG:
-      break;
-    }
-  return NULL;
-  }
 
 const bg_parameter_info_t * bg_encoder_get_stream_parameters(bg_encoder_t * enc,
                                                              gavl_stream_type_t type)
@@ -1216,19 +1123,6 @@ int bg_encoder_add_overlay_stream(bg_encoder_t * enc,
   ret = enc->num_overlay_streams;
   enc->num_overlay_streams++;
   return ret;
-  }
-
-void
-bg_encoder_set_video_pass(bg_encoder_t * enc,
-                          int stream, int pass, int total_passes,
-                          const char * stats_file)
-  {
-  video_stream_t * s = &enc->video_streams[stream];
-
-  s->pass = pass;
-  s->total_passes = total_passes;
-  s->stats_file = gavl_strrep(s->stats_file, stats_file);
-  
   }
 
 

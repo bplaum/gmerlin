@@ -50,42 +50,25 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
   int num;
   int num_text_streams;
 
-  const gavl_value_t * val;
   const gavl_dictionary_t * enc = NULL;
-  const gavl_dictionary_t * dict = NULL;
-  const gavl_dictionary_t * video_dict;
-  const char * name;
+  const gavl_dictionary_t * encoder_dict;
+
   gavl_dictionary_t * track_encoder_section;
   gavl_dictionary_t * stream_encoder_section;
 
   fprintf(stderr, "bg_transcoder_track_set_encoders\nEncoder section:\n");
   gavl_dictionary_dump(encoder_section, 2);
-  
-  if((val = gavl_dictionary_get(encoder_section, "ve")))
-    video_dict = gavl_value_get_dictionary(val);
-  else
-    video_dict = NULL;
-  
+
+  encoder_dict = gavl_dictionary_get_dictionary(encoder_section, "encoder");
   track_encoder_section = bg_transcoder_track_get_cfg_encoder_nc(t);
   gavl_dictionary_reset(track_encoder_section);
+
+  if(encoder_dict)
+    gavl_dictionary_copy(track_encoder_section, encoder_dict);
   
   if((num = gavl_track_get_num_audio_streams(t)))
     {
-    dict = gavl_dictionary_get_dictionary(encoder_section, "ae");
-
-    gavl_dictionary_copy_value(track_encoder_section,
-                               encoder_section, "ae");
-    
-    if((!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
-        !strcmp(name, "$to_video")))
-      {
-      if(video_dict)
-        enc = bg_cfg_section_find_subsection_c(video_dict, "$audio");
-      else
-        fprintf(stderr, "Wrong audio encoder configuration");
-      }
-    else
-      enc = bg_cfg_section_find_subsection_c(dict, "$audio");
+    enc = bg_cfg_section_find_subsection_c(encoder_dict, "$audio");
     
     for(i = 0; i < num; i++)
       {
@@ -98,10 +81,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
 
   if((num = gavl_track_get_num_video_streams(t)))
     {
-    gavl_dictionary_copy_value(track_encoder_section,
-                               encoder_section, "ve");
-    
-    enc = bg_cfg_section_find_subsection_c(video_dict, "$video");
+    enc = bg_cfg_section_find_subsection_c(encoder_dict, "$video");
     
     for(i = 0; i < num; i++)
       {
@@ -114,14 +94,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
     }
   if((num_text_streams = gavl_track_get_num_text_streams(t)))
     {
-    gavl_dictionary_copy_value(track_encoder_section,
-                               encoder_section, "te");
-    
-    if(!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
-       !strcmp(name, "$to_video"))
-      enc = bg_cfg_section_find_subsection_c(video_dict, "$text");
-    else
-      enc = bg_cfg_section_find_subsection_c(dict, "$text");
+    enc = bg_cfg_section_find_subsection_c(encoder_dict, "$text");
 
     for(i = 0; i < num_text_streams; i++)
       {
@@ -135,15 +108,7 @@ void bg_transcoder_track_set_encoders(bg_transcoder_track_t * t,
   num = 0;
   if(num_text_streams || (num = gavl_track_get_num_overlay_streams(t)))
     {
-    gavl_dictionary_copy_value(track_encoder_section,
-                               encoder_section, "oe");
-    
-    
-    if(!(name = gavl_dictionary_get_string(dict, BG_CFG_TAG_NAME)) ||
-       !strcmp(name, "$to_video"))
-      enc = bg_cfg_section_find_subsection_c(video_dict, "$overlay");
-    else
-      enc = bg_cfg_section_find_subsection_c(dict, "$overlay");
+    enc = bg_cfg_section_find_subsection_c(encoder_dict, "$overlay");
     
     for(i = 0; i < num_text_streams; i++)
       {
@@ -173,28 +138,7 @@ void bg_transcoder_track_get_encoders(const bg_transcoder_track_t * t,
   track_encoder_section = bg_transcoder_track_get_cfg_encoder(t);
   
   gavl_dictionary_copy_value(encoder_section,
-                             track_encoder_section, "ae");
-
-  /*
-  fprintf(stderr, "Get encoders:\n");
-  gavl_value_dump(gavl_dictionary_get(encoder_section, "ae"), 2);
-  fprintf(stderr, "\n");
-  */
-  
-  gavl_dictionary_copy_value(encoder_section,
-                             track_encoder_section, "ve");
-  gavl_dictionary_copy_value(encoder_section,
-                             track_encoder_section, "te");
-
-  /*
-  fprintf(stderr, "Get encoders te:\n");
-  gavl_value_dump(gavl_dictionary_get(encoder_section, "te"), 2);
-  fprintf(stderr, "\n");
-  */
-  
-  gavl_dictionary_copy_value(encoder_section,
-                             track_encoder_section, "oe");
-  
+                             track_encoder_section, "encoder");
   }
 
 static const bg_parameter_info_t parameters_general[] =
@@ -219,13 +163,9 @@ static const bg_parameter_info_t general_parameters_text[] =
       .val_default = GAVL_VALUE_INIT_STRING("forget"),
       .multi_names =  (char const *[]){ "forget",
                                         "transcode",
-                                        "transcode_overlay",
-                                        "blend",
                                         NULL },
       .multi_labels = (char const *[]){ TRS("Forget"),
-                                        TRS("Transcode as text"),
-                                        TRS("Transcode as overlay"),
-                                        TRS("Blend onto video"),
+                                        TRS("Transcode"),
                                         NULL },
       .help_string = TRS("Select action for this subtitle stream.")
     },
@@ -267,12 +207,10 @@ static const bg_parameter_info_t general_parameters_overlay[] =
       .multi_names =  (char const *[]){ "forget",
                                         "copy",
                                         "transcode",
-                                        "blend",
                                         NULL },
       .multi_labels = (char const *[]){ TRS("Forget"),
                                         TRS("Copy (if possible)"),
                                         TRS("Transcode"),
-                                        TRS("Blend onto video"),
                                         NULL },
       .val_default = GAVL_VALUE_INIT_STRING("forget"),
     },
@@ -741,13 +679,6 @@ static const bg_parameter_info_t general_parameters_audio[] =
       .type =        BG_PARAMETER_CHECKBUTTON,
       .val_default = GAVL_VALUE_INIT_INT(0),
       .help_string = TRS("Force the given language even if the input has the language set differently.")
-    },
-    {
-      .name =        "normalize",
-      .long_name =   TRS("Normalize audio"),
-      .type =        BG_PARAMETER_CHECKBUTTON,
-      .help_string = TRS("This will enable 2 pass transcoding. In the first pass, the peak volume\
- is detected. In the second pass, the stream is transcoded with normalized volume.")
     },
     BG_GAVL_PARAM_CONVERSION_QUALITY,
     BG_GAVL_PARAM_AUDIO_DITHER_MODE,

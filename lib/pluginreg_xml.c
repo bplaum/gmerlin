@@ -40,10 +40,6 @@ type_names[] =
     { "Input",                   BG_PLUGIN_INPUT },
     { "OutputAudio",             BG_PLUGIN_OUTPUT_AUDIO },
     { "OutputVideo",             BG_PLUGIN_OUTPUT_VIDEO     },
-    { "EncoderAudio",            BG_PLUGIN_ENCODER_AUDIO    },
-    { "EncoderVideo",            BG_PLUGIN_ENCODER_VIDEO    },
-    { "EncoderSubtitleText",     BG_PLUGIN_ENCODER_TEXT     },
-    { "EncoderSubtitleOverlay",  BG_PLUGIN_ENCODER_OVERLAY  },
     { "Encoder",                 BG_PLUGIN_ENCODER          },
     { "ImageReader",             BG_PLUGIN_IMAGE_READER     },
     { "ImageWriter",             BG_PLUGIN_IMAGE_WRITER     },
@@ -84,7 +80,8 @@ static const struct
   }
 flag_names[] =
   {
-    { "File",           BG_PLUGIN_FILE             },
+    { "File",           BG_PLUGIN_FILE            },
+    { "URL",            BG_PLUGIN_URL             },
     { "Pipe",           BG_PLUGIN_PIPE            }, /* Plugin reads from stdin */
     { "Tuner",          BG_PLUGIN_TUNER           }, /* Plugin has tuner */
     { "Filter1",        BG_PLUGIN_FILTER_1        }, /* Filter with one input port */

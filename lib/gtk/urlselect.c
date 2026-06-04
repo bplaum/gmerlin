@@ -93,7 +93,9 @@ bg_gtk_urlsel_show(const char * title,
   GtkWidget * content_area;
 
   GtkWidget * dlg;
-  
+
+  parent_window = bg_gtk_get_toplevel(parent_window);
+
   /* Create window */
   flags = GTK_DIALOG_DESTROY_WITH_PARENT;
   dlg = gtk_dialog_new_with_buttons("Load URL",

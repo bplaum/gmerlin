@@ -1038,6 +1038,7 @@ int bg_g_value_to_gavl(const GValue * gval, gavl_value_t * gavl, gavl_parameter_
       gavl_value_set_float(gavl, g_value_get_double(gval));
       break;
     case GAVL_PARAMETER_STRING:
+    case GAVL_PARAMETER_STRING_MULTILINE:
     case GAVL_PARAMETER_STRING_HIDDEN:
     case GAVL_PARAMETER_FONT:
     case GAVL_PARAMETER_FILE:
@@ -1121,18 +1122,34 @@ int bg_g_value_from_gavl(GValue * gval, const gavl_value_t * gavl, gavl_paramete
       g_value_set_double(gval, val_f);
       }
       break;
+    case GAVL_PARAMETER_STRING_MULTILINE:
     case GAVL_PARAMETER_STRING:
     case GAVL_PARAMETER_STRING_HIDDEN:
     case GAVL_PARAMETER_FONT:
     case GAVL_PARAMETER_STRINGLIST:
       {
-      const char * str = gavl_value_get_string(gavl);
-
-      if(!str)
-        str = "";
       
-      g_value_init(gval, G_TYPE_STRING);
-      g_value_set_string(gval, str);
+      if((type == GAVL_PARAMETER_STRING) &&
+         (gavl->type == GAVL_TYPE_ARRAY))
+        {
+        char * str;
+        str = gavl_string_array_join(gavl_value_get_array(gavl), "; ");
+        g_value_init(gval, G_TYPE_STRING);
+        g_value_set_string(gval, str);
+        free(str);
+        break;
+        }
+      else
+        {
+        const char * str;
+        str = gavl_value_get_string(gavl);
+
+        if(!str)
+          str = "";
+      
+        g_value_init(gval, G_TYPE_STRING);
+        g_value_set_string(gval, str);
+        }
       }
       break;
     case GAVL_PARAMETER_COLOR_RGB:

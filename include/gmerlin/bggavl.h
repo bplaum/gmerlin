@@ -56,6 +56,10 @@ bg_gavl_audio_set_parameter(void * data, const char * name,
 
 void bg_gavl_audio_options_init(bg_gavl_audio_options_t *);
 
+void bg_gavl_audio_options_copy(bg_gavl_audio_options_t * dst,
+                                const bg_gavl_audio_options_t * src);
+
+
 void bg_gavl_audio_options_free(bg_gavl_audio_options_t *);
 
 void bg_gavl_audio_options_set_format(const bg_gavl_audio_options_t *,
@@ -89,6 +93,10 @@ int bg_gavl_video_set_parameter(void * data, const char * name,
 void bg_gavl_video_options_init(bg_gavl_video_options_t *);
 
 void bg_gavl_video_options_free(bg_gavl_video_options_t *);
+
+void bg_gavl_video_options_copy(bg_gavl_video_options_t * dst,
+                                const bg_gavl_video_options_t * src);
+
 
 void bg_gavl_video_options_set_framerate(const bg_gavl_video_options_t *,
                                          const gavl_video_format_t * in_format,
@@ -812,7 +820,18 @@ int bg_tracks_from_string(gavl_dictionary_t * dict, int format, const char * str
 void bg_string_to_string_array(const char * str, gavl_array_t * arr);
 char * bg_string_array_to_string(const gavl_array_t * arr);
 
+/* Track and stream configuration */
 
+#define BG_TRACK_CONFIG_TAG "cfg"
+
+
+#define BG_TRACK_CONFIG_ENCODER    "enc"    /* Per stream (compression settings)
+                                            or per track (format settings) */
+#define BG_TRACK_CONFIG_FILTER     "filter"       /* Always per stream */
+#define BG_TRACK_CONFIG_TRANSCODE  "transcode" /* Transcode options (per stream) */
+
+const gavl_dictionary_t * bg_track_get_config(const gavl_dictionary_t * track, const char * tag);
+gavl_dictionary_t * bg_track_get_config_nc(gavl_dictionary_t * track, const char * tag);
 
 
 #endif // BGGAVL_H_INCLUDED

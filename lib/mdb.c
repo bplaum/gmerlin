@@ -2681,7 +2681,6 @@ void bg_mdb_set_load_uri(gavl_msg_t * msg, const char * id, int idx, const char 
 
 void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl_array_t * arr)
   {
-  int i;
   gavl_value_t add_val;
   gavl_array_t * add_arr;
 
@@ -2690,19 +2689,9 @@ void bg_mdb_set_load_uris(gavl_msg_t * msg, const char * id, int idx, const gavl
   gavl_value_init(&add_val);
   add_arr = gavl_value_set_array(&add_val);
 
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    gavl_value_t dict_val;
-    gavl_dictionary_t * dict;
-    
-    gavl_value_init(&dict_val);
-    dict = gavl_value_set_dictionary(&dict_val);
+  gavl_tracks_from_locations(add_arr, arr);
 
-    gavl_track_from_location(dict, gavl_string_array_get(arr, i));
-    gavl_array_splice_val_nocopy(add_arr, -1, 0, &dict_val);
-    }
-  //  fprintf(stderr, "bg_mdb_set_load_uris 1\n");
-  //  gavl_array_dump(add_arr, 2);
+  
   bg_msg_set_splice_children(msg, BG_CMD_DB_SPLICE_CHILDREN, id, 1, idx, 0, &add_val);
   gavl_value_free(&add_val);
   }

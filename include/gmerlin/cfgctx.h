@@ -47,8 +47,6 @@ typedef struct
   bg_msg_sink_t * sink;
   bg_msg_sink_t * sink_priv; // Privately owned, will be free()d by bg_cfg_ctx_free
   
-  int msg_id;
-
   } bg_cfg_ctx_t;
 
 void bg_cfg_ctx_init(bg_cfg_ctx_t * ctx,

@@ -41,11 +41,6 @@ typedef struct
   char * filename;
   int titles_written;
   
-  gavl_time_t last_time;
-  gavl_time_t last_duration;
-  
-  gavl_dictionary_t metadata;
-  
   bg_encoder_callbacks_t * cb;
 
   gavl_packet_sink_t * sink;
@@ -108,7 +103,6 @@ static const struct
   const char * extension;
   const char * name;
   void (*write_subtitle)(subtext_t * s, gavl_packet_t * p);
-  void (*write_header)(subtext_t * s);
   }
 formats[] =
   {
@@ -122,8 +116,6 @@ formats[] =
 static void * create_subtext()
   {
   subtext_t * ret = calloc(1, sizeof(*ret));
-  ret->last_time     = GAVL_TIME_UNDEFINED;
-  ret->last_duration = GAVL_TIME_UNDEFINED;
   return ret;
   }
 
@@ -148,8 +140,6 @@ static int open_subtext(void * data, const char * filename,
   
   e->output = fopen(e->filename, "w");
 
-  if(metadata)
-    gavl_dictionary_copy(&e->metadata, metadata);
   
   return 1;
   }
@@ -168,8 +158,6 @@ static gavl_sink_status_t write_subtitle_text_subtext(void * data, gavl_packet_t
   e = data;
   formats[e->format_index].write_subtitle(e, p);
   e->titles_written++;
-  e->last_time     = p->pts;
-  e->last_duration = p->duration;
   
   return 1;
   }
@@ -179,8 +167,6 @@ static int start_subtext(void * data)
   subtext_t * e;
   e = data;
   
-  if(formats[e->format_index].write_header)
-    formats[e->format_index].write_header(e);
   e->sink = gavl_packet_sink_create(NULL, write_subtitle_text_subtext, e);
   return 1;
   }
@@ -270,7 +256,7 @@ const bg_encoder_plugin_t the_plugin =
       .name =           "e_subtext",       /* Unique short name */
       .long_name =      TRS("Text subtitle exporter"),
       .description =    TRS("Plugin for exporting text subtitles. Supported format is SRT"),
-      .type =           BG_PLUGIN_ENCODER_TEXT,
+      .type =           BG_PLUGIN_ENCODER,
       .flags =          BG_PLUGIN_FILE,
       .priority =       BG_PLUGIN_PRIORITY_MAX,
       .create =         create_subtext,
@@ -280,6 +266,7 @@ const bg_encoder_plugin_t the_plugin =
       .get_extensions = get_extensions_subwriter,
     },
 
+    .min_text_streams = 1,
     .max_text_streams = 1,
     
     .set_callbacks =        set_callbacks_subtext,

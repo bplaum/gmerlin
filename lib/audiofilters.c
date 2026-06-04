@@ -62,7 +62,7 @@ struct bg_audio_filter_chain_s
   gavl_audio_frame_t * out_frame;
   
   audio_filter_t * filters;
-  const bg_gavl_audio_options_t * opt;
+  bg_gavl_audio_options_t opt;
   
   gavl_array_t filter_arr;
   
@@ -182,7 +182,12 @@ bg_audio_filter_chain_create(const bg_gavl_audio_options_t * opt)
   {
   bg_audio_filter_chain_t * ret;
   ret = calloc(1, sizeof(*ret));
-  ret->opt = opt;
+
+  bg_gavl_audio_options_init(&ret->opt);
+  
+  if(opt)
+    bg_gavl_audio_options_copy(&ret->opt, opt);
+      
   ret->cmd_sink = bg_msg_sink_create(handle_cmd, ret, 1);
   pthread_mutex_init(&ret->mutex, NULL);
   return ret;
@@ -301,6 +306,9 @@ void bg_audio_filter_chain_destroy(void * ch1)
   
   destroy_audio_chain(ch);
   pthread_mutex_destroy(&ch->mutex);
+
+  bg_gavl_audio_options_free(&ch->opt);
+
   free(ch);
   }
 
@@ -328,11 +336,11 @@ bg_audio_filter_chain_connect(bg_audio_filter_chain_t * ch,
   for(i = 0; i < ch->filter_arr.num_entries; i++)
     {
     gavl_audio_options_copy(gavl_audio_source_get_options(src),
-                            ch->opt->opt);
+                            ch->opt.opt);
     
     ch->filters[i].out_src =
       ch->filters[i].plugin->connect(ch->filters[i].handle->priv,
-                                     src, ch->opt->opt);
+                                     src, ch->opt.opt);
     src = ch->filters[i].out_src;
     }
   

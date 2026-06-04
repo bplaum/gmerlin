@@ -120,7 +120,6 @@ country_table.c \
 downloader.c \
 edldec.c \
 edl_xml.c \
-encoder.c \
 fileutils.c \
 flaccover.c \
 formats.c \
@@ -204,8 +203,6 @@ subtitle.c \
 textrenderer.c \
 thumbnail.c \
 trackio.c \
-transcoder.c \
-transcoder_track.c \
 translation.c \
 urilist.c \
 videofilters.c \

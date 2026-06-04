@@ -517,6 +517,7 @@ bg_parameter_init_value(const gavl_dictionary_t * param,
       gavl_value_set_float(val, 0.0);
       return 1;
       break;
+    case GAVL_PARAMETER_STRING_MULTILINE:  //!< String (multiline)
     case GAVL_PARAMETER_STRING:        //!< String (one line only)
     case GAVL_PARAMETER_STRING_HIDDEN: //!< Encrypted string (displays as ***)
     case GAVL_PARAMETER_FONT:          //!< Font (contains fontconfig compatible fontname)

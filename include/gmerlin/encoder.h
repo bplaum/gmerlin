@@ -35,19 +35,12 @@ typedef struct bg_encoder_s bg_encoder_t;
 bg_encoder_t * bg_encoder_create(bg_transcoder_track_t * tt,
                                  int stream_mask, int flag_mask);
 
-const gavl_dictionary_t * bg_encoder_get_stream_section(bg_encoder_t * enc,
-                                                       gavl_stream_type_t type);
 
 const bg_parameter_info_t * bg_encoder_get_stream_parameters(bg_encoder_t * enc,
                                                              gavl_stream_type_t type);
 
 void
 bg_encoder_set_callbacks(bg_encoder_t * e, bg_encoder_callbacks_t * cb);
-
-void
-bg_encoder_set_video_pass(bg_encoder_t * enc,
-                          int stream, int pass, int total_passes,
-                          const char * stats_file);
 
 
 /* Also closes all internal encoders */
@@ -123,23 +116,6 @@ void bg_encoder_get_text_timescale(bg_encoder_t *, int stream,
 int bg_encoder_start(bg_encoder_t *);
 
 /* Write frame */
-int bg_encoder_write_audio_frame(bg_encoder_t *,
-                                 gavl_audio_frame_t * frame, int stream);
-
-int bg_encoder_write_video_frame(bg_encoder_t *,
-                                 gavl_video_frame_t * frame, int stream);
-
-int bg_encoder_write_text(bg_encoder_t *,const char * text,
-                                   int64_t start, int64_t duration, int stream);
-
-int bg_encoder_write_overlay(bg_encoder_t *,
-                                      gavl_overlay_t * ovl, int stream);
-
-int bg_encoder_write_audio_packet(bg_encoder_t *,
-                                  gavl_packet_t * p, int stream);
-
-int bg_encoder_write_video_packet(bg_encoder_t *,
-                                  gavl_packet_t * p, int stream);
 
 gavl_audio_sink_t *
 bg_encoder_get_audio_sink(bg_encoder_t *, int stream);

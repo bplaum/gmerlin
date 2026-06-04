@@ -72,12 +72,11 @@
  *  \ingroup plugin
  *  \brief Macros for the plugin flags
  *
- *
- *  All plugins must have at least one flag set.
  *  @{
  */
 
-#define BG_PLUGIN_FILE             (1<<7)  //!< Plugin can do I/O from stdin or stdout ("-")
+#define BG_PLUGIN_URL              (1<<6)  //!< Plugin can open an uri and can be selected by protocol
+#define BG_PLUGIN_FILE             (1<<7)  //!< Plugin can open regulöar files
 #define BG_PLUGIN_PIPE             (1<<8)  //!< Plugin can do I/O from stdin or stdout ("-")
 #define BG_PLUGIN_TUNER            (1<<9)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
 #define BG_PLUGIN_FILTER_1        (1<<10)  //!< Plugin acts as a filter with one input
@@ -100,7 +99,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 46
+#define BG_PLUGIN_API_VERSION 48
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -141,10 +140,6 @@ typedef enum
     BG_PLUGIN_INPUT                      = (1<<0), //!< Media input
     BG_PLUGIN_OUTPUT_AUDIO               = (1<<1), //!< Audio output
     BG_PLUGIN_OUTPUT_VIDEO               = (1<<2), //!< Video output
-    BG_PLUGIN_ENCODER_AUDIO              = (1<<5), //!< Encoder for audio only
-    BG_PLUGIN_ENCODER_VIDEO              = (1<<6), //!< Encoder for video only
-    BG_PLUGIN_ENCODER_TEXT               = (1<<7), //!< Encoder for text subtitles only
-    BG_PLUGIN_ENCODER_OVERLAY            = (1<<8), //!< Encoder for overlay subtitles only
     BG_PLUGIN_ENCODER                    = (1<<9), //!< Encoder for multiple kinds of streams
     BG_PLUGIN_IMAGE_READER               = (1<<11),//!< Image reader
     BG_PLUGIN_IMAGE_WRITER               = (1<<12), //!< Image writer
@@ -596,6 +591,11 @@ typedef struct bg_encoder_plugin_s bg_encoder_plugin_t;
 struct bg_encoder_plugin_s
   {
   bg_plugin_common_t common; //!< Infos and functions common to all plugin types
+
+  int min_audio_streams;  //!< Minimum number of audio streams
+  int min_video_streams;  //!< Minimum number of video streams
+  int min_text_streams;//!< Minimum number of text subtitle streams
+  int min_overlay_streams;//!< Minimum number of overlay subtitle streams
   
   int max_audio_streams;  //!< Maximum number of audio streams. -1 means infinite
   int max_video_streams;  //!< Maximum number of video streams. -1 means infinite
@@ -883,17 +883,6 @@ struct bg_encoder_plugin_s
   void (*set_overlay_parameter)(void * priv, int stream,
                                 const char * name,
                                 const gavl_value_t * v);
-  
-  /** \brief Setup multipass video encoding.
-   *  \param priv The handle returned by the create() method
-   *  \param stream Stream index (starting with 0)
-   *  \param pass Number of this pass (starting with 1)
-   *  \param total_passes Number of total passes
-   *  \param stats_file Name of a file, which can be used for multipass statistics
-   *  \returns 0 if multipass transcoding is not supported and can be ommitted, 1 else
-   */
-  int (*set_video_pass)(void * priv, int stream, int pass, int total_passes,
-                        const char * stats_file);
   
   /** \brief Set up all codecs and prepare for encoding
    *  \param priv The handle returned by the create() method

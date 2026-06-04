@@ -214,77 +214,36 @@ char * bg_uri_to_string(const char * pos1, int len)
   return ret;
   }
 
-char ** bg_urilist_decode(const char * str, int len)
+void bg_urilist_decode(const char * cstr, int len, gavl_array_t * ret)
   {
-  char ** ret;
-  const char * pos1;
-  const char * pos2;
-  int num_uris;
-  int num_added;
+  char * pos;
+  int i;
+  char ** lines;
 
-  if(len < 0)
-    len = strlen(str);
+  char * str = gavl_strndup(cstr, cstr + len);
+
+  lines = gavl_strbreak(str, '\n');
   
-  pos1 = str;
-
-  /* Count the URIs */
+  i = 0;
+  while(lines[i])
+    {
+    if((pos = strchr(lines[i], '\r')))
+      *pos = '\0';
+    
+    if((*(lines[i]) == '#') || (*(lines[i]) == '\0'))
+      {
+      i++;
+      continue;
+      }
+    gavl_string_array_add_nocopy(ret, bg_uri_to_string(lines[i], -1));
+    i++;
+    }
   
-  num_uris = 0;
-  while(1)
-    {
-    /* Skip spaces */
-    while(((pos1 - str) < len) && isspace(*pos1))
-      pos1++;
-    
-    if(isspace(*pos1) || (*pos1 == '\0'))
-      break;
-    
-    num_uris++;
-    
-    /* Skip non-spaces */
-    while(((pos1 - str) < len) && !isspace(*pos1))
-      pos1++;
-
-    if(!isspace(*pos1))
-      break;
-    }
-
-  /* Set up the array and decode URLS */
-
-  num_added = 0;
-  pos1 = str;
-
-  ret = calloc(num_uris+1, sizeof(*ret));
-    
-  while(1)
-    {
-    while(((pos1 - str) < len) && isspace(*pos1))
-      pos1++;
-    
-    pos2 = pos1;
-    
-    while(((pos2 - str) < len) && !isspace(*pos2))
-      pos2++;
-
-    if(!isspace(*pos2) || (pos1 == pos2))
-      {
-      if(*pos2 != '\0')
-        pos2++;
-      }
-    
-    if(pos2 == pos1)
-      break;
-        
-    if((ret[num_added] = bg_uri_to_string(pos1, pos2-pos1)))
-      {
-      num_added++;
-      }
-
-    pos1 = pos2;
-    }
-  return ret;
+  gavl_strbreak_free(lines);
+  free(str);
+  
   }
-
+#if 0
 void bg_urilist_free(char ** uri_list)
   {
   int i;
@@ -298,3 +257,4 @@ void bg_urilist_free(char ** uri_list)
     }
   free(uri_list);
   }
+#endif

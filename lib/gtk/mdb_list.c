@@ -241,7 +241,7 @@ static void list_clipboard_get_func(GtkClipboard *clipboard,
   }
 
 static void list_clipboard_clear_func(GtkClipboard *clipboard,
-                                 gpointer data)
+                                      gpointer data)
   {
   bg_gtk_mdb_tree_t * tree = data;
 
@@ -1551,8 +1551,6 @@ static void insert_selection_data(list_t * list, GtkSelectionData *data,
   if(!strcmp(target_name, "text/uri-list") ||
      !strcmp(target_name, "text/plain"))
     {
-    int i;
-    char ** urilist;
     gavl_array_t arr;
     gavl_msg_t * msg;
     int len = gtk_selection_data_get_length(data);
@@ -1560,22 +1558,10 @@ static void insert_selection_data(list_t * list, GtkSelectionData *data,
     if(!(str = gtk_selection_data_get_data(data)))
       goto fail;
 
-    urilist = bg_urilist_decode((char*)str, len);
-
     gavl_array_init(&arr);
-    i = 0;
+        
+    bg_urilist_decode((char*)str, len, &arr);
 
-    while(urilist[i])
-      {
-      gavl_value_t val;
-      gavl_value_init(&val);
-      gavl_value_set_string(&val, urilist[i]);
-      gavl_array_splice_val_nocopy(&arr, i, 0, &val);
-
-      // fprintf(stderr, "Insert selection data: %s\n", list[i]);
-      
-      i++;
-      }
 
     msg = bg_msg_sink_get(sink);
     bg_mdb_set_load_uris(msg, list->id, idx, &arr);
@@ -1583,7 +1569,6 @@ static void insert_selection_data(list_t * list, GtkSelectionData *data,
     bg_msg_sink_put(sink);
     
     gavl_array_free(&arr);
-    bg_urilist_free(urilist);
     }
   else if(!strcmp(target_name, bg_gtk_atom_tracks_name))
     {
@@ -2182,7 +2167,7 @@ static void create_stream_source(bg_gtk_mdb_tree_t * tree)
   bg_cfg_ctx_t ctx;
 
   bg_cfg_ctx_init(&ctx, stream_source_params, MSG_ADD_STREAM,
-                  TR("Auto rename"), NULL, NULL);
+                  TR("Add stream source"), NULL, NULL);
   
   ctx.sink = tree->dlg_sink;
   

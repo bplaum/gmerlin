@@ -32,8 +32,8 @@
 #include <gmerlin/bgmsg.h>
 
 
-#define BG_MEDIACONNECTOR_FLAG_EOF     (1<<0)
-#define BG_MEDIACONNECTOR_FLAG_DISCONT (1<<1)
+// #define BG_MEDIACONNECTOR_FLAG_EOF     (1<<0)
+// #define BG_MEDIACONNECTOR_FLAG_DISCONT (1<<1)
 
 typedef struct bg_plugin_handle_s bg_plugin_handle_t;
 
@@ -104,7 +104,6 @@ typedef struct
   
   int flags;
 
-  bg_eof_mode_t eof_mode;
   int eof;
   
   } bg_media_source_t;
@@ -122,7 +121,7 @@ int bg_media_source_set_from_track(bg_media_source_t * src,
                                    gavl_dictionary_t * track);
 
 void bg_media_source_set_from_source(bg_media_source_t * dst,
-                                     bg_media_source_t * src);
+                                     const bg_media_source_t * src);
 
 bg_media_source_stream_t *
 bg_media_source_append_stream(bg_media_source_t * src, gavl_stream_type_t type);
@@ -143,6 +142,8 @@ bg_media_source_stream_t *
 bg_media_source_append_msg_stream_by_id(bg_media_source_t * src, int id);
 
 bg_media_source_stream_t * bg_media_source_get_stream(bg_media_source_t * src, int type, int idx);
+int bg_media_source_get_stream_idx(bg_media_source_t * src, const bg_media_source_stream_t * st);
+
 
 bg_media_source_stream_t * bg_media_source_get_stream_by_id(bg_media_source_t * src, int id);
 
@@ -181,6 +182,86 @@ int bg_media_source_load_decoders(bg_media_source_t * src);
 
 int bg_media_source_set_export(bg_media_source_t * src,
                                const gavl_array_t * abuf, const gavl_array_t * vbuf);
+
+/* Load filters: Between the two functions the source must get started */
+
+int bg_media_source_filter_init(bg_media_source_t * filter_src,
+                                bg_media_source_t * src);
+
+int bg_media_source_filter_connect(bg_media_source_t * filter_src,
+                                   bg_media_source_t * src);
+
+/*
+ * Encoder frontend: Connect sinks and provide processing routines.
+ * This is the generic multistream processing engine, which is used 
+ * by gmerlin-transoder and the gavftools
+ */
+
+/* One A/V stream is the master: When it's processed,
+   the non-continuous streams (subtitles) are also flushed.
+   It's better than having them in own threads, which are idle most of the time */
+
+#define BG_ENCODER_STREAM_DELAY    (1<<1)
+#define BG_ENCODER_STREAM_NONCONT  (1<<2)
+#define BG_ENCODER_STREAM_EOF      (1<<3)
+/* Non-continuous streams need this */
+#define BG_ENCODER_GOT_SINK_FRAME  (1<<4)
+#define BG_ENCODER_GOT_SRC_FRAME   (1<<5)
+
+typedef struct
+  {
+  gavl_audio_sink_t * asink;
+  gavl_video_sink_t * vsink;
+  gavl_packet_sink_t * psink;
+  bg_msg_sink_t * msink;
+  
+  int src_scale;
+  uint32_t dst_scale;
+  
+  gavl_time_t time;
+  int idx;
+  int flags;
+  
+  gavl_compression_info_t ci;
+  /* Packets and video frames are stored here between process calls */
+  gavl_packet_t * p;
+  gavl_video_frame_t * vframe;
+  gavl_source_status_t (*process)(bg_media_source_stream_t * st, gavl_time_t t);
+  } bg_encoder_stream_t;
+
+typedef struct
+  {
+  bg_plugin_handle_t * h;
+  gavl_time_t time;
+  pthread_mutex_t mutex;
+  } bg_encoder_t;
+
+bg_encoder_stream_t * bg_encoder_stream_create(bg_media_source_stream_t * st);
+bg_encoder_t * bg_encoder_create(bg_media_source_t * src);
+
+
+int bg_media_encoder_init(bg_media_source_t * src,
+                          bg_plugin_handle_t * h);
+
+
+
+int bg_media_encoder_connect(bg_media_source_t * enc_src,
+                             bg_media_source_t * src,
+                             bg_plugin_handle_t * h);
+
+void bg_media_encoder_finalize(bg_media_source_t * src_enc);
+
+
+void bg_media_encoder_finalize(bg_media_source_t * src_enc);
+
+
+/* Do one iteration (single- or multithread */
+gavl_source_status_t bg_media_encoder_process_stream(bg_media_source_stream_t * st,
+                                                     gavl_time_t time);
+
+/* Do one singlethread iteration */
+gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time_t * time);
+
 
 
 #endif // BG_MEDIACONNECTOR_H_INCLUDED

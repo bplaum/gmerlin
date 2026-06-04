@@ -466,7 +466,6 @@ static void property_callback(GObject *object, GParamSpec *pspec, gpointer user_
 
   gavl_value_free(&gavl_val);
   g_value_unset(&value);
-
   }
 
 static void set_widget(GtkWidget * w, const gavl_value_t * val)
@@ -503,6 +502,12 @@ static void set_widget(GtkWidget * w, const gavl_value_t * val)
         g_signal_handlers_unblock_by_func(data->obj, G_CALLBACK(property_callback), w);
         }
       g_value_unset(&value);
+      }
+      break;
+    case GAVL_PARAMETER_STRING_MULTILINE:
+      {
+      GtkTextBuffer *buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(w));
+      gtk_text_buffer_set_text(buf, gavl_value_get_string(val), -1);
       }
       break;
     case GAVL_PARAMETER_FILE:
@@ -975,6 +980,22 @@ static void file_callback(GtkWidget * w, gpointer data)
   gavl_value_free(&val);
   }
 
+static gboolean multiline_string_callback(GtkWidget * widget, GdkEventFocus *event, gpointer data)
+  {
+  char * text;
+  GtkTextBuffer *buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+  GtkTextIter start, end;
+  gavl_value_t val;
+  GtkWidget * cfg_widget = data;
+  gavl_value_init(&val);
+  gtk_text_buffer_get_bounds(buf, &start, &end);
+  text = gtk_text_buffer_get_text(buf, &start, &end, FALSE);
+  gavl_value_set_string_nocopy(&val, text);
+  widget_changed(cfg_widget, &val);
+  g_free(text);
+  return FALSE;
+  }
+
 static void time_callback(GtkWidget * w, gpointer data)
   {
   gavl_value_t val;
@@ -1123,7 +1144,6 @@ static void add_config_widgets(GtkWidget * grid,
   s->ctx.set_param = ctx->set_param;
   s->ctx.cb_data   = ctx->cb_data;
   s->ctx.sink      = ctx->sink;
-  s->ctx.msg_id    = ctx->msg_id;
   s->w             = grid;
 
   g_object_set_data_full(G_OBJECT(grid), SECTION_DATA, s, destroy_section);
@@ -1243,11 +1263,42 @@ static void add_config_widgets(GtkWidget * grid,
         ypos++;
         }
         break;
+
+      case GAVL_PARAMETER_STRING_MULTILINE:
+        {
+        GtkWidget *label;
+        GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                       GTK_POLICY_AUTOMATIC,
+                                       GTK_POLICY_AUTOMATIC);
+        gtk_widget_set_size_request(scroll, -1, 120);   /* Mindesthöhe */
+        
+        w = gtk_text_view_new();
+        gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(w), GTK_WRAP_WORD_CHAR);
+        gtk_container_add(GTK_CONTAINER(scroll), w);
+        set_cfg_widget(w, name, type, NULL, NULL,
+                       help_string, translation_domain);
+        
+        label = gtk_label_new(long_name);
+        gtk_widget_set_halign(label, GTK_ALIGN_START);
+
+        gtk_grid_attach(GTK_GRID(grid), label, 0, ypos, 3, 1);
+        gtk_grid_attach(GTK_GRID(grid), scroll, 0, ypos+1, 3, 1);
+
+        gtk_widget_set_hexpand(scroll, TRUE);
+        gtk_widget_set_vexpand(scroll, TRUE);
+        
+        
+        g_signal_connect(w, "focus-out-event", G_CALLBACK(multiline_string_callback), w);
+        
+        ypos+=2;
+        }
+        break;
       case GAVL_PARAMETER_STRING:
       case GAVL_PARAMETER_STRING_HIDDEN:
         {
         GtkWidget * label;
-        
+          
         w = gtk_entry_new();
 
         if(type == BG_PARAMETER_STRING_HIDDEN)

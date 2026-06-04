@@ -84,8 +84,6 @@ static const char * load_blacklist_names  = "README lock";
 
 #define LOG_DOMAIN "pluginregistry"
 
-#define TO_VIDEO "$to_video"
-
 #define SECTION_MASK (BG_PLUGIN_INPUT|BG_PLUGIN_IMAGE_READER)
 
 static int
@@ -976,11 +974,7 @@ bg_plugin_info_t * bg_plugin_info_create(const bg_plugin_common_t * plugin)
   new_info->flags       = plugin->flags; 	 
   new_info->priority    = plugin->priority;
 
-  if(plugin->type & (BG_PLUGIN_ENCODER_AUDIO|
-                     BG_PLUGIN_ENCODER_VIDEO|
-                     BG_PLUGIN_ENCODER_TEXT |
-                     BG_PLUGIN_ENCODER_OVERLAY |
-                     BG_PLUGIN_ENCODER ))
+  if(plugin->type == BG_PLUGIN_ENCODER)
     {
     bg_encoder_plugin_t * encoder;
     encoder = (bg_encoder_plugin_t*)plugin;
@@ -1026,11 +1020,7 @@ static bg_plugin_info_t * plugin_info_create(const bg_plugin_common_t * plugin,
     }
 
   
-  if(plugin->type & (BG_PLUGIN_ENCODER_AUDIO|
-                     BG_PLUGIN_ENCODER_VIDEO|
-                     BG_PLUGIN_ENCODER_TEXT |
-                     BG_PLUGIN_ENCODER_OVERLAY |
-                     BG_PLUGIN_ENCODER ))
+  if(plugin->type == BG_PLUGIN_ENCODER)
     {
     bg_encoder_plugin_t * encoder;
     encoder = (bg_encoder_plugin_t*)plugin;
@@ -3659,11 +3649,7 @@ static void set_parameter_info(bg_plugin_registry_t * reg,
       gavl_strdup(TRD(bg_plugin_info_get_long_name(info),
                       gettext_domain));
     
-    if(info->type & (BG_PLUGIN_ENCODER_AUDIO |
-                     BG_PLUGIN_ENCODER_VIDEO |
-                     BG_PLUGIN_ENCODER_TEXT |
-                     BG_PLUGIN_ENCODER_OVERLAY |
-                     BG_PLUGIN_ENCODER))
+    if(info->type == BG_PLUGIN_ENCODER)
       ret->multi_parameters_nc[start_entries+i] =
         create_encoder_parameters(info, stream_params);
     else if(info->parameters)
@@ -3682,156 +3668,7 @@ void bg_plugin_registry_set_parameter_info(bg_plugin_registry_t * reg,
   set_parameter_info(reg, type_mask, flag_mask, ret, 1);
   }
 
-static const bg_parameter_info_t audio_encoder_param =
-  {
-    .name      = "ae",
-    .long_name = TRS("Audio"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-  };
 
-static const bg_parameter_info_t audio_encoder_param_v =
-  {
-    .name               = "ae",
-    .long_name          = TRS("Audio"),
-    .type               = BG_PARAMETER_MULTI_MENU,
-    .multi_names        = (const char *[]){ TO_VIDEO, NULL },
-    .multi_labels       = (const char *[]){ "Write to video file", NULL },
-    .multi_parameters   = (const bg_parameter_info_t*[]){ NULL, NULL },
-    .multi_descriptions = (const char *[]){ NULL, NULL },
-  };
-
-static const bg_parameter_info_t video_encoder_param =
-  {
-    .name       = "ve",
-    .long_name = TRS("Video"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-  };
-
-static const bg_parameter_info_t text_encoder_param =
-  {
-    .name      = "te",
-    .long_name = TRS("Text subtitles"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-  };
-
-static const bg_parameter_info_t text_encoder_param_v =
-  {
-    .name      = "te",
-    .long_name = TRS("Text subtitles"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-    .multi_names  = (const char *[]){ TO_VIDEO, NULL },
-    .multi_labels = (const char *[]){ "Write to video file", NULL },
-    .multi_parameters = (const bg_parameter_info_t*[]){ NULL, NULL },
-    .multi_descriptions = (const char *[]){ NULL, NULL },
-  };
-
-static const bg_parameter_info_t overlay_encoder_param =
-  {
-    .name       = "oe",
-    .long_name = TRS("Overlay subtitles"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-  };
-
-static const bg_parameter_info_t overlay_encoder_param_v =
-  {
-    .name       = "oe",
-    .long_name = TRS("Overlay subtitles"),
-    .type      = BG_PARAMETER_MULTI_MENU,
-    .multi_names  = (const char *[]){ TO_VIDEO, NULL },
-    .multi_labels = (const char *[]){ "Write to video file", NULL },
-    .multi_parameters = (const bg_parameter_info_t*[]){ NULL, NULL },
-    .multi_descriptions = (const char *[]){ NULL, NULL },
-  };
-
-bg_parameter_info_t *
-bg_plugin_registry_create_encoder_parameters(bg_plugin_registry_t * reg,
-                                             uint32_t type_mask,
-                                             uint32_t flag_mask, int stream_params)
-  {
-  int do_audio = 0;
-  int do_video = 0;
-  int do_text = 0;
-  int do_overlay = 0;
-  int i;
-  
-  bg_parameter_info_t * ret;
-  
-  /* Determine what stream we want */
-
-  if(type_mask & GAVL_STREAM_AUDIO)
-    do_audio = 1;
-  if(type_mask & GAVL_STREAM_VIDEO)
-    do_video = 1;
-  if(type_mask & GAVL_STREAM_TEXT)
-    do_text = 1;
-  if(type_mask & GAVL_STREAM_OVERLAY)
-    do_overlay = 1;
-  
-  /* Count parameters */
-  i = 0;
-  if(do_audio)
-    i++;
-  if(do_text)
-    i++;
-  if(do_overlay)
-    i++;
-  if(do_video)
-    i++;
-
-  ret = calloc(i+1, sizeof(*ret));
-
-  i = 0;
-
-  if(do_audio)
-    {
-    if(do_video)
-      bg_parameter_info_copy(&ret[i], &audio_encoder_param_v);
-    else
-      bg_parameter_info_copy(&ret[i], &audio_encoder_param);
-
-    set_parameter_info(reg,
-                       BG_PLUGIN_ENCODER_AUDIO,
-                       flag_mask, &ret[i], stream_params);
-
-    i++;
-    }
-  if(do_text)
-    {
-    if(do_video)
-      bg_parameter_info_copy(&ret[i], &text_encoder_param_v);
-    else 
-      bg_parameter_info_copy(&ret[i], &text_encoder_param);
-    
-    set_parameter_info(reg,
-                       BG_PLUGIN_ENCODER_TEXT,
-                       flag_mask, &ret[i], stream_params);
-    
-    i++;
-    }
-  if(do_overlay)
-    {
-    if(do_video)
-      bg_parameter_info_copy(&ret[i], &overlay_encoder_param_v);
-    else
-      bg_parameter_info_copy(&ret[i], &overlay_encoder_param);
-    
-    set_parameter_info(reg,
-                       BG_PLUGIN_ENCODER_OVERLAY,
-                       flag_mask, &ret[i], stream_params);
-    i++;
-    }
-  if(do_video)
-    {
-    bg_parameter_info_copy(&ret[i], &video_encoder_param);
-
-    set_parameter_info(reg,
-                       BG_PLUGIN_ENCODER_VIDEO | BG_PLUGIN_ENCODER,
-                       flag_mask, &ret[i], stream_params);
-    i++;
-    }
-
-  return ret;
-  }
 
 int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
   {
@@ -5484,5 +5321,72 @@ void bg_plugin_info_set_max_text_streams(bg_plugin_info_t * inf, int i)
 void bg_plugin_info_set_max_overlay_streams(bg_plugin_info_t * inf, int i)
   {
   gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MAX_OVERLAY_STREAMS, i);
+  
+  }
+
+
+
+
+
+
+int bg_plugin_info_get_min_audio_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MIN_AUDIO_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  }
+
+int bg_plugin_info_get_min_video_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MIN_VIDEO_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  
+  }
+
+int bg_plugin_info_get_min_text_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MIN_TEXT_STREAMS, &val))
+    return val;
+  else
+    return 0;
+
+  }
+
+int bg_plugin_info_get_min_overlay_streams(const bg_plugin_info_t * inf)
+  {
+  int val = 0;
+  if(gavl_dictionary_get_int(&inf->dict, BG_PLUGIN_MIN_OVERLAY_STREAMS, &val))
+    return val;
+  else
+    return 0;
+  
+  }
+
+void bg_plugin_info_set_min_audio_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MIN_AUDIO_STREAMS, i);
+  }
+
+void bg_plugin_info_set_min_video_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MIN_VIDEO_STREAMS, i);
+  
+  }
+
+void bg_plugin_info_set_min_text_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MIN_TEXT_STREAMS, i);
+  
+  }
+
+void bg_plugin_info_set_min_overlay_streams(bg_plugin_info_t * inf, int i)
+  {
+  gavl_dictionary_set_int(&inf->dict, BG_PLUGIN_MIN_OVERLAY_STREAMS, i);
   
   }

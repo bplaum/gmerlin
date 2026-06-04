@@ -98,6 +98,7 @@ void bg_parameter_info_copy(bg_parameter_info_t * dst,
       dst->num_digits        = src->num_digits;
       break;
     case BG_PARAMETER_STRING:
+    case BG_PARAMETER_STRING_MULTILINE:
     case BG_PARAMETER_STRING_HIDDEN:
     case BG_PARAMETER_FONT:
     case BG_PARAMETER_FILE:
@@ -209,6 +210,7 @@ void bg_parameter_info_free(bg_parameter_info_t * info)
         
       break;
     case BG_PARAMETER_STRING:
+    case BG_PARAMETER_STRING_MULTILINE:
     case BG_PARAMETER_STRING_HIDDEN:
     case BG_PARAMETER_FONT:
     case BG_PARAMETER_FILE:

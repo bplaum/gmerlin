@@ -18,10 +18,19 @@ bin_PROGRAMS = gmerlin-transcoder
 
 
 gmerlin_transcoder_SOURCES = \
-main.c \
-transcoder_window.c \
-trackdialog.c \
-tracklist.c
+gmerlin-transcoder.c \
+app.c \
+mainwindow.c \
+metadata.c \
+transcode.c
+
+
+
+# Old
+# main.c \
+# transcoder_window.c \
+# trackdialog.c \
+# tracklist.c
 
 
 gmerlin_transcoder_LDADD = \
@@ -30,8 +39,12 @@ $(top_builddir)/lib/libgmerlin.la @GTK_LIBS@
 
 
 noinst_HEADERS = \
-transcoder_window.h \
-tracklist.h \
-trackdialog.h
+app.h \
+mainwindow.h \
+transcode.h
+
+# transcoder_window.h \
+# tracklist.h \
+# trackdialog.h
 
 EXTRA_DIST = gmerlin-transcoder.desktop

@@ -1304,7 +1304,7 @@ const bg_encoder_plugin_t encoder_plugin =
       .long_name =      "Single images",
       .description =    TRS("This plugin encodes a video as a series of images. It uses the installed image writers."),
 
-      .type =           BG_PLUGIN_ENCODER_VIDEO,
+      .type =           BG_PLUGIN_ENCODER,
       .flags =          BG_PLUGIN_FILE,
       .priority =       BG_PLUGIN_PRIORITY_MAX,
       .create =         NULL,
@@ -1316,6 +1316,7 @@ const bg_encoder_plugin_t encoder_plugin =
     /* Maximum number of audio/video streams. -1 means infinite */
     
     .max_audio_streams = 0,
+    .min_video_streams = 1,
     .max_video_streams = 1,
 
     /* Open a file, filename base is without extension, which

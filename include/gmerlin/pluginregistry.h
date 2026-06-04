@@ -115,6 +115,12 @@ typedef struct bg_plugin_info_s  bg_plugin_info_t;
 #define BG_PLUGIN_MAX_TEXT_STREAMS    "max_tstreams"
 #define BG_PLUGIN_MAX_OVERLAY_STREAMS "max_ostreams"
 
+#define BG_PLUGIN_MIN_AUDIO_STREAMS   "min_astreams"
+#define BG_PLUGIN_MIN_VIDEO_STREAMS   "min_vstreams"
+#define BG_PLUGIN_MIN_TEXT_STREAMS    "min_tstreams"
+#define BG_PLUGIN_MIN_OVERLAY_STREAMS "min_ostreams"
+
+
 int bg_plugin_info_get_max_audio_streams(const bg_plugin_info_t * inf);
 int bg_plugin_info_get_max_video_streams(const bg_plugin_info_t * inf);
 int bg_plugin_info_get_max_text_streams(const bg_plugin_info_t * inf);
@@ -124,7 +130,18 @@ void bg_plugin_info_set_max_audio_streams(bg_plugin_info_t * inf, int i);
 void bg_plugin_info_set_max_video_streams(bg_plugin_info_t * inf, int i);
 void bg_plugin_info_set_max_text_streams(bg_plugin_info_t * inf, int i);
 void bg_plugin_info_set_max_overlay_streams(bg_plugin_info_t * inf, int i);
-  
+
+int bg_plugin_info_get_min_audio_streams(const bg_plugin_info_t * inf);
+int bg_plugin_info_get_min_video_streams(const bg_plugin_info_t * inf);
+int bg_plugin_info_get_min_text_streams(const bg_plugin_info_t * inf);
+int bg_plugin_info_get_min_overlay_streams(const bg_plugin_info_t * inf);
+
+void bg_plugin_info_set_min_audio_streams(bg_plugin_info_t * inf, int i);
+void bg_plugin_info_set_min_video_streams(bg_plugin_info_t * inf, int i);
+void bg_plugin_info_set_min_text_streams(bg_plugin_info_t * inf, int i);
+void bg_plugin_info_set_min_overlay_streams(bg_plugin_info_t * inf, int i);
+
+
 #define bg_plugin_info_get_gettext_domain(inf) \
   gavl_dictionary_get_string(&inf->dict, BG_PLUGIN_GETTEXT_DOMAIN)
 
@@ -549,13 +566,13 @@ void bg_plugin_registry_set_parameter_info(bg_plugin_registry_t * reg,
  *  (with \ref bg_cfg_section_create_from_parameters or \ref bg_cfg_section_create_items)
  *  the resulting encoding section will contain the complete encoder setup.
  */
-
+#if 0
 bg_parameter_info_t *
 bg_plugin_registry_create_encoder_parameters(bg_plugin_registry_t * reg,
                                              uint32_t stream_type_mask,
                                              uint32_t flag_mask,
                                              int stream_params);
-
+#endif
 
 /** \ingroup plugin_registry
  *  \brief Load an image

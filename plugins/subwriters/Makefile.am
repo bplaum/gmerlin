@@ -10,9 +10,10 @@ AM_CFLAGS = \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
 
-plugin_LTLIBRARIES = e_subtext.la
+plugin_LTLIBRARIES = e_srt.la
 
-e_subtext_la_SOURCES  = e_subtext.c
-e_subtext_la_LIBADD  = @MODULE_LIBADD@
+e_srt_la_SOURCES  = e_srt.c
+
+e_srt_la_LIBADD  = @MODULE_LIBADD@
 
 

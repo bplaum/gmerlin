@@ -293,14 +293,7 @@ char * bg_uri_to_string(const char * pos1, int len);
  *  caller with bg_urilist_free.
  */
 
-char ** bg_urilist_decode(const char * str, int len);
-
-/** \brief Free an URI list
- *  \param uri_list Decoded URI list returned by \ref bg_uri_to_string
- */
-
-void bg_urilist_free(char ** uri_list);
-
+void bg_urilist_decode(const char * str, int len, gavl_array_t * ret);
 
 /** \brief Get a language name
  *  \param iso An iso-639 3 character code
