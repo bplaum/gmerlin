@@ -72,7 +72,7 @@ extern const gavl_parameter_info_t metadata_generic_parameters[];
 
 extern const gavl_parameter_info_t metadata_bulk_parameters[];
 
-const gavl_parameter_info_t * get_metadata_parameters(const char * klass);
+const gavl_parameter_info_t * get_metadata_parameters(const gavl_dictionary_t * track);
 
 
 typedef struct

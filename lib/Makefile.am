@@ -156,6 +156,7 @@ mdb_thumbnail.c \
 mdb_xml.c \
 mdb.c \
 mediadirs.c \
+mediaencoder.c \
 mediasrcsink.c \
 metadata.c \
 msg.c \

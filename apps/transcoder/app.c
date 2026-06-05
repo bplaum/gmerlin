@@ -272,10 +272,24 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
 
     if(!strcmp(ctx, TRACK_METADATA))
       {
+      const char * var;
       if(!name)
         continue;
 
       dst = gavl_track_get_metadata_nc(track);
+
+      if(!strcmp(name, GAVL_META_YEAR) &&
+         (var = gavl_value_get_string(val)))
+        {
+        gavl_dictionary_set_string_nocopy(dst, GAVL_META_DATE,
+                                          gavl_sprintf("%s-99-99", var));
+        
+        /*
+        fprintf(stderr, "Got year:\n");
+        gavl_value_dump(val, 2);
+        fprintf(stderr, "\n");
+        */
+        }
       
       /* string -> array */
       if(is_multi_tag(name))
@@ -287,10 +301,6 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
         gavl_dictionary_set(dst, name, val);
         }
 
-      if(strcmp(name, GAVL_META_YEAR))
-        gavl_dictionary_set_string_nocopy(dst, GAVL_META_DATE,
-                                          gavl_sprintf("%s-99-99", gavl_value_get_string(val)));
-      
       }
     else if(!strcmp(ctx, TRACK_RENAME))
       {
@@ -327,7 +337,7 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
           }
         }
 
-      if(strcmp(name, GAVL_META_YEAR))
+      if(!strcmp(name, GAVL_META_YEAR))
         gavl_dictionary_set_string_nocopy(dst, GAVL_META_DATE,
                                           gavl_sprintf("%s-99-99", gavl_value_get_string(val)));
       
@@ -339,7 +349,6 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
         {
         gavl_dictionary_set(dst, name, val);
         }
-        
       }
     else if(!strcmp(ctx, TRACK_ENCODER))
       {
@@ -1499,27 +1508,24 @@ static void action_config_metadata(GSimpleAction *action, GVariant *param, gpoin
   app_data_t * ad = get_app_data_win(user_data);
   int num_sel = num_selected(ad);
   bg_cfg_ctx_t ctx;
-  gavl_dictionary_t * first;
+  gavl_dictionary_t * first_track;
+  gavl_dictionary_t * first_m;
 
   g_print("Config metadata %d\n", num_sel);
   
   if(!num_sel)
     return;
 
-  first = get_first_selected(ad);
-  first = gavl_track_get_metadata_nc(first);
+  first_track = get_first_selected(ad);
+  first_m = gavl_track_get_metadata_nc(first_track);
   
   if(num_sel == 1)
     {
     //    const bg_parameter_info_t * parameters;
-    
     /* Tag Single */
-    const char * klass =
-      gavl_dictionary_get_string(first, GAVL_META_CLASS);
-
     
     bg_cfg_ctx_init(&ctx,
-                    get_metadata_parameters(klass),
+                    get_metadata_parameters(first_track),
                     TRACK_METADATA,
                     "Metadata",
                     NULL, NULL);
@@ -1535,8 +1541,8 @@ static void action_config_metadata(GSimpleAction *action, GVariant *param, gpoin
     }
   ctx.sink = ad->dlg_sink;
     
-  ctx.s = first;
-
+  ctx.s = first_m;
+  
   dlg = bg_gtk_config_dialog_create_single(BG_GTK_CONFIG_DIALOG_OK_CANCEL,
                                            TRS("Configure metadata"),
                                            ad->listbox,

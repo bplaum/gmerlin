@@ -20,8 +20,10 @@
 
 #include <config.h>
 #include <gmerlin/translation.h>
+
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
+#include <gmerlin/bggavl.h>
 
 #include "app.h"
 
@@ -187,13 +189,42 @@ const gavl_parameter_info_t metadata_generic_parameters[] =
   };
 
 
-const gavl_parameter_info_t * get_metadata_parameters(const char * klass)
+const gavl_parameter_info_t * get_metadata_parameters(const gavl_dictionary_t * track)
   {
-  // if(gavl_string_starts_with(klass, "item.audio"))
-
+  const gavl_dictionary_t * cfg;
+  const gavl_dictionary_t * m;
+  const char * klass;
+  const char * plugin_name;
+  const bg_plugin_info_t * info;
+  
+  if(!(m = gavl_track_get_metadata(track)) ||
+     !(klass = gavl_dictionary_get_string(m, GAVL_META_CLASS)))
+    return NULL;
+  
   if(!strcmp(klass, GAVL_META_CLASS_AUDIO_PODCAST_EPISODE) ||
      !strcmp(klass, GAVL_META_CLASS_VIDEO_PODCAST_EPISODE))
     return metadata_podcastepisode_parameters;
+
+  /* Audio or video is decided according to the configured encoder */
+  if((cfg = bg_track_get_config(track, BG_TRACK_CONFIG_ENCODER)) &&
+     (cfg = gavl_dictionary_get_dictionary(cfg, "plugin")) &&
+     ((plugin_name = gavl_dictionary_get_string(cfg, BG_CFG_TAG_NAME))) &&
+     (info = bg_plugin_find_by_name(plugin_name)))
+    {
+    fprintf(stderr, "Blupp\n");
+
+    if((bg_plugin_info_get_max_video_streams(info) > 0) &&
+       (gavl_track_get_num_video_streams(track) > 0))
+      return metadata_video_parameters;
+
+    if((bg_plugin_info_get_max_audio_streams(info) > 0) &&
+       (gavl_track_get_num_audio_streams(track) > 0))
+      return metadata_audio_parameters;
+    
+    }
+  else
+    fprintf(stderr, "Blupp 1\n");
+  
   if(gavl_string_starts_with(klass, "item.audio"))
     return metadata_audio_parameters;
   else if(gavl_string_starts_with(klass, "item.video"))

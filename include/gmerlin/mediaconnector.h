@@ -262,6 +262,10 @@ gavl_source_status_t bg_media_encoder_process_stream(bg_media_source_stream_t * 
 /* Do one singlethread iteration */
 gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time_t * time);
 
+/* Multithread */
+void bg_media_encoder_start(bg_media_source_t * src);
+void bg_media_encoder_stop(bg_media_source_t * src);
+int bg_media_encoder_eof(bg_media_source_t * src);
 
 
 #endif // BG_MEDIACONNECTOR_H_INCLUDED
