@@ -301,7 +301,8 @@ static void arr_get_num_children(const gavl_array_t * arr, const char * director
   
   }
 
-static void get_num_children(const gavl_dictionary_t * dict, const char * directory, int * containers, int * items,
+static void get_num_children(const gavl_dictionary_t * dict, const char * directory,
+                             int * containers, int * items,
                              gavl_time_t * duration)
   {
   const gavl_array_t * arr;
@@ -439,7 +440,8 @@ static int do_add(bg_mdb_backend_t * b,
   }
 
 
-static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del, gavl_array_t * add_arr)
+static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, int del,
+                  gavl_array_t * add_arr)
   {
   int i;
   gavl_dictionary_t * dir_idx = NULL;
@@ -460,6 +462,7 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   int items = 0;
   gavl_time_t duration;
 
+  gavl_dictionary_t * dst_m;
   gavl_dictionary_t * metadata;
   gavl_dictionary_t * track;
   
@@ -582,14 +585,17 @@ static int splice(bg_mdb_backend_t * b, const char * ctx_id, int last, int idx, 
   
   arr_get_num_children(child_ids, parent_directory, &containers, &items, &duration);
 
+  dst_m = gavl_track_get_metadata_nc(dir_idx);
+  
   if(duration != GAVL_TIME_UNDEFINED)
+    {
     gavl_dictionary_set_long(metadata, GAVL_META_APPROX_DURATION, duration);
+    gavl_dictionary_copy_value(dst_m, metadata, GAVL_META_APPROX_DURATION);
+    }
   
   gavl_track_set_num_children(&dict, containers, items);
-  
-  gavl_dictionary_update_fields(gavl_track_get_metadata_nc(dir_idx), metadata);
-  
   gavl_track_set_num_children(dir_idx, containers, items);
+  
   
   gavl_msg_set_arg_dictionary(res, 0, &dict);
   bg_msg_sink_put(b->ctrl.evt_sink);
