@@ -804,6 +804,8 @@ static int handle_cache_msg(void * data, gavl_msg_t * msg)
           const char * id;
           gavl_dictionary_t dict;
           GtkTreeIter it;
+          list_t * list;
+          
           id = gavl_dictionary_get_string(&msg->header, GAVL_MSG_CONTEXT_ID);
 
           if(!bg_gtk_mdb_tree_id_to_iter(GTK_TREE_VIEW(t->treeview), id, &it))
@@ -812,6 +814,14 @@ static int handle_cache_msg(void * data, gavl_msg_t * msg)
           gavl_dictionary_init(&dict);
           gavl_msg_get_arg_dictionary(msg, 0, &dict);
           set_entry_tree(t, &dict, &it);
+
+          /* Set tab label */
+          
+          if((list = bg_gtk_mdb_tree_find_list(t, id)))
+            bg_gdk_mdb_list_set_obj(list, &dict);
+          
+          gavl_dictionary_free(&dict);
+          
           }
           break;
           
