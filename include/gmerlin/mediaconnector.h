@@ -208,8 +208,26 @@ int bg_media_source_filter_connect(bg_media_source_t * filter_src,
 #define BG_ENCODER_GOT_SINK_FRAME  (1<<4)
 #define BG_ENCODER_GOT_SRC_FRAME   (1<<5)
 
+#define BG_ENCODER_STATE_INIT      0
+#define BG_ENCODER_STATE_RUNNING   1
+#define BG_ENCODER_STATE_STOP      2
+#define BG_ENCODER_STATE_EOF       3
+
+
+
 typedef struct
   {
+  gavl_time_t time;
+  pthread_mutex_t mutex;
+  pthread_barrier_t barrier;
+  int state;
+  int num_threads;
+  } bg_encoder_t;
+
+
+typedef struct
+  {
+  bg_encoder_t * com;
   gavl_audio_sink_t * asink;
   gavl_video_sink_t * vsink;
   gavl_packet_sink_t * psink;
@@ -227,20 +245,20 @@ typedef struct
   gavl_packet_t * p;
   gavl_video_frame_t * vframe;
   gavl_source_status_t (*process)(bg_media_source_stream_t * st, gavl_time_t t);
+
+  pthread_t th;
+  
+  gavl_stream_stats_t stats;
+  
   } bg_encoder_stream_t;
 
-typedef struct
-  {
-  bg_plugin_handle_t * h;
-  gavl_time_t time;
-  pthread_mutex_t mutex;
-  } bg_encoder_t;
 
-bg_encoder_stream_t * bg_encoder_stream_create(bg_media_source_stream_t * st);
-bg_encoder_t * bg_encoder_create(bg_media_source_t * src);
+bg_encoder_stream_t * bg_encoder_stream_create(bg_media_source_t * src,
+                                               bg_media_source_stream_t * st);
+// bg_encoder_t * bg_encoder_create(bg_media_source_t * src);
 
 
-int bg_media_encoder_init(bg_media_source_t * src,
+int bg_media_encoder_init(bg_media_source_t * src ,
                           bg_plugin_handle_t * h);
 
 
@@ -248,9 +266,6 @@ int bg_media_encoder_init(bg_media_source_t * src,
 int bg_media_encoder_connect(bg_media_source_t * enc_src,
                              bg_media_source_t * src,
                              bg_plugin_handle_t * h);
-
-void bg_media_encoder_finalize(bg_media_source_t * src_enc);
-
 
 void bg_media_encoder_finalize(bg_media_source_t * src_enc);
 
@@ -266,6 +281,8 @@ gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time
 void bg_media_encoder_start(bg_media_source_t * src);
 void bg_media_encoder_stop(bg_media_source_t * src);
 int bg_media_encoder_eof(bg_media_source_t * src);
+
+void bg_media_encoder_dump_stats(bg_media_source_t * src);
 
 
 #endif // BG_MEDIACONNECTOR_H_INCLUDED

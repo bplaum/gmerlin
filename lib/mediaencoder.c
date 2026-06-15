@@ -22,6 +22,7 @@
 #include <gmerlin/pluginregistry.h>
 #include <gavl/log.h>
 #include <gmerlin/filters.h>
+#include <gavl/utils.h>
 
 #define LOG_DOMAIN "mediaencoder"
 
@@ -265,9 +266,14 @@ static void free_encoder(void * priv)
   free(s);
   }
 
-bg_encoder_t * bg_encoder_create(bg_media_source_t * src)
+static bg_encoder_t * get_common(bg_media_source_t * src)
   {
-  bg_encoder_t * ret = calloc(1, sizeof(*ret));
+  bg_encoder_t * ret;
+
+  if(src->user_data)
+    return src->user_data;
+  
+  ret = calloc(1, sizeof(*ret));
 
   pthread_mutex_init(&ret->mutex, NULL);
 
@@ -275,7 +281,7 @@ bg_encoder_t * bg_encoder_create(bg_media_source_t * src)
   
   src->user_data = ret;
   src->free_user_data = free_encoder;
-  return ret;
+  return src->user_data;
   }
 
 static void free_encoder_stream(void * priv)
@@ -286,11 +292,14 @@ static void free_encoder_stream(void * priv)
   free(s);
   }
 
-bg_encoder_stream_t * bg_encoder_stream_create(bg_media_source_stream_t * st)
+bg_encoder_stream_t * bg_encoder_stream_create(bg_media_source_t * src,
+                                               bg_media_source_stream_t * st)
   {
   bg_encoder_stream_t * ret = calloc(1, sizeof(*ret));
+  ret->com = get_common(src);
   st->user_data = ret;
   st->free_user_data = free_encoder_stream;
+  gavl_stream_stats_init(&ret->stats);
   return ret;
   }
 
@@ -468,7 +477,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
     switch(st->type)
       {
       case GAVL_STREAM_AUDIO:
-        s = bg_encoder_stream_create(st);
+        s = bg_encoder_stream_create(enc_src, st);
         if(st->asrc)
           {
           s->idx = enc->add_audio_stream(h->priv,
@@ -502,7 +511,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
         break;
       case GAVL_STREAM_VIDEO:
         {
-        s = bg_encoder_stream_create(st);
+        s = bg_encoder_stream_create(enc_src, st);
         
         if(st->vsrc)
           {
@@ -540,7 +549,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
       case GAVL_STREAM_TEXT:
         {
         const gavl_dictionary_t * m;
-        s = bg_encoder_stream_create(st);
+        s = bg_encoder_stream_create(enc_src, st);
         
         if((m = gavl_stream_get_metadata(st->s)))
           gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE,
@@ -552,7 +561,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
         }
         break;
       case GAVL_STREAM_OVERLAY:
-        s = bg_encoder_stream_create(st);
+        s = bg_encoder_stream_create(enc_src, st);
 
         if(st->vsrc)
           {
@@ -590,7 +599,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
         
         break;
       case GAVL_STREAM_MSG:
-        s = bg_encoder_stream_create(st);
+        s = bg_encoder_stream_create(enc_src, st);
         //        s->flags |= BG_ENCODER_STREAM_NONCONT;
         s->msink = enc->add_msg_stream(h->priv, GAVL_META_STREAM_ID_MSG_PROGRAM);
         break;
@@ -671,6 +680,9 @@ static gavl_source_status_t process_audio(bg_media_source_stream_t * st, gavl_ti
     return result;
     }
 
+  gavl_stream_stats_update_params(&s->stats, f->timestamp, f->valid_samples,
+                                  0, 0);
+  
   s->time = gavl_time_unscale(s->dst_scale, f->timestamp + f->valid_samples);
         
   if(gavl_audio_sink_put_frame(s->asink, f) == GAVL_SINK_OK)
@@ -694,7 +706,11 @@ static gavl_source_status_t process_video(bg_media_source_stream_t * st, gavl_ti
     }
 
   s->time = gavl_time_unscale(s->dst_scale, f->timestamp + f->duration);
-        
+
+  gavl_stream_stats_update_params(&s->stats, f->timestamp, f->duration,
+                                  0, 0);
+
+  
   if(gavl_video_sink_put_frame(s->vsink, f) == GAVL_SINK_OK)
     return GAVL_SOURCE_OK;
   else
@@ -723,7 +739,11 @@ static gavl_source_status_t process_packet(bg_media_source_stream_t * st, gavl_t
     }
   
   t = gavl_time_unscale(s->dst_scale, s->p->pts + s->p->duration);
-        
+
+  gavl_stream_stats_update_params(&s->stats, s->p->pts, s->p->duration,
+                                  s->p->buf.len, s->p->flags);
+
+  
   if(gavl_packet_sink_put_packet(s->psink, s->p) != GAVL_SINK_OK)
     {
     s->p = NULL;
@@ -814,6 +834,9 @@ static gavl_source_status_t process_packet_noncont(bg_media_source_stream_t * st
   else
     result = GAVL_SOURCE_EOF;
 
+  gavl_stream_stats_update_params(&s->stats, s->p->pts, s->p->duration,
+                                  s->p->buf.len, s->p->flags);
+  
   s->flags &= ~(BG_ENCODER_GOT_SINK_FRAME|BG_ENCODER_GOT_SRC_FRAME);
   s->p = NULL;
   return result;
@@ -859,6 +882,9 @@ static gavl_source_status_t process_video_noncont(bg_media_source_stream_t * st,
   else
     result = GAVL_SOURCE_EOF;
 
+  gavl_stream_stats_update_params(&s->stats, s->vframe->timestamp, s->vframe->duration,
+                                  0, 0);
+  
   s->flags &= ~(BG_ENCODER_GOT_SINK_FRAME|BG_ENCODER_GOT_SRC_FRAME);
   s->vframe = NULL;
   return result;
@@ -868,8 +894,10 @@ static gavl_source_status_t process_video_noncont(bg_media_source_stream_t * st,
 gavl_source_status_t bg_media_encoder_process_stream(bg_media_source_stream_t * st,
                                                      gavl_time_t t)
   {
-  gavl_source_status_t result;
+  gavl_source_status_t result = GAVL_SOURCE_OK;
   bg_encoder_stream_t * s = st->user_data;
+
+
   result = s->process(st, t);
 
   if(result == GAVL_SOURCE_EOF)
@@ -918,12 +946,8 @@ gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time
 
   /* Process stream */
   
-  if(bg_media_encoder_process_stream(src->streams[min_idx], GAVL_TIME_UNDEFINED) !=
-     GAVL_SOURCE_OK)
-    {
-    return GAVL_SOURCE_EOF;
-    }
-
+  bg_media_encoder_process_stream(src->streams[min_idx], GAVL_TIME_UNDEFINED);
+  
   s = src->streams[min_idx]->user_data;
   
   if(s->time > max_time)
@@ -949,17 +973,134 @@ gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time
   return GAVL_SOURCE_OK;
   }
 
+static void * encoder_stream_thread(void * data)
+  {
+  gavl_source_status_t result;
+  bg_media_source_stream_t * st = data;
+  bg_encoder_stream_t * s = st->user_data;
+
+  pthread_barrier_wait(&s->com->barrier);
+  
+  
+  while(1)
+    {
+    pthread_mutex_lock(&s->com->mutex);
+    if(s->com->state != BG_ENCODER_STATE_RUNNING)
+      result = GAVL_SOURCE_EOF;
+    pthread_mutex_unlock(&s->com->mutex);
+
+    if(result == GAVL_SOURCE_EOF)
+      break;
+
+    result = bg_media_encoder_process_stream(st, GAVL_TIME_UNDEFINED);
+
+    if(result == GAVL_SOURCE_EOF)
+      break;
+    }
+  
+  pthread_mutex_lock(&s->com->mutex);
+  s->com->num_threads--;
+  if(!s->com->num_threads)
+    s->com->state = BG_ENCODER_STATE_EOF; 
+  
+  pthread_mutex_unlock(&s->com->mutex);
+  return NULL;
+  
+  } 
+
+
 void bg_media_encoder_start(bg_media_source_t * src)
   {
+  /* Count threads */
+  int i;
+  bg_encoder_stream_t * s;
+  bg_encoder_t * enc = src->user_data;
+
+  for(i = 0; i < src->num_streams; i++)
+    {
+    if((src->streams[i]->action == BG_STREAM_ACTION_OFF) ||
+       (src->streams[i]->type == GAVL_STREAM_MSG))
+      continue;
+    enc->num_threads++;
+    }
+
+  enc->state = BG_ENCODER_STATE_RUNNING;
   
+  pthread_barrier_init(&enc->barrier, NULL, enc->num_threads + 1);
+  
+  for(i = 0; i < src->num_streams; i++)
+    {
+    if((src->streams[i]->action == BG_STREAM_ACTION_OFF) ||
+       (src->streams[i]->type == GAVL_STREAM_MSG))
+      continue;
+    
+    s = src->streams[i]->user_data;
+    pthread_create(&s->th, NULL, encoder_stream_thread, src->streams[i]);
+    }
+
+  pthread_barrier_wait(&enc->barrier);
+  pthread_barrier_destroy(&enc->barrier);
   }
 
 void bg_media_encoder_stop(bg_media_source_t * src)
   {
+  int i;
+  bg_encoder_stream_t * s;
+
+  bg_encoder_t * enc = src->user_data;
+  pthread_mutex_lock(&enc->mutex);
+  enc->state = BG_ENCODER_STATE_STOP;
+  pthread_mutex_unlock(&enc->mutex);
+
+  for(i = 0; i < src->num_streams; i++)
+    {
+    if((src->streams[i]->action == BG_STREAM_ACTION_OFF) ||
+       (src->streams[i]->type == GAVL_STREAM_MSG))
+      continue;
+    
+    s = src->streams[i]->user_data;
+    pthread_join(s->th, NULL);
+    }
   
   }
 
 int bg_media_encoder_eof(bg_media_source_t * src)
   {
+  int ret = 0;
+  bg_encoder_t * enc = src->user_data;
+
+  pthread_mutex_lock(&enc->mutex);
+  if(enc->state == BG_ENCODER_STATE_EOF)
+    ret = 1;
+  pthread_mutex_unlock(&enc->mutex);
+  return ret;
+  }
+
+static void dump_stats_type(bg_media_source_t * src, gavl_stream_type_t type)
+  {
+  int i, num;
+
+  bg_encoder_stream_t * s;
+  bg_media_source_stream_t * st;
   
+  num = bg_media_source_get_num_streams(src, type);
+  
+  for(i = 0; i < num; i++)
+    {
+    st = bg_media_source_get_stream(src, type, i);
+    s = st->user_data;
+    
+    gavl_dprintf("%s stream %d:\n", gavl_stream_type_name(type), i+1);
+    gavl_stream_stats_dump(&s->stats, 2);
+    gavl_dprintf("\n");
+    }
+  
+  }
+
+void bg_media_encoder_dump_stats(bg_media_source_t * src)
+  {
+  dump_stats_type(src, GAVL_STREAM_AUDIO);
+  dump_stats_type(src, GAVL_STREAM_VIDEO);
+  dump_stats_type(src, GAVL_STREAM_TEXT);
+  dump_stats_type(src, GAVL_STREAM_OVERLAY);
   }

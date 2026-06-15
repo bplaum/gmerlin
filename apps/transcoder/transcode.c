@@ -412,9 +412,12 @@ void transcoder_destroy(transcoder_t * t)
   gavl_msg_t * msg = bg_msg_sink_get(t->ctrl.cmd_sink);
   gavl_msg_set_id_ns(msg, GAVL_CMD_QUIT, GAVL_MSG_NS_GENERIC);
   bg_msg_sink_put(t->ctrl.cmd_sink);
+
   
   
   pthread_join(t->th, NULL);
+
+  bg_media_encoder_dump_stats(&t->src_encoder);
   
   transcoder_cleanup(t);
 
