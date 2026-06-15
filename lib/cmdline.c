@@ -859,6 +859,7 @@ static void print_help_parameters(int indent,
         print_linebreak(out, format);
 
         break;
+      case BG_PARAMETER_STRING_MULTILINE:
       case BG_PARAMETER_STRING:
       case BG_PARAMETER_FONT:
       case BG_PARAMETER_FILE:
