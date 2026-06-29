@@ -353,8 +353,9 @@ static char * create_service_browser(avahi_t * a, const char * type)
   if((var = gavl_msg_get_arg_string_c(res, 0)))
     {
     char * rule;
-    char * rule_common = gavl_sprintf("sender='%s',type='signal',path='%s',interface='org.freedesktop.Avahi.ServiceBrowser'",
-                                      a->avahi_addr, var);
+    char * rule_common =
+      gavl_sprintf("sender='%s',type='signal',path='%s',interface='org.freedesktop.Avahi.ServiceBrowser'",
+                   a->avahi_addr, var);
       
     ret = gavl_strdup(var);
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Created service browser %s", ret);

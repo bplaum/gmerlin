@@ -2214,11 +2214,6 @@ function cfg_set_parameter(name, val)
         player_control.hide();
       }
       break;
-    case "rescan_devs":
-      {
-      msg_send(msg_create(BG_MSG_BACKENDS_RESCAN, BG_MSG_NS_BACKEND), server_connection);
-      }
-      break;
     }
   }
 
@@ -2313,10 +2308,6 @@ function cfg_info_init()
       
   cfg_info.push(info);
 
-  /* Rescan */
-    
-  info = cfg_item_create("rescan_devs", CFG_TYPE_BUTTON, "Search devices");
-  cfg_info.push(info);
   
   /* Skins */
 
