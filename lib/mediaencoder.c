@@ -701,7 +701,8 @@ static gavl_source_status_t process_video(bg_media_source_stream_t * st, gavl_ti
   if(result != GAVL_SOURCE_OK)
     {
     /* TODO: Undo get_frame? */
-          
+    //    fprintf(stderr, "Video EOF\n");
+    //    gavl_stream_stats_dump(&s->stats, 2);
     return result;
     }
 
@@ -1088,7 +1089,9 @@ static void dump_stats_type(bg_media_source_t * src, gavl_stream_type_t type)
   for(i = 0; i < num; i++)
     {
     st = bg_media_source_get_stream(src, type, i);
-    s = st->user_data;
+
+    if(!(s = st->user_data))
+      continue;
     
     gavl_dprintf("%s stream %d:\n", gavl_stream_type_name(type), i+1);
     gavl_stream_stats_dump(&s->stats, 2);
