@@ -1192,7 +1192,7 @@ static void action_preferences(GSimpleAction *action, GVariant *param, gpointer 
 
   bg_cfg_ctx_init(&ctx,
                   text_parameters,
-                  PREFS_VIDEO, TRS("Text defaults"),
+                  PREFS_TEXT, TRS("Text defaults"),
                   NULL, // bg_set_parameter_func_t set_param,
                   NULL // void * cb_data
                   );
@@ -1204,7 +1204,7 @@ static void action_preferences(GSimpleAction *action, GVariant *param, gpointer 
 
   bg_cfg_ctx_init(&ctx,
                   overlay_parameters,
-                  PREFS_VIDEO, TRS("Overlay defaults"),
+                  PREFS_OVERLAY, TRS("Overlay defaults"),
                   NULL, // bg_set_parameter_func_t set_param,
                   NULL // void * cb_data
                   );
