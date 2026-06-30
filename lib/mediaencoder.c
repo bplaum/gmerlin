@@ -976,12 +976,11 @@ gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time
 
 static void * encoder_stream_thread(void * data)
   {
-  gavl_source_status_t result;
+  gavl_source_status_t result = GAVL_SOURCE_OK;
   bg_media_source_stream_t * st = data;
   bg_encoder_stream_t * s = st->user_data;
 
   pthread_barrier_wait(&s->com->barrier);
-  
   
   while(1)
     {
@@ -1025,6 +1024,9 @@ void bg_media_encoder_start(bg_media_source_t * src)
     enc->num_threads++;
     }
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+           "Starting encoding (%d threads)\n", enc->num_threads);
+  
   enc->state = BG_ENCODER_STATE_RUNNING;
   
   pthread_barrier_init(&enc->barrier, NULL, enc->num_threads + 1);
