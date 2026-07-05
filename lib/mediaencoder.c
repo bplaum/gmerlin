@@ -942,9 +942,16 @@ gavl_source_status_t bg_media_encoder_process(bg_media_source_t * src, gavl_time
       }
     
     }
+  
   if(min_idx < 0)
+    {
+    bg_encoder_t * enc = src->user_data;
+    
+    pthread_mutex_lock(&enc->mutex);
+    enc->state = BG_ENCODER_STATE_EOF;
+    pthread_mutex_unlock(&enc->mutex);
     return GAVL_SOURCE_EOF;
-
+    }
   /* Process stream */
   
   bg_media_encoder_process_stream(src->streams[min_idx], GAVL_TIME_UNDEFINED);
