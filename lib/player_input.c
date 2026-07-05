@@ -497,6 +497,11 @@ void bg_player_source_select_streams(bg_player_t * player,
       bg_media_source_set_overlay_action(src->input_handle->src, i,
                                          BG_STREAM_ACTION_OFF);
     }
+
+  bg_media_source_set_msg_action_by_id(src->input_handle->src, GAVL_META_STREAM_ID_MSG_PROGRAM,
+                                       BG_STREAM_ACTION_DECODE);
+  
+
   }
 
 int bg_player_source_set_from_handle(bg_player_t * player, bg_player_source_t * src,
