@@ -2564,7 +2564,7 @@ static void detect_album_cover(bg_plugin_registry_t * plugin_reg,
   char * file = NULL;
   int result;
 
-  if(!path)
+  if(!path || gavl_dictionary_get(dict, GAVL_META_COVER_URL))
     return;
   
   file = gavl_sprintf("%s/cover.jpg", path);
@@ -2582,7 +2582,7 @@ static int detect_movie_poster(bg_plugin_registry_t * plugin_reg,
   char * file = NULL;
   int result;
 
-  if(!path || !basename)
+  if(!path || !basename || gavl_dictionary_get(dict, GAVL_META_POSTER_URL))
     return 0;
   
   file = gavl_sprintf("%s/%s.jpg", path, basename);
@@ -2599,7 +2599,7 @@ static int detect_movie_wallpaper(bg_plugin_registry_t * plugin_reg,
   char * file = NULL;
   int result;
 
-  if(!path || !basename)
+  if(!path || !basename || gavl_dictionary_get(dict, GAVL_META_WALLPAPER_URL))
     return 0;
   
   file = gavl_sprintf("%s/%s.fanart.jpg", path, basename);
@@ -3699,8 +3699,6 @@ int bg_input_plugin_set_track(bg_plugin_handle_t * h, int track)
   if(p->get_src)
     {
     h->src = p->get_src(h->priv);
-    bg_media_source_set_msg_action_by_id(h->src, GAVL_META_STREAM_ID_MSG_PROGRAM,
-                                         BG_STREAM_ACTION_DECODE);
     }
   return 1;
   }
