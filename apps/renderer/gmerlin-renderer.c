@@ -37,7 +37,6 @@
 
 #include <signal.h>
 
-static char * save_config = NULL;
 static gavl_array_t fe_arr;
 
 static void opt_fe(void * data, int * argc, char *** argv, int arg)
@@ -59,7 +58,8 @@ static bg_cmdline_arg_t global_options[] =
       .arg = "-sc",
       .help_arg = "<file>",
       .help_string = TRS("Save config to file"),
-      .argv = &save_config,
+      .flags = BG_CMDLINE_ARG_STRING,
+      //      .argv = &save_config,
     },
     BG_OPT_LOAD_CONFIG,
     {
@@ -129,6 +129,7 @@ int main(int argc, char ** argv)
   int ret = EXIT_FAILURE;
   gavl_time_t delay_time = GAVL_TIME_SCALE / 50; // 20 ms
   renderer_t s;
+  const char * save_config;
 
   gavl_array_init(&fe_arr);
   bg_frontend_set_option(&fe_arr, "gmerlin,upnp,mpris", BG_PLUGIN_FRONTEND_RENDERER);
@@ -147,11 +148,11 @@ int main(int argc, char ** argv)
   /* Pre-initialize the frontends */
   
   bg_cmdline_init(&app_data);
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
 
   renderer_init(&s, &fe_arr);
     
-  if(save_config)
+  if((save_config = gavl_dictionary_get_string(&bg_cmdline_options, "sc")))
     {
     gavl_dictionary_t tmp;
     gavl_dictionary_init(&tmp);

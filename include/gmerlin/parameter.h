@@ -90,8 +90,8 @@
 /* Flags */
 
 
-#define BG_PARAMETER_SYNC           (1<<0) //!< Apply the value whenever the widgets value changes
-#define BG_PARAMETER_HIDE_DIALOG    (1<<1) //!< Don't make a configuration widget (for objects, which change values themselves)
+#define BG_PARAMETER_SYNC           GAVL_PARAMETER_SYNC //!< Apply the value whenever the widgets value changes
+#define BG_PARAMETER_HIDE_DIALOG    GAVL_PARAMETER_HIDE_DIALOG //!< Don't make a configuration widget (for objects, which change values themselves)
 
 /** \brief Typedef for parmeter description
  */
@@ -188,6 +188,11 @@ bg_parameter_info_concat_arrays(bg_parameter_info_t const ** srcs);
 const bg_parameter_info_t *
 bg_parameter_find(const bg_parameter_info_t * info,
                   const char * name);
+
+
+const bg_parameter_info_t *
+bg_parameter_find_in_array(const bg_parameter_info_t * info,
+                           const char * name);
 
 
 /** \brief Convert a libxml2 node into a parameter array

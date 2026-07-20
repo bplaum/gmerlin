@@ -4595,6 +4595,12 @@ void bg_plugin_registry_list_vis(void * data, int * argc,
   bg_plugin_registry_list_plugins(BG_PLUGIN_VISUALIZATION, 0);
   }
 
+void bg_plugin_registry_list_enc(void * data, int * argc,
+                                         char *** _argv, int arg)
+  {
+  bg_plugin_registry_list_plugins(BG_PLUGIN_ENCODER, 0);
+  }
+
 
 void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
                                                char *** _argv, int arg)
@@ -4627,10 +4633,31 @@ void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
     tmp_string = gavl_string_array_join(arr, " ");
     fprintf(stderr, "Protocols: %s\n", tmp_string);
     }
+
+
   
   if(info->parameters)
     {
-    bg_cmdline_print_help_parameters(info->parameters, BG_HELP_FORMAT_TERM);
+    printf("Parameters:\n");
+    bg_cmdline_print_help_parameters(info->parameters);
+    }
+
+  if(info->audio_parameters)
+    {
+    printf("Audio parameters:\n");
+    bg_cmdline_print_help_parameters(info->audio_parameters);
+    }
+
+  if(info->video_parameters)
+    {
+    printf("Video parameters:\n");
+    bg_cmdline_print_help_parameters(info->video_parameters);
+    }
+
+  if(info->overlay_parameters)
+    {
+    printf("Overlay parameters:\n");
+    bg_cmdline_print_help_parameters(info->overlay_parameters);
     }
   
   bg_cmdline_remove_arg(argc, _argv, arg);

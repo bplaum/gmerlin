@@ -783,7 +783,7 @@ const bg_encoder_plugin_t the_plugin =
       .long_name =         TRS("WAV"),
       .description =       TRS("Simple writer for wave files, supports 8, 16, 24 and 32 bit PCM"),
       .type =              BG_PLUGIN_ENCODER,
-      .flags =             BG_PLUGIN_FILE | BG_PLUGIN_PIPE | BG_PLUGIN_GAVF_IO,
+      .flags =             BG_PLUGIN_FILE | BG_PLUGIN_PIPE,
       .priority =          BG_PLUGIN_PRIORITY_MAX,
       .create =            create_wav,
       .destroy =           destroy_wav,
@@ -798,7 +798,6 @@ const bg_encoder_plugin_t the_plugin =
     .set_callbacks =       set_callbacks_wav,
     
     .open =                open_wav,
-    .open_io =             open_io_wav,
     
     .get_audio_parameters =    get_audio_parameters_wav,
 

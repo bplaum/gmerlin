@@ -525,12 +525,12 @@ int main(int argc, char ** argv)
   bg_cmdline_init(&app_data);
   
   if(argc < 2)
-    bg_cmdline_print_help(argv[0], 0);
+    bg_cmdline_print_help(argv[0]);
   
 
   bg_cmdline_init(&app_data);
 
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
   
   if(!remote_addr)
     remote_addr = BG_BACKEND_URI_SCHEME_GMERLIN_RENDERER"://127.0.0.1:10101/ws/"GAVL_META_CLASS_BACKEND_RENDERER;
@@ -547,7 +547,7 @@ int main(int argc, char ** argv)
   
   backend_ctrl = bg_backend_handle_get_controllable(backend);
     
-  bg_cmdline_parse(commands, &argc, &argv, NULL);
+  bg_cmdline_parse(commands, &argc, &argv);
 
   frontends = bg_frontends_create(backend_ctrl,
                                   BG_PLUGIN_FRONTEND_RENDERER, &fe_arr, &num_frontends);

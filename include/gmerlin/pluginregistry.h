@@ -868,6 +868,9 @@ void bg_plugin_registry_list_fe_mdb(void * data, int * argc,
 void bg_plugin_registry_list_vis(void * data, int * argc,
                                          char *** _argv, int arg);
 
+void bg_plugin_registry_list_enc(void * data, int * argc,
+                                 char *** _argv, int arg);
+
 void bg_plugin_registry_list_plugin_parameters(void * data, int * argc,
                                                char *** _argv, int arg);
 
@@ -959,6 +962,13 @@ int bg_plugin_config_parse_single(gavl_dictionary_t * dict,
   .arg =         "-list-vis", \
   .help_string = TRS("List the names of the installed visualization plugins"), \
   .callback =    bg_plugin_registry_list_vis, \
+  }
+
+#define BG_PLUGIN_OPT_LIST_ENC                  \
+  { \
+  .arg =         "-list-enc", \
+  .help_string = TRS("List the names of the installed encoder plugins"), \
+  .callback =    bg_plugin_registry_list_enc, \
   }
 
 #define BG_PLUGIN_OPT_LIST_OPTIONS      \

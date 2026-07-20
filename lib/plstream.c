@@ -271,9 +271,10 @@ static void flush_metadata(plstream_t * p)
     dst = gavl_value_set_dictionary(&val);
     
     gavl_dictionary_copy(dst, dict);
-
+        
     gavl_dictionary_set(dst, GAVL_META_CAN_SEEK, NULL);
     gavl_dictionary_set(dst, GAVL_META_CAN_PAUSE, NULL);
+    gavl_dictionary_set(dst, GAVL_META_SAMPLE_ACCURATE, NULL);
     gavl_dictionary_set(dst, GAVL_META_SRC, NULL);
     gavl_dictionary_set(dst, GAVL_META_HASH, NULL);
     gavl_dictionary_set(dst, GAVL_META_IDX, NULL);

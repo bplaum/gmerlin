@@ -577,7 +577,7 @@ int main(int argc, char ** argv)
   cfg_ctx[3].long_name = "Section 4";
   cfg_ctx[4].long_name = "Section 5";
   
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
   
   bg_gtk_init(&argc, &argv);
   

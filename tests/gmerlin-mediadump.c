@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
   bg_app_init("mediadump", TRS("Dump media frames"), NULL);
 
   bg_cmdline_init(&app_data);
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
   
   /* Create registries */
 

@@ -130,13 +130,13 @@ int main(int argc, char ** argv)
 
   /* Parse options */
   bg_cmdline_init(&app_data);
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
   
   files = bg_cmdline_get_locations_from_args(&argc, &argv);
 
   if(!files || !files[0] || !files[1] || files[2])
     {
-    bg_cmdline_print_help(argv[0], 0);
+    bg_cmdline_print_help(argv[0]);
     return -1;
     }
   /* Create registries */

@@ -308,6 +308,22 @@ bg_parameter_info_concat_arrays(bg_parameter_info_t const ** srcs)
   return ret;
   }
 
+const bg_parameter_info_t *
+bg_parameter_find_in_array(const bg_parameter_info_t * info,
+                           const char * name)
+  {
+  int i;
+  i = 0;
+  while(info[i].name)
+    {
+    if(!strcmp(name, info[i].name))
+      return &info[i];
+    i++;
+    }
+  return NULL;
+  }
+
+
 
 const bg_parameter_info_t *
 bg_parameter_find(const bg_parameter_info_t * info,

@@ -332,35 +332,6 @@ static void destroy_alsa(void * p)
   free(priv);
   }
 
-#if 0
-
-const bg_recorder_plugin_t the_plugin =
-  {
-    .common =
-    {
-      BG_LOCALE,
-      .name =          "i_alsa",
-      .long_name =     TRS("Alsa"),
-      .description =   TRS("Alsa recorder"),
-      .type =          BG_PLUGIN_RECORDER_AUDIO,
-      .flags =         BG_PLUGIN_DEVPARAM,
-      .priority =      BG_PLUGIN_PRIORITY_MAX - 1,
-      .create =        create_alsa,
-      .destroy =       destroy_alsa,
-
-      .get_parameters = get_parameters_alsa,
-      .set_parameter =  set_parameter_alsa,
-    },
-
-    .open =             open_alsa,
-    .get_audio_source = get_audio_source_alsa,
-    .close =            close_alsa,
-  };
-/* Include this into all plugin modules exactly once
-   to let the plugin loader obtain the API version */
-BG_GET_PLUGIN_API_VERSION;
-
-#else
 
 const bg_input_plugin_t the_plugin =
   {
@@ -392,5 +363,3 @@ const bg_input_plugin_t the_plugin =
    to let the plugin loader obtain the API version */
 BG_GET_PLUGIN_API_VERSION;
 
-
-#endif

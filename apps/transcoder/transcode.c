@@ -30,6 +30,45 @@
 #include <gmerlin/bggavl.h>
 #include <gavl/utils.h>
 
+static void init_stream_actions(transcoder_t * t, const gavl_dictionary_t * track)
+  {
+  int i;
+  const gavl_dictionary_t * src_dict;
+  const gavl_dictionary_t * src_stream;
+  
+  for(i = 0; i < t->src->num_streams; i++)
+    {
+    int idx;
+    const char * action;
+    bg_media_source_stream_t * s = t->src->streams[i];
+
+    idx = bg_media_source_get_stream_idx(t->src, s);
+    src_stream = gavl_track_get_stream(track, s->type, idx);
+
+    if(!src_stream)
+      {
+      //      fprintf(stderr, "Got no stream\n");
+      //      gavl_dictionary_dump(track, 2);
+      continue; // Probably nothing to do
+      }
+    
+    /* Configuration */
+    if((src_dict = bg_track_get_config(src_stream, BG_TRACK_CONFIG_TRANSCODE)))
+      {
+      /* Action */
+      action = gavl_dictionary_get_string(src_dict, "action");
+      if(!strcmp(action, "transcode"))
+        s->action = BG_STREAM_ACTION_DECODE;
+      else if(!strcmp(action, "copy"))
+        s->action = BG_STREAM_ACTION_READRAW;
+      else
+        s->action = BG_STREAM_ACTION_OFF;
+      }
+    
+    }
+  
+  }
+
 static void transfer_config(transcoder_t * t, const gavl_dictionary_t * track)
   {
   const gavl_dictionary_t * src_dict;
@@ -55,7 +94,6 @@ static void transfer_config(transcoder_t * t, const gavl_dictionary_t * track)
   for(i = 0; i < t->src->num_streams; i++)
     {
     int idx;
-    const char * action;
     bg_media_source_stream_t * s = t->src->streams[i];
 
     idx = bg_media_source_get_stream_idx(t->src, s);
@@ -90,14 +128,20 @@ static void transfer_config(transcoder_t * t, const gavl_dictionary_t * track)
       dst_dict = gavl_stream_get_metadata_nc(s->s);
       gavl_dictionary_copy_value(dst_dict, src_dict, GAVL_META_LANGUAGE);
       
-      /* Action */
-      action = gavl_dictionary_get_string(src_dict, "action");
-      if(!strcmp(action, "transcode"))
-        s->action = BG_STREAM_ACTION_DECODE;
-      else if(!strcmp(action, "copy"))
-        s->action = BG_STREAM_ACTION_READRAW;
-      else
-        s->action = BG_STREAM_ACTION_OFF;
+      }
+
+    /* Encoder */
+    if((src_dict = bg_track_get_config(src_stream, BG_TRACK_CONFIG_ENCODER)))
+      {
+      dst_dict = bg_track_get_config_nc(s->s, BG_TRACK_CONFIG_ENCODER);
+      gavl_dictionary_copy(dst_dict, src_dict);
+
+      fprintf(stderr, "Copied encoder config:\n");
+      gavl_dictionary_dump(src_dict, 2);
+      fprintf(stderr, "\nDst: %p\n", s->s);
+      gavl_dictionary_dump(s->s, 2);
+      fprintf(stderr, "\n\n");
+
       }
     
     }
@@ -228,8 +272,9 @@ static int transcoder_init(transcoder_t * t, const gavl_dictionary_t * track)
    *   Apply the configuration. This also sets the initial
    *   stream actions
    */
+
+  init_stream_actions(t, track);
   
-  transfer_config(t, track);
 
   m = gavl_track_get_metadata(t->src->track);
   gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &t->duration);
@@ -265,6 +310,9 @@ static int transcoder_init(transcoder_t * t, const gavl_dictionary_t * track)
   
   bg_input_plugin_start(t->input);
 
+  /* Configuration is transferred after the input is started */
+  transfer_config(t, track);
+  
   /* input -> filters  */
   bg_media_source_filter_connect(&t->src_filter, t->src);
 

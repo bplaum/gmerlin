@@ -307,6 +307,10 @@ static gavl_dictionary_t * get_stream_config(gavl_dictionary_t * s, const char *
                                              const gavl_parameter_info_t * params)
   {
   const gavl_dictionary_t * cfg;
+
+  fprintf(stderr, "Get stream config %p\n", s);
+  gavl_dictionary_dump(s, 2);
+  fprintf(stderr, "\n");
   
   if((cfg = bg_track_get_config(s, tag)))
     return gavl_dictionary_clone(cfg);
@@ -456,6 +460,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
   {
   int i;
   bg_media_source_stream_t * st;
+  
   bg_encoder_stream_t * s;
   bg_encoder_plugin_t * enc = (bg_encoder_plugin_t*)h->plugin;
   const gavl_parameter_info_t * p;
@@ -470,7 +475,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
   for(i = 0; i < enc_src->num_streams; i++)
     {
     st = enc_src->streams[i];
-
+    
     if(st->action == BG_STREAM_ACTION_OFF)
       continue;
       
@@ -490,8 +495,11 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
             sep.func = enc->set_audio_parameter;
             sep.priv = h->priv;
             sep.s = s;
-            cfg = get_stream_config(st->s, BG_TRACK_CONFIG_ENCODER, p);
-
+            cfg = get_stream_config(src->streams[i]->s, BG_TRACK_CONFIG_ENCODER, p);
+            
+            fprintf(stderr, "Applying stream config %p\n", cfg);
+            gavl_dictionary_dump(cfg, 2);
+            
             bg_cfg_section_apply(cfg, p, set_stream_encoder_param, &sep);
             }
           
@@ -526,7 +534,7 @@ int bg_media_encoder_connect(bg_media_source_t * enc_src,
             sep.func = enc->set_video_parameter;
             sep.priv = h->priv;
             sep.s = s;
-            cfg = get_stream_config(st->s, BG_TRACK_CONFIG_ENCODER, p);
+            cfg = get_stream_config(src->streams[i]->s, BG_TRACK_CONFIG_ENCODER, p);
 
             bg_cfg_section_apply(cfg, p, set_stream_encoder_param, &sep);
             

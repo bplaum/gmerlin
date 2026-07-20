@@ -206,7 +206,7 @@ int main(int argc, char ** argv)
 #endif
 
   bg_cmdline_init(&app_data);
-  bg_cmdline_parse(cmdline_args, &argc, &argv, NULL);
+  bg_cmdline_parse(cmdline_args, &argc, &argv);
   
   bg_iconfont_init();
   /* Initialize random generator (for shuffle) */

@@ -75,23 +75,24 @@
  *  @{
  */
 
-#define BG_PLUGIN_URL              (1<<6)  //!< Plugin can open an uri and can be selected by protocol
-#define BG_PLUGIN_FILE             (1<<7)  //!< Plugin can open regulöar files
-#define BG_PLUGIN_PIPE             (1<<8)  //!< Plugin can do I/O from stdin or stdout ("-")
-#define BG_PLUGIN_TUNER            (1<<9)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
-#define BG_PLUGIN_FILTER_1        (1<<10)  //!< Plugin acts as a filter with one input
+#define BG_PLUGIN_URL              (1<<0)  //!< Plugin can open an uri and can be selected by protocol
+#define BG_PLUGIN_FILE             (1<<1)  //!< Plugin can open regulöar files
+#define BG_PLUGIN_PIPE             (1<<2)  //!< Plugin can do I/O from stdin or stdout ("-")
+#define BG_PLUGIN_TUNER            (1<<3)  //!< Plugin has some kind of tuner. Channels will be loaded as tracks.
+#define BG_PLUGIN_FILTER_1        (1<<4)  //!< Plugin acts as a filter with one input
 
-#define BG_PLUGIN_BROADCAST       (1<<16)  //!< Plugin can broadcasts (e.g. webstreams)
-#define BG_PLUGIN_DEVPARAM        (1<<17)  //!< Plugin has pluggable devices as parameters, which must be updated regurarly
-#define BG_PLUGIN_OV_STILL        (1<<18)  //!< OV plugin supports still images
-#define BG_PLUGIN_GAVF_IO         (1<<19)  //!< Plugin can read/write to/from a gavf I/O handle
+#define BG_PLUGIN_BROADCAST       (1<<5)  //!< Plugin can broadcasts (e.g. webstreams)
+#define BG_PLUGIN_OV_STILL        (1<<6)  //!< OV plugin supports still images
 
-#define BG_PLUGIN_NEEDS_HTTP_SERVER (1<<20) //!< Plugin needs a global http server instance
-#define BG_PLUGIN_NEEDS_TERMINAL    (1<<21) //!< Plugin accesses the terminal (only one plugin can to this at once)
+#define BG_PLUGIN_NEEDS_HTTP_SERVER (1<<7) //!< Plugin needs a global http server instance
+#define BG_PLUGIN_NEEDS_TERMINAL    (1<<8) //!< Plugin accesses the terminal (only one plugin can to this at once)
 
-#define BG_PLUGIN_HANDLES_OVERLAYS   (1<<23)  //!< Plugin compresses overlays
+#define BG_PLUGIN_HANDLES_OVERLAYS   (1<<9)  //!< Plugin compresses overlays
 
-#define BG_PLUGIN_UNSUPPORTED     (1<<25)  //!< Plugin is not supported. Only for a foreign API plugins
+
+
+#define BG_PLUGIN_UNSUPPORTED     (1<<10)  //!< Plugin is not supported. Only for a foreign API plugins
+#define BG_PLUGIN_NOMUX           (1<<11)  //!< Encoder plugin has separate destinnations for the streams
 
 
 #define BG_PLUGIN_ALL 0xFFFFFFFF //!< Mask of all possible plugin flags
@@ -99,7 +100,7 @@
 /** @}
  */
 
-#define BG_PLUGIN_API_VERSION 48
+#define BG_PLUGIN_API_VERSION 49
 
 /* Include this into all plugin modules exactly once
    to let the plugin loader obtain the API version */
@@ -295,8 +296,6 @@ struct bg_input_plugin_s
    *  \returns 1 on success, 0 on failure
    */
   int (*open)(void * priv, const char * arg);
-  
-  int (*open_io)(void * priv, gavl_io_t * io);
   
   /** \brief Get the edl (optional)
    *  \param priv The handle returned by the create() method
@@ -661,17 +660,6 @@ struct bg_encoder_plugin_s
               const gavl_dictionary_t * metadata);
  
 
- /** \brief Open an encoder with a gavf IO handle
-   *  \param priv The handle returned by the create() method
-   *  \param io IO handle
-   *  \param metadata Metadata to be written to the file
-   *  \param chapter_list Chapter list (optional, can be NULL)
-   */
-
-  int (*open_io)(void * data, gavl_io_t * io,
-                 const gavl_dictionary_t * metadata);
-
-  
   
   /* Return per stream parameters */
 

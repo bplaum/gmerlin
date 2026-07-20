@@ -41,14 +41,13 @@
 
 static const bg_cmdline_app_data_t * app_data;
 
+gavl_dictionary_t bg_cmdline_options = { 0 };
 
 /* Terminal related functions */
 
 #define MAX_COLS 79 /* For line-wrapping */
 
 static void opt_help(void * data, int * argc, char *** argv, int arg);
-static void opt_help_man(void * data, int * argc, char *** argv, int arg);
-static void opt_help_texi(void * data, int * argc, char *** argv, int arg);
 static void opt_version(void * data, int * argc, char *** argv, int arg);
 
 static void opt_v(void * data, int * argc, char *** _argv, int arg);
@@ -68,28 +67,15 @@ static void opt_v(void * data, int * argc, char *** _argv, int arg)
   bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
-static void do_indent(FILE * out, int num, bg_help_format_t format)
+static void do_indent(FILE * out, int num)
   {
-  switch(format)
-    {
-    case BG_HELP_FORMAT_TERM:
-    case BG_HELP_FORMAT_PLAIN:
-      {
-      int i;
-      for(i = 0; i < num; i++)
-        fprintf(out, " ");
-      }
-      break;
-    case BG_HELP_FORMAT_MAN:
-      //      fprintf(out, ".RS %d\n", num);
-      break;
-    case BG_HELP_FORMAT_TEXI:
-      break;
-    }
+  int i;
+  for(i = 0; i < num; i++)
+    fprintf(out, " ");
   }
 
 static void dump_string_term(FILE * out, const char * str, int indent,
-                             const char * translation_domain, bg_help_format_t format)
+                             const char * translation_domain)
   {
   const char * start;
   const char * end;
@@ -97,8 +83,6 @@ static void dump_string_term(FILE * out, const char * str, int indent,
   
   str = TR_DOM(str);
 
-  if(format == BG_HELP_FORMAT_MAN)
-    do_indent(out, indent + 2, format);
   
   start = str;
   pos   = str;
@@ -111,8 +95,7 @@ static void dump_string_term(FILE * out, const char * str, int indent,
 
     if(pos - start + indent + 2 > MAX_COLS)
       {
-      if(format != BG_HELP_FORMAT_MAN)
-        do_indent(out, indent + 2, format);
+      do_indent(out, indent + 2);
       
       fwrite(start, 1, end - start, out);
       
@@ -124,8 +107,7 @@ static void dump_string_term(FILE * out, const char * str, int indent,
       }
     else if(*pos == '\0')
       {
-      if(format != BG_HELP_FORMAT_MAN)
-        do_indent(out, indent + 2, format);
+      do_indent(out, indent + 2);
       
       fwrite(start, 1, pos - start, out);
       fprintf(out, "\n");
@@ -133,15 +115,11 @@ static void dump_string_term(FILE * out, const char * str, int indent,
       }
     else if(*pos == '\n')
       {
-      if(format != BG_HELP_FORMAT_MAN)
-        do_indent(out, indent + 2, format);
+      do_indent(out, indent + 2);
       
       fwrite(start, 1, pos - start, out);
 
-      if(format == BG_HELP_FORMAT_TEXI)
-        fprintf(out, "@*\n");
-      else
-        fprintf(out, "\n");
+      fprintf(out, "\n");
       
       pos++;
       
@@ -159,82 +137,31 @@ static const char ansi_underline[] = { 27, '[', '4', 'm', '\0' };
 static const char ansi_normal[] = { 27, '[', '0', 'm', '\0' };
 static const char ansi_bold[] = { 27, '[', '1', 'm', '\0' };
 
-static void print_string(FILE * out, const char * str, bg_help_format_t format)
+static void print_string(FILE * out, const char * str)
   {
-  switch(format)
-    {
-    case BG_HELP_FORMAT_TEXI:
-      {
-      const char * pos;
-      pos = str;
-      while(*pos)
-        {
-        if((*pos == '{') || (*pos == '}') || (*pos == '@'))
-          fprintf(out, "@%c", *pos);
-        else
-          fprintf(out, "%c", *pos);
-        pos++;
-        }
-      }
-      break;
-    default:
-      fprintf(out, "%s", str);
-      break;
-    }
+  fprintf(out, "%s", str);
   }
 
-static void print_bold(FILE * out, char * str, bg_help_format_t format)
+static void print_bold(FILE * out, char * str)
   {
-  switch(format)
-    {
-    case BG_HELP_FORMAT_TERM:
-      fprintf(out, "%s%s%s", ansi_bold, str, ansi_normal);
-      break;
-    case BG_HELP_FORMAT_PLAIN:
-      fprintf(out, "%s", str);
-      /* Do nothing */
-      break;
-    case BG_HELP_FORMAT_MAN:
-      fprintf(out, ".B %s\n", str);
-      break;
-    case BG_HELP_FORMAT_TEXI:
-      fprintf(out, "@b{");
-      print_string(out, str, format);
-      fprintf(out, "}");
-      break;
-    }
-  }
-
-static void print_italic(FILE * out, const char * str, bg_help_format_t format)
-  {
-  switch(format)
-    {
-    case BG_HELP_FORMAT_TERM:
-      fprintf(out, "%s%s%s", ansi_underline, str, ansi_normal);
-      break;
-    case BG_HELP_FORMAT_PLAIN:
-      /* Do nothing */
-      fprintf(out, "%s", str);
-      break;
-    case BG_HELP_FORMAT_MAN:
-      fprintf(out, ".I %s\n", str);
-      break;
-    case BG_HELP_FORMAT_TEXI:
-      fprintf(out, "@i{");
-      print_string(out, str, format);
-      fprintf(out, "}");
-      break;
-    }
-  }
-
-static void print_linebreak(FILE * out, bg_help_format_t format)
-  {
-  if(format == BG_HELP_FORMAT_MAN)
-    fprintf(out, "\n.P\n");
-  else if(format == BG_HELP_FORMAT_TEXI)
-    fprintf(out, "@*@*\n");
+  if(isatty(fileno(out)))
+    fprintf(out, "%s%s%s", ansi_bold, str, ansi_normal);
   else
-    fprintf(out, "\n\n");
+    fprintf(out, "%s", str);
+  }
+
+static void print_italic(FILE * out, const char * str)
+  {
+  
+  if(isatty(fileno(out)))
+    fprintf(out, "%s%s%s", ansi_underline, str, ansi_normal);
+  else
+    fprintf(out, "%s", str);
+  }
+
+static void print_linebreak(FILE * out)
+  {
+  fprintf(out, "\n\n");
   }
 
 static void print_version(const bg_cmdline_app_data_t * app_data)
@@ -246,67 +173,31 @@ the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
 There is NO WARRANTY.\n"));
   }
 
-static void print_help(const bg_cmdline_arg_t* args, bg_help_format_t format)
+static void print_help(const bg_cmdline_arg_t* args)
   {
   int i = 0;
-  char * tmp_string;
   FILE * out = stdout;
   const char * help_arg = NULL;
   
-  if(format == BG_HELP_FORMAT_TEXI)
-    fprintf(out, "@table @i\n");
   while(args[i].arg)
     {
 
     help_arg = args[i].help_arg;
     
-    switch(format)
+    fprintf(out, "  ");
+    print_bold(out, args[i].arg);
+
+    if(help_arg)
       {
-      case BG_HELP_FORMAT_PLAIN:
-      case BG_HELP_FORMAT_TERM:
-        fprintf(out, "  ");
-        print_bold(out, args[i].arg, format);
-
-        if(help_arg)
-          {
-          fprintf(out, " ");
-          print_italic(out, help_arg, format);
-          }
-        fprintf(out, "\n");
-        dump_string_term(out, args[i].help_string, 0, NULL, format);
-    
-        break;
-      case BG_HELP_FORMAT_TEXI:
-        fprintf(out, "@item %s", args[i].arg);
-        if(help_arg)
-          {
-          fprintf(out, " ");
-          print_string(out, help_arg, format);
-          }
-        fprintf(out, "\n");
-        print_string(out, args[i].help_string, format);
-        fprintf(out, "@*\n");
-        break;
-      case BG_HELP_FORMAT_MAN:
-        tmp_string = gavl_escape_string(gavl_strdup(args[i].arg), "-");
-        print_bold(out, tmp_string, format);
-        free(tmp_string);
-        
-        if(help_arg)
-          print_italic(out, help_arg, format);
-        fprintf(out, "\n");
-        fprintf(out, ".RS 2\n");
-        dump_string_term(out, args[i].help_string, 0, NULL, format);
-        fprintf(out, ".RE\n");
-
-        break;
+      fprintf(out, " ");
+      print_italic(out, help_arg);
       }
+    fprintf(out, "\n");
+    dump_string_term(out, args[i].help_string, 0, NULL);
     
     fprintf(out, "\n");
     i++;
     }
-  if(format == BG_HELP_FORMAT_TEXI)
-    fprintf(out, "@end table\n");
   
   }
 
@@ -334,16 +225,6 @@ static const bg_cmdline_arg_t auto_options[] =
       .callback =    opt_help,
     },
     {
-      .arg =         "-help-man",
-      .help_string = TRS("Print this help message as a manual page and exit"),
-      .callback =    opt_help_man,
-    },
-    {
-      .arg =         "-help-texi",
-      .help_string = TRS("Print this help message in texinfo format and exit"),
-      .callback =    opt_help_texi,
-    },
-    {
       .arg =         "-version",
       .help_string = TRS("Print version info and exit"),
       .callback =    opt_version,
@@ -369,222 +250,65 @@ static const bg_cmdline_arg_t auto_options[] =
   };
 
 
-void bg_cmdline_print_help(char * argv0, bg_help_format_t format)
+void bg_cmdline_print_help(char * argv0)
   {
   int i;
   char * tmp_string;
   
-  switch(format)
+  tmp_string = gavl_sprintf(TRD(app_data->synopsis, app_data->package), argv0);
+  printf("Usage: %s\n\n", tmp_string);
+  free(tmp_string);
+  printf("%s\n", app_data->help_before);
+  i = 0;
+  while(app_data->args[i].name)
     {
-    case BG_HELP_FORMAT_TERM:
-    case BG_HELP_FORMAT_PLAIN:
-      tmp_string = gavl_sprintf(TRD(app_data->synopsis, app_data->package), argv0);
-      printf("Usage: %s\n\n", tmp_string);
-      free(tmp_string);
-      printf("%s\n", app_data->help_before);
-      i = 0;
-      while(app_data->args[i].name)
-        {
-        printf("%s\n\n", app_data->args[i].name);
-        print_help(app_data->args[i].args, format);
-        i++;
-        }
-      print_bold(stdout, "Generic options\n", format);
-      printf("\nThe following generic options are available for all gmerlin applications\n");
-      print_linebreak(stdout, format);
-      print_help(auto_options, format);
-
-      if(app_data->env)
-        {
-        print_bold(stdout, TR("Environment variables\n\n"), format);
-        i = 0;
-        while(app_data->env[i].name)
-          {
-          print_bold(stdout, app_data->env[i].name, format);
-          printf("\n");
-          dump_string_term(stdout, app_data->env[i].desc,
-                           0, NULL, format);
-          i++;
-          print_linebreak(stdout, format);
-          }
-        }
-      if(app_data->files)
-        {
-        print_bold(stdout, TR("Files\n\n"), format);
-        i = 0;
-        while(app_data->files[i].name)
-          {
-          print_bold(stdout, app_data->files[i].name, format);
-          printf("\n");
-          dump_string_term(stdout, app_data->files[i].desc,
-                           0, NULL, format);
-          print_linebreak(stdout, format);
-          i++;
-          }
-        }
-      
-      
-      break;
-    case BG_HELP_FORMAT_MAN:
-      {
-      char date_str[512];
-      struct tm brokentime;
-      time_t t;
-      char ** args;
-      char * string_uc;
-      
-      time(&t);
-      localtime_r(&t, &brokentime);
-      strftime(date_str, 511, "%B %Y", &brokentime);
-
-      string_uc = bg_toupper(bg_app_get_name());
-      
-      printf(".TH %s 1 \"%s\" Gmerlin \"User Manuals\"\n", string_uc,
-             date_str);
-
-      free(string_uc);
-
-      if(bg_app_get_label())
-        printf(".SH NAME\n%s \\- %s\n", bg_app_get_name(),
-               bg_app_get_label());
-      else
-        printf(".SH NAME\n%s\n", bg_app_get_name());
-        
-      printf(".SH SYNOPSIS\n.B %s \n", bg_app_get_name());
-      tmp_string = gavl_strdup(TRD(app_data->synopsis, app_data->package));
-      
-      args = gavl_strbreak(tmp_string, ' ');
-      i = 0;
-      while(args && args[i])
-        {
-        printf(".I %s\n", args[i]);
-        i++;
-        }
-      gavl_strbreak_free(args);
-      
-      if(app_data->help_before)
-        printf(".SH DESCRIPTION\n%s\n", TRD(app_data->help_before, app_data->package));
-
-      i = 0;
-      while(app_data->args[i].name)
-        {
-        string_uc = bg_toupper(app_data->args[i].name);
-        printf(".SH %s\n\n", string_uc);
-        free(string_uc);
-        print_help(app_data->args[i].args, format);
-        i++;
-        }
-      printf(".SH GENERIC OPTIONS\nThe following generic options are available for all gmerlin applications\n\n");
-      print_help(auto_options, format);
-
-      if(app_data->env)
-        {
-        printf(TR(".SH ENVIRONMENT VARIABLES\n"));
-        i = 0;
-        while(app_data->env[i].name)
-          {
-          print_bold(stdout, app_data->env[i].name, format);
-          printf("\n");
-          printf(".RS 2\n");
-          dump_string_term(stdout, app_data->env[i].desc,
-                           0, NULL, format);
-          printf(".RE\n");
-          i++;
-          }
-        }
-      if(app_data->files)
-        {
-        printf(TR(".SH FILES\n"));
-        i = 0;
-        while(app_data->files[i].name)
-          {
-          print_bold(stdout, app_data->files[i].name, format);
-          printf("\n");
-          printf(".RS 2\n");
-          dump_string_term(stdout, app_data->files[i].desc,
-                           0, NULL, format);
-          printf(".RE\n");
-          print_linebreak(stdout, format);
-          i++;
-          }
-        }
-      }
-      break;
-    case BG_HELP_FORMAT_TEXI:
-      printf("@table @b\n");
-      printf("@item Synopsis\n");
-      printf("@b{%s} @i{%s}@*\n", bg_app_get_name(),
-             TRD(app_data->synopsis, app_data->package));
-      if(app_data->help_before)
-        {
-        printf("@item Description\n");
-        printf("%s@*\n", TRD(app_data->help_before, app_data->package));
-        }
-      i = 0;
-      while(app_data->args[i].name)
-        {
-        printf("@item %s\n", app_data->args[i].name);
-        print_help(app_data->args[i].args, format);
-        i++;
-        }
-      printf("@item Generic options\n");
-      printf("The following generic options are available for all gmerlin applications@*\n");
-      print_help(auto_options, format);
-
-      if(app_data->env)
-        {
-        printf(TR("@item Environment variables\n"));
-        printf("@table @env\n");
-        i = 0;
-        while(app_data->env[i].name)
-          {
-          printf("@item %s\n", app_data->env[i].name);
-          printf("%s@*\n", TRD(app_data->env[i].desc, app_data->package));
-          i++;
-          }
-        printf("@end table\n");
-        }
-
-      if(app_data->files)
-        {
-        printf(TR("@item Files\n"));
-        printf("@table @file\n");
-        i = 0;
-        while(app_data->files[i].name)
-          {
-          printf("@item %s\n", app_data->files[i].name);
-          printf("%s@*\n", TRD(app_data->files[i].desc, app_data->package));
-          i++;
-          }
-        printf("@end table\n");
-        }
-      printf("@end table\n");
-      break;
+    printf("%s\n\n", app_data->args[i].name);
+    print_help(app_data->args[i].args);
+    i++;
     }
+  print_bold(stdout, "Generic options\n");
+  printf("\nThe following generic options are available for all gmerlin applications\n");
+  print_linebreak(stdout);
+  print_help(auto_options);
 
+  if(app_data->env)
+    {
+    print_bold(stdout, TR("Environment variables\n\n"));
+    i = 0;
+    while(app_data->env[i].name)
+      {
+      print_bold(stdout, app_data->env[i].name);
+      printf("\n");
+      dump_string_term(stdout, app_data->env[i].desc,
+                       0, NULL);
+      i++;
+      print_linebreak(stdout);
+      }
+    }
+  if(app_data->files)
+    {
+    print_bold(stdout, TR("Files\n\n"));
+    i = 0;
+    while(app_data->files[i].name)
+      {
+      print_bold(stdout, app_data->files[i].name);
+      printf("\n");
+      dump_string_term(stdout, app_data->files[i].desc,
+                       0, NULL);
+      print_linebreak(stdout);
+      i++;
+      }
+    }
+  
   }
 
 
 static void opt_help(void * data, int * argc, char *** argv, int arg)
   {
-  if(isatty(fileno(stdout)))
-    bg_cmdline_print_help((*argv)[0], BG_HELP_FORMAT_TERM);
-  else
-    bg_cmdline_print_help((*argv)[0], BG_HELP_FORMAT_PLAIN);
+  bg_cmdline_print_help((*argv)[0]);
   exit(0);
   }
 
-static void opt_help_man(void * data, int * argc, char *** argv, int arg)
-  {
-  bg_cmdline_print_help((*argv)[0], BG_HELP_FORMAT_MAN);
-  exit(0);
-  }
-
-static void opt_help_texi(void * data, int * argc, char *** argv, int arg)
-  {
-  bg_cmdline_print_help((*argv)[0], BG_HELP_FORMAT_TEXI);
-  exit(0);
-  }
 
 static void opt_version(void * data, int * argc, char *** argv, int arg)
   {
@@ -605,19 +329,55 @@ void bg_cmdline_remove_arg(int * argc, char *** _argv, int arg)
   (*argc)--;
   }
 
+static int arg_match(const bg_cmdline_arg_t * arg, char * str,
+                     int * stream_idx)
+  {
+  char * pos;
+  *stream_idx = -1;
+
+  if(arg->flags & BG_CMDLINE_ARG_PER_STREAM)
+    {
+    if(!strcmp(arg->arg, str))
+      return 1;
+
+    if(!gavl_string_starts_with(str, arg->arg))
+      return 0;
+
+    pos = str + strlen(arg->arg);
+    if(*pos != '-')
+      return 0;
+
+    pos++;
+
+    *stream_idx = strtol(pos, &pos, 10);
+
+    if(*pos != '\0')
+      return 0;
+
+    return 1;
+    }
+  
+  
+  if(!strcmp(arg->arg, str))
+    return 1;
+  
+  return 0;
+  }
+
 static void cmdline_parse(const bg_cmdline_arg_t * args,
                           int * argc, char *** _argv,
-                          void * callback_data,
                           int parse_auto)
   {
   int found;
   int i, j;
   char ** argv = *_argv;
 
+  int stream_idx;
+  
   i = 1;
 
   if(parse_auto)
-    cmdline_parse(auto_options, argc, _argv, NULL, 0);
+    cmdline_parse(auto_options, argc, _argv, 0);
   
   if(!args)
     return;
@@ -632,33 +392,43 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
     
     while(args[j].arg)
       {
-      const char * colon_pos;
-      int idx;
       
-      if(!strcmp(args[j].arg, argv[i]))
+      if(arg_match(&args[j], argv[i], &stream_idx))
         {
         bg_cmdline_remove_arg(argc, _argv, i);
+        
         if(args[j].callback)
-          args[j].callback(callback_data, argc, _argv, i);
-        if(args[j].argv)
+          args[j].callback(NULL, argc, _argv, i);
+        
+        if(args[j].flags & BG_CMDLINE_ARG_STRING)
           {
           if(i >= *argc)
             {
             fprintf(stderr, "Option %s requires an argument\n", args[j].arg);
             exit(-1);
             }
-          *args[j].argv = argv[i];
+          gavl_dictionary_set_string(&bg_cmdline_options,
+                                     args[j].arg+1, argv[i]);
+          bg_cmdline_remove_arg(argc, _argv, i);
+          }
+        else if(args[j].flags & BG_CMDLINE_ARG_PARAM)
+          {
+          gavl_array_t * arr;
+          if(i >= *argc)
+            {
+            fprintf(stderr, "Option %s requires an argument\n", args[j].arg);
+            exit(-1);
+            }
+
+          if(args[j].flags & BG_CMDLINE_ARG_PER_STREAM)
+            arr = bg_cmdline_get_stream_params_wr(args[j].arg + 1, stream_idx);
+          else
+            arr = bg_cmdline_get_params_wr(args[j].arg + 1);
+
+          gavl_string_array_insert_at(arr, -1, argv[i]);
           bg_cmdline_remove_arg(argc, _argv, i);
           }
         
-        found = 1;
-        break;
-        }
-      else if(args[j].callback_idx && (colon_pos = strchr(argv[i], '/')) &&
-              !strncmp(argv[i], args[j].arg, colon_pos - argv[i]) &&
-              ((idx = atoi(colon_pos+1)) > 0))
-        {
-        args[j].callback_idx(callback_data, idx, argc, _argv, i);
         found = 1;
         break;
         }
@@ -670,10 +440,9 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
     }
   }
 
-void bg_cmdline_parse(bg_cmdline_arg_t * args, int * argc, char *** _argv,
-                      void * callback_data)
+void bg_cmdline_parse(bg_cmdline_arg_t * args, int * argc, char *** _argv)
   {
-  cmdline_parse(args, argc, _argv, callback_data, 1);
+  cmdline_parse(args, argc, _argv, 1);
   }
 
 
@@ -732,8 +501,7 @@ char ** bg_cmdline_get_locations_from_args(int * argc, char *** _argv)
 
 
 static void print_help_parameters(int indent,
-                                  const bg_parameter_info_t * parameters,
-                                  bg_help_format_t format)
+                                  const bg_parameter_info_t * parameters)
   {
   int i = 0;
   int j;
@@ -747,14 +515,10 @@ static void print_help_parameters(int indent,
   const char * translation_domain = NULL;
 
   indent += 2;
-  if(format == BG_HELP_FORMAT_MAN)
-    fprintf(out, ".RS 2\n");
-  else if(format == BG_HELP_FORMAT_TEXI)
-    fprintf(out, "@table @r\n");
   
   if(!indent)
     {
-    do_indent(out, indent+2, format);
+    do_indent(out, indent+2);
     
     fprintf(out, TR("Supported options:\n\n"));
     }
@@ -774,39 +538,13 @@ static void print_help_parameters(int indent,
       }
     pos = 0;
 
-    if(format == BG_HELP_FORMAT_MAN)
-      {
-      do_indent(out, indent+2, format);
-      fprintf(out, ".BR ");
-       
-      //      pos += fprintf(out, spaces);
-      //      pos += fprintf(out, "  ");
+    do_indent(out, indent+2);
+    pos += indent+2;
       
-      fprintf(out, "%s", parameters[i].name);
-      pos += strlen(parameters[i].name);
-      fprintf(out, " \"=");
-      }
-    else if(format == BG_HELP_FORMAT_TEXI)
-      {
-      fprintf(out, "@item ");
-
-      pos += indent+2;
+    print_bold(out, parameters[i].name);
+    pos += strlen(parameters[i].name);
       
-      print_bold(out, parameters[i].name, format);
-      pos += strlen(parameters[i].name);
-      
-      fprintf(out, "=");
-      }
-    else
-      {
-      do_indent(out, indent+2, format);
-      pos += indent+2;
-      
-      print_bold(out, parameters[i].name, format);
-      pos += strlen(parameters[i].name);
-      
-      fprintf(out, "=");
-      }
+    fprintf(out, "=");
     
     switch(parameters[i].type)
       {
@@ -815,11 +553,9 @@ static void print_help_parameters(int indent,
         break;
       case BG_PARAMETER_CHECKBUTTON:
         tmp_string = gavl_sprintf(TR("[1|0] (default: %d)"), parameters[i].val_default.v.i);
-        print_string(out, tmp_string, format);
+        print_string(out, tmp_string);
         free(tmp_string);
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         break;
       case BG_PARAMETER_INT:
       case BG_PARAMETER_SLIDER_INT:
@@ -831,9 +567,7 @@ static void print_help_parameters(int indent,
           }
         fprintf(out, TR("default: %d)"), parameters[i].val_default.v.i);
 
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         break;
       case BG_PARAMETER_SLIDER_FLOAT:
       case BG_PARAMETER_FLOAT:
@@ -854,9 +588,7 @@ static void print_help_parameters(int indent,
                 parameters[i].val_default.v.d);
         free(tmp_string);
 
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
 
         break;
       case BG_PARAMETER_STRING_MULTILINE:
@@ -868,31 +600,25 @@ static void print_help_parameters(int indent,
         if(parameters[i].val_default.v.str)
           {
           tmp_string = gavl_sprintf(TR(" (Default: %s)"), parameters[i].val_default.v.str);
-          print_string(out, tmp_string, format);
+          print_string(out, tmp_string);
           free(tmp_string);
           }
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
 
         break;
       case BG_PARAMETER_STRING_HIDDEN:
         pos += fprintf(out, TR("<string>"));
 
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         break;
       case BG_PARAMETER_STRINGLIST:
         pos += fprintf(out, TR("<string>"));
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
 
         j = 0;
 
         pos = 0;
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         pos += fprintf(out, TR("Supported strings: "));
         
@@ -902,24 +628,23 @@ static void print_help_parameters(int indent,
 
           if(pos + strlen(parameters[i].multi_names[j]+1) > MAX_COLS)
             {
-            if((format == BG_HELP_FORMAT_TERM) || (format == BG_HELP_FORMAT_PLAIN))
-              fprintf(out, "\n");
+            fprintf(out, "\n");
             pos = 0;
-            do_indent(out, indent+2, format);
+            do_indent(out, indent+2);
             pos += indent+2;
             }
           
           pos += fprintf(out, "%s", parameters[i].multi_names[j]);
           j++;
           }
-        print_linebreak(out, format);
-        do_indent(out, indent+2, format);
+        print_linebreak(out);
+        do_indent(out, indent+2);
         pos += indent+2;
 
         tmp_string = gavl_sprintf(TR("Default: %s"), parameters[i].val_default.v.str);
-        print_string(out, tmp_string, format);
+        print_string(out, tmp_string);
         free(tmp_string);
-        print_linebreak(out, format);
+        print_linebreak(out);
         
         break;
       case BG_PARAMETER_COLOR_RGB:
@@ -927,18 +652,13 @@ static void print_help_parameters(int indent,
                 parameters[i].val_default.v.color[0],
                 parameters[i].val_default.v.color[1],
                 parameters[i].val_default.v.color[2]);
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         
         fprintf(out, TR("<r>, <g> and <b> are in the range 0.0..1.0"));
-        if(format != BG_HELP_FORMAT_MAN)
           fprintf(out, "\n");
-        else
-          fprintf(out, "\n.P\n");
         break;
       case BG_PARAMETER_COLOR_RGBA:
         fprintf(out, TR("<r>,<g>,<b>,<a> (default: %.3f,%.3f,%.3f,%.3f)"),
@@ -946,27 +666,20 @@ static void print_help_parameters(int indent,
                 parameters[i].val_default.v.color[1],
                 parameters[i].val_default.v.color[2],
                 parameters[i].val_default.v.color[3]);
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
 
         fprintf(out, TR("<r>, <g>, <b> and <a> are in the range 0.0..1.0"));
-        if(format != BG_HELP_FORMAT_MAN)
-          fprintf(out, "\n");
-        else
-          fprintf(out, "\n.P\n");
+        fprintf(out, "\n");
         break;
       case BG_PARAMETER_MULTI_MENU:
-        print_string(out, TR("option[{suboptions}]"), format);
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_string(out, TR("option[:var1=val1:var2=val2..]"));
+        print_linebreak(out);
         pos = 0;
 
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
 
         pos += fprintf(out, TR("Supported options: "));
@@ -980,10 +693,9 @@ static void print_help_parameters(int indent,
 
             if(pos + strlen(parameters[i].multi_names[j]) > MAX_COLS)
               {
-              if(format != BG_HELP_FORMAT_MAN)
-                fprintf(out, "\n");
+              fprintf(out, "\n");
               pos = 0;
-              do_indent(out, indent+2, format);
+              do_indent(out, indent+2);
               pos += indent+2;
               }
             pos += fprintf(out, "%s", parameters[i].multi_names[j]);
@@ -993,31 +705,27 @@ static void print_help_parameters(int indent,
         else
           pos += fprintf(out, TR("<None>"));
 
-        print_linebreak(out, format);
+        print_linebreak(out);
         
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         fprintf(out, TR("Default: %s"), parameters[i].val_default.v.str);
         
-        print_linebreak(out, format);
+        print_linebreak(out);
         break;
       case BG_PARAMETER_DIRLIST:
         pos += fprintf(out, TR("dir1[:dir2..]"));
         break;
       case BG_PARAMETER_MULTI_LIST:
       case BG_PARAMETER_MULTI_CHAIN:
-        print_string(out, TR("{option[{suboptions}][:option[{suboptions}]...]}"), format);
-
-        // print_string(out, TR("option1?suboption1=b&suboption2=d$ }][:option[{suboptions}]...]}"), format);
+        print_string(out, TR("{option[{suboptions}][:option[{suboptions}]...]}"));
         
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
         
-        print_linebreak(out, format);
+        print_linebreak(out);
 
         pos = 0;
         
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         
         pos += fprintf(out, TR("Supported options: "));
@@ -1030,7 +738,7 @@ static void print_help_parameters(int indent,
             {
             fprintf(out, "\n");
             pos = 0;
-            do_indent(out, indent+4, format);
+            do_indent(out, indent+4);
             pos += indent+4;
             }
           pos += fprintf(out, "%s", parameters[i].multi_names[j]);
@@ -1040,7 +748,7 @@ static void print_help_parameters(int indent,
         
         break;
       case BG_PARAMETER_TIME:
-        print_string(out, TR("{[[HH:]MM:]SS} ("), format);
+        print_string(out, TR("{[[HH:]MM:]SS} ("));
         if(parameters[i].val_min.v.l < parameters[i].val_max.v.l)
           {
           gavl_time_prettyprint(parameters[i].val_min.v.l, time_string);
@@ -1052,11 +760,9 @@ static void print_help_parameters(int indent,
         gavl_time_prettyprint(parameters[i].val_default.v.l, time_string);
         fprintf(out, TR("default: %s)"), time_string);
 
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
 
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         fprintf(out, TR("Seconds can be fractional (i.e. with decimal point)\n"));
         break;
@@ -1064,34 +770,29 @@ static void print_help_parameters(int indent,
         fprintf(out, TR("<x>,<y> (default: %.3f,%.3f)"),
                 parameters[i].val_default.v.position[0],
                 parameters[i].val_default.v.position[1]);
-        if(format == BG_HELP_FORMAT_MAN)
-          fprintf(out, "\"");
-        print_linebreak(out, format);
+        print_linebreak(out);
         
-        do_indent(out, indent+2, format);
+        do_indent(out, indent+2);
         pos += indent+2;
         
         fprintf(out, TR("<r>, <g> and <b> are in the range 0.0..1.0"));
-        if(format != BG_HELP_FORMAT_MAN)
           fprintf(out, "\n");
-        else
-          fprintf(out, "\n.P\n");
         break;
 
 
       }
     
-    do_indent(out, indent+2, format);
+    do_indent(out, indent+2);
     pos += indent+2;
     
     fprintf(out, "%s", TR_DOM(parameters[i].long_name));
     
-    print_linebreak(out, format);
+    print_linebreak(out);
     
     if(parameters[i].help_string)
       {
-      dump_string_term(out, parameters[i].help_string, indent, translation_domain, format);
-      print_linebreak(out, format);
+      dump_string_term(out, parameters[i].help_string, indent, translation_domain);
+      print_linebreak(out);
       }
     
     /* Print suboptions */
@@ -1103,7 +804,7 @@ static void print_help_parameters(int indent,
         {
         if(parameters[i].multi_parameters[j])
           {
-          do_indent(out, indent+2, format);
+          do_indent(out, indent+2);
           pos += indent+2;
           //          print_linebreak(out, format);
           
@@ -1117,13 +818,13 @@ static void print_help_parameters(int indent,
             tmp_string = gavl_sprintf(TR("Suboptions for %s"),
                                     parameters[i].multi_names[j]);
             }
-          print_bold(out, tmp_string, format);
+          print_bold(out, tmp_string);
           free(tmp_string);
-          print_linebreak(out, format);
+          print_linebreak(out);
           
           //          print_linebreak(out, format);
           //          print_linebreak(out, format);
-          print_help_parameters(indent+2, parameters[i].multi_parameters[j], format);
+          print_help_parameters(indent+2, parameters[i].multi_parameters[j]);
           }
         j++;
         }
@@ -1132,17 +833,11 @@ static void print_help_parameters(int indent,
     i++;
     }
   
-  if(format == BG_HELP_FORMAT_MAN)
-    fprintf(out, ".RE\n");
-  else if(format == BG_HELP_FORMAT_TEXI)
-    fprintf(out, "@end table\n");
-
   }
 
-void bg_cmdline_print_help_parameters(const bg_parameter_info_t * parameters,
-                                      bg_help_format_t format)
+void bg_cmdline_print_help_parameters(const bg_parameter_info_t * parameters)
   {
-  print_help_parameters(0, parameters, format);
+  print_help_parameters(0, parameters);
   }
 
 void bg_cmdline_init(const bg_cmdline_app_data_t * data)
@@ -1163,56 +858,220 @@ int bg_cmdline_check_unsupported(int argc, char ** argv)
   return ret;
   }
 
-/* Parse parameters in the form a=b&c=d. Returns 0 if an unsupported parameter was encountered */
+#define ID_LEN 16
 
-int bg_cmdline_parse_parameters(const char * string,
-                                const bg_parameter_info_t * parameters,
-                                gavl_dictionary_t * dict)
+void bg_cmdline_get_stream_params(const char * name,
+                                   int idx, gavl_array_t * ret)
   {
-  int ret = 0;
-  int i = 0;
+  const gavl_dictionary_t * dict;
+  const gavl_array_t * arr;
+  char id[ID_LEN];
+  
+  if(!(dict = gavl_dictionary_get_dictionary(&bg_cmdline_options, name)))
+    return;
+
+  /* Global options */
+  snprintf(id, ID_LEN, "%d", -1);
+
+  if((arr = gavl_dictionary_get_array(dict, id)))
+    gavl_array_splice_array(ret, -1, 0, arr);
+
+  /* Per stream options */
+  snprintf(id, ID_LEN, "%d", idx);
+  
+  if((arr = gavl_dictionary_get_array(dict, id)))
+    gavl_array_splice_array(ret, -1, 0, arr);
+  
+  }
+
+gavl_array_t * bg_cmdline_get_stream_params_wr(const char * name,
+                                               int idx)
+  {
+  gavl_dictionary_t * dict;
+
+  char id[ID_LEN];
+  snprintf(id, ID_LEN, "%d", idx);
+  dict = gavl_dictionary_get_dictionary_create(&bg_cmdline_options, name);
+  return gavl_dictionary_get_array_create(dict, id);
+  }
+
+const gavl_array_t * bg_cmdline_get_params(const char * name)
+  {
+  return gavl_dictionary_get_array(&bg_cmdline_options, name);
+  }
+
+/* Get options array for writing */
+gavl_array_t * bg_cmdline_get_params_wr(const char * name)
+  {
+  return gavl_dictionary_get_array_create(&bg_cmdline_options, name);
+  
+  }
+
+/*
+ *  Can be called multiple times.
+ */
+
+int bg_cmdline_apply_params(gavl_dictionary_t * dst,
+                            const gavl_parameter_info_t * info,
+                            const gavl_array_t * arr)
+  {
+  int i;
   char * pos;
+  char * val;
+  char * var;
+  const gavl_parameter_info_t * param;
+  const gavl_parameter_info_t * sub_param;
+  gavl_dictionary_t sub_params;
+  gavl_value_t value;
   
-  const bg_parameter_info_t * info = NULL;
-  char ** vars = gavl_strbreak(string, '&');
+  //  const gavl_parameter_info_t * subparam;
+
+  gavl_dictionary_init(&sub_params);
   
-  if(!vars)
-    return 1;
-  
-  while(vars[i])
+  for(i = 0; i < arr->num_entries; i++)
     {
-    if(!(pos = gavl_find_char(vars[i], '=')))
+    if(!(var = gavl_strdup(gavl_string_array_get(arr, i))))
+      continue;
+
+    if(!(pos = strchr(var, '=')) || (strlen(pos) == 1))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid option: %s", var);
+      free(var);
       return 0;
+      }
 
     *pos = '\0';
-    pos++;
-
-    if(parameters && !(info = bg_parameter_find(parameters, vars[i])))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown parameter %s", vars[i]);
-      goto fail;
-      }
-
-    if(info)
-      {
-      gavl_value_t val;
-      gavl_value_init(&val);
-      val.type = gavl_parameter_type_to_gavl(info->type);
-      gavl_value_from_string(&val, pos);
-      gavl_dictionary_set_nocopy(dict, vars[i], &val);
-      }
-    else
-      gavl_dictionary_set_string(dict, vars[i], pos);
     
-    i++;
+    if(!(param = bg_parameter_find_in_array(info, var)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown variable: %s", var);
+      free(var);
+      return 0;
+      }
+
+    pos++;
+    val = pos;
+    
+    if(param->multi_names && param->multi_parameters)
+      {
+      int j;
+
+      if((pos = strchr(val, ':'))) // Suboptions
+        {
+        *pos = '\0';
+        pos++;
+        }
+
+      /* Find this option */
+      j = 0;
+      while(param->multi_names[j])
+        {
+        if(!strcmp(param->multi_names[j], val))
+          break;
+        j++;
+        }
+
+      if(!(param->multi_names[j]))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown option: %s\n", val);
+        free(var);
+        return 0;
+        }
+      
+      if(param->multi_parameters[j])
+        {
+        bg_cfg_section_create_items(&sub_params, param->multi_parameters[j]);
+        
+        if(pos)
+          {
+          /* Apply sub parameters */
+          char * var_sub;
+          char * val_sub;
+          int end = 0;
+        
+          while(1)
+            {
+            var_sub = pos;
+          
+            if(!(pos = strchr(var_sub, '=')))
+              {
+              gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Error parsing option: %s\n", pos);
+              free(var);
+              gavl_dictionary_free(&sub_params);
+              return 0;
+              }
+            *pos = '\0';
+            pos++;
+
+            val_sub = pos;
+
+            if((pos = strchr(val_sub, ':')))
+              *pos = '\0';
+            else
+              end = 1;
+
+            fprintf(stderr, "Var: %s val: %s\n", var_sub, val_sub);
+
+            if(!(sub_param = bg_parameter_find_in_array(param->multi_parameters[j], var_sub)))
+              {
+              gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown variable: %s", var_sub);
+              free(var);
+              gavl_dictionary_free(&sub_params);
+              return 0;
+              }
+
+            gavl_value_init(&value);
+            value.type = gavl_parameter_type_to_gavl(sub_param->type);
+            if((value.type != GAVL_TYPE_UNDEFINED) &&
+               gavl_value_from_string(&value, val_sub))
+              gavl_dictionary_set_nocopy(&sub_params, var_sub, &value);
+          
+          
+            if(end)
+              break;
+          
+            pos++;
+          
+            }
+          }
+
+
+        
+        }
+      
+      
+      if(param->type == GAVL_PARAMETER_MULTI_CHAIN)
+        {
+        /* Append to options */
+        }
+      else if(param->type == GAVL_PARAMETER_MULTI_MENU)
+        {
+        fprintf(stderr, "Got multi menu: %s=%s\n", var, val);
+        gavl_dictionary_set_string(&sub_params, BG_CFG_TAG_NAME, val);
+
+        gavl_dictionary_dump(&sub_params, 2);
+        gavl_dictionary_set_dictionary(dst, var, &sub_params);
+        
+        }
+      /* TODO: GAVL_PARAMETER_MULTI_LIST */
+      
+      }
+    
+    else
+      {
+      /* Convert value from string */
+      gavl_value_init(&value);
+      value.type = gavl_parameter_type_to_gavl(param->type);
+      if((value.type != GAVL_TYPE_UNDEFINED) &&
+         gavl_value_from_string(&value, val))
+        gavl_dictionary_set_nocopy(dst, var, &value);
+      
+      }
+    
+    gavl_dictionary_reset(&sub_params);
+    free(var);
     }
-
-  ret = 1;
   
-  fail:
-
-  if(vars)
-    gavl_strbreak_free(vars);
-
-  return ret;
+  return 1;
+  
   }

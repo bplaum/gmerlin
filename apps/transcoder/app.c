@@ -291,16 +291,10 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
         */
         }
       
-      /* string -> array */
-      if(is_multi_tag(name))
-        {
-        set_parameter_multi(dst, name, val);
-        }
+      if((var = gavl_value_get_string(val)))
+        gavl_metadata_set_from_string(dst, name, var);
       else
-        {
         gavl_dictionary_set(dst, name, val);
-        }
-
       }
     else if(!strcmp(ctx, TRACK_RENAME))
       {
@@ -353,11 +347,12 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
     else if(!strcmp(ctx, TRACK_ENCODER))
       {
       /* */
-      if(strcmp(name, "plugin"))
+      if(!strcmp(name, "plugin"))
         set_encoder_plugin(track, gavl_value_get_dictionary(val));
 
       dst = bg_track_get_config_nc(track, BG_TRACK_CONFIG_ENCODER);
       gavl_dictionary_set(dst, name, val);
+      
       }
     else if(!strcmp(ctx, TRACK_AUTONUMBER))
       {
@@ -1103,6 +1098,7 @@ static void init_encoder_config(bg_cfg_ctx_t * ctx, const char * name)
   ctx->parameters_priv[0].name = gavl_strdup("plugin");
   ctx->parameters_priv[0].long_name = gavl_strdup("Format");
   ctx->parameters_priv[0].type = GAVL_PARAMETER_MULTI_MENU;
+  ctx->parameters_priv[0].flags = GAVL_PARAMETER_SORT_OPTIONS;
   
   bg_plugin_registry_set_parameter_info(bg_plugin_reg, 
                                         BG_PLUGIN_ENCODER, BG_PLUGIN_FILE,

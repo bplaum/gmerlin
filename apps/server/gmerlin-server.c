@@ -114,7 +114,7 @@ int main(int argc, char ** argv)
   bg_plugins_init();
   
   bg_cmdline_init(&app_data);
-  bg_cmdline_parse(global_options, &argc, &argv, NULL);
+  bg_cmdline_parse(global_options, &argc, &argv);
   
   result = server_init(&s, &fe_arr);
 
