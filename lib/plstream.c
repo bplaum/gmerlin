@@ -74,7 +74,6 @@ typedef struct
   int in_pos;
   
   gavl_audio_frame_t * out_frame;
-  
   } plstream_t;
 
 static int load_file(plstream_t * p)
@@ -348,7 +347,7 @@ static gavl_source_status_t read_audio(void * priv,
 
     samples_read += samples_copied;
     p->in_pos += samples_copied;
-    p->out_frame->valid_samples += samples_copied;
+    (*frame)->valid_samples += samples_copied;
     
     if(p->in_pos == p->in_frame->valid_samples)
       p->in_frame = NULL;
