@@ -40,7 +40,7 @@
  *   as transfer formats
  */
 
-static const char * get_uri(const gavl_dictionary_t * m, int local)
+static const char * get_uri(const gavl_dictionary_t * m, const char * key, int local)
   {
 
   /* TODO: kick out lpcm uris, which might come first */
@@ -49,7 +49,7 @@ static const char * get_uri(const gavl_dictionary_t * m, int local)
   const char * location = NULL;
   if(local)
     {
-    if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    if(!gavl_metadata_get_src(m, key, 0, NULL, &location))
       return NULL;
     return location;
     }
@@ -57,7 +57,7 @@ static const char * get_uri(const gavl_dictionary_t * m, int local)
     {
     int idx = 0;
     
-    while(gavl_metadata_get_src(m, GAVL_META_SRC, idx, NULL, &location))
+    while(gavl_metadata_get_src(m, key, idx, NULL, &location))
       {
       if(gavl_string_starts_with(location, "http://"))
         {
@@ -173,7 +173,7 @@ static char * write_xspf(const gavl_dictionary_t * dict, int local)
       }
 
     /* location */
-    if((location = get_uri(m, local)))
+    if((location = get_uri(m, GAVL_META_SRC, local)))
       {
       tmp_string = bg_string_to_uri(location, -1);
       bg_xml_append_child_node(track, "location", tmp_string);
@@ -210,7 +210,8 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local)
     const char * location;
     const gavl_dictionary_t * m;
     const gavl_dictionary_t * child;
-
+    const char * image;
+    
     if(!(child = gavl_get_track(dict, i)) ||
        !(m = gavl_track_get_metadata(child)) ||
        !(val = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
@@ -221,7 +222,10 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local)
        !(val = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
       continue;
 
-    if(!(location = get_uri(m, local)))
+    if(!(location = get_uri(m, GAVL_META_SRC, local)))
+      continue;
+
+    if(!(image = get_uri(m, GAVL_META_COVER_URL, 0)))
       continue;
     
     if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
@@ -229,10 +233,21 @@ static char * write_m3u(const gavl_dictionary_t * dict, int local)
     else
       duration = -1;
     
-    tmp_string = gavl_sprintf("#EXTINF:%"PRId64",%s\n%s\n", duration, val, location);
+    tmp_string = gavl_sprintf("#EXTINF:%"PRId64, duration);
     ret = gavl_strcat(ret, tmp_string);
-
     free(tmp_string);
+
+    if(image)
+      {
+      tmp_string = gavl_sprintf(" tvg-logo=\"%s\"", image);
+      ret = gavl_strcat(ret, tmp_string);
+      free(tmp_string);
+      }
+    
+    tmp_string = gavl_sprintf(",%s\n%s\n", val, location);
+    ret = gavl_strcat(ret, tmp_string);
+    free(tmp_string);
+    
     }
   
   return ret;
@@ -351,7 +366,7 @@ static char * write_pls(const gavl_dictionary_t * dict, int local)
        !(val = gavl_dictionary_get_string(m, GAVL_META_LABEL)))
       continue;
     
-    if(!(location = get_uri(m, local)))
+    if(!(location = get_uri(m, GAVL_META_SRC, local)))
       continue;
     
     if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
@@ -407,7 +422,7 @@ static char * write_urilist(const gavl_dictionary_t * dict, int local)
        gavl_string_starts_with(val, "container"))
       continue;
     
-    if(!(location = get_uri(m, local)))
+    if(!(location = get_uri(m, GAVL_META_SRC, local)))
       continue;
     
     idx++;
