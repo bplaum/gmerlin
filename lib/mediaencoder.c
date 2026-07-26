@@ -307,11 +307,11 @@ static gavl_dictionary_t * get_stream_config(gavl_dictionary_t * s, const char *
                                              const gavl_parameter_info_t * params)
   {
   const gavl_dictionary_t * cfg;
-
+#if 0
   fprintf(stderr, "Get stream config %p\n", s);
   gavl_dictionary_dump(s, 2);
   fprintf(stderr, "\n");
-  
+#endif
   if((cfg = bg_track_get_config(s, tag)))
     return gavl_dictionary_clone(cfg);
 
