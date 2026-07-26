@@ -49,7 +49,9 @@ typedef struct
   bg_media_source_t src;
   gavl_dictionary_t mi;
 
-  gavl_array_t tracks;
+  //  gavl_array_t tracks;
+  gavl_array_t files;
+  
   int idx;
   
   bg_controllable_t ctrl;
@@ -81,10 +83,11 @@ static int load_file(plstream_t * p)
   const gavl_dictionary_t * mi;
   const gavl_dictionary_t * t;
   const gavl_dictionary_t * s;
-  gavl_dictionary_t track;
+  //  gavl_dictionary_t track;
   int num_variants = 0;
   int first_idx = p->idx;
-  const char * uri;
+  //  const char * uri;
+  const gavl_dictionary_t * file;
   
   if(p->h)
     {
@@ -92,17 +95,17 @@ static int load_file(plstream_t * p)
     p->h = NULL;
     }
   
-  gavl_dictionary_init(&track);
+  //  gavl_dictionary_init(&track);
 
   while(1)
     {
-    uri = gavl_string_array_get(&p->tracks, p->idx);
-
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s", uri);
+    file = gavl_value_get_dictionary(&p->files.entries[p->idx]);
     
-    gavl_track_from_location(&track, uri);
+    //    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s", uri);
     
-    if((p->h = bg_load_track(&track, 0, &num_variants)) &&
+    // gavl_track_from_location(&track, uri);
+    
+    if((p->h = bg_load_track(file, 0, &num_variants)) &&
        (mi = bg_input_plugin_get_media_info(p->h)) &&
        (t = gavl_get_track(mi, 0)) &&
        (s = gavl_track_get_audio_stream(t, 0)))
@@ -115,19 +118,14 @@ static int load_file(plstream_t * p)
       }
     
     p->idx++;
-    if(p->idx >= p->tracks.num_entries)
+    if(p->idx >= p->files.num_entries)
       p->idx = 0;
 
     if(p->idx == first_idx)
       {
-      gavl_dictionary_free(&track);
       return 0;
       }
-    gavl_dictionary_reset(&track);
     }
-
-  gavl_dictionary_free(&track);
-  
   
   if(!bg_input_plugin_set_track(p->h, 0))
     return 0;
@@ -144,7 +142,7 @@ static int load_file(plstream_t * p)
 static int advance(plstream_t * p)
   {
   p->idx++;
-  if(p->idx == p->tracks.num_entries)
+  if(p->idx == p->files.num_entries)
     p->idx = 0;
 
   if(!load_file(p))
@@ -201,27 +199,28 @@ static int open_plstream(void * priv, const char * file)
       continue;
       }
     
-    gavl_string_array_add(&p->tracks, uri);
+    //    gavl_string_array_add(&p->tracks, uri);
     i++;
     }
+  gavl_array_copy(&p->files, arr);
   
   if(gavl_dictionary_get_int(&vars, "shuffle", &val_i) && val_i)
     {
     int i;
     int * indices;
     
-    indices = bg_create_shuffle_list(p->tracks.num_entries);
+    indices = bg_create_shuffle_list(p->files.num_entries);
 
-    for(i = 0; i < p->tracks.num_entries; i++)
+    for(i = 0; i < p->files.num_entries; i++)
       {
       if(indices[i] != i)
-        gavl_value_swap(&p->tracks.entries[i],
-                        &p->tracks.entries[indices[i]]);
+        gavl_value_swap(&p->files.entries[i],
+                        &p->files.entries[indices[i]]);
       }
     free(indices);
     }
   
-  fprintf(stderr, "Got %d tracks\n", p->tracks.num_entries);
+  fprintf(stderr, "Got %d tracks\n", p->files.num_entries);
   
   track = gavl_append_track(&p->mi, NULL);
   m = gavl_track_get_metadata_nc(track);
@@ -270,7 +269,7 @@ static void flush_metadata(plstream_t * p)
     dst = gavl_value_set_dictionary(&val);
     
     gavl_dictionary_copy(dst, dict);
-        
+    
     gavl_dictionary_set(dst, GAVL_META_CAN_SEEK, NULL);
     gavl_dictionary_set(dst, GAVL_META_CAN_PAUSE, NULL);
     gavl_dictionary_set(dst, GAVL_META_SAMPLE_ACCURATE, NULL);
@@ -279,14 +278,15 @@ static void flush_metadata(plstream_t * p)
     gavl_dictionary_set(dst, GAVL_META_IDX, NULL);
     gavl_dictionary_set(dst, GAVL_META_TOTAL, NULL);
     gavl_dictionary_set(dst, GAVL_META_APPROX_DURATION, NULL);
+
+    if((dict = gavl_value_get_dictionary(&p->files.entries[p->idx])) &&
+       (dict = gavl_track_get_metadata(dict)))
+      gavl_dictionary_copy_value(dst, dict, GAVL_META_LOGO_URL);
+    
     
     gavl_msg_set_state(msg, GAVL_MSG_STATE_CHANGED, 1,
                        GAVL_STATE_CTX_SRC, GAVL_STATE_SRC_METADATA, &val);
     
-    /*
-    fprintf(stderr, "Got metadata\n");
-    gavl_dictionary_dump(dst, 2);
-    */
     
     gavl_value_free(&val);
     
@@ -453,7 +453,7 @@ static void close_plstream(void * priv)
     }
 
   gavl_dictionary_reset(&p->mi);
-  gavl_array_reset(&p->tracks);
+  gavl_array_reset(&p->files);
   gavl_array_reset(&p->buffer_formats);
   
   bg_media_source_cleanup(&p->src);
