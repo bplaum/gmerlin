@@ -338,7 +338,7 @@ static gavl_source_status_t read_audio(void * priv,
       }
 
     samples_copied = gavl_audio_frame_copy(p->fmt,
-                                           p->out_frame,
+                                           (*frame),
                                            p->in_frame,
                                            samples_read,
                                            p->in_pos,
