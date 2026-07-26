@@ -151,7 +151,7 @@ static int update_sap(void * priv)
             {
             pos += 2;
             if((end = strchr(pos, '\r')) || (end = strchr(pos, '\n')))
-              gavl_dictionary_set_string(dict, GAVL_META_LABEL, gavl_strndup(pos, end));
+              gavl_dictionary_set_string_nocopy(dict, GAVL_META_LABEL, gavl_strndup(pos, end));
             }
           
           gavl_dictionary_set_long(dict, BG_RESOURCE_EXPIRE_TIME,
