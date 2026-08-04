@@ -156,6 +156,9 @@ static int update_sap(void * priv)
           
           gavl_dictionary_set_long(dict, BG_RESOURCE_EXPIRE_TIME,
                                    gavl_time_get_monotonic() + MAX_AGE);
+
+          //          fprintf(stderr, "Got SDP:\n");
+          //          gavl_hexdump((const uint8_t*)sdp, strlen(sdp), 16);
           
           gavl_dictionary_set_string_nocopy(dict, GAVL_META_URI, gavl_sdp_to_uri(sdp));
 
