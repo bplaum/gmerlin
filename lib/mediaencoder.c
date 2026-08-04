@@ -352,7 +352,7 @@ void bg_media_encoder_finalize(bg_media_source_t * src_enc)
       {
       case GAVL_STREAM_AUDIO:
         {
-        const gavl_audio_format_t * afmt;
+        const gavl_audio_format_t * afmt = NULL;
         if(st->asrc)
           {
           afmt = gavl_audio_sink_get_format(s->asink);
@@ -372,7 +372,7 @@ void bg_media_encoder_finalize(bg_media_source_t * src_enc)
         break;
       case GAVL_STREAM_VIDEO:
         {
-        const gavl_video_format_t * vfmt;
+        const gavl_video_format_t * vfmt = NULL;
         
         if(st->vsrc)
           {
@@ -407,7 +407,8 @@ void bg_media_encoder_finalize(bg_media_source_t * src_enc)
             
             }
           }
-        s->dst_scale = vfmt->timescale;
+        if(vfmt)
+          s->dst_scale = vfmt->timescale;
         }
         break;
       case GAVL_STREAM_TEXT:
@@ -424,7 +425,7 @@ void bg_media_encoder_finalize(bg_media_source_t * src_enc)
         break;
       case GAVL_STREAM_OVERLAY:
         {
-        const gavl_video_format_t * vfmt;
+        const gavl_video_format_t * vfmt = NULL;
         
         s->flags |= BG_ENCODER_STREAM_NONCONT;
 

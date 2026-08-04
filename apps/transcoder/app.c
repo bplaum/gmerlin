@@ -377,6 +377,8 @@ static void set_parameter_selected(app_data_t * ad, const char * ctx, const char
           dst = gavl_track_get_stream_nc(track, GAVL_STREAM_TEXT, idx);
         else if(!strcmp(str[0], STREAM_OVERLAY))
           dst = gavl_track_get_stream_nc(track, GAVL_STREAM_OVERLAY, idx);
+        else
+          dst = NULL;
         
         if(dst && (dst = bg_track_get_config_nc(dst, str[2])))
           gavl_dictionary_set(dst, name, val);

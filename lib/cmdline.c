@@ -995,7 +995,7 @@ int bg_cmdline_apply_params(gavl_dictionary_t * dst,
           
             if(!(pos = strchr(var_sub, '=')))
               {
-              gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Error parsing option: %s\n", pos);
+              gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Error parsing option: %s\n", var_sub);
               free(var);
               gavl_dictionary_free(&sub_params);
               return 0;
