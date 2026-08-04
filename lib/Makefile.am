@@ -137,6 +137,7 @@ httpconnection.c \
 httpcoverhandler.c \
 httplpcmhandler.c \
 httpmediahandler.c \
+httpsdphandler.c \
 httpplaylisthandler.c \
 httpserver.c \
 iconfont.c \

@@ -798,7 +798,8 @@ void bg_http_server_set_mdb(bg_http_server_t * s, bg_mdb_t * mdb)
   {
   s->mdb = mdb;
   bg_http_server_init_playlist_handler(s);
-
+  bg_http_server_init_sdp_handler(s);
+  
   if(bg_plugin_reg && !s->lpcmhandler)
     s->lpcmhandler = bg_lpcm_handler_create(mdb, s);
 

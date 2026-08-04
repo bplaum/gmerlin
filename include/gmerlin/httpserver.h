@@ -207,6 +207,9 @@ void bg_http_server_set_root_file(bg_http_server_t * s, const char * path);
 
 void bg_http_server_put_connection(bg_http_server_t * s, bg_http_connection_t * conn);
 
+void bg_http_server_init_sdp_handler(bg_http_server_t * srv);
+
+
 void bg_http_server_init_playlist_handler(bg_http_server_t * srv);
 void bg_http_server_add_playlist_uris(bg_http_server_t * srv, gavl_dictionary_t * container);
 

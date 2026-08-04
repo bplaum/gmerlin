@@ -2455,12 +2455,19 @@ static void add_local_stream(bg_mdb_backend_t * be, const gavl_dictionary_t * re
 
   var = gavl_dictionary_get_string(resource, GAVL_META_URI);
   if(gavl_string_starts_with(var, "sdp://"))
+    {
     gavl_metadata_add_src(add_metadata, GAVL_META_SRC, "application/sdp", var);
+    bg_mdb_add_http_uris(be->db, add_track);
+    }
   else
     gavl_metadata_add_src(add_metadata, GAVL_META_SRC, NULL, var);
 
   gavl_dictionary_set_string_nocopy(add_metadata, GAVL_META_ID,
                                     gavl_sprintf(LOCAL_ID"/%s", id));
+
+  /* Unique ID also serves as hash. That's better than
+     using the URI because this changes over time */
+  gavl_dictionary_set_string(add_metadata, GAVL_META_HASH, id);
   
   //  fprintf(stderr, "Got local stream:\n");
   //  gavl_dictionary_dump(add_track, 2);

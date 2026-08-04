@@ -1993,9 +1993,7 @@ static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * 
   const gavl_value_t * local_val;
   
   const char * local_uri;
-
-  char * http_uri;
-
+  
   int num = gavl_dictionary_get_num_items(dict, name);
 
   //  fprintf(stderr, "Add http uris %d %s\n", num, name);
@@ -2004,7 +2002,6 @@ static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * 
   
   for(i = 0; i < num; i++)
     {
-    http_uri = NULL;
     local_uri = NULL;
 
     //    fprintf(stderr, "Add http uris:\n");
@@ -2012,25 +2009,41 @@ static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * 
     
     if((local_val = gavl_dictionary_get_item(dict, name, i)) &&
        (local_dict = gavl_value_get_dictionary(local_val)) &&
-       (local_uri = gavl_dictionary_get_string(local_dict, GAVL_META_URI)) &&
-       (local_uri[0] == '/') &&
-       (http_uri = bg_media_dirs_local_to_http_uri(mdb->dirs, local_uri)))
+       (local_uri = gavl_dictionary_get_string(local_dict, GAVL_META_URI)))
       {
-      gavl_dictionary_t tmp_dict;
-      gavl_dictionary_t * http_dict;
+      char * http_uri = NULL;
 
-      gavl_dictionary_init(&tmp_dict);
-      gavl_dictionary_copy(&tmp_dict, local_dict);
-
-      if((http_dict = gavl_metadata_add_src(dict, name, NULL, http_uri)))
+      if((local_uri[0] == '/') &&
+         (http_uri = bg_media_dirs_local_to_http_uri(mdb->dirs, local_uri)))
         {
-        gavl_dictionary_merge2(http_dict, &tmp_dict);
+        gavl_dictionary_t tmp_dict;
+        gavl_dictionary_t * http_dict;
+
+        gavl_dictionary_init(&tmp_dict);
+        gavl_dictionary_copy(&tmp_dict, local_dict);
+
+        if((http_dict = gavl_metadata_add_src(dict, name, NULL, http_uri)))
+          {
+          gavl_dictionary_merge2(http_dict, &tmp_dict);
         
-        /* Remove filesystem specific stuff */
-        gavl_dictionary_set(http_dict, GAVL_META_MTIME, NULL);
-        ret++;
+          /* Remove filesystem specific stuff */
+          gavl_dictionary_set(http_dict, GAVL_META_MTIME, NULL);
+          ret++;
+          }
+        gavl_dictionary_free(&tmp_dict);
         }
-      gavl_dictionary_free(&tmp_dict);
+      else if(gavl_string_starts_with(local_uri, "sdp://"))
+        {
+        const char * root_url;
+        
+        if(mdb->srv && (root_url = bg_http_server_get_root_url(mdb->srv)))
+          {
+          http_uri = gavl_sprintf("%s/sdp/%s/stream.sdp", root_url, local_uri + 6);
+          gavl_metadata_add_src(dict, name, "application/sdp", http_uri);
+          }
+        }
+      if(http_uri)
+        free(http_uri);
       }
 #if 0
     else
@@ -2039,8 +2052,6 @@ static int add_http_uris(bg_mdb_t * mdb, gavl_dictionary_t * dict, const char * 
       gavl_dictionary_dump(local_dict, 2);
       }
 #endif
-    if(http_uri)
-      free(http_uri);
     }
   return ret;
   }
