@@ -277,6 +277,9 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
     {
     bg_http_connection_check_keepalive(conn);
 
+    //    fprintf(stderr, "Getting server storage: %s %s\n",
+    //            id, real_path);
+    
     if((buf = bg_server_storage_get(s, id, real_path, &len)))
       {
       bg_http_connection_init_res(conn, conn->protocol, 200, "OK");
@@ -290,12 +293,18 @@ int bg_server_storage_handle_http(bg_http_connection_t * conn, void * data)
         }
       else
         bg_http_connection_init_res(conn, conn->protocol, 200, "OK");
+
+      //      fprintf(stderr, "Getting server storage: Success\n%s\n", (char*)buf);
+      
       }
     else
       {
       bg_http_connection_init_res(conn, conn->protocol, 404, "Not Found");
       gavl_dictionary_set_string(&conn->res, "Content-Type", "text/plain");
       gavl_dictionary_set_string(&conn->res, "Content-Length", "0");
+
+      //      fprintf(stderr, "Getting server storage failed\n");
+      
       }
     }
   else if(!strcmp(conn->method, "PUT"))
