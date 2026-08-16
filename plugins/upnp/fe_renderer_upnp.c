@@ -220,8 +220,9 @@ static void destroy_renderer_upnp(void * priv)
 
   if(p->protocol_info)
     free(p->protocol_info);
-  
 
+  bg_control_cleanup(&p->ctrl);
+  
   free(p);
   }
 

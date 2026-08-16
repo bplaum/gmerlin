@@ -401,6 +401,7 @@ static int handle_msg_plugin(void * data, gavl_msg_t * msg)
                   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Not adding resource %s (%s is already there)",
                            gavl_dictionary_get_string(&dict, GAVL_META_URI),
                            gavl_dictionary_get_string(test_dict, GAVL_META_URI));
+                  gavl_dictionary_free(&dict);
                   return 1;
                   }
                 

@@ -759,6 +759,9 @@ int bg_upnp_device_get_node_info(gavl_dictionary_t * dev, const char * device, i
 
   if(real_uri)
     free(real_uri);
+
+  if(uri_base)
+    free(uri_base);
   
   if(doc)
     xmlFreeDoc(doc);

@@ -116,7 +116,7 @@ static char * make_id(const char * klass, int idx)
     return gavl_sprintf("%s-default", prefix);
   }
   
-static void add_device(pulse_t * reg, gavl_dictionary_t * dict, int idx)
+static void add_device(pulse_t * reg, const gavl_dictionary_t * dict, int idx)
   {
   gavl_msg_t * msg;
   const char * klass;
@@ -373,6 +373,8 @@ static int update_pulse(void * priv)
     add_device(reg, &dict, -1);
     
     reg->defaults_added = 1;
+    gavl_dictionary_free(&dict);
+    
     }
   
   pa_mainloop_iterate(reg->pa_ml, 0, NULL);

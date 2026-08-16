@@ -237,7 +237,7 @@ gavl_msg_t * bg_msg_sink_get(bg_msg_sink_t * sink)
     if(!sink->m_priv)
       sink->m_priv = gavl_msg_create();
 
-    gavl_msg_free(sink->m_priv);
+    gavl_msg_reset(sink->m_priv);
     sink->m = sink->m_priv;
     }
   return sink->m;

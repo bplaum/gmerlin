@@ -194,6 +194,9 @@ void renderer_cleanup(renderer_t * s)
   
   if(s->player)
     bg_player_destroy(s->player);
+
+  if(s->vardir)
+    free(s->vardir);
   }
 
 int renderer_iteration(renderer_t * s)

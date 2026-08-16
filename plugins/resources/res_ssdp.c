@@ -406,6 +406,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
   gavl_value_t new_val;
   char ** str = NULL;
   const char * klass = NULL;
+
   
   gavl_value_init(&new_val);
   
@@ -478,6 +479,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
     //    fprintf(stderr, "New device:\n");
     //    gavl_dictionary_dump(header, 2);
 
+    
     /* Create new */
     dict = gavl_value_set_dictionary(&new_val);
     gavl_dictionary_set_string(dict, GAVL_META_URI, real_uri);
@@ -512,7 +514,7 @@ static void update_remote_device(ssdp_t * s, int alive, const gavl_dictionary_t 
 
     gavl_dictionary_set_long(dict, BG_RESOURCE_EXPIRE_TIME,
                              s->cur + max_age * GAVL_TIME_SCALE);
-    
+
     /* Got new Device */
     msg = bg_msg_sink_get(s->ctrl.evt_sink);
   
@@ -551,7 +553,7 @@ static void handle_search_dev(ssdp_t * ssdp, const char * st, int mx, const gavl
   gavl_dictionary_init(&m);
 
   gavl_http_response_init(&m, "HTTP/1.1", 200, "OK");
-  gavl_dictionary_set_string(&m, "CACHE-CONTROL", gavl_sprintf("max-age=%d", MAX_AGE));
+  gavl_dictionary_set_string_nocopy(&m, "CACHE-CONTROL", gavl_sprintf("max-age=%d", MAX_AGE));
   //  gavl_http_header_set_date(&m, "DATE");
 
   

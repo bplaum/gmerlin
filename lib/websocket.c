@@ -1093,7 +1093,8 @@ static int bg_websocket_context_handle_request(bg_http_connection_t * c, void * 
       gavl_dictionary_set_string(&node, GAVL_META_LABEL, str);
 
     bg_dictionary_to_json(&node, json);
-      
+    gavl_dictionary_free(&node);
+    
     info_json = json_object_to_json_string_ext(json, 0);
     
     len = strlen(info_json);

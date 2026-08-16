@@ -356,6 +356,8 @@ void bg_osd_destroy(bg_osd_t * osd)
   menu_free(&osd->subtitle_menu);
   menu_free(&osd->chapter_menu);
 
+  gavl_packet_free(&osd->p);
+  
   free(osd);
   }
 
