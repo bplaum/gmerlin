@@ -219,13 +219,6 @@ struct bg_plugin_info_s
 
   bg_parameter_info_t * parameters; //!< Parameters, which can be passed to the plugin
 
-#if 0  
-  int max_audio_streams; //!< For encoders: Maximum number of audio streams (-1 means infinite)
-  int max_video_streams; //!< For encoders: Maximum number of video streams (-1 means infinite)
-  int max_text_streams;//!< For encoders: Maximum number of text subtitle streams (-1 means infinite)
-  int max_overlay_streams;//!< For encoders: Maximum number of overlay subtitle streams (-1 means infinite)
-#endif
-  
   bg_parameter_info_t * audio_parameters; //!< Parameters, which can be passed to set_audio_parameter
   bg_parameter_info_t * video_parameters; //!< Parameters, which can be passed to set_video_parameter
 
@@ -240,20 +233,6 @@ struct bg_plugin_info_s
 const char * bg_plugin_type_to_string(bg_plugin_type_t type);
 bg_plugin_type_t bg_plugin_type_from_string(const char * name);
 
-
-#if 0
-/** \ingroup plugin_registry
- *  \brief Creation options for a plugin registry
- *
- 
- */
-
-typedef struct
-  {
-  char ** blacklist; //!< Plugins, which should be ignored
-  //  int dont_save;            //!< If 1, don't save the registry after it was created
-  } bg_plugin_registry_options_t;
-#endif
 
 /** \ingroup plugin_registry
  *  \brief Opaque handle for a plugin registry
@@ -295,9 +274,6 @@ struct bg_plugin_handle_s
   //  char * location; //!< Applications can save the argument of an open call here
 
   gavl_dictionary_t state;
-  //  bg_msg_sink_t * evt_sink; // For recording the state
-  //  bg_msg_sink_t * cmd_sink; // 
-
   
   bg_controllable_t * ctrl_plugin; // From the plugin
   bg_control_t control;          // Internally used
@@ -512,6 +488,8 @@ bg_plugin_handle_t * bg_input_plugin_load_full(const char * location);
 
 bg_plugin_handle_t * bg_input_plugin_load_edl(const gavl_dictionary_t * edl);
 bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track, bg_plugin_handle_t * h);
+
+bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr);
 
 bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type);
 
