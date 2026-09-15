@@ -124,10 +124,17 @@ static void add_device(pulse_t * reg, const gavl_dictionary_t * dict, int idx)
   klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
   
   msg = bg_msg_sink_get(reg->ctrl.evt_sink);
+
   
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
   gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, make_id(klass, idx));
   gavl_msg_set_arg_dictionary(msg, 0, dict);
+
+#if 0
+  fprintf(stderr, "Add pulse device:\n");
+  gavl_dictionary_dump(dict, 2);
+  fprintf(stderr, "\n");
+#endif
   
   bg_msg_sink_put(reg->ctrl.evt_sink);
 
