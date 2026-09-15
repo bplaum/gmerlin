@@ -86,7 +86,21 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
         {
         case GAVL_CMD_SRC_START:
           {
+          bg_media_source_stream_t * st;
+          
           gavl_v4l2_device_start_capture(v4l->dev);
+
+          st = bg_media_source_get_video_stream(&v4l->src, 0);
+          
+          if(!(st->vsrc = gavl_v4l2_device_get_video_source(v4l->dev)))
+            {
+            gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got compressed output");
+            st->psrc = gavl_v4l2_device_get_packet_source(v4l->dev);
+            }
+          
+          gavl_track_finalize(v4l->src.track);
+
+
           /* Load decoder */
           bg_media_source_load_decoders(&v4l->src);
 
@@ -95,7 +109,6 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           break;
         case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
           {
-          gavl_array_t arr;
           int type = gavl_msg_get_arg_int(msg, 0);
           
           if(type == GAVL_STREAM_VIDEO)
@@ -103,12 +116,13 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
             gavl_array_reset(&v4l->buf_fmts);
             gavl_msg_get_arg_array(msg, 1, &v4l->buf_fmts);
             gavl_v4l2_device_set_buffer_formats(v4l->dev, &v4l->buf_fmts);
-            gavl_array_free(&arr);
+
+            //            fprintf(stderr, "Buffer formats:\n");
+            //            gavl_array_dump(&v4l->buf_fmts, 2);
             }
           }
           break;
         case GAVL_CMD_SRC_PAUSE:
-          break;
         case GAVL_CMD_SRC_RESUME:
           break;
         }
@@ -194,7 +208,6 @@ static int open_v4l(void * priv, const char * location)
 
   gavl_dictionary_t * t;
   gavl_dictionary_t * m;
-  bg_media_source_stream_t * st;
   
   v4l2_t * v4l;
   v4l = priv;
@@ -244,15 +257,6 @@ static int open_v4l(void * priv, const char * location)
   
   //  fprintf(stderr, "Open v4l\n");
 
-  st = bg_media_source_get_video_stream(&v4l->src, 0);
-
-  if(!(st->vsrc = gavl_v4l2_device_get_video_source(v4l->dev)))
-    {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got compressed output");
-    st->psrc = gavl_v4l2_device_get_packet_source(v4l->dev);
-    }
-
-  gavl_track_finalize(t);
 
   /* Overwrite value from gavl_track_finalize */
   gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_VIDEO_RECORDER);
