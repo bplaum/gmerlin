@@ -165,6 +165,7 @@ msgconn.c \
 msghub.c \
 msgsink.c \
 multiinput.c \
+muxinput.c \
 npt.c \
 objectcache.c \
 osd.c \
