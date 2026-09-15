@@ -384,7 +384,6 @@ bg_plugin_info_t * bg_multi_input_get_info()
   return bg_plugin_info_create(&multi_plugin.common);
   }
 
-
 bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track, bg_plugin_handle_t * h)
   {
   //  int num_streams;
