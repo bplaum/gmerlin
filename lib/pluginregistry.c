@@ -1551,6 +1551,11 @@ bg_plugin_registry_create_1(gavl_dictionary_t * section)
   tmp_info = bg_multi_input_get_info();
   if(tmp_info)
     ret->entries = append_to_list(ret->entries, tmp_info);
+
+  tmp_info = bg_mux_input_get_info();
+  if(tmp_info)
+    ret->entries = append_to_list(ret->entries, tmp_info);
+  
   
   if(ret->entries)
     {
@@ -3262,8 +3267,7 @@ static int input_plugin_load(const char * location,
       }
     }
   
-  
-  if(!try_and_error)
+  if(!try_and_error || protocol)
     goto fail;
   
   num_plugins = bg_get_num_plugins(BG_PLUGIN_INPUT, 0);
