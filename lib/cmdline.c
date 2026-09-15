@@ -411,6 +411,19 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
                                      args[j].arg+1, argv[i]);
           bg_cmdline_remove_arg(argc, _argv, i);
           }
+        if(args[j].flags & BG_CMDLINE_ARG_STRINGARRAY)
+          {
+          gavl_array_t * arr;
+          if(i >= *argc)
+            {
+            fprintf(stderr, "Option %s requires an argument\n", args[j].arg);
+            exit(-1);
+            }
+          arr = bg_cmdline_get_params_wr(args[j].arg + 1);
+          gavl_string_array_add(arr, argv[i]);
+          bg_cmdline_remove_arg(argc, _argv, i);
+          }
+        
         else if(args[j].flags & BG_CMDLINE_ARG_PARAM)
           {
           gavl_array_t * arr;
@@ -904,7 +917,6 @@ const gavl_array_t * bg_cmdline_get_params(const char * name)
 gavl_array_t * bg_cmdline_get_params_wr(const char * name)
   {
   return gavl_dictionary_get_array_create(&bg_cmdline_options, name);
-  
   }
 
 /*

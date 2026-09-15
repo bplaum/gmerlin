@@ -40,10 +40,15 @@ void bg_cmdline_remove_arg(int * argc, char *** argv, int arg);
 /* cmdline options */
 
 
-/* Simple string: "-opt val" is stored as opt = val int the global dict */
+/* Simple string: "-opt val" is stored as opt = val in the global dict */
 #define BG_CMDLINE_ARG_STRING     (1<<0) 
-#define BG_CMDLINE_ARG_PARAM      (1<<2)
-#define BG_CMDLINE_ARG_PER_STREAM (1<<1)
+
+/* Simple string: "-opt val" appends val to the opt array in the global dict */
+#define BG_CMDLINE_ARG_STRINGARRAY (1<<1)
+
+#define BG_CMDLINE_ARG_PARAM       (1<<2)
+
+#define BG_CMDLINE_ARG_PER_STREAM (1<<3)
 
 /* Get concatenated options (global then per stream) */
 void bg_cmdline_get_stream_params(const char * name,
