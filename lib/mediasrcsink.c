@@ -151,7 +151,6 @@ int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_t
   return ret;
   }
 
-
 bg_media_source_stream_t *
 bg_media_source_append_stream(bg_media_source_t * src, gavl_stream_type_t type)
   {
