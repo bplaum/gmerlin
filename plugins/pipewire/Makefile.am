@@ -11,7 +11,13 @@ AM_CFLAGS =  \
 -DDATA_DIR=\"$(pkgdatadir)\"
 
 plugin_LTLIBRARIES = \
+i_pipewire.la \
 res_pipewire.la
 
 res_pipewire_la_SOURCES = res_pipewire.c
 res_pipewire_la_LIBADD = @PIPEWIRE_LIBS@ @MODULE_LIBADD@
+
+i_pipewire_la_SOURCES = i_pipewire.c pipewire_common.c
+i_pipewire_la_LIBADD = @PIPEWIRE_LIBS@ @MODULE_LIBADD@
+
+noinst_HEADERS = pipewire_common.h

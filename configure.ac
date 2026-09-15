@@ -247,7 +247,7 @@ dnl
 dnl pipewire
 dnl
 
-dnl GMERLIN_CHECK_PIPEWIRE
+GMERLIN_CHECK_PIPEWIRE
 
 dnl
 dnl XFixes
@@ -718,6 +718,7 @@ plugins/edl/Makefile \
 plugins/jpeg/Makefile \
 plugins/png/Makefile \
 plugins/pulseaudio/Makefile \
+plugins/pipewire/Makefile \
 plugins/subwriters/Makefile \
 plugins/image/Makefile \
 plugins/mpris/Makefile \

@@ -31,8 +31,11 @@
 
 #include <gmerlin/translation.h>
 #include <gmerlin/plugin.h>
+#include <gmerlin/resourcemanager.h>
 
 #include <pipewire/pipewire.h>
+
+#include "pipewire_common.h"
 
 #define FLAG_READY       (1<<0)
 #define FLAG_ERROR       (1<<1)
@@ -64,71 +67,46 @@ static int handle_msg(void * priv, gavl_msg_t * msg)
 
 /* */
 
-#if 0
-// This callback gets called when our context changes state.  We really only
-// care about when it's ready or if it has failed
-static void pa_state_cb(pa_context *c, void *userdata)
+static char * make_id(uint32_t id, int monitor)
   {
-  pa_context_state_t state;
-  pipewire_t * p = userdata;
-  
-  state = pa_context_get_state(c);
-  switch(state)
-    {
-    // There are just here for reference
-    case PA_CONTEXT_UNCONNECTED:
-    case PA_CONTEXT_CONNECTING:
-    case PA_CONTEXT_AUTHORIZING:
-    case PA_CONTEXT_SETTING_NAME:
-    default:
-      break;
-    case PA_CONTEXT_FAILED:
-    case PA_CONTEXT_TERMINATED:
-      p->flags |= FLAG_ERROR;
-      break;
-    case PA_CONTEXT_READY:
-      p->flags |= FLAG_READY;
-      break;
-    }
-  }
-
-#endif
-
-static char * make_id(const char * klass, int idx)
-  {
-  if(!strcmp(klass, GAVL_META_CLASS_AUDIO_RECORDER))
-    return gavl_sprintf("pipewire-source-%d", idx);
-
-  if(!strcmp(klass, GAVL_META_CLASS_SINK_AUDIO))
-    return gavl_sprintf("pipewire-sink-%d", idx);
-  
-  return NULL;
+  if(monitor)
+    return gavl_sprintf("pipewire-monitor-%08x", id);
+  else
+    return gavl_sprintf("pipewire-node-%08x", id);
   }
   
-static void add_device(pipewire_t * reg, gavl_dictionary_t * dict, int idx)
+static void add_device(pipewire_t * reg, gavl_dictionary_t * dict, char * id)
   {
   gavl_msg_t * msg;
-  const char * klass;
-
-  klass = gavl_dictionary_get_string(dict, GAVL_META_CLASS);
   
   msg = bg_msg_sink_get(reg->ctrl.evt_sink);
   
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_ADDED, GAVL_MSG_NS_GENERIC);
-  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, make_id(klass, idx));
+  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, id);
   gavl_msg_set_arg_dictionary(msg, 0, dict);
-  
+#if 0
+  fprintf(stderr, "Add pipewire device:\n");
+  gavl_dictionary_dump(dict, 2);
+  fprintf(stderr, "\n");
+#endif
   bg_msg_sink_put(reg->ctrl.evt_sink);
 
   }
 
-static void del_device(pipewire_t * reg, const char * klass, int idx)
+static void del_device(pipewire_t * reg, int id)
   {
   gavl_msg_t * msg = bg_msg_sink_get(reg->ctrl.evt_sink);
   
   gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
-  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, make_id(klass, idx));
+  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, make_id(id, 0));
   bg_msg_sink_put(reg->ctrl.evt_sink);
+
+  msg = bg_msg_sink_get(reg->ctrl.evt_sink);
+  
+  gavl_msg_set_id_ns(msg, GAVL_MSG_RESOURCE_DELETED, GAVL_MSG_NS_GENERIC);
+  gavl_dictionary_set_string_nocopy(&msg->header, GAVL_MSG_CONTEXT_ID, make_id(id, 1));
+  bg_msg_sink_put(reg->ctrl.evt_sink);
+  
   }
 
 static void registry_event_global(void *data, uint32_t id,
@@ -136,9 +114,10 @@ static void registry_event_global(void *data, uint32_t id,
                                   const char *type, uint32_t version,
                                   const struct spa_dict *props)
   {
-  int i;
   pipewire_t * reg = data;
+  //  int i;
 
+#if 0  
   /* We aren't interested in these for now */
   if(!strcmp(type, PW_TYPE_INTERFACE_Port) ||
      !strcmp(type, PW_TYPE_INTERFACE_Core) ||
@@ -147,7 +126,7 @@ static void registry_event_global(void *data, uint32_t id,
     //    fprintf(stderr, "Got Port\n");
     return;
     }
-  
+
   fprintf(stderr, "object: id:%u type:%s/%d\n", id, type, version);
 
   if(!strcmp(type, PW_TYPE_INTERFACE_Device))
@@ -159,15 +138,126 @@ static void registry_event_global(void *data, uint32_t id,
       }
     return;
     }
-  else if(!strcmp(type, PW_TYPE_INTERFACE_Node))
+  else
+#endif
+
+  if(!strcmp(type, PW_TYPE_INTERFACE_Node))
     {
-    fprintf(stderr, "Got Node\n");
+    const char * klass;
+    const char * name;
+    const char * label;
+    gavl_dictionary_t dict;
+    gavl_dictionary_init(&dict);
+    
+    //    fprintf(stderr, "Got Node\n");
+    
+    if(!(klass = spa_dict_lookup(props, PW_KEY_MEDIA_CLASS)))
+      return; // Don't care
+
+    if(!(name = spa_dict_lookup(props, PW_KEY_NODE_NAME)))
+      return; // Don't care
+    
+    if(!strcmp(klass, "Audio/Source"))
+      {
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf(PIPEWIRE_SOURCE_PROTOCOL"://%s/%s",
+                                                                           reg->hostname, name));
+      }
+    else if(!strcmp(klass, "Audio/Sink"))
+      {
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_SINK_AUDIO);
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI, gavl_sprintf(PIPEWIRE_SINK_PROTOCOL"://%s/%s",
+                                                                           reg->hostname, name));
+      }
+    else
+      return; // Don't care
+    
+
+    if(!(label = spa_dict_lookup(props, PW_KEY_NODE_NICK)))
+      label = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION);
+
+#if 0
+    fprintf(stderr, "Got %s %s %s\n", klass, name, label);
+    
     for(i = 0; i < props->n_items; i++)
       {
       fprintf(stderr, "  %s: %s\n", props->items[i].key, props->items[i].value);
       }
+#endif
+    gavl_dictionary_set_string(&dict, GAVL_META_LABEL, label);
+    
+    add_device(reg, &dict, make_id(id, 0));
+
+    gavl_dictionary_free(&dict);
+    
     return;
     }
+  if(!strcmp(type, PW_TYPE_INTERFACE_Port))
+    {
+    uint32_t id;
+    const char * var;
+    
+    if((var = spa_dict_lookup(props, PW_KEY_PORT_MONITOR)) &&
+       !strcmp(var, "true") &&
+       (var = spa_dict_lookup(props, PW_KEY_NODE_ID)) &&
+       (sscanf(var, "%"PRIu32, &id) == 1))
+      {
+      const gavl_dictionary_t * node;
+      char * monitor_id = NULL;
+      char * node_id    = NULL;
+
+      gavl_dictionary_t dict;
+      gavl_dictionary_init(&dict);
+      
+      
+      monitor_id = make_id(id, 1);
+
+      if((node = bg_resource_get_by_id(0, monitor_id)))
+        {
+        free(monitor_id);
+        return;
+        }
+
+      node_id = make_id(id, 0);
+
+      if(!(node = bg_resource_get_by_id(0, node_id)))
+        {
+        free(monitor_id);
+        free(node_id);
+        return;
+        }
+      
+      
+      var = gavl_dictionary_get_string(node, GAVL_META_URI);
+      
+      //      fprintf(stderr, "Got monitor port for %s\n", var);
+
+      var = strstr(var, "://");
+      var += 3;
+      
+      gavl_dictionary_set_string(&dict, GAVL_META_CLASS, GAVL_META_CLASS_AUDIO_RECORDER);
+      gavl_dictionary_set_string_nocopy(&dict, GAVL_META_URI,
+                                        gavl_sprintf(PIPEWIRE_MONITOR_PROTOCOL"://%s", var));
+      
+      gavl_dictionary_set_string(&dict, GAVL_META_LABEL,
+                                 gavl_sprintf("Monitor of %s",
+                                              gavl_dictionary_get_string(node, GAVL_META_LABEL)));
+      
+      add_device(reg, &dict, monitor_id);
+      
+      //      free(node_id);
+      gavl_dictionary_free(&dict);
+      }
+#if 0
+    fprintf(stderr, "Got port\n");
+    for(i = 0; i < props->n_items; i++)
+      {
+      fprintf(stderr, "  %s: %s\n", props->items[i].key, props->items[i].value);
+      }
+#endif
+    }
+  
+#if 0
   else if(!strcmp(type, PW_TYPE_INTERFACE_Factory))
     {
     fprintf(stderr, "Got Factory\n");
@@ -177,11 +267,14 @@ static void registry_event_global(void *data, uint32_t id,
       }
     return;
     }
+#endif
   }
   
 static void registry_event_global_remove(void *data, uint32_t id)
   {
-
+  pipewire_t * reg = data;
+  del_device(reg, id);
+  
   }
  
 static const struct pw_registry_events registry_events = {
@@ -370,40 +463,7 @@ static int update_pipewire(void * priv)
   pipewire_t * reg = priv;
 
   reg->num_ops = 0;
-
-#if 0  
-  
-  if(!reg->pa_ml)
-    return 0;
-  
-  pa_mainloop_iterate(reg->pa_ml, 0, NULL);
-
-  if(reg->pa_op && (pa_operation_get_state(reg->pa_op) == PA_OPERATION_DONE))
-    {
-    pa_operation_unref(reg->pa_op);
-    reg->pa_op = NULL;
-
-    if(!(reg->flags & FLAG_GOT_SOURCES))
-      {
-      reg->flags |= FLAG_GOT_SOURCES;
-      reg->pa_op = pa_context_get_sink_info_list(reg->pa_ctx, pa_sink_cb, reg);
-      reg->num_ops++;
-      }
-    else
-      {
-      reg->flags |= FLAG_GOT_SINKS;
-
-      pa_context_set_subscribe_callback(reg->pa_ctx, pa_subscribe_callback, reg);
-      pa_context_subscribe(reg->pa_ctx, PA_SUBSCRIPTION_MASK_SOURCE | PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
-      reg->num_ops++;
-      }
-    
-    }
-#else
-
   pw_loop_iterate(pw_main_loop_get_loop(reg->loop), 0);
-  
-#endif
   return reg->num_ops;
   }
 
