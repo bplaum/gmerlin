@@ -62,9 +62,7 @@ static void start_pulse(bg_pa_recorder_t * priv)
   if(pa_simple_read(priv->com.pa, buffer,
                     priv->com.block_align * INIT_SAMPLES,
                     &error) < 0)
-    {
     fprintf(stderr, "Couldn't get first samples\n");
-    }
   else
     fprintf(stderr, "Reading initialized\n");
   
@@ -172,7 +170,6 @@ static bg_media_source_t * get_source_pulse(void * p)
   return &priv->source;
   }
 
-
 static const bg_parameter_info_t parameters[] =
   {
     {
@@ -230,9 +227,7 @@ set_parameter_pulse(void * p, const char * name,
       priv->com.bytes_per_sample = 2;
     }
   else if(!strcmp(name, "samplerate"))
-    {
     priv->com.samplerate = val->v.i;
-    }
   }
 
 static void * create_pulse(void)
@@ -264,8 +259,6 @@ static const char * get_protocols_pulse(void * priv)
   {
   return protocols;
   }
-
-
 
 const bg_input_plugin_t the_plugin =
   {
