@@ -26,6 +26,10 @@
 
 #include <spa/pod/parser.h>
 #include <spa/param/audio/format-utils.h>
+#include <pipewire/extensions/metadata.h>
+
+#include <gavl/metatags.h>
+
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "res_pipewire"
@@ -33,6 +37,7 @@
 
 #include <spa/utils/result.h>
 #include <spa/debug/pod.h>
+#include <spa/debug/dict.h>
 
 typedef struct
   {
@@ -42,11 +47,13 @@ typedef struct
   struct pw_core *core;
   struct pw_registry *registry;
   struct pw_node *node;
-
+  //  struct pw_metadata *settings;
+  
   /* Hooks */
   struct spa_hook registry_listener;
   struct spa_hook core_listener;
   struct spa_hook node_listener;
+  struct spa_hook metadata_listener;
   
   
   const char * name;
@@ -58,6 +65,9 @@ typedef struct
 
   gavl_audio_format_t * afmt;
 
+  int * max_buffer_size;
+
+  gavl_dictionary_t * m;
   } query_t;
 
 /* Node events */
@@ -124,7 +134,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
       const struct spa_pod *val;
       const struct spa_pod_object *obj = (const struct spa_pod_object *)param;
 
-      fprintf(stderr, "SPA_PARAM_EnumFormat\n");
+      //      fprintf(stderr, "SPA_PARAM_EnumFormat\n");
       
       if(spa_format_parse(param, &media_type, &media_subtype) < 0)
         return;
@@ -137,8 +147,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
           {
           case SPA_FORMAT_AUDIO_rate:
             {
-            
-            fprintf(stderr, "Got rate\n");
+            //            fprintf(stderr, "Got rate\n");
             
             val = &prop->value;
 
@@ -166,14 +175,14 @@ static void node_event_param(void *data, int seq, uint32_t id,
             break;
           case SPA_FORMAT_AUDIO_format:
             {
-            fprintf(stderr, "Got format\n");
+            //            fprintf(stderr, "Got format\n");
             
             val = &prop->value;
             if(spa_pod_is_id(val))
               {
               uint32_t id;
               spa_pod_get_id(val, &id);
-              printf("Format: %s\n", spa_debug_type_find_name(spa_type_audio_format, id));
+              //              printf("Format: %s\n", spa_debug_type_find_name(spa_type_audio_format, id));
 
               bg_pipewire_sample_format_from_spa(id, qd->afmt);
               }
@@ -186,7 +195,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
                 {
                 uint32_t *vals   = (uint32_t *)SPA_POD_CHOICE_VALUES(val);
                 bg_pipewire_sample_format_from_spa(vals[0], qd->afmt);
-                printf("Format: %s\n", spa_debug_type_find_name(spa_type_audio_format, vals[0]));
+                //                printf("Format: %s\n", spa_debug_type_find_name(spa_type_audio_format, vals[0]));
                 }
               
               }
@@ -197,9 +206,9 @@ static void node_event_param(void *data, int seq, uint32_t id,
             uint32_t n_vals;
             uint32_t *vals;
             
-            printf("Got position\n");
+            //            printf("Got position\n");
             val = &prop->value;
-            spa_debug_pod(0, NULL, val);
+            //            spa_debug_pod(0, NULL, val);
 
             if(spa_pod_is_array(val) &&
                spa_pod_is_id(SPA_POD_ARRAY_CHILD(val)))
@@ -237,7 +246,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
             if(spa_pod_is_int(val))
               {
               spa_pod_get_int(val, &num);
-              printf("Got %d channels\n", num);
+              //              printf("Got %d channels\n", num);
               qd->afmt->num_channels = num;
               }
             else if(spa_pod_is_choice(val))
@@ -248,7 +257,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
               if(spa_pod_is_int(&choice->body.child) && (n_vals >= 1))
                 {
                 int32_t *vals   = (int32_t *)SPA_POD_CHOICE_VALUES(val);
-                printf("Got channels (choice): %d\n", vals[0]);
+                //                printf("Got channels (choice): %d\n", vals[0]);
                 qd->afmt->num_channels = vals[0];
                 }
               
@@ -256,7 +265,7 @@ static void node_event_param(void *data, int seq, uint32_t id,
             break;
             }
           default:
-            spa_debug_pod(0, NULL, &prop->value);
+            //            spa_debug_pod(0, NULL, &prop->value);
             break;
             
           }
@@ -272,17 +281,6 @@ static void node_event_param(void *data, int seq, uint32_t id,
       break;
     }
   
-  /* Clone the pod - it is only valid inside this callback. */
-#if 0
-  copy = malloc(SPA_POD_SIZE(param));
-  if (!copy)
-    return;
-  memcpy(copy, param, SPA_POD_SIZE(param));
-  
-  res->params[res->n_params].id = id;
-  res->params[res->n_params].pod = copy;
-  res->n_params++;
-#endif
   }
  
 static const struct pw_node_events node_events =
@@ -306,10 +304,48 @@ static void core_event_error(void *data, uint32_t id, int seq,
                               int res, const char *message)
   {
   query_t *qd = data;
-  fprintf(stderr, "pipewire error: id=%u seq=%d res=%d (%s): %s\n",
-          id, seq, res, spa_strerror(res), message);
+  //  fprintf(stderr, "pipewire error: id=%u seq=%d res=%d (%s): %s\n",
+  //          id, seq, res, spa_strerror(res), message);
   qd->error = 1;
   pw_main_loop_quit(qd->loop);
+  }
+
+static void on_core_info(void *data, const struct pw_core_info *info)
+  {
+  query_t *qd = data;
+  //  printf("Core id=%u, name=%s, version=%s\n",
+  //         info->id, info->name, info->version);
+  
+  /* info->props is a struct spa_dict * (or NULL if none sent yet) */
+  if(info->props)
+    {
+    //    printf("Core properties:\n");
+    //    spa_debug_dict(0, info->props);   /* quick dump, from earlier answer */
+    
+    const char * var;
+
+    //    fprintf(stderr, "Got core\n");
+    //    spa_debug_dict(0, info->props);
+    
+    var = spa_dict_lookup(info->props, "default.clock.quantum-limit");
+    if(var)
+      {
+      //      fprintf(stderr, "Got quantum limit %s\n", var);
+      if(qd->max_buffer_size)
+        *qd->max_buffer_size = atoi(var);
+      }
+  
+    var = spa_dict_lookup(info->props, "default.clock.quantum");
+    if(var)
+      {
+      //      fprintf(stderr, "Got quantum %s\n", var);
+      if(qd->afmt)
+        qd->afmt->samples_per_frame = atoi(var);
+      }
+
+
+
+    }
   }
 
 static const struct pw_core_events core_events =
@@ -317,7 +353,9 @@ static const struct pw_core_events core_events =
     PW_VERSION_CORE_EVENTS,
     .done = core_event_done,
     .error = core_event_error,
+    .info = on_core_info,
   };
+
 
 /* Registry events */
  
@@ -330,17 +368,6 @@ static void registry_event_global(void *data, uint32_t id,
 
   //  fprintf(stderr, "registry_event_global %s %s\n", type, spa_dict_lookup(props, PW_KEY_NODE_NAME));
 
-  if(!strcmp(type, PW_TYPE_INTERFACE_Core))
-    {
-    const char * var;
-
-    fprintf(stderr, "Got core\n");
-    
-    
-    var = spa_dict_lookup(props, "default.clock.quantum-limit");
-    if(var)
-      fprintf(stderr, "Got quantum limit %s\n", var);
-    }
   
   if(qd->found ||
      strcmp(type, PW_TYPE_INTERFACE_Node) ||
@@ -348,10 +375,16 @@ static void registry_event_global(void *data, uint32_t id,
      strcmp(name, qd->name))
     return;
 
-  fprintf(stderr, "Got device: %s\n", name);
-    
+  //  fprintf(stderr, "Got device: %s\n", name);
+  //  spa_debug_dict(0, props);
+  
   qd->found = 1;
- 
+
+  if(qd->m)
+    {
+    gavl_dictionary_set_string(qd->m, GAVL_META_DEVICE, spa_dict_lookup(props, PW_KEY_NODE_NICK));
+    }
+  
   qd->node = pw_registry_bind(qd->registry, id, type, PW_VERSION_NODE, 0);
   if(!qd->node)
     {
@@ -372,7 +405,8 @@ static const struct pw_registry_events registry_events =
   };
  
 
-int bg_pipewire_query_device(const char * name, gavl_audio_format_t * afmt)
+int bg_pipewire_query_device(const char * name, gavl_audio_format_t * afmt,
+                             int * max_buffer_size, gavl_dictionary_t * m)
   {
   int ret = 0;
   query_t qd = { 0 };
@@ -384,11 +418,13 @@ int bg_pipewire_query_device(const char * name, gavl_audio_format_t * afmt)
   qd.afmt = afmt;
   
   qd.loop = pw_main_loop_new(NULL);
-
+  qd.m = m;
+  
   if(!qd.loop)
     goto fail;
   
-    
+  qd.max_buffer_size = max_buffer_size;
+  
   qd.context = pw_context_new(pw_main_loop_get_loop(qd.loop), NULL, 0);
 
   if(!qd.context)
@@ -422,9 +458,7 @@ int bg_pipewire_query_device(const char * name, gavl_audio_format_t * afmt)
     goto fail;
     }
 
-  
-  
-  //  ret = 1;
+  ret = 1;
 
   fail:
 
@@ -443,8 +477,8 @@ int bg_pipewire_query_device(const char * name, gavl_audio_format_t * afmt)
   if(qd.loop)
     pw_main_loop_destroy(qd.loop);
 
-  fprintf(stderr, "Got audio format\n");
-  gavl_audio_format_dump(qd.afmt);
+  //  fprintf(stderr, "Got audio format\n");
+  //  gavl_audio_format_dump(qd.afmt);
   
   return ret;
   
@@ -535,3 +569,41 @@ int bg_pipewire_channel_positions_from_spa(uint32_t * ids, int num_ids,
     }
   return 1;
   }
+
+void bg_pipewire_audio_format_to_spa(const gavl_audio_format_t * fmt,
+                                     struct spa_audio_info_raw * spa)
+  {
+  int i = 0;
+  int j;
+  
+  while(sampleformats[i].sampleformat)
+    {
+    if((fmt->sample_format == sampleformats[i].sampleformat) &&
+       (fmt->interleave_mode == sampleformats[i].interleave))
+      {
+      spa->format = sampleformats[i].spa;
+      break;
+      }
+    i++;
+    }
+
+  spa->rate = fmt->samplerate;
+  spa->channels = fmt->num_channels;
+
+  for(i = 0; i < spa->channels; i++)
+    {
+    j = 0;
+
+    while(channel_ids[j].channel_id)
+      {
+      if(channel_ids[j].channel_id == fmt->channel_locations[i])
+        {
+        spa->position[i] = channel_ids[j].spa;
+        break;
+        }
+      j++;
+      }
+    }
+  
+  }
+   
