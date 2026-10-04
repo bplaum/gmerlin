@@ -689,7 +689,7 @@ static gavl_source_status_t process_audio(bg_media_source_stream_t * st, gavl_ti
     return result;
     }
 
-  gavl_stream_stats_update_params(&s->stats, f->timestamp, f->valid_samples,
+  gavl_stream_stats_update_params(&s->stats, GAVL_TIME_UNDEFINED, f->timestamp, f->valid_samples,
                                   0, 0);
   
   s->time = gavl_time_unscale(s->dst_scale, f->timestamp + f->valid_samples);
@@ -717,7 +717,7 @@ static gavl_source_status_t process_video(bg_media_source_stream_t * st, gavl_ti
 
   s->time = gavl_time_unscale(s->dst_scale, f->timestamp + f->duration);
 
-  gavl_stream_stats_update_params(&s->stats, f->timestamp, f->duration,
+  gavl_stream_stats_update_params(&s->stats, GAVL_TIME_UNDEFINED, f->timestamp, f->duration,
                                   0, 0);
 
   
@@ -750,8 +750,7 @@ static gavl_source_status_t process_packet(bg_media_source_stream_t * st, gavl_t
   
   t = gavl_time_unscale(s->dst_scale, s->p->pts + s->p->duration);
 
-  gavl_stream_stats_update_params(&s->stats, s->p->pts, s->p->duration,
-                                  s->p->buf.len, s->p->flags);
+  gavl_stream_stats_update(&s->stats, s->p);
 
   
   if(gavl_packet_sink_put_packet(s->psink, s->p) != GAVL_SINK_OK)
@@ -844,8 +843,7 @@ static gavl_source_status_t process_packet_noncont(bg_media_source_stream_t * st
   else
     result = GAVL_SOURCE_EOF;
 
-  gavl_stream_stats_update_params(&s->stats, s->p->pts, s->p->duration,
-                                  s->p->buf.len, s->p->flags);
+  gavl_stream_stats_update(&s->stats, s->p);
   
   s->flags &= ~(BG_ENCODER_GOT_SINK_FRAME|BG_ENCODER_GOT_SRC_FRAME);
   s->p = NULL;
@@ -892,7 +890,7 @@ static gavl_source_status_t process_video_noncont(bg_media_source_stream_t * st,
   else
     result = GAVL_SOURCE_EOF;
 
-  gavl_stream_stats_update_params(&s->stats, s->vframe->timestamp, s->vframe->duration,
+  gavl_stream_stats_update_params(&s->stats, GAVL_TIME_UNDEFINED, s->vframe->timestamp, s->vframe->duration,
                                   0, 0);
   
   s->flags &= ~(BG_ENCODER_GOT_SINK_FRAME|BG_ENCODER_GOT_SRC_FRAME);

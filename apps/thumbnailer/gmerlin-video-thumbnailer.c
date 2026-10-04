@@ -178,7 +178,7 @@ int main(int argc, char ** argv)
   bg_plugins_init();
   
   /* Load input plugin */
-  if(!(input_handle = bg_input_plugin_load(in_file)))
+  if(!(input_handle = bg_input_plugin_load(in_file, NULL)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s", in_file);
     return -1;

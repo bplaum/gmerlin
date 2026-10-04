@@ -93,15 +93,6 @@ void bg_msg_set_chain_parameter_ctx(gavl_msg_t * msg,
                                     const char * sub_name,
                                     const gavl_value_t * val);
 
-#if 0
-void bg_msg_set_multi_parameter_ctx(gavl_msg_t * msg,
-                                    const char * ctx,
-                                    const char * name,
-                                    const char * el_name,
-                                    const char * sub_name,
-                                    const gavl_value_t * val);
-#endif
-
 /** \brief Get a parameter
  *  \param msg A message
  *  \param type Type of the parameter

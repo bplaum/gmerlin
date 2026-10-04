@@ -49,7 +49,6 @@
  */
 
 #define BG_URL_VAR_PLUGIN  "plugin"     // Force usage of a plugin
-#define BG_URL_VAR_CMDLINE "cmdlineopt" // Respect the -i option
 
 #define BG_INPUT_FLAG_PREFER_EDL          (1<<0)
 #define BG_INPUT_FLAG_SELECT_TRACK        (1<<2)
@@ -450,7 +449,7 @@ bg_plugin_find_by_protocol(const char * protocol, int type_mask);
  *
  */
 
-bg_plugin_handle_t * bg_input_plugin_load(const char * location);
+bg_plugin_handle_t * bg_input_plugin_load(const char * location, const gavl_dictionary_t * cfg);
 
 /** \ingroup plugin_registry
  *  \brief Load and open an input plugin with URL redirection
@@ -469,7 +468,7 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location);
  *
  */
 
-bg_plugin_handle_t * bg_input_plugin_load_full(const char * location);
+bg_plugin_handle_t * bg_input_plugin_load_full(const char * location, const gavl_dictionary_t * cfg);
 
 /** \ingroup plugin_registry
  *  \brief Load and open an edl decoder
@@ -489,7 +488,7 @@ bg_plugin_handle_t * bg_input_plugin_load_full(const char * location);
 bg_plugin_handle_t * bg_input_plugin_load_edl(const gavl_dictionary_t * edl);
 bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track, bg_plugin_handle_t * h);
 
-bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr);
+bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const gavl_dictionary_t * cfg);
 
 bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type);
 
@@ -504,7 +503,7 @@ bg_plugin_handle_t * bg_output_plugin_load(const char * sink_uri, int type);
  *  - Redirectors (GAVL_MEDIA_CLASS_LOCATION)
  *  - Devices
  *  ...
- *  variant is the index of the multivariat (multi bitrate-) streams.
+ *  variant is the index of the multivariant (multi bitrate-) streams.
  *  0 means first, with highest quality. Increase value after playback
  *  failed
  *  due to slow system or network.

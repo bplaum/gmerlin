@@ -56,6 +56,8 @@ typedef struct
   int plugins_alloc;
   
   bg_controllable_t controllable;
+
+  gavl_dictionary_t src_cfg;
   
   } multi_t;
 
@@ -108,7 +110,7 @@ static bg_plugin_handle_t * load_input(multi_t * m, const char * uri)
            sizeof(*m->plugins) * (m->plugins_alloc - m->num_plugins));
     }
 
-  m->plugins[m->num_plugins].h = bg_input_plugin_load_full(uri);
+  m->plugins[m->num_plugins].h = bg_input_plugin_load_full(uri, &m->src_cfg);
   m->plugins[m->num_plugins].uri = gavl_strdup(uri);
   m->num_plugins++;
   return m->plugins[m->num_plugins-1].h;
@@ -135,6 +137,7 @@ static void destroy_multi(void * priv)
   {
   multi_t * m = priv;
   bg_controllable_cleanup(&m->controllable);
+  gavl_dictionary_free(&m->src_cfg);
   close_multi(priv);
   free(priv);
   }
@@ -255,6 +258,23 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           break;
         }
       break;
+    case BG_MSG_NS_PARAMETER:
+      {
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name = NULL;
+          gavl_value_t  val;
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+          
+          gavl_dictionary_set_nocopy(&priv->src_cfg, name, &val);
+          
+          gavl_value_free(&val);
+          }
+        }
+      }
     }
   return 1;
   }
@@ -302,7 +322,7 @@ bg_plugin_info_t * bg_mux_input_get_info()
 
 
 
-bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr)
+bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const gavl_dictionary_t * cfg)
   {
   int i, j, num_streams;
   bg_plugin_handle_t * ret;

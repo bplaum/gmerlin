@@ -248,7 +248,7 @@ static void thread_func(bg_http_connection_t * conn, void * priv, int format)
   /* Open Object */
   handle = NULL;
   
-  if(!(handle = bg_input_plugin_load_full(location)))
+  if(!(handle = bg_input_plugin_load_full(location, NULL)))
     {
     gavl_http_response_init(&conn->res, conn->protocol, 500, "Internal Server Error");
     goto fail;

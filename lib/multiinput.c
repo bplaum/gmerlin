@@ -46,6 +46,8 @@ typedef struct
   /* Global handle */
   bg_plugin_handle_t * h;
   bg_controllable_t controllable;
+
+  gavl_dictionary_t src_cfg;
   
   } multi_t;
 
@@ -146,7 +148,7 @@ static void start_multi(void * priv)
         }
       
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading external uri: %s", uri);
-      if(!(h = bg_input_plugin_load(uri)))
+      if(!(h = bg_input_plugin_load(uri, &m->src_cfg)))
         return;
       
       /* Stream is external */
@@ -268,6 +270,25 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
           }
         }
       break;
+
+    case BG_MSG_NS_PARAMETER:
+      {
+      switch(msg->ID)
+        {
+        case BG_CMD_SET_PARAMETER:
+          {
+          const char * name = NULL;
+          gavl_value_t  val;
+          gavl_value_init(&val);
+          bg_msg_get_parameter(msg, &name, &val);
+          
+          gavl_dictionary_set_nocopy(&priv->src_cfg, name, &val);
+          
+          gavl_value_free(&val);
+          }
+        }
+      }
+      
     }
   return 1;
   }
@@ -333,6 +354,7 @@ static void destroy_multi(void * priv)
   multi_t * m = priv;
   bg_controllable_cleanup(&m->controllable);
   close_multi(priv);
+  gavl_dictionary_free(&m->src_cfg);
   free(priv);
   }
 
@@ -439,7 +461,7 @@ bg_plugin_handle_t * bg_input_plugin_load_multi(const gavl_dictionary_t * track,
 
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading primary uri: %s", uri);
       
-      if(!(h = bg_input_plugin_load(uri)))
+      if(!(h = bg_input_plugin_load(uri, &priv->src_cfg)))
         goto fail;
       bg_input_plugin_set_track(h, 0);
 

@@ -169,8 +169,9 @@ static int source_init(source_t * s,
   s->location = gavl_dictionary_get_string(seg->seg, GAVL_META_URI);
   if(!s->location)
     s->location = gavl_dictionary_get_string(&dec->mi, GAVL_META_URI);
-  
-  if(!(s->h = bg_input_plugin_load(s->location)))
+
+  /* TODO: Add option for sample accurate seeking */
+  if(!(s->h = bg_input_plugin_load(s->location, NULL)))
     return 0;
   
   s->track = seg->track;

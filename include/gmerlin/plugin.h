@@ -92,7 +92,8 @@
 
 
 #define BG_PLUGIN_UNSUPPORTED     (1<<10)  //!< Plugin is not supported. Only for a foreign API plugins
-#define BG_PLUGIN_NOMUX           (1<<11)  //!< Encoder plugin has separate destinnations for the streams
+#define BG_PLUGIN_NOMUX           (1<<11)  //!< Encoder plugin has separate destinations for the streams
+#define BG_PLUGIN_REALTIME        (1<<12)  //!< Encoding plugin is realtime
 
 
 #define BG_PLUGIN_ALL 0xFFFFFFFF //!< Mask of all possible plugin flags
@@ -162,14 +163,6 @@ typedef enum
     BG_PLUGIN_CONTROL                    = (1<<25),  //!< 
 
   } bg_plugin_type_t;
-
-/** \ingroup plugin
- *  \brief Device description
- *
- *  The find_devices() function of a plugin returns
- *  a NULL terminated array of devices. It's used mainly for input plugins,
- *  which access multiple drives. For output plugins, devices are normal parameters.
- */
 
 
 /* Common part */
@@ -278,6 +271,11 @@ typedef struct bg_input_plugin_s bg_input_plugin_t;
  *
  */
 
+#define BG_PLUGIN_PARAM_DECODING_MODE "$decoding-mode"
+
+#define BG_PLUGIN_DECODE_RT              0 // Default, generate sufficient info for playback
+#define BG_PLUGIN_DECODE_TRANSCODE       1 // Generate accurate timing info (DTS and packet durations)
+#define BG_PLUGIN_DECODE_SAMPLE_ACCURATE 2 // Generate accurate timing info and enable sample accurate seeking
 
 struct bg_input_plugin_s
   {

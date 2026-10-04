@@ -92,6 +92,7 @@ flag_names[] =
     { "NeedsHTTP",      BG_PLUGIN_NEEDS_HTTP_SERVER     },
     { "NeedsTerminal",  BG_PLUGIN_NEEDS_TERMINAL  },
     { "NoMUX",          BG_PLUGIN_NOMUX           },
+    { "Realtime",       BG_PLUGIN_REALTIME        },
     { NULL,    0                                  },
   };
 

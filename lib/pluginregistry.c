@@ -1866,33 +1866,6 @@ bg_plugin_registry_load_cover_full(bg_plugin_registry_t * r,
       uri = gavl_dictionary_get_string(img, GAVL_META_URI);
       mimetype = gavl_dictionary_get_string(img, GAVL_META_MIMETYPE);
       }
-#if 0 // TODO
-    else if((img = gavl_dictionary_get_image_max(metadata,
-                                                 GAVL_META_COVER_EMBEDDED, max_width, max_height, NULL)))
-      {
-      int64_t offset;
-      int64_t size;
-
-      if(gavl_dictionary_get_long(img, GAVL_META_COVER_OFFSET, &offset) &&
-         gavl_dictionary_get_long(img, GAVL_META_COVER_SIZE, &size) &&
-         gavl_metadata_get_src(metadata, GAVL_META_SRC, 0, NULL, &uri))
-        {
-        gavl_dictionary_t url_vars;
-        gavl_dictionary_init(&url_vars);
-
-        gavl_dictionary_set_string_nocopy(&url_vars, "byterange",
-                                          gavl_sprintf("%"PRId64"-%"PRId64, offset, offset+size));
-        
-        uri_priv = gavl_strdup(uri);
-        uri_priv = bg_url_append_vars(uri_priv, &url_vars);
-        
-        uri = uri_priv;
-        gavl_dictionary_free(&url_vars);
-
-        mimetype = gavl_dictionary_get_string(img, GAVL_META_MIMETYPE);
-        }
-      }
-#endif
     if(uri)
       goto have_uri;
     
@@ -2516,9 +2489,24 @@ char * bg_get_default_sink_uri(int plugin_type)
   return NULL;
   }
 
+static 
+
+void set_input_param(void * priv, const char * name,
+                     const gavl_value_t * val)
+  {
+  gavl_msg_t * msg;
+  
+  bg_plugin_handle_t * h = priv;
+  
+  msg = bg_msg_sink_get(h->ctrl_ext.cmd_sink);
+  gavl_msg_set_id_ns(msg, BG_CMD_SET_PARAMETER, BG_MSG_NS_PARAMETER);
+  bg_msg_set_parameter(msg, name, val);
+  bg_msg_sink_put(h->ctrl_ext.cmd_sink);
+  }
+
 static void load_input_plugin(bg_plugin_registry_t * reg,
                               const bg_plugin_info_t * info,
-                              const gavl_dictionary_t * options,
+                              const gavl_dictionary_t * cfg,
                               bg_plugin_handle_t ** ret)
   {
   if(!(*ret) || !(*ret)->info || strcmp(bg_plugin_info_get_name((*ret)->info),
@@ -2530,14 +2518,14 @@ static void load_input_plugin(bg_plugin_registry_t * reg,
       *ret = NULL;
       }
 
-    if(options)
-      bg_plugin_load_with_options(options);
-#if 0
-    else if(!strcmp(info->name, "i_bgplug"))
-      *ret = bg_input_plugin_create_plug();
-#endif
-    else
-      *ret = bg_plugin_load(info);
+    *ret = bg_plugin_load(info);
+    
+    /* Set parameters before we call open() */
+    if(cfg && *ret && (*ret)->ctrl_ext.cmd_sink)
+      {
+      gavl_dictionary_foreach(cfg, set_input_param, *ret);
+      }
+
     }
   }
 
@@ -3181,7 +3169,7 @@ static int input_plugin_finalize(bg_plugin_handle_t * h, const char * location)
 
 static int input_plugin_load(const char * location,
                              const bg_plugin_info_t * info,
-                             const gavl_dictionary_t * options,
+                             const gavl_dictionary_t * cfg,
                              bg_plugin_handle_t ** ret)
   {
   const char * real_location;
@@ -3210,7 +3198,7 @@ static int input_plugin_load(const char * location,
     return 0;
     }
   
-  if(!info && !options) /* No plugin given, seek one */
+  if(!info) /* No plugin given, seek one */
     {
     if(bg_string_is_url(location))
       {
@@ -3237,15 +3225,12 @@ static int input_plugin_load(const char * location,
   else
     try_and_error = 0; /* We never try other plugins than the given one */
   
-  if(info || options)
+  if(info)
     {
     /* Try to load this */
-
-    load_input_plugin(bg_plugin_reg, info, options, ret);
-
-    if(!info)
-      info = bg_plugin_find_by_name(gavl_dictionary_get_string(options, BG_CFG_TAG_NAME));
     
+    load_input_plugin(bg_plugin_reg, info, cfg, ret);
+        
     if(!(*ret))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, TRS("Loading plugin \"%s\" failed"),
@@ -3291,7 +3276,7 @@ static int input_plugin_load(const char * location,
           continue;
         }
       }
-    load_input_plugin(bg_plugin_reg, info, NULL, ret);
+    load_input_plugin(bg_plugin_reg, info, cfg, ret);
 
     if(!*ret)
       continue;
@@ -3357,7 +3342,6 @@ static void remove_gmerlin_url_vars(gavl_dictionary_t * vars)
   gavl_dictionary_set(vars, GAVL_URL_VAR_TRACK,   NULL);
   gavl_dictionary_set(vars, GAVL_URL_VAR_VARIANT, NULL);
   gavl_dictionary_set(vars, BG_URL_VAR_PLUGIN,  NULL);
-  gavl_dictionary_set(vars, BG_URL_VAR_CMDLINE, NULL);
   gavl_dictionary_set(vars, GAVL_URL_VAR_CLOCK_TIME, NULL);
   }
 
@@ -3404,18 +3388,14 @@ static void set_locations(gavl_dictionary_t * dict, const char * location)
     }
   }
 
-bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
+bg_plugin_handle_t * bg_input_plugin_load(const char * location_c, const gavl_dictionary_t * cfg)
   {
-  int i;
   char * location = NULL;
-  //  char * tmp_string = NULL;
   
   gavl_dictionary_t vars;
   const char * plugin_name;
   const bg_plugin_info_t * info = NULL;
   
-  const gavl_value_t * options_val;
-  const gavl_dictionary_t * options = NULL;
   bg_plugin_handle_t * ret = NULL;
   
   gavl_dictionary_init(&vars);
@@ -3434,19 +3414,12 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
   if((plugin_name = gavl_dictionary_get_string(&vars, BG_URL_VAR_PLUGIN)))
     info = bg_plugin_find_by_name(plugin_name);
 
-  /* Apply -ip option */
-  i = 0;
-  if(gavl_dictionary_get_int(&vars, BG_URL_VAR_CMDLINE, &i) && i &&
-     (options_val = bg_plugin_config_get(BG_PLUGIN_INPUT)))
-    {
-    options = gavl_value_get_dictionary(options_val);
-    }
   
   /* Remove the gmerlin specific variables and append the others */
   remove_gmerlin_url_vars(&vars);
   location = bg_url_append_vars(location, &vars);
   
-  if(!input_plugin_load(location, info, options, &ret))
+  if(!input_plugin_load(location, info, cfg, &ret))
     {
     if(ret)
       {
@@ -3466,7 +3439,7 @@ bg_plugin_handle_t * bg_input_plugin_load(const char * location_c)
   }
 
 
-bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
+bg_plugin_handle_t * bg_input_plugin_load_full(const char * location, const gavl_dictionary_t * cfg)
   {
   bg_plugin_handle_t * ret;
   gavl_dictionary_t track;
@@ -3475,6 +3448,10 @@ bg_plugin_handle_t * bg_input_plugin_load_full(const char * location)
   
   gavl_dictionary_init(&track);
   gavl_track_from_location(&track, location);
+
+  if(cfg)
+    gavl_dictionary_copy(bg_track_get_config_nc(&track, BG_TRACK_CONFIG_SRC), cfg);
+  
   ret = bg_load_track(&track, variant, &num_variants);
   gavl_dictionary_free(&track);
   return ret;
@@ -3994,10 +3971,10 @@ gavl_dictionary_t * bg_plugin_registry_load_media_info(bg_plugin_registry_t * re
   
   if(flags & BG_INPUT_FLAG_SELECT_TRACK)
     {
-    if(!(h = bg_input_plugin_load_full(location)))
+    if(!(h = bg_input_plugin_load_full(location, NULL)))
       goto fail;
     }
-  else if(!(h = bg_input_plugin_load(location)))
+  else if(!(h = bg_input_plugin_load(location, NULL)))
     goto fail;
   
   if(!(flags & BG_INPUT_FLAG_SELECT_TRACK))
@@ -4947,6 +4924,8 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
   bg_plugin_handle_t * ret = NULL;
   const gavl_dictionary_t * extra_vars = NULL;
 
+  const gavl_dictionary_t * cfg = NULL;
+  
   int src_idx;
   int track_index = 0;
   gavl_dictionary_t vars;
@@ -4954,6 +4933,20 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
   gavl_dictionary_init(&vars);
   gavl_dictionary_init(&dict);
 
+  cfg = bg_track_get_config(track, BG_TRACK_CONFIG_SRC);
+
+#if 0  
+  if(cfg)
+    {
+    fprintf(stderr, "Got track config:\n");
+    gavl_dictionary_dump(cfg, 2);
+    }
+  else
+    {
+    fprintf(stderr, "Got no track config\n");
+    }
+#endif
+  
   /* Multipart movie */
   if(get_multipart_edl(track, &dict))
     edl = &dict;
@@ -5033,7 +5026,7 @@ bg_plugin_handle_t * bg_load_track(const gavl_dictionary_t * track,
       
       gavl_dictionary_free(&vars);
 
-      if(!(ret = bg_input_plugin_load(real_location)))
+      if(!(ret = bg_input_plugin_load(real_location, cfg)))
         {
         free(real_location);
         src_idx++;

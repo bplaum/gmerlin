@@ -32,7 +32,7 @@ static int load_file(bg_plugin_registry_t * plugin_reg,
   {
   gavl_dictionary_t * ti;
   *input_handle = NULL;
-  if(!(*input_handle = bg_input_plugin_load(file)))
+  if(!(*input_handle = bg_input_plugin_load(file, NULL)))
     {
     fprintf(stderr, "Cannot open %s\n", file);
     return 0;

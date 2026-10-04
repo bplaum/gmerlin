@@ -830,9 +830,10 @@ char * bg_string_array_to_string(const gavl_array_t * arr);
 #define BG_TRACK_CONFIG_FILTER     "filter"       /* Always per stream */
 #define BG_TRACK_CONFIG_TRANSCODE  "transcode" /* Transcode options (per stream) */
 
+#define BG_TRACK_CONFIG_SRC        "src" /* Options for the input plugin */
+
 const gavl_dictionary_t * bg_track_get_config(const gavl_dictionary_t * track, const char * tag);
 gavl_dictionary_t * bg_track_get_config_nc(gavl_dictionary_t * track, const char * tag);
-
 
 #endif // BGGAVL_H_INCLUDED
 
