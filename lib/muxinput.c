@@ -58,8 +58,18 @@ typedef struct
   bg_controllable_t controllable;
 
   gavl_dictionary_t src_cfg;
+  gavl_dictionary_t buffer_formats;
   
   } multi_t;
+
+static void copy_stream_data(gavl_dictionary_t * dst,
+                             const gavl_dictionary_t * src)
+  {
+  gavl_dictionary_copy_value(dst, src, GAVL_META_STREAM_FORMAT);
+  gavl_dictionary_copy_value(dst, src, GAVL_META_METADATA);
+  gavl_dictionary_copy_value(dst, src, GAVL_META_STREAM_STATS);
+  gavl_dictionary_copy_value(dst, src, GAVL_META_STREAM_COMPRESSION_INFO);
+  }
 
 static gavl_dictionary_t * get_stream_config_wr(bg_media_source_stream_t * st)
   {
@@ -172,6 +182,7 @@ static void start_multi(multi_t * m)
     int idx = 0;
     const char * uri = NULL;
     const gavl_dictionary_t * dict;
+    const gavl_array_t * fmts;
     
     if(m->src.streams[i]->action == BG_STREAM_ACTION_OFF)
       continue;
@@ -183,6 +194,17 @@ static void start_multi(multi_t * m)
 
     h = load_input(m, uri);
 
+    if((m->src.streams[i]->type == GAVL_STREAM_AUDIO) &&
+       (fmts = gavl_dictionary_get_array(&m->buffer_formats, "audio")))
+      {
+      bg_input_plugin_set_audio_buffer_formats(h, fmts);
+      }
+    else if((m->src.streams[i]->type == GAVL_STREAM_VIDEO) &&
+            (fmts = gavl_dictionary_get_array(&m->buffer_formats, "video")))
+      {
+      bg_input_plugin_set_video_buffer_formats(h, fmts);
+      }
+    
     st = h->src->streams[idx];
 
     st->action = m->src.streams[i]->action;
@@ -201,10 +223,9 @@ static void start_multi(multi_t * m)
 
     st = m->src.streams[i]->user_data;
 
-    gavl_dictionary_copy_value(m->src.streams[i]->s, st->s, GAVL_META_STREAM_FORMAT);
-    gavl_dictionary_copy_value(m->src.streams[i]->s, st->s, GAVL_META_METADATA);
-    gavl_dictionary_copy_value(m->src.streams[i]->s, st->s, GAVL_META_STREAM_STATS);
+    copy_stream_data(m->src.streams[i]->s, st->s);
     
+                     
     if((m->src.streams[i]->asrc = st->asrc))
       {
       gavl_audio_format_copy(gavl_stream_get_audio_format_nc(m->src.streams[i]->s),
@@ -217,6 +238,9 @@ static void start_multi(multi_t * m)
       }
     
     m->src.streams[i]->psrc = st->psrc;
+
+    //    fprintf(stderr, "Set up stream:\n");
+    //    gavl_dictionary_dump(m->src.streams[i]->s, 2);
     }
   
   }
@@ -245,7 +269,7 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
         case GAVL_CMD_SRC_SELECT_TRACK:
           {
           /* Close plugins */
-          
+          //          gavl_set_current_track(gavl_dictionary_t * dict, int idx);
           }
           break;
         case GAVL_CMD_SRC_START:
@@ -256,6 +280,21 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
         case GAVL_CMD_SRC_RESUME:
           forward_command(priv, msg);
           break;
+        case GAVL_CMD_SRC_SET_BUFFER_FORMATS:
+          {
+          gavl_stream_type_t t = gavl_msg_get_arg_int(msg, 0);
+      
+          //          opt = bgav_get_options(avdec->dec);
+      
+          if(t == GAVL_STREAM_AUDIO)
+            {
+            gavl_dictionary_set(&priv->buffer_formats, "audio", gavl_msg_get_arg_c(msg, 1));
+            }
+          else if(t == GAVL_STREAM_VIDEO)
+            {
+            gavl_dictionary_set(&priv->buffer_formats, "video", gavl_msg_get_arg_c(msg, 1));
+            }
+          }
         }
       break;
     case BG_MSG_NS_PARAMETER:
@@ -320,8 +359,6 @@ bg_plugin_info_t * bg_mux_input_get_info()
   return bg_plugin_info_create(&mux_plugin.common);
   }
 
-
-
 bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const gavl_dictionary_t * cfg)
   {
   int i, j, num_streams;
@@ -337,6 +374,8 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
   ret->plugin = (bg_plugin_common_t*)&mux_plugin;
   ret->info = bg_plugin_find_by_name("i_mux");
 
+  gavl_dictionary_copy(&priv->src_cfg, cfg);
+  
   ret->priv = priv;
   
   ret->refcount = 1;
@@ -383,6 +422,9 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
         continue;
       
       st = bg_media_source_append_stream(&priv->src, type);
+
+      copy_stream_data(st->s, s);
+      
       cfg = get_stream_config_wr(st);
       gavl_dictionary_set_int(cfg, GAVL_META_IDX, j);
       gavl_dictionary_set_string(cfg, GAVL_META_URI, uri);

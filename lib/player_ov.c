@@ -666,7 +666,8 @@ void * bg_player_ov_thread(void * data)
       break;
     else
       {
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Skipping initial video frame");
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Skipping initial video frame Frame time: %"PRId64" Current time: %"PRId64,
+               s->frame_time, current_time);
       s->frame = NULL;
       }
     }

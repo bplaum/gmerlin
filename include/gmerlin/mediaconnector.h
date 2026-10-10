@@ -43,7 +43,7 @@ typedef struct bg_plugin_handle_s bg_plugin_handle_t;
  *  plugin. Note that by default, each stream is switched off.
  */
 
-typedef enum
+typedef enum bg_stream_action_e
   {
     BG_STREAM_ACTION_OFF = 0, //!< Stream is switched off and will be ignored
     BG_STREAM_ACTION_DECODE,  //!< Stream is switched on and will be decoded

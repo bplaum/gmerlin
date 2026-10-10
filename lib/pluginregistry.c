@@ -3708,12 +3708,17 @@ void bg_input_plugin_set_audio_buffer_formats(bg_plugin_handle_t * h,
                                               const gavl_array_t * arr)
   {
   set_buffer_params(h, GAVL_STREAM_AUDIO, arr);
+
+  
   }
 
 void bg_input_plugin_set_video_buffer_formats(bg_plugin_handle_t * h, 
                                               const gavl_array_t * arr)
   {
   set_buffer_params(h, GAVL_STREAM_VIDEO, arr);
+
+  //  fprintf(stderr, "Set video buffer formats\n");
+  //  gavl_array_dump(arr, 2);
   }
 
 

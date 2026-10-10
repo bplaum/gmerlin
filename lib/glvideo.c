@@ -617,11 +617,6 @@ static int port_init(port_t * port, gavl_video_format_t * fmt, int src_flags)
     case MODE_TEXTURE_TRANSFER:
       /* GL Texture (indirect) */
       port->set_frame = func_texture_transfer;
-#if 0
-      if(!port->idx)
-        gavl_hw_ctx_set_video_creator(port->g->hwctx, fmt, GAVL_HW_FRAME_MODE_TRANSFER);
-#endif
-      
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Port %d: Transferring video data into textures", port->idx);
       break;
     case MODE_IMPORT:

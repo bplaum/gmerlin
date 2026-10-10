@@ -22,6 +22,7 @@
 #define BG_CMDLINE_H_INCLUDED
 
 #include <gavl/metadata.h>
+#include <gavl/trackinfo.h>
 #include <gmerlin/parameter.h>
 #include <gmerlin/cfg_registry.h>
 #include <gmerlin/cfgctx.h>
@@ -30,6 +31,7 @@
 
 extern gavl_dictionary_t bg_cmdline_options;
 
+typedef enum bg_stream_action_e bg_stream_action_t;
     
 /*
  *  Remove the nth arg from an argc/argv pair
@@ -60,6 +62,10 @@ gavl_array_t * bg_cmdline_get_stream_params_wr(const char * name,
 
 /* Get concatenated options (global then per stream) */
 const gavl_array_t * bg_cmdline_get_params(const char * name);
+
+void bg_cmdline_set_stream_param(const char * name, int idx, const char * value);
+const char * bg_cmdline_get_stream_param(const char * name, int idx);
+
 
 /* Get options array for writing */
 gavl_array_t * bg_cmdline_get_params_wr(const char * name);
@@ -155,6 +161,42 @@ void bg_cmdline_print_help_parameters(const bg_parameter_info_t * parameters);
 
 
 void bg_cmdline_print_version(const char * application);
+
+/* Stream modes */
+#define BG_STREAM_MODE_AUDIO \
+  {                                                             \
+  .arg = "-am",                                                 \
+  .help_arg = "decode|copy|off",                              \
+  .help_string = TRS("Audio stream mode"),                    \
+  .flags = BG_CMDLINE_ARG_STRING | BG_CMDLINE_ARG_PER_STREAM, \
+  }
+
+#define BG_STREAM_MODE_VIDEO                                    \
+  {                                                             \
+  .arg = "-vm",                                                 \
+  .help_arg = "decode|copy|off",                              \
+  .help_string = TRS("Video stream mode"),                    \
+  .flags = BG_CMDLINE_ARG_STRING | BG_CMDLINE_ARG_PER_STREAM, \
+  }
+
+#define BG_STREAM_MODE_TEXT                                    \
+  {                                                             \
+  .arg = "-tm",                                                 \
+  .help_arg = "decode|off",                              \
+  .help_string = TRS("Text stream stream mode"),                    \
+  .flags = BG_CMDLINE_ARG_STRING | BG_CMDLINE_ARG_PER_STREAM, \
+  }
+
+#define BG_STREAM_MODE_OVERLAY                                     \
+  {                                                             \
+  .arg = "-om",                                                 \
+  .help_arg = "decode|copy|off",                              \
+  .help_string = TRS("Overlay stream stream mode"),                    \
+  .flags = BG_CMDLINE_ARG_STRING | BG_CMDLINE_ARG_PER_STREAM, \
+  }
+
+int bg_cmdline_get_stream_action(gavl_stream_type_t type, int idx,
+                                 bg_stream_action_t * ret);
 
 
 #endif // BG_CMDLINE_H_INCLUDED

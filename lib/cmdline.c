@@ -39,6 +39,9 @@
 #include <gmerlin/log.h>
 #define LOG_DOMAIN "cmdline"
 
+#include <gmerlin/mediaconnector.h>
+
+
 static const bg_cmdline_app_data_t * app_data;
 
 gavl_dictionary_t bg_cmdline_options = { 0 };
@@ -407,8 +410,12 @@ static void cmdline_parse(const bg_cmdline_arg_t * args,
             fprintf(stderr, "Option %s requires an argument\n", args[j].arg);
             exit(-1);
             }
-          gavl_dictionary_set_string(&bg_cmdline_options,
-                                     args[j].arg+1, argv[i]);
+
+          if(args[j].flags & BG_CMDLINE_ARG_PER_STREAM)
+            bg_cmdline_set_stream_param(args[j].arg+1, stream_idx, argv[i]);
+          else
+            gavl_dictionary_set_string(&bg_cmdline_options,
+                                       args[j].arg+1, argv[i]);
           bg_cmdline_remove_arg(argc, _argv, i);
           }
         if(args[j].flags & BG_CMDLINE_ARG_STRINGARRAY)
@@ -897,6 +904,38 @@ void bg_cmdline_get_stream_params(const char * name,
   
   }
 
+void bg_cmdline_set_stream_param(const char * name, int idx, const char * value)
+  {
+  char id[ID_LEN];
+  gavl_dictionary_t * dict;
+  snprintf(id, ID_LEN, "%d", idx);
+  dict = gavl_dictionary_get_dictionary_create(&bg_cmdline_options, name);
+  gavl_dictionary_set_string(dict, id, value);
+  }
+
+const char * bg_cmdline_get_stream_param(const char * name, int idx)
+  {
+  char id[ID_LEN];
+  const gavl_dictionary_t * dict;
+  const char * var;
+
+  snprintf(id, ID_LEN, "%d", idx);
+
+  if(!(dict = gavl_dictionary_get_dictionary(&bg_cmdline_options, name)))
+    return NULL;
+  
+  if((var = gavl_dictionary_get_string(dict, id)))
+    return var;
+
+  snprintf(id, ID_LEN, "%d", -1);
+  
+  if((var = gavl_dictionary_get_string(dict, id)))
+    return var;
+
+  return NULL;
+  
+  }
+
 gavl_array_t * bg_cmdline_get_stream_params_wr(const char * name,
                                                int idx)
   {
@@ -1086,4 +1125,55 @@ int bg_cmdline_apply_params(gavl_dictionary_t * dst,
   
   return 1;
   
+  }
+
+int bg_cmdline_get_stream_action(gavl_stream_type_t type, int idx,
+                                 bg_stream_action_t * ret)
+  {
+  const char * name = NULL;
+  const char * var = NULL;
+  
+  if(!gavl_dictionary_get(&bg_cmdline_options, "am") &&
+     !gavl_dictionary_get(&bg_cmdline_options, "vm") &&
+     !gavl_dictionary_get(&bg_cmdline_options, "tm") &&
+     !gavl_dictionary_get(&bg_cmdline_options, "om"))
+    {
+    return 0;
+    }
+
+  switch(type)
+    {
+    case GAVL_STREAM_AUDIO:
+      name = "am";
+      break;
+    case GAVL_STREAM_VIDEO:
+      name = "vm";
+      break;
+    case GAVL_STREAM_TEXT:
+      name = "tm";
+      break;
+    case GAVL_STREAM_OVERLAY:
+      name = "om";
+      break;
+    default:
+      return 0;
+      break;
+    }
+
+  if(!(var = bg_cmdline_get_stream_param(name, idx)))
+    {
+    *ret = BG_STREAM_ACTION_OFF;
+    return 1;
+    }
+  else if(!strcmp(var, "copy"))
+    {
+    *ret = BG_STREAM_ACTION_READRAW;
+    return 1;
+    }
+  else if(!strcmp(var, "decode"))
+    {
+    *ret = BG_STREAM_ACTION_DECODE;
+    return 1;
+    }
+  return 0;
   }
