@@ -475,7 +475,12 @@ static int handle_dbus_msg_volume(void * data, gavl_msg_t * msg)
           return 1;
           }
         
-        dst_dict = gavl_dictionary_get_dictionary_nc(dst_dict, prop_if);
+        if(!(dst_dict = gavl_dictionary_get_dictionary_nc(dst_dict, prop_if)))
+          {
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "No dictionary found for interface %s", prop_if);
+          gavl_dictionary_free(&prop_dict);
+          return 1;
+          }
         
         gavl_dictionary_update_fields(dst_dict, &prop_dict);
 
