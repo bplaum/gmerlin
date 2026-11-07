@@ -3697,6 +3697,15 @@ static void set_buffer_params(bg_plugin_handle_t * h, gavl_stream_type_t type,
   {
   gavl_msg_t * cmd; 
 
+  if(!h->control.cmd_sink)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+             "Cannot set %s buffer parameters for %s: No message sink",
+             gavl_stream_type_name(type),
+             bg_plugin_info_get_long_name(h->info));
+    return;
+    }
+  
   cmd = bg_msg_sink_get(h->control.cmd_sink);
   gavl_msg_set_id_ns(cmd, GAVL_CMD_SRC_SET_BUFFER_FORMATS, GAVL_MSG_NS_SRC);
   gavl_msg_set_arg_int(cmd, 0, type);
@@ -3708,8 +3717,6 @@ void bg_input_plugin_set_audio_buffer_formats(bg_plugin_handle_t * h,
                                               const gavl_array_t * arr)
   {
   set_buffer_params(h, GAVL_STREAM_AUDIO, arr);
-
-  
   }
 
 void bg_input_plugin_set_video_buffer_formats(bg_plugin_handle_t * h, 
