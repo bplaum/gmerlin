@@ -33,12 +33,22 @@
 #include <gmerlin/application.h>
 
 static int input_flags = 0;
-// static int num_frames = 10;
-
+static int num_frames = 10;
 
 static void opt_track(void * data, int * argc, char *** _argv, int arg)
   {
   input_flags |= BG_INPUT_FLAG_SELECT_TRACK;
+  }
+
+static void opt_frames(void * data, int * argc, char *** _argv, int arg)
+  {
+  if(arg >= *argc)
+    {
+    fprintf(stderr, "Option -nf requires an argument\n");
+    exit(-1);
+    }
+  num_frames = atoi((*_argv)[arg]);
+  bg_cmdline_remove_arg(argc, _argv, arg);
   }
 
 static bg_cmdline_arg_t global_options[] =
@@ -47,6 +57,12 @@ static bg_cmdline_arg_t global_options[] =
       .arg =         "-track",
       .help_string = "Select and return single track (passed in the URL)",
       .callback =    opt_track,
+    },
+    {
+      .arg =         "-nf",
+      .help_arg = "<num>",
+      .help_string = "Try to decode this many A/V frames",
+      .callback =    opt_frames,
     },
     {
       /* End */
@@ -65,7 +81,7 @@ const bg_cmdline_app_data_t app_data =
 
 int main(int argc, char ** argv)
   {
-  int i, num_streams;
+  int i, j, num_streams;
   bg_plugin_handle_t * h;
   gavl_dictionary_t track;
   const gavl_dictionary_t * ti;
@@ -174,24 +190,29 @@ int main(int argc, char ** argv)
     const gavl_audio_format_t * fmt;
 
     st =  bg_media_source_get_audio_stream(h->src, i);
-    af = NULL;
 
     fmt = gavl_audio_source_get_dst_format(st->asrc);
-    
-    fprintf(stderr, "Reading frame from audio stream %d...", i+1);
-    
-    if(gavl_audio_source_read_frame(st->asrc, &af) == GAVL_SOURCE_OK)
+
+    for(j = 0; j < num_frames; j++)
       {
+      af = NULL;
+
+      fprintf(stderr, "Reading frame %d from audio stream %d...", j+1, i+1);
+    
+      if(gavl_audio_source_read_frame(st->asrc, &af) == GAVL_SOURCE_OK)
+        {
       
-      fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %d\n",
-              af->timestamp, gavl_time_unscale(fmt->samplerate, af->timestamp),
-              af->valid_samples);
+        fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %d\n",
+                af->timestamp, gavl_time_unscale(fmt->samplerate, af->timestamp),
+                af->valid_samples);
+        }
+      else
+        {
+        fprintf(stderr, "failed\n");
+        break;
+        }
       }
-    else
-      {
-      fprintf(stderr, "failed\n");
-      break;
-      }
+    
     }
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_VIDEO);
   for(i = 0; i < num_streams; i++)
@@ -200,23 +221,25 @@ int main(int argc, char ** argv)
     st =  bg_media_source_get_video_stream(h->src, i);
     fmt = gavl_video_source_get_dst_format(st->vsrc);
 
-    vf = NULL;
 
-    fprintf(stderr, "Reading frame from video stream %d...", i+1);
-    
-    if(gavl_video_source_read_frame(st->vsrc, &vf) == GAVL_SOURCE_OK)
+    for(j = 0; j < num_frames; j++)
       {
-      fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %"PRId64"\n",
-              vf->timestamp, gavl_time_unscale(fmt->timescale, vf->timestamp),
-              vf->duration);
+      fprintf(stderr, "Reading frame %d from video stream %d...", j+1, i+1);
+      vf = NULL;
       
+      if(gavl_video_source_read_frame(st->vsrc, &vf) == GAVL_SOURCE_OK)
+        {
+        fprintf(stderr, "done, PTS: %"PRId64" [%"PRId64"], duration: %"PRId64"\n",
+                vf->timestamp, gavl_time_unscale(fmt->timescale, vf->timestamp),
+                vf->duration);
+      
+        }
+      else
+        {
+        fprintf(stderr, "failed\n");
+        break;
+        }
       }
-    else
-      {
-      fprintf(stderr, "failed\n");
-      break;
-      }
-
     }
   num_streams = bg_media_source_get_num_streams(h->src, GAVL_STREAM_TEXT);
   for(i = 0; i < num_streams; i++)
