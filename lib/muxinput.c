@@ -365,8 +365,10 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
   bg_plugin_handle_t * ret;
   int can_seek  = 1;
   int can_pause = 1;
+  int is_recorder = -1;
+  
   gavl_dictionary_t * m;
-
+  const char * klass;
   multi_t * priv = calloc(1, sizeof(*priv));
   
   ret = calloc(1, sizeof(*ret));
@@ -403,6 +405,16 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
     
     if(!gavl_track_can_seek(track))
       can_seek = 0;
+
+    klass = gavl_track_get_media_class(track);
+    if(gavl_meta_class_is_recorder(klass))
+      {
+      if(is_recorder < 0)
+        is_recorder = 1;
+      }
+    else
+      is_recorder = 0;
+    
     
     num_streams = gavl_track_get_num_streams_all(track);
 
@@ -437,6 +449,10 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
     {
     gavl_dictionary_set_int(m, GAVL_META_CAN_PAUSE, can_pause);
     gavl_dictionary_set_int(m, GAVL_META_CAN_SEEK, can_seek);
+
+    if(is_recorder)
+      gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_RECORDER);
+    
     }
   
   bg_controllable_init(&priv->controllable,
