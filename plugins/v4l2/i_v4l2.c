@@ -99,11 +99,10 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
             }
           
           gavl_track_finalize(v4l->src.track);
-
-
+          
           /* Load decoder */
-          bg_media_source_load_decoders(&v4l->src);
-
+          bg_media_source_load_decoders(&v4l->src, NULL, &v4l->buf_fmts);
+          
           bg_media_source_set_export(&v4l->src, NULL, &v4l->buf_fmts);
           }
           break;
@@ -197,7 +196,7 @@ static void set_parameter_v4l(void * priv, const char * name,
   //  v4l = priv;
   }
 
-static int open_v4l(void * priv, const char * location)
+static int open_v4l(void * priv, const char * _location)
   {
   int ret = 0;
   
@@ -205,14 +204,21 @@ static int open_v4l(void * priv, const char * location)
   char * path     = NULL;
   char * hostname = NULL;
   gavl_dictionary_t dev;
-
+  gavl_dictionary_t url_vars;
+  
   gavl_dictionary_t * t;
   gavl_dictionary_t * m;
+  char * location = NULL;  
   
   v4l2_t * v4l;
   v4l = priv;
   
   gavl_dictionary_init(&dev);
+  gavl_dictionary_init(&url_vars);
+
+  location = gavl_strdup(_location);
+
+  gavl_url_get_vars(location, &url_vars);
   
   if(!gavl_url_split(location,
                      &protocol,
@@ -240,7 +246,7 @@ static int open_v4l(void * priv, const char * location)
   if(!gavl_v4l2_get_device_info(path, &dev))
     goto fail;
 
-  if(!(v4l->dev = gavl_v4l2_device_open(&dev)))
+  if(!(v4l->dev = gavl_v4l2_device_open(&dev, &url_vars)))
     goto fail;
   
   t = gavl_append_track(&v4l->mi, NULL);
@@ -271,7 +277,11 @@ static int open_v4l(void * priv, const char * location)
     free(path);
   if(protocol)
     free(protocol);
+  if(location)
+    free(location);
   
+  gavl_dictionary_free(&url_vars);
+    
   return ret;
   }
 
