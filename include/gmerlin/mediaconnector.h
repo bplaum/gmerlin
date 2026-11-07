@@ -178,7 +178,9 @@ int bg_media_source_set_msg_action_by_id(bg_media_source_t * src, int id, bg_str
 int bg_media_source_get_num_streams(const bg_media_source_t * src, gavl_stream_type_t type);
 
 /* Load implicit decoders */
-int bg_media_source_load_decoders(bg_media_source_t * src);
+int bg_media_source_load_decoders(bg_media_source_t * src,
+                                  const gavl_array_t * audio_buffer_formats,
+                                  const gavl_array_t * video_buffer_formats);
 
 int bg_media_source_set_export(bg_media_source_t * src,
                                const gavl_array_t * abuf, const gavl_array_t * vbuf);

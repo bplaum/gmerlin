@@ -462,6 +462,8 @@ static bg_plugin_handle_t * load_decoder_plugin(gavl_dictionary_t * s, uint32_t 
   
   ret = bg_plugin_load(info);
   
+  
+  
   fail:
   gavl_compression_info_free(&ci);
   
@@ -469,7 +471,9 @@ static bg_plugin_handle_t * load_decoder_plugin(gavl_dictionary_t * s, uint32_t 
   
   }
 
-int bg_media_source_load_decoders(bg_media_source_t * src)
+int bg_media_source_load_decoders(bg_media_source_t * src,
+                                  const gavl_array_t * audio_buffer_formats,
+                                  const gavl_array_t * video_buffer_formats)
   {
   int i;
   bg_codec_plugin_t * plugin;
@@ -487,6 +491,9 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
           {
           if((s->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_AUDIO)))
             {
+            if(audio_buffer_formats)
+              bg_input_plugin_set_audio_buffer_formats(s->codec_handle, audio_buffer_formats);
+            
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->asrc = plugin->open_decode_audio(s->codec_handle->priv, s->psrc, s->s);
             gavl_stream_set_compression_info(s->s, NULL);
@@ -499,6 +506,9 @@ int bg_media_source_load_decoders(bg_media_source_t * src)
           {
           if((s->codec_handle = load_decoder_plugin(s->s, BG_PLUGIN_DECOMPRESSOR_VIDEO)))
             {
+            if(video_buffer_formats)
+              bg_input_plugin_set_video_buffer_formats(s->codec_handle, video_buffer_formats);
+            
             plugin = (bg_codec_plugin_t *)s->codec_handle->plugin;
             s->vsrc = plugin->open_decode_video(s->codec_handle->priv, s->psrc, s->s);
             gavl_stream_set_compression_info(s->s, NULL);
