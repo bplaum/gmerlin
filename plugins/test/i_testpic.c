@@ -389,6 +389,9 @@ static void paint_frame(input_t * inp)
       
       switch(inp->fmt->pixelformat)
         {
+        case GAVL_PIXELFORMAT_EXTENDED:
+          /* TODO */
+          break;
         case GAVL_PIXELFORMAT_NONE:
           break;
         case GAVL_GRAY_8:
