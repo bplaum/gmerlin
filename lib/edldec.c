@@ -489,8 +489,10 @@ static int set_track_edl(void * priv, int track)
     bg_media_source_cleanup(&ed->src);
     bg_media_source_init(&ed->src);
     }
-  ed->ti_cur = gavl_get_track_nc(&ed->mi, track);
 
+  if(!(ed->ti_cur = gavl_get_track_nc(&ed->mi, track)))
+    return 0;
+  
   if(!streams_create(ed))
     return 0;
   
