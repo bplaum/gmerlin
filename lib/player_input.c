@@ -205,7 +205,7 @@ int bg_player_input_start(bg_player_t * p)
     gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Cannot connect input messages");
   
   if((klass = gavl_track_get_media_class(p->src->track_info)) &&
-     gavl_string_starts_with(klass, "item.recorder"))
+     gavl_meta_class_is_recorder(klass))
     {
     p->flags |= PLAYER_IS_RECORDER;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Detected recording device");
