@@ -115,3 +115,6 @@ void destroy_app_data(void * priv);
 void register_window_actions(GtkWidget * w);
 
 void show_tracks_init(app_data_t * ad);
+
+void app_add_gmerlin_tracks(app_data_t * ad, gavl_array_t * arr);
+void app_add_locations(app_data_t * ad, const gavl_array_t * arr);

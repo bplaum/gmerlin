@@ -681,7 +681,7 @@ static int load_streams(gavl_array_t * arr)
   return 1;
   }
 
-static void add_gmerlin_tracks(app_data_t * ad, gavl_array_t * arr)
+void app_add_gmerlin_tracks(app_data_t * ad, gavl_array_t * arr)
   {
   if(!load_streams(arr))
     return;
@@ -698,7 +698,7 @@ static void add_gmerlin_tracks(app_data_t * ad, gavl_array_t * arr)
   
   }
 
-static void add_locations(app_data_t * ad, const gavl_array_t * arr)
+void app_add_locations(app_data_t * ad, const gavl_array_t * arr)
   {
   gavl_array_t tracks;
   const char * path;
@@ -721,7 +721,7 @@ static void add_locations(app_data_t * ad, const gavl_array_t * arr)
 
   bg_tracks_resolve_locations(&add_val, &tracks, BG_INPUT_FLAG_GET_FORMAT);
           
-  add_gmerlin_tracks(ad, &tracks);
+  app_add_gmerlin_tracks(ad, &tracks);
   
   gavl_array_free(&tracks);
   gavl_value_free(&add_val);
@@ -803,7 +803,7 @@ static int handle_dlg_message(void * data, gavl_msg_t * msg)
           
           gavl_array_init(&arr);
           gavl_msg_get_arg_array(msg, 0, &arr);
-          add_locations(ad, &arr);
+          app_add_locations(ad, &arr);
           gavl_array_free(&arr);
           }
           break;
@@ -970,12 +970,11 @@ static void paste_contents_received(GtkClipboard     *clipboard,
   if(!strcmp(type_name, "text/uri-list") ||
      !strcmp(type_name, "text/plain"))
     {
-    //    char ** bg_urilist_decode(const char * str, int len);
     gavl_array_t arr;
     gavl_array_init(&arr);
     bg_urilist_decode((char*)data, length, &arr);
-
-    add_locations(ad, &arr);
+    
+    app_add_locations(ad, &arr);
     gavl_array_free(&arr);
     }
   else if(!strcmp(type_name, TRANSCODER_TRACKS_MIMETYPE))
@@ -999,8 +998,8 @@ static void paste_contents_received(GtkClipboard     *clipboard,
     
     gavl_dictionary_init(&dict);
     bg_tracks_from_string(&dict, BG_TRACK_FORMAT_GMERLIN, (char*)data, length);
-
-    add_gmerlin_tracks(ad, gavl_get_tracks_nc(&dict));
+    
+    app_add_gmerlin_tracks(ad, gavl_get_tracks_nc(&dict));
 
     
     gavl_dictionary_free(&dict);

@@ -36,6 +36,9 @@
 #include "mainwindow.h"
 #include "app.h"
 
+#include <gmerlin/bggavl.h>
+#include <gui_gtk/mdb.h>
+#include <gmerlin/utils.h>
 
 
 
@@ -52,6 +55,48 @@ static void on_button_clicked(GtkButton *btn, gpointer user_data)
     g_print("Button clicked!\n");
 }
 #endif
+
+/* Drop targets */
+
+static const GtkTargetEntry drop_targets[] = 
+  {
+    { bg_gtk_atom_tracks_name, 0, BG_TRACK_FORMAT_GMERLIN },
+    { "text/uri-list",         0, BG_TRACK_FORMAT_URILIST },
+    { "text/plain",            0, BG_TRACK_FORMAT_URILIST },
+  };
+
+static void
+on_drag_data_received(GtkWidget *widget, GdkDragContext *context,
+                      gint x, gint y, GtkSelectionData *data,
+                      guint info, guint time, gpointer user_data)
+  {
+  gint length = 0;
+
+  const guchar *raw = gtk_selection_data_get_data_with_length(data, &length);
+  app_data_t * ad = user_data;
+  
+  if(info == BG_TRACK_FORMAT_GMERLIN)
+    {
+    gavl_dictionary_t dict;
+    gavl_dictionary_init(&dict);
+    bg_tracks_from_string(&dict, BG_TRACK_FORMAT_GMERLIN, (char*)raw, length);
+    app_add_gmerlin_tracks(ad, gavl_get_tracks_nc(&dict));
+    gavl_dictionary_free(&dict);
+    }
+  else if(info == BG_TRACK_FORMAT_URILIST)
+    {
+    gavl_array_t arr;
+    gavl_array_init(&arr);
+    bg_urilist_decode((char*)raw, length, &arr);
+    
+    app_add_locations(ad, &arr);
+    gavl_array_free(&arr);
+
+    }
+  /* GTK_DEST_DEFAULT_ALL calls gtk_drag_finish() for us. */
+  }
+
+
 /* ── Public constructor ─────────────────────────────────────────────────── */
 GtkWidget *app_window_new(GtkApplication *app)
   {
@@ -156,6 +201,13 @@ static GtkWidget *build_content(app_data_t * ad)
   ad->listbox = gtk_list_box_new();
   gtk_list_box_set_selection_mode(GTK_LIST_BOX(ad->listbox), GTK_SELECTION_MULTIPLE);
   //  g_signal_connect(listbox, "row-selected", G_CALLBACK(on_row_selected), NULL);
+
+  /* Make drag dst */
+  gtk_drag_dest_set(ad->listbox, GTK_DEST_DEFAULT_ALL,
+                    drop_targets, G_N_ELEMENTS(drop_targets),
+                    GDK_ACTION_COPY);
+  g_signal_connect(G_OBJECT(ad->listbox), "drag-data-received",
+                   G_CALLBACK(on_drag_data_received), ad);
   
   /* Scrolledwindow */
   scroll = gtk_scrolled_window_new(NULL, NULL);
