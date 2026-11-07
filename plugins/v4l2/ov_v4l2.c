@@ -183,7 +183,7 @@ static int open_v4l2(void * priv, const char * uri,
   if(!gavl_v4l2_get_device_info(path, &dev))
     return 0;
 
-  v4l->dev = gavl_v4l2_device_open(&dev);
+  v4l->dev = gavl_v4l2_device_open(&dev, NULL);
   
   //  gavl_video_format_dump(format);
 
