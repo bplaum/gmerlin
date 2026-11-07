@@ -744,6 +744,8 @@ static void get_buffer_formats(bg_glvideo_t * g)
   const gavl_array_t * arr;
 
   const gavl_array_t * arr_fourcc;
+  const gavl_array_t * arr_pfmt;
+
   const gavl_dictionary_t * dict_src;
 
   
@@ -759,6 +761,7 @@ static void get_buffer_formats(bg_glvideo_t * g)
     int i;
     gavl_dictionary_t * dict_map = gavl_hw_buf_desc_append(&g->import_map_formats, GAVL_HW_DMABUFFER);
     gavl_dictionary_t * dict_transfer = gavl_hw_buf_desc_append(&g->import_transfer_formats, GAVL_HW_DMABUFFER);
+    arr_pfmt = gavl_dictionary_get_array(dict_src, GAVL_HW_BUF_PIXELFORMAT);
     
     for(i = 0; i < arr_fourcc->num_entries; i++)
       {
@@ -767,7 +770,12 @@ static void get_buffer_formats(bg_glvideo_t * g)
         int flags;
         int pfmt = 0;
 
-        if((pfmt = gavl_drm_pixelformat_from_fourcc(fourcc, &flags, NULL)) != GAVL_PIXELFORMAT_NONE)
+        if(arr_pfmt)
+          gavl_value_get_int(&arr_pfmt->entries[i], &pfmt);
+        else
+          pfmt = gavl_drm_pixelformat_from_fourcc(fourcc, &flags, NULL);
+        
+        if(pfmt != GAVL_PIXELFORMAT_NONE)
           {
           if((flags & GAVL_DMABUF_FLAG_SHUFFLE) && !gavl_pixelformat_is_rgb(pfmt))
             {
