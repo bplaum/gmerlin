@@ -1610,23 +1610,22 @@ static void load_next_track(bg_player_t * player, int advance)
     track = bg_player_tracklist_get_next(&player->tl);
   else
     track = bg_player_tracklist_get_current_track(&player->tl);
+
+  if(!track)
+    return;
   
-  if(track)
-    {
-    set_source_from_track(player, player->src_next, track);
-    /* Open next location */
+  set_source_from_track(player, player->src_next, track);
+  /* Open next location */
               
-    if(bg_track_is_multitrack_sibling(&player->src->track,
-                                      track, &player->src->next_track))
-      {
-      gavl_dictionary_copy(&player->src_next->track, track);
-      }
-    else
-      {
-      bg_player_source_open(player, player->src_next, 0);
-      }
+  if(bg_track_is_multitrack_sibling(&player->src->track,
+                                    track, &player->src->next_track))
+    {
+    gavl_dictionary_copy(&player->src_next->track, track);
     }
-  
+  else
+    {
+    bg_player_source_open(player, player->src_next, 0);
+    }
   }
                             
 
@@ -1829,6 +1828,10 @@ int bg_player_advance_gapless(bg_player_t * player)
   const gavl_audio_format_t * new_fmt;
   int ret = 0;
   gavl_time_t time;
+
+  gavl_audio_format_t dst_fmt;
+  int dst_flags;
+  
   
   // gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Trying gapless transition");
   
@@ -1847,6 +1850,9 @@ int bg_player_advance_gapless(bg_player_t * player)
 
   memset(&old_fmt, 0, sizeof(old_fmt));
   gavl_audio_format_copy(&old_fmt, gavl_audio_source_get_src_format(player->src->audio_src));
+
+  gavl_audio_format_copy(&dst_fmt, gavl_audio_source_get_dst_format(player->src->audio_src));
+  dst_flags = gavl_audio_source_get_dst_flags(player->src->audio_src);
   
   if(player->src->input_handle && (player->src->next_track >= 0))
     {
@@ -1911,9 +1917,7 @@ int bg_player_advance_gapless(bg_player_t * player)
   //  fprintf(stderr, "seamless transition %08d\n", gavl_audio_source_get_dst_flags(player->src_next->audio_src));
   //  gavl_audio_format_dump(gavl_audio_source_get_dst_format(player->src_next->audio_src));
   
-  gavl_audio_source_set_dst(player->src->audio_src,
-                            gavl_audio_source_get_dst_flags(player->src_next->audio_src),
-                            gavl_audio_source_get_dst_format(player->src_next->audio_src));
+  gavl_audio_source_set_dst(player->src->audio_src, dst_flags, &dst_fmt);
   
   player->audio_stream.in_src_int = player->src->audio_src;
 
