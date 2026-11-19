@@ -871,6 +871,7 @@ static void set_out_format(cropscale_priv_t * vp)
     case GAVL_RGB_FLOAT:
     case GAVL_RGBA_FLOAT:
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
     case GAVL_YUVA_32:
     case GAVL_YUVA_64:
     case GAVL_YUV_FLOAT:

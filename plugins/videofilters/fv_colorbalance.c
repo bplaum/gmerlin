@@ -549,6 +549,7 @@ set_input_format(colorbalance_priv_t * vp)
       vp->use_matrix = 1;
       break;
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       break;
     }
 
