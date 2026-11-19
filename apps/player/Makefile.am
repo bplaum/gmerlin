@@ -22,6 +22,7 @@ bin_PROGRAMS = gmerlin
 gmerlin_SOURCES = \
 cfgdialog.c \
 gmerlin.c \
+actions.c \
 main.c \
 mainmenu.c \
 mainwindow.c \

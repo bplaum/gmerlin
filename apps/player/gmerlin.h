@@ -302,3 +302,14 @@ void gmerlin_set_parameter(void * data, const char * name,
 /* Handle remote command */
 
 void gmerlin_handle_remote(gmerlin_t * g, gavl_msg_t * msg);
+
+/* New Action API (prepatation for gtk-4 migrtation) */
+
+void create_window_actions(GActionMap * map, bg_controllable_t * player_ctrl);
+
+void create_application_actions(GActionMap * map, bg_controllable_t * player_ctrl);
+
+typedef struct menu_s menu_t;
+
+menu_t * menu_create(bg_controllable_t * player_ctrl);
+

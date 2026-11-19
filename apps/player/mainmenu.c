@@ -118,8 +118,7 @@ struct command_menu_s
   GtkWidget * next_chapter;
   GtkWidget * previous_chapter;
   GtkWidget * current_to_favourites;
-  GtkWidget * goto_current;
-
+  
   GtkWidget * next_visualization;
   
   GtkWidget * seek_item;
@@ -145,10 +144,7 @@ struct main_menu_s
   struct stream_menu_s        subtitle_stream_menu;
   struct chapter_menu_s       chapter_menu;
   
-  GtkWidget * windows_item;
-  GtkWidget * help_item;
   GtkWidget * preferences_item;
-  GtkWidget * command_item;
   
   //  GtkWidget * audio_stream_item;
   //  GtkWidget * video_stream_item;
@@ -159,9 +155,6 @@ struct main_menu_s
   GtkWidget * subtitle_stream_item;
   GtkWidget * chapter_item;
   GtkWidget * visualization_item;
-  
-  GtkWidget * player_backend_item;
-  GtkWidget * mdb_backend_item;
   
   GtkWidget * menu;
   gmerlin_t * g;
@@ -757,13 +750,6 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
                              GDK_KEY_BackSpace, 0,
                              GTK_ACCEL_VISIBLE);
   
-  ret->command_menu.goto_current = create_item(TR("Goto current track"),
-                                               NULL, 
-                                               gmerlin, ret->command_menu.menu);
-  gtk_widget_add_accelerator(ret->command_menu.goto_current, "activate",
-                             ret->g->accel_group,
-                             GDK_KEY_g, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-
   ret->command_menu.next_visualization = create_item(TR("Next visualization"),
                                                      NULL, 
                                                      gmerlin, ret->command_menu.menu);
@@ -954,26 +940,26 @@ main_menu_t * main_menu_create(gmerlin_t * gmerlin)
 
 
   
-  ret->windows_item = create_submenu_item(TR("Windows..."), NULL,
+  create_submenu_item(TR("Windows..."), NULL,
                                           ret->windows_menu.menu,
                                           ret->menu);
 
 
-  ret->command_item = create_submenu_item(TR("Commands..."), NULL,
-                                           ret->command_menu.menu,
-                                           ret->menu);
+  create_submenu_item(TR("Commands..."), NULL,
+                      ret->command_menu.menu,
+                      ret->menu);
   
-  ret->player_backend_item = create_submenu_item(TR("Player backend"), BG_ICON_PLAYER,
+  create_submenu_item(TR("Player backend"), BG_ICON_PLAYER,
                                                  bg_gtk_backend_menu_get_widget(ret->player_backend_menu),
                                                  ret->menu);
 
-  ret->mdb_backend_item = create_submenu_item(TR("Database backend"), BG_ICON_SERVER,
-                                              bg_gtk_backend_menu_get_widget(ret->mdb_backend_menu),
-                                              ret->menu);
+  create_submenu_item(TR("Database backend"), BG_ICON_SERVER,
+                      bg_gtk_backend_menu_get_widget(ret->mdb_backend_menu),
+                      ret->menu);
   
-  ret->help_item = create_submenu_item(TR("Help..."),BG_ICON_HELP,
-                                       ret->help_menu.menu,
-                                       ret->menu);
+  create_submenu_item(TR("Help..."),BG_ICON_HELP,
+                      ret->help_menu.menu,
+                      ret->menu);
   
   gtk_widget_show(ret->menu);
 
