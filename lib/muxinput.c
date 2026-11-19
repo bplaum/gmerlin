@@ -451,8 +451,10 @@ bg_plugin_handle_t * bg_input_plugin_load_mux(const gavl_array_t * arr, const ga
     gavl_dictionary_set_int(m, GAVL_META_CAN_SEEK, can_seek);
 
     if(is_recorder)
+      {
       gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_RECORDER);
-    
+      gavl_dictionary_set_int(m, GAVL_META_REALTIME, 1);
+      }
     }
   
   bg_controllable_init(&priv->controllable,

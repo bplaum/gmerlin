@@ -51,7 +51,7 @@ typedef struct
   
   } bg_pw_recorder_t;
 
-static void start_pulse(bg_pw_recorder_t*);
+static int start_pulse(bg_pw_recorder_t*);
 
 static gavl_source_status_t read_func_pulse(void * p, gavl_audio_frame_t ** frame)
   {
@@ -105,7 +105,7 @@ static gavl_source_status_t read_func_pulse(void * p, gavl_audio_frame_t ** fram
   return GAVL_SOURCE_OK;
   }
 
-void start_pulse(bg_pw_recorder_t * p)
+static int start_pulse(bg_pw_recorder_t * p)
   {
   int ret;
   struct spa_audio_info_raw info = { 0 };
@@ -127,22 +127,22 @@ void start_pulse(bg_pw_recorder_t * p)
                           PW_STREAM_FLAG_MAP_BUFFERS,
                           //                          PW_STREAM_FLAG_RT_PROCESS,
                           params, 1);
-#if 0
+  
   if(ret < 0)
     {
-    fprintf(stderr, "pw_stream_connect failed\n");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "pw_stream_connect failed");
+    return 0;
     }
-  else
-    fprintf(stderr, "pw_stream_connect succeeded: %d\n", ret);
-#endif
-  
   while((p->stream_state != PW_STREAM_STATE_STREAMING) &&
         (p->stream_state != PW_STREAM_STATE_ERROR))
     pw_loop_iterate(pw_main_loop_get_loop(p->loop), -1 /* block until event */);
 
   if(p->stream_state == PW_STREAM_STATE_ERROR)
+    {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Stream reported error");
-
+    return 0;
+    }
+  return 1;
   }
 
 static int handle_cmd(void * data, gavl_msg_t * msg)
@@ -342,6 +342,8 @@ static int open_pipewire(void * priv, const char * location)
   t = gavl_append_track(&p->mi, NULL);
   m = gavl_track_get_metadata_nc(t);
 
+  gavl_dictionary_set_int(m, GAVL_META_REALTIME, 1);
+  
   gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location);
 
   s = gavl_track_append_audio_stream(t);

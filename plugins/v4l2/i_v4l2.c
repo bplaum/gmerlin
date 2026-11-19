@@ -96,6 +96,10 @@ static int handle_cmd(void * data, gavl_msg_t * msg)
             {
             gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got compressed output");
             st->psrc = gavl_v4l2_device_get_packet_source(v4l->dev);
+
+            /* Starting the stream might have set the pixelformat for MJPG */
+            gavl_video_format_copy(gavl_stream_get_video_format_nc(v4l->s),
+                                   gavl_packet_source_get_video_format(st->psrc));
             }
           
           gavl_track_finalize(v4l->src.track);
@@ -251,7 +255,8 @@ static int open_v4l(void * priv, const char * _location)
   
   t = gavl_append_track(&v4l->mi, NULL);
   m = gavl_track_get_metadata_nc(t);
-
+  gavl_dictionary_set_int(m, GAVL_META_REALTIME, 1);
+  
   gavl_dictionary_set_string(m, GAVL_META_LABEL, gavl_dictionary_get_string(&dev, GAVL_META_LABEL));
   
   v4l->s = gavl_track_append_video_stream(t);
